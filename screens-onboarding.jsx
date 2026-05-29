@@ -5,11 +5,10 @@
 // ────────────────────────────────────────────────────────────
 // 01 — SPLASH
 // ────────────────────────────────────────────────────────────
-function ScreenSplash({ go, state }) {
-  // Auto-advance on default state after 2s
+function ScreenSplash({ go, state, language }) {
   React.useEffect(() => {
     if (state !== 'default') return;
-    const id = setTimeout(() => go('onboarding-1'), 2400);
+    const id = setTimeout(() => go('lang-select'), 2400);
     return () => clearTimeout(id);
   }, [state, go]);
 
@@ -18,13 +17,15 @@ function ScreenSplash({ go, state }) {
       <div className="ns-screen" style={{ background: 'var(--bg-base)' }}>
         <PhoneStatus/>
         <ErrorState
-          title="Холболт амжилтгүй"
-          body="Интернэт холболтоо шалгана уу"
+          title={tr('err.noConnection', language)}
+          body={tr('err.checkInternet', language)}
           onRetry={() => go('splash')}
         />
       </div>
     );
   }
+
+  const isEN = language === 'en';
 
   return (
     <div className="ns-screen" style={{ background: 'var(--bg-base)' }}>
@@ -46,7 +47,10 @@ function ScreenSplash({ go, state }) {
             margin: 0, fontFamily: 'var(--ff-display)',
             fontSize: 38, fontWeight: 500, letterSpacing: '-0.02em', lineHeight: 1,
           }}>
-            Шөнийн<br/><span className="ns-grad-text" style={{ fontStyle: 'italic' }}>шувуухай</span>
+            {isEN
+              ? <>Night<br/><span className="ns-grad-text" style={{ fontStyle: 'italic' }}>Owl</span></>
+              : <>Шөнийн<br/><span className="ns-grad-text" style={{ fontStyle: 'italic' }}>шувуухай</span></>
+            }
           </h1>
           <div style={{ marginTop: 14 }} className="ns-mono">Night Owl · UB</div>
         </div>
@@ -80,23 +84,11 @@ function ScreenSplash({ go, state }) {
 // ────────────────────────────────────────────────────────────
 // 02 — ONBOARDING (3 slides as one component, internal carousel)
 // ────────────────────────────────────────────────────────────
-function ScreenOnboarding({ go, state, slide = 1 }) {
+function ScreenOnboarding({ go, state, slide = 1, language }) {
   const slides = [
-    {
-      icon: 'compass',
-      headline: 'Шөнийн амьдралыг нээ',
-      sub: 'УБ-ын хамгийн халуухан бар, lounge, клубуудыг нэг дор.',
-    },
-    {
-      icon: 'film',
-      headline: 'Шууд дамжуулалт үз',
-      sub: 'Дуртай creator-ийнхээ exclusive контентыг алгасахгүй.',
-    },
-    {
-      icon: 'pin',
-      headline: 'Газрын зураг дээр нээ',
-      sub: 'Өөрт ойрхон газар болон найзуудаа олж, үнэлгээг харж, чиглэлээ ав.',
-    },
+    { icon: 'compass', titleKey: 'onb.1.title', subKey: 'onb.1.sub' },
+    { icon: 'film',    titleKey: 'onb.2.title', subKey: 'onb.2.sub' },
+    { icon: 'pin',     titleKey: 'onb.3.title', subKey: 'onb.3.sub' },
   ];
   const s = slides[slide - 1];
   const isLast = slide === 3;
@@ -125,7 +117,7 @@ function ScreenOnboarding({ go, state, slide = 1 }) {
       }}>
         <ScreenMeta index={1 + slide} total={19} label={`Slide ${slide}/3`}/>
         <button className="ns-btn-ghost" onClick={() => go('auth-landing')}>
-          Алгасах
+          {tr('btn.skip', language)}
         </button>
       </div>
 
@@ -134,7 +126,6 @@ function ScreenOnboarding({ go, state, slide = 1 }) {
         alignItems: 'center', justifyContent: 'center',
         padding: '0 40px', gap: 28, position: 'relative', zIndex: 2,
       }}>
-        {/* glowing orbital icon */}
         <div style={{ position: 'relative' }}>
           <div style={{
             width: 200, height: 200, borderRadius: '50%',
@@ -161,15 +152,14 @@ function ScreenOnboarding({ go, state, slide = 1 }) {
             margin: 0, fontFamily: 'var(--ff-display)', fontSize: 32,
             fontWeight: 500, letterSpacing: '-0.02em', lineHeight: 1.05,
             textWrap: 'balance',
-          }}>{s.headline}</h1>
+          }}>{tr(s.titleKey, language)}</h1>
           <p style={{
             margin: '14px 0 0', fontSize: 15, lineHeight: 1.5,
             color: 'var(--text-secondary)',
-          }}>{s.sub}</p>
+          }}>{tr(s.subKey, language)}</p>
         </div>
       </div>
 
-      {/* page dots + next */}
       <div style={{
         padding: '0 32px 56px', display: 'flex',
         alignItems: 'center', justifyContent: 'space-between',
@@ -187,7 +177,7 @@ function ScreenOnboarding({ go, state, slide = 1 }) {
         <button className="ns-btn-primary"
           style={{ height: 56, width: isLast ? 'auto' : 56, padding: isLast ? '0 28px' : 0, borderRadius: 28 }}
           onClick={next}>
-          {isLast ? 'ЭХЛЭХ' : <Icon name="arrow-right" size={22} stroke="#1B0210" strokeWidth={2}/>}
+          {isLast ? tr('btn.start', language) : <Icon name="arrow-right" size={22} stroke="#1B0210" strokeWidth={2}/>}
         </button>
       </div>
     </div>
@@ -198,18 +188,18 @@ function ScreenOnboarding({ go, state, slide = 1 }) {
 // 03 — PERMISSION: LOCATION
 // 04 — PERMISSION: NOTIFICATION
 // ────────────────────────────────────────────────────────────
-function ScreenPermission({ go, state, kind }) {
+function ScreenPermission({ go, state, kind, language }) {
   const isLoc = kind === 'location';
   const next = isLoc ? 'perm-notification' : 'auth-landing';
   const meta = isLoc
     ? { idx: 5, label: 'Permission · Location',
         icon: 'pin',
-        title: 'Байршил хуваалцана уу?',
-        body: 'Ойрхон бар, lounge-уудыг газрын зураг дээр харуулахын тулд бид таны байршлыг ашиглана. Хэзээ ч өөрчилж болно.' }
+        titleKey: 'perm.loc.title',
+        bodyKey: 'perm.loc.body' }
     : { idx: 6, label: 'Permission · Notification',
         icon: 'bell',
-        title: 'Мэдэгдэл хүлээж авах уу?',
-        body: 'Шинэ контент, лайк, дагагч, эвентийн мэдээллийг танд хүргэе. Чимээгүй цаг тохируулж болно.' };
+        titleKey: 'perm.notif.title',
+        bodyKey: 'perm.notif.body' };
 
   return (
     <div className="ns-screen">
@@ -234,7 +224,6 @@ function ScreenPermission({ go, state, kind }) {
           filter: 'drop-shadow(0 0 20px rgba(255,77,141,0.6))',
           position: 'relative',
         }}>
-          {/* concentric rings */}
           <div style={{ position: 'absolute', inset: 0, borderRadius: '50%',
             border: '1px solid rgba(255,77,141,0.2)' }}/>
           <div style={{ position: 'absolute', inset: 18, borderRadius: '50%',
@@ -247,24 +236,140 @@ function ScreenPermission({ go, state, kind }) {
             margin: 0, fontFamily: 'var(--ff-display)', fontSize: 28,
             fontWeight: 500, letterSpacing: '-0.01em', lineHeight: 1.1,
             textWrap: 'balance',
-          }}>{meta.title}</h1>
+          }}>{tr(meta.titleKey, language)}</h1>
           <p style={{
             margin: '16px 0 0', fontSize: 14, lineHeight: 1.55,
             color: 'var(--text-secondary)',
-          }}>{meta.body}</p>
+          }}>{tr(meta.bodyKey, language)}</p>
         </div>
       </div>
 
       <div style={{ padding: '0 28px 56px', display: 'flex', flexDirection: 'column', gap: 12 }}>
         <button className="ns-btn-primary" style={{ width: '100%' }} onClick={() => go(next)}>
-          Зөвшөөрөх
+          {tr('btn.allow', language)}
         </button>
         <button className="ns-btn-ghost" style={{ height: 44, alignSelf: 'center' }} onClick={() => go(next)}>
-          Дараа нь
+          {tr('btn.later', language)}
         </button>
       </div>
     </div>
   );
 }
 
-Object.assign(window, { ScreenSplash, ScreenOnboarding, ScreenPermission });
+// ────────────────────────────────────────────────────────────
+// 01b — LANGUAGE SELECT
+// ────────────────────────────────────────────────────────────
+function ScreenLangSelect({ go, state, language }) {
+  const [selected, setSelected] = React.useState(language || 'en');
+
+  // Keep in sync if tweaks panel language changes while on this screen
+  React.useEffect(() => { setSelected(language || 'en'); }, [language]);
+
+  const proceed = () => {
+    if (typeof window.__setLanguage === 'function') window.__setLanguage(selected);
+    go('onboarding-1');
+  };
+
+  const opts = [
+    { value: 'en', label: 'English' },
+    { value: 'mn', label: 'Монгол' },
+  ];
+
+  return (
+    <div className="ns-screen">
+      <div className="ns-aurora" style={{ top: -100, right: -100, opacity: 0.55,
+        background: 'radial-gradient(circle, rgba(255,77,141,0.32), transparent 70%)' }}/>
+      <div className="ns-aurora" style={{ bottom: -120, left: -80, opacity: 0.4 }}/>
+
+      <PhoneStatus/>
+
+      {/* header */}
+      <div style={{
+        display: 'flex', justifyContent: 'space-between',
+        padding: '8px 28px 0', alignItems: 'center', zIndex: 2,
+      }}>
+        <ScreenMeta index={2} total={24} label="Language"/>
+        <button className="ns-btn-ghost" onClick={() => go('auth-landing')}
+          style={{ color: 'rgba(255,255,255,0.7)' }}>
+          {tr('btn.skip', selected)}
+        </button>
+      </div>
+
+      {/* option list */}
+      <div style={{
+        flex: 1, display: 'flex', flexDirection: 'column',
+        alignItems: 'center', justifyContent: 'center',
+        padding: '0 40px', gap: 16, position: 'relative', zIndex: 2,
+      }}>
+        {opts.map(opt => {
+          const on = selected === opt.value;
+          return (
+            <button
+              key={opt.value}
+              onClick={() => setSelected(opt.value)}
+              style={{
+                width: '100%', height: 62, borderRadius: 31,
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                padding: '0 22px',
+                background: on ? 'var(--accent-grad)' : 'rgba(255,255,255,0.04)',
+                border: on ? 'none' : '1.5px solid rgba(255,255,255,0.18)',
+                color: on ? '#1B0210' : 'var(--text-primary)',
+                cursor: 'pointer',
+                boxShadow: on ? '0 8px 28px rgba(255,77,141,0.38)' : 'none',
+                transition: 'all .2s ease',
+                fontFamily: 'var(--ff-body)', fontSize: 18, fontWeight: 700,
+                letterSpacing: '0.01em',
+              }}>
+              <span>{opt.label}</span>
+              <span style={{
+                width: 28, height: 28, borderRadius: '50%', flexShrink: 0,
+                background: on ? 'rgba(27,2,16,0.22)' : 'transparent',
+                border: on ? 'none' : '1.5px solid rgba(255,255,255,0.3)',
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                transition: 'all .2s ease',
+              }}>
+                {on && <Icon name="check" size={16} stroke="#1B0210" strokeWidth={2.8}/>}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* bottom: dots + arrow */}
+      <div style={{
+        padding: '0 32px 56px',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        position: 'relative', zIndex: 2,
+      }}>
+        {/* page dots (3 = upcoming onboarding slides) */}
+        <div style={{ display: 'flex', gap: 8 }}>
+          {[0, 1, 2].map(i => (
+            <div key={i} style={{
+              width: 8, height: 8, borderRadius: 4,
+              background: 'rgba(255,255,255,0.15)',
+            }}/>
+          ))}
+        </div>
+
+        {/* continue text button (centered) */}
+        <button
+          className="ns-btn-primary"
+          style={{ height: 50, padding: '0 32px', borderRadius: 25, fontSize: 13,
+            letterSpacing: '0.08em', textTransform: 'uppercase', fontWeight: 700 }}
+          onClick={proceed}>
+          {tr('ui.continue', selected)}
+        </button>
+
+        {/* arrow circle button */}
+        <button
+          className="ns-btn-primary"
+          style={{ width: 56, height: 56, borderRadius: 28, padding: 0 }}
+          onClick={proceed}>
+          <Icon name="arrow-right" size={22} stroke="#1B0210" strokeWidth={2}/>
+        </button>
+      </div>
+    </div>
+  );
+}
+
+Object.assign(window, { ScreenSplash, ScreenOnboarding, ScreenPermission, ScreenLangSelect });

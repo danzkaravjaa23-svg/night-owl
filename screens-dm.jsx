@@ -1,43 +1,42 @@
 /* screens-dm.jsx
    20 DM List  ·  21 DM Thread
-   Chat section: list of conversations + active thread view.
 */
 
 const DM_THREADS = [
   { id: 't1', name: 'Bayarmaa DJ',   user: '@bayar.dj',     initial: 'Б',
     last: 'Маргааш Mass-д ирэх үү?', time: '21:42', unread: 2, online: true, ring: true },
   { id: 't2', name: 'Sugar Lounge',  user: '@sugar.lounge', initial: 'S',
-    last: 'Эвентэд урьж байна 🥂',     time: '20:15', unread: 1, venue: true },
+    last: 'Эвентэд урьж байна 🥂',   time: '20:15', unread: 1, venue: true },
   { id: 't3', name: 'Nara U',         user: '@nara.ulaan',    initial: 'Н',
-    last: 'Тэр зурагнаас илгээгээч',  time: '18:04', unread: 0 },
+    last: 'Тэр зурагнаас илгээгээч', time: '18:04', unread: 0 },
   { id: 't4', name: 'Solongo',        user: '@solongo',       initial: 'С',
-    last: 'Жажингаас уулзъя.',         time: 'Өчигдөр', unread: 0 },
+    last: 'Жажингаас уулзъя.',        time: 'Өчигдөр', unread: 0 },
   { id: 't5', name: 'Odgerel',        user: '@odgerel',       initial: 'О',
-    last: 'Хүлээнэ, амжаарай',         time: 'Лха',     unread: 0 },
+    last: 'Хүлээнэ, амжаарай',        time: 'Лха',     unread: 0 },
   { id: 't6', name: 'Erden DJ',       user: '@erden_dj',      initial: 'Э',
-    last: 'Set 9-д эхэлнэ',              time: 'Мяг',     unread: 0 },
+    last: 'Set 9-д эхэлнэ',           time: 'Мяг',     unread: 0 },
   { id: 't7', name: 'Mass Club',      user: '@mass_club',     initial: 'M',
-    last: 'Шинэ резидент DJ зарлав',    time: '5/22',    unread: 0, venue: true },
+    last: 'Шинэ резидент DJ зарлав',  time: '5/22',    unread: 0, venue: true },
 ];
 
 const ACTIVE_THREAD = [
   { from: 'them', t: 'Энэ долоо хоног хаана аялах вэ?',  time: '21:12' },
-  { from: 'me',   t: 'Бямбад Mass руу очих гэсэн',           time: '21:14' },
+  { from: 'me',   t: 'Бямбад Mass руу очих гэсэн',        time: '21:14' },
   { from: 'them', t: 'Mass гэнэ үү? Шинэ set байгаа гэсэн', time: '21:16' },
-  { from: 'them', t: 'Vinyl байх',                                  time: '21:16' },
-  { from: 'me',   t: 'Аан. Хэдэн цагаас?',                          time: '21:38' },
-  { from: 'them', t: 'Маргааш Mass-д ирэх үү?',                  time: '21:42' },
+  { from: 'them', t: 'Vinyl байх',                          time: '21:16' },
+  { from: 'me',   t: 'Аан. Хэдэн цагаас?',                 time: '21:38' },
+  { from: 'them', t: 'Маргааш Mass-д ирэх үү?',            time: '21:42' },
 ];
 
 // ────────────────────────────────────────────────────────────
 // 20 — DM LIST
 // ────────────────────────────────────────────────────────────
-function ScreenDMList({ go, state }) {
+function ScreenDMList({ go, state, language }) {
   if (state === 'loading') {
     return (
       <div className="ns-screen">
         <PhoneStatus/>
-        <DMListHeader go={go}/>
+        <DMListHeader go={go} language={language}/>
         <div className="ns-screen-scroll" style={{ padding: '8px 20px' }}>
           {[1,2,3,4,5].map(i => (
             <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 0' }}>
@@ -57,12 +56,17 @@ function ScreenDMList({ go, state }) {
     return (
       <div className="ns-screen">
         <PhoneStatus/>
-        <DMListHeader go={go}/>
+        <DMListHeader go={go} language={language}/>
         <EmptyState
           icon="send"
-          title="Чат алга"
-          body="Найзаасаа эсвэл дуртай газраасаа мессеж хүлээж аваарай."
-          action={<button className="ns-btn-primary" onClick={() => go('feed')}><Icon name="plus" size={16} stroke="#1B0210" strokeWidth={2.2}/> Шинэ чат</button>}
+          title={tr('dm.empty.title', language)}
+          body={tr('dm.empty.body', language)}
+          action={
+            <button className="ns-btn-primary" onClick={() => go('feed')}>
+              <Icon name="plus" size={16} stroke="#1B0210" strokeWidth={2.2}/>
+              {tr('btn.newChat', language)}
+            </button>
+          }
         />
       </div>
     );
@@ -71,7 +75,7 @@ function ScreenDMList({ go, state }) {
     return (
       <div className="ns-screen">
         <PhoneStatus/>
-        <DMListHeader go={go}/>
+        <DMListHeader go={go} language={language}/>
         <ErrorState onRetry={() => go('dm-list')}/>
       </div>
     );
@@ -80,9 +84,8 @@ function ScreenDMList({ go, state }) {
   return (
     <div className="ns-screen">
       <PhoneStatus/>
-      <DMListHeader go={go}/>
+      <DMListHeader go={go} language={language}/>
 
-      {/* search */}
       <div style={{ flexShrink: 0, padding: '4px 20px 12px' }}>
         <div style={{
           display: 'flex', alignItems: 'center', gap: 10,
@@ -91,16 +94,15 @@ function ScreenDMList({ go, state }) {
           border: '1px solid var(--hairline)',
         }}>
           <Icon name="search" size={16} stroke="var(--text-secondary)"/>
-          <input placeholder="Чат хайх" style={{
+          <input placeholder={tr('ph.searchChat', language)} style={{
             flex: 1, background: 'transparent', border: 0, outline: 0,
             color: 'var(--text-primary)', fontSize: 14,
           }}/>
         </div>
       </div>
 
-      {/* active-now strip */}
       <div style={{ flexShrink: 0, padding: '0 16px 14px' }}>
-        <div className="ns-mono" style={{ padding: '0 4px 8px' }}>ИДЭВХТЭЙ</div>
+        <div className="ns-mono" style={{ padding: '0 4px 8px' }}>{tr('lbl.active', language)}</div>
         <div style={{ display: 'flex', gap: 14, overflowX: 'auto', padding: '0 4px', scrollbarWidth: 'none' }}>
           {DM_THREADS.slice(0, 5).map(t => (
             <div key={t.id} onClick={() => go('dm-thread')} style={{
@@ -127,9 +129,8 @@ function ScreenDMList({ go, state }) {
         </div>
       </div>
 
-      {/* threads */}
       <div className="ns-screen-scroll" style={{ paddingBottom: 12 }}>
-        <div className="ns-mono" style={{ padding: '0 24px 6px' }}>МЕССЕЖ</div>
+        <div className="ns-mono" style={{ padding: '0 24px 6px' }}>{tr('lbl.messages', language)}</div>
         {DM_THREADS.map(t => (
           <button key={t.id} onClick={() => go('dm-thread')} style={{
             width: '100%', textAlign: 'left',
@@ -193,7 +194,7 @@ function ScreenDMList({ go, state }) {
   );
 }
 
-function DMListHeader({ go }) {
+function DMListHeader({ go, language }) {
   return (
     <div style={{
       flexShrink: 0,
@@ -205,7 +206,7 @@ function DMListHeader({ go }) {
       </button>
       <div>
         <div style={{ fontFamily: 'var(--ff-display)', fontSize: 18, fontWeight: 500, textAlign: 'center' }}>
-          Чат
+          {tr('lbl.chat', language)}
         </div>
         <div className="ns-mono" style={{ textAlign: 'center', marginTop: 2 }}>@munkh_ub</div>
       </div>
@@ -219,15 +220,15 @@ function DMListHeader({ go }) {
 // ────────────────────────────────────────────────────────────
 // 21 — DM THREAD
 // ────────────────────────────────────────────────────────────
-function ScreenDMThread({ go, state }) {
+function ScreenDMThread({ go, state, language }) {
   const partner = DM_THREADS[0];
 
   if (state === 'loading') {
     return (
       <div className="ns-screen">
         <PhoneStatus/>
-        <DMThreadHeader go={go} partner={partner}/>
-        <LoadingState label="Мессеж ачаалж байна..."/>
+        <DMThreadHeader go={go} partner={partner} language={language}/>
+        <LoadingState label={tr('lbl.loading.dm', language)}/>
       </div>
     );
   }
@@ -235,12 +236,13 @@ function ScreenDMThread({ go, state }) {
     return (
       <div className="ns-screen">
         <PhoneStatus/>
-        <DMThreadHeader go={go} partner={partner}/>
+        <DMThreadHeader go={go} partner={partner} language={language}/>
         <EmptyState
           icon="send"
-          title="Чат шинээр эхлүүлэх"
-          body="Эхний мессежээ илгээж яриаг эхлүүлээрэй."/>
-        <DMInput/>
+          title={tr('dm.thread.empty.title', language)}
+          body={tr('dm.thread.empty.body', language)}
+        />
+        <DMInput language={language}/>
       </div>
     );
   }
@@ -248,22 +250,21 @@ function ScreenDMThread({ go, state }) {
     return (
       <div className="ns-screen">
         <PhoneStatus/>
-        <DMThreadHeader go={go} partner={partner}/>
+        <DMThreadHeader go={go} partner={partner} language={language}/>
         <ErrorState onRetry={() => go('dm-thread')}/>
       </div>
     );
   }
 
-  // group by who-sent so we can show avatar only on first of group
   return (
     <div className="ns-screen">
       <PhoneStatus/>
-      <DMThreadHeader go={go} partner={partner}/>
+      <DMThreadHeader go={go} partner={partner} language={language}/>
 
       <div className="ns-screen-scroll" style={{ padding: '4px 16px 12px',
             display: 'flex', flexDirection: 'column', gap: 4 }}>
         <div style={{ textAlign: 'center', padding: '14px 0' }}>
-          <span className="ns-mono">ӨНӨӨ · 21:00</span>
+          <span className="ns-mono">{tr('lbl.today', language)} · 21:00</span>
         </div>
 
         {ACTIVE_THREAD.map((m, i, arr) => {
@@ -323,12 +324,12 @@ function ScreenDMThread({ go, state }) {
         `}</style>
       </div>
 
-      <DMInput/>
+      <DMInput language={language}/>
     </div>
   );
 }
 
-function DMThreadHeader({ go, partner }) {
+function DMThreadHeader({ go, partner, language }) {
   return (
     <div style={{
       flexShrink: 0,
@@ -345,7 +346,7 @@ function DMThreadHeader({ go, partner }) {
         <div style={{ fontSize: 11, color: 'var(--success)', display: 'flex', alignItems: 'center', gap: 4 }}>
           <span style={{ width: 6, height: 6, borderRadius: 3, background: 'currentColor',
             boxShadow: '0 0 6px currentColor' }}/>
-          онлайн
+          {tr('lbl.online', language)}
         </div>
       </div>
       <button style={iconBtn}><Icon name="phone" size={20}/></button>
@@ -354,7 +355,7 @@ function DMThreadHeader({ go, partner }) {
   );
 }
 
-function DMInput() {
+function DMInput({ language }) {
   return (
     <div style={{
       flexShrink: 0,
@@ -371,7 +372,7 @@ function DMInput() {
         padding: '6px 6px 6px 16px', borderRadius: 9999,
         background: 'var(--bg-surface)', border: '1px solid var(--hairline)',
       }}>
-        <input placeholder="Мессеж бичих..." style={{
+        <input placeholder={tr('ph.writeMessage', language)} style={{
           flex: 1, background: 'transparent', border: 0, outline: 0,
           color: 'var(--text-primary)', fontSize: 14, height: 32,
         }}/>

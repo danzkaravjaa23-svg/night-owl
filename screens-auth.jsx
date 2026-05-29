@@ -5,10 +5,9 @@
 // ────────────────────────────────────────────────────────────
 // 05 — AUTH LANDING
 // ────────────────────────────────────────────────────────────
-function ScreenAuthLanding({ go, state }) {
+function ScreenAuthLanding({ go, state, language }) {
   return (
     <div className="ns-screen">
-      {/* blurred bokeh background */}
       <div style={{
         position: 'absolute', inset: 0,
         background: `
@@ -37,20 +36,23 @@ function ScreenAuthLanding({ go, state }) {
               margin: 0, fontFamily: 'var(--ff-display)', fontSize: 36,
               fontWeight: 800, letterSpacing: '-0.02em', lineHeight: 1,
             }}>
-              Шөнө<span className="ns-grad-text" style={{ fontWeight: 800 }}> эхэлж</span> байна
+              {language === 'mn'
+                ? <>Шөнө<span className="ns-grad-text" style={{ fontWeight: 800 }}> эхэлж</span> байна</>
+                : <>The<span className="ns-grad-text" style={{ fontWeight: 800 }}> Night</span> Begins</>
+              }
             </h1>
             <p style={{ margin: '12px 0 0', fontSize: 14, color: 'var(--text-secondary)' }}>
-              УБ-ын бар, lounge-уудын нийгэм
+              {tr('auth.sub', language)}
             </p>
           </div>
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12, paddingBottom: 56 }}>
           <button className="ns-btn-primary" style={{ width: '100%' }} onClick={() => go('login')}>
-            Нэвтрэх
+            {tr('auth.signIn', language)}
           </button>
           <button className="ns-btn-secondary" style={{ width: '100%' }} onClick={() => go('register')}>
-            Бүртгүүлэх
+            {tr('auth.register', language)}
           </button>
 
           <div style={{
@@ -58,7 +60,7 @@ function ScreenAuthLanding({ go, state }) {
             color: 'var(--text-tertiary)', fontSize: 11, letterSpacing: '0.14em',
           }}>
             <span style={{ flex: 1, height: 1, background: 'var(--hairline)' }}/>
-            ЭСВЭЛ
+            {tr('auth.or', language)}
             <span style={{ flex: 1, height: 1, background: 'var(--hairline)' }}/>
           </div>
 
@@ -68,7 +70,7 @@ function ScreenAuthLanding({ go, state }) {
               display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
               fontFamily: 'serif', fontWeight: 700, fontSize: 13,
             }}>G</span>
-            Google-ээр үргэлжлүүлэх
+            {tr('auth.withGoogle', language)}
           </button>
         </div>
       </div>
@@ -79,7 +81,7 @@ function ScreenAuthLanding({ go, state }) {
 // ────────────────────────────────────────────────────────────
 // 06 — LOGIN
 // ────────────────────────────────────────────────────────────
-function ScreenLogin({ go, state }) {
+function ScreenLogin({ go, state, language }) {
   const [showPw, setShowPw] = React.useState(false);
   const isError = state === 'error';
 
@@ -97,24 +99,28 @@ function ScreenLogin({ go, state }) {
       </div>
 
       <div style={{ padding: '32px 28px 0' }}>
-        <PageTitle>Нэвтрэх</PageTitle>
+        <PageTitle>{tr('auth.signIn', language)}</PageTitle>
         <p style={{ margin: '8px 0 0', fontSize: 14, color: 'var(--text-secondary)' }}>
-          Шөнийн ертөнцөдөө буцаж тавтай морил
+          {tr('login.welcome', language)}
         </p>
       </div>
 
       {state === 'loading' ? (
-        <LoadingState label="Нэвтэрч байна..."/>
+        <LoadingState label={tr('login.loading', language)}/>
       ) : (
         <div style={{ padding: '36px 28px 0', display: 'flex', flexDirection: 'column', gap: 14 }}>
           <div>
-            <label className="ns-mono" style={{ marginBottom: 8, display: 'block' }}>И-мэйл</label>
+            <label className="ns-mono" style={{ marginBottom: 8, display: 'block' }}>
+              {tr('auth.email', language)}
+            </label>
             <input className="ns-input" type="email" placeholder="you@example.com"
               defaultValue={isError ? 'bayar@nightowl.mn' : ''}
               style={isError ? { borderColor: 'var(--error)' } : {}}/>
           </div>
           <div>
-            <label className="ns-mono" style={{ marginBottom: 8, display: 'block' }}>Нууц үг</label>
+            <label className="ns-mono" style={{ marginBottom: 8, display: 'block' }}>
+              {tr('auth.password', language)}
+            </label>
             <div style={{ position: 'relative' }}>
               <input className="ns-input" type={showPw ? 'text' : 'password'}
                 placeholder="••••••••" defaultValue={isError ? '••••••' : ''}
@@ -131,15 +137,15 @@ function ScreenLogin({ go, state }) {
                 display: 'flex', alignItems: 'center', gap: 6,
               }}>
                 <Icon name="alert" size={14}/>
-                И-мэйл эсвэл нууц үг буруу байна
+                {tr('login.error', language)}
               </div>
             )}
           </div>
           <button className="ns-btn-ghost" style={{
             alignSelf: 'flex-end', height: 32, padding: 0,
             color: 'var(--accent-start)', fontSize: 13, fontWeight: 600,
-          }}>
-            Нууц үг мартсан?
+          }} onClick={() => go('forgot-password')}>
+            {tr('login.forgot', language)}
           </button>
         </div>
       )}
@@ -148,14 +154,14 @@ function ScreenLogin({ go, state }) {
 
       <div style={{ padding: '0 28px 28px', display: 'flex', flexDirection: 'column', gap: 14 }}>
         <button className="ns-btn-primary" style={{ width: '100%' }} onClick={() => go('feed')}>
-          Нэвтрэх
+          {tr('auth.signIn', language)}
         </button>
         <div style={{
           display: 'flex', alignItems: 'center', gap: 10,
           color: 'var(--text-tertiary)', fontSize: 11, letterSpacing: '0.14em',
         }}>
           <span style={{ flex: 1, height: 1, background: 'var(--hairline)' }}/>
-          ЭСВЭЛ
+          {tr('auth.or', language)}
           <span style={{ flex: 1, height: 1, background: 'var(--hairline)' }}/>
         </div>
         <button className="ns-btn-secondary" style={{ width: '100%' }} onClick={() => go('feed')}>
@@ -164,13 +170,13 @@ function ScreenLogin({ go, state }) {
             display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
             fontFamily: 'serif', fontWeight: 700, fontSize: 13,
           }}>G</span>
-          Google-ээр нэвтрэх
+          {tr('login.withGoogle', language)}
         </button>
         <div style={{ textAlign: 'center', fontSize: 13, color: 'var(--text-secondary)', marginTop: 4 }}>
-          Бүртгэл байхгүй юу?{' '}
+          {tr('login.noAccount', language)}{' '}
           <span onClick={() => go('register')} style={{
             color: 'var(--accent-start)', fontWeight: 700, cursor: 'pointer',
-          }}>Бүртгүүлэх</span>
+          }}>{tr('auth.register', language)}</span>
         </div>
       </div>
     </div>
@@ -180,7 +186,7 @@ function ScreenLogin({ go, state }) {
 // ────────────────────────────────────────────────────────────
 // 07 — REGISTER
 // ────────────────────────────────────────────────────────────
-function ScreenRegister({ go, state }) {
+function ScreenRegister({ go, state, language }) {
   const [checked, setChecked] = React.useState(false);
   return (
     <div className="ns-screen">
@@ -197,22 +203,24 @@ function ScreenRegister({ go, state }) {
       </div>
 
       <div style={{ padding: '24px 28px 0' }}>
-        <PageTitle>Бүртгүүлэх</PageTitle>
+        <PageTitle>{tr('auth.register', language)}</PageTitle>
         <p style={{ margin: '8px 0 0', fontSize: 13, color: 'var(--text-secondary)' }}>
-          Шинэ хаяг үүсгээд клубт ор
+          {tr('reg.sub', language)}
         </p>
       </div>
 
       <div className="ns-screen-scroll" style={{ padding: '24px 28px 24px' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           {[
-            { label: 'Нэр', placeholder: 'Болд', type: 'text' },
-            { label: 'И-мэйл', placeholder: 'bold@nightowl.mn', type: 'email' },
-            { label: 'Нууц үг', placeholder: '••••••••', type: 'password' },
-            { label: 'Нууц үг давтах', placeholder: '••••••••', type: 'password' },
+            { labelKey: 'reg.name',             placeholder: language === 'mn' ? 'Болд' : 'Alex',      type: 'text' },
+            { labelKey: 'auth.email',            placeholder: 'bold@nightowl.mn',                       type: 'email' },
+            { labelKey: 'auth.password',         placeholder: '••••••••',                               type: 'password' },
+            { labelKey: 'auth.confirmPassword',  placeholder: '••••••••',                               type: 'password' },
           ].map(f => (
-            <div key={f.label}>
-              <label className="ns-mono" style={{ marginBottom: 6, display: 'block' }}>{f.label}</label>
+            <div key={f.labelKey}>
+              <label className="ns-mono" style={{ marginBottom: 6, display: 'block' }}>
+                {tr(f.labelKey, language)}
+              </label>
               <input className="ns-input" type={f.type} placeholder={f.placeholder}/>
             </div>
           ))}
@@ -233,10 +241,21 @@ function ScreenRegister({ go, state }) {
               {checked && <Icon name="check" size={14} stroke="#1B0210" strokeWidth={2.5}/>}
             </span>
             <span style={{ lineHeight: 1.45 }}>
-              <span style={{ color: 'var(--accent-start)', fontWeight: 600 }}>Үйлчилгээний нөхцөл</span>
-              {' ба '}
-              <span style={{ color: 'var(--accent-start)', fontWeight: 600 }}>нууцлалын бодлого</span>
-              -г уншиж зөвшөөрсөн
+              {language === 'mn' ? (
+                <>
+                  <span style={{ color: 'var(--accent-start)', fontWeight: 600 }}>{tr('auth.tos', language)}</span>
+                  {' ба '}
+                  <span style={{ color: 'var(--accent-start)', fontWeight: 600 }}>{tr('auth.privacy', language)}</span>
+                  {tr('reg.tosAgree', language)}
+                </>
+              ) : (
+                <>
+                  {tr('reg.tosAgree', language)}{' '}
+                  <span style={{ color: 'var(--accent-start)', fontWeight: 600 }}>{tr('auth.tos', language)}</span>
+                  {' '}{tr('reg.and', language)}{' '}
+                  <span style={{ color: 'var(--accent-start)', fontWeight: 600 }}>{tr('auth.privacy', language)}</span>
+                </>
+              )}
             </span>
           </label>
         </div>
@@ -244,7 +263,7 @@ function ScreenRegister({ go, state }) {
 
       <div style={{ padding: '0 28px 28px', display: 'flex', flexDirection: 'column', gap: 10 }}>
         <button className="ns-btn-primary" style={{ width: '100%' }} onClick={() => go('setup')}>
-          Бүртгүүлэх
+          {tr('auth.register', language)}
         </button>
         <button className="ns-btn-secondary" style={{ width: '100%' }} onClick={() => go('setup')}>
           <span style={{
@@ -252,13 +271,13 @@ function ScreenRegister({ go, state }) {
             display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
             fontFamily: 'serif', fontWeight: 700, fontSize: 13,
           }}>G</span>
-          Google-ээр бүртгүүлэх
+          {tr('reg.withGoogle', language)}
         </button>
         <div style={{ textAlign: 'center', fontSize: 13, color: 'var(--text-secondary)' }}>
-          Бүртгэлтэй юу?{' '}
+          {tr('reg.hasAccount', language)}{' '}
           <span onClick={() => go('login')} style={{
             color: 'var(--accent-start)', fontWeight: 700, cursor: 'pointer',
-          }}>Нэвтрэх</span>
+          }}>{tr('auth.signIn', language)}</span>
         </div>
       </div>
     </div>
@@ -268,11 +287,18 @@ function ScreenRegister({ go, state }) {
 // ────────────────────────────────────────────────────────────
 // 08 — PROFILE SETUP
 // ────────────────────────────────────────────────────────────
-function ScreenSetup({ go, state }) {
+function ScreenSetup({ go, state, language, profile }) {
   const interests = ['Bar', 'Lounge', 'Live music', 'DJ', 'Cocktail', 'Karaoke', 'Pub', 'Hookah'];
-  const [picked, setPicked] = React.useState(['Bar', 'Live music', 'Cocktail']);
+  const [picked,   setPicked]   = React.useState(profile?.interests || ['Bar', 'Live music', 'Cocktail']);
+  const [username, setUsername] = React.useState(profile?.username  ? `@${profile.username}` : '@bold_ub');
+  const [bio,      setBio]      = React.useState(profile?.bio       || '');
 
   const toggle = (x) => setPicked(p => p.includes(x) ? p.filter(y => y !== x) : [...p, x]);
+
+  // Derive display name: "@sugar_247" → "Sugar 247"
+  const toDisplayName = (raw) =>
+    raw.replace(/^@/, '').replace(/[_.-]/g, ' ')
+       .split(' ').map(w => w ? w[0].toUpperCase() + w.slice(1) : '').join(' ').trim() || raw;
 
   return (
     <div className="ns-screen">
@@ -288,12 +314,16 @@ function ScreenSetup({ go, state }) {
       </div>
 
       <div className="ns-screen-scroll" style={{ padding: '24px 28px 24px' }}>
-        <PageTitle>Өөрийгөө<br/><span className="ns-grad-text" style={{ fontStyle: 'italic' }}>танилцуул</span></PageTitle>
+        <PageTitle>
+          {tr('setup.titleLine1', language)}<br/>
+          <span className="ns-grad-text" style={{ fontStyle: 'italic' }}>
+            {tr('setup.titleLine2', language)}
+          </span>
+        </PageTitle>
         <p style={{ margin: '8px 0 0', fontSize: 14, color: 'var(--text-secondary)' }}>
-          Зураг, нэр, сонирхлоо нэм
+          {tr('setup.sub', language)}
         </p>
 
-        {/* avatar uploader */}
         <div style={{ display: 'flex', justifyContent: 'center', margin: '32px 0 28px' }}>
           <div style={{ position: 'relative' }}>
             <div className="ns-avatar has-ring" style={{ width: 110, height: 110 }}>
@@ -320,16 +350,29 @@ function ScreenSetup({ go, state }) {
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           <div>
-            <label className="ns-mono" style={{ marginBottom: 6, display: 'block' }}>Хэрэглэгчийн нэр</label>
-            <input className="ns-input" type="text" placeholder="@bold_ub"/>
+            <label className="ns-mono" style={{ marginBottom: 6, display: 'block' }}>
+              {tr('auth.username', language)}
+            </label>
+            <input className="ns-input" type="text" placeholder="@bold_ub"
+              value={username}
+              onChange={e => {
+                let v = e.target.value;
+                if (v && !v.startsWith('@')) v = '@' + v;
+                setUsername(v);
+              }}/>
           </div>
           <div>
-            <label className="ns-mono" style={{ marginBottom: 6, display: 'block' }}>Танилцуулга</label>
-            <textarea className="ns-input" rows={3} placeholder="Шөнийн соёлд дуртай. Live music, jazz, vinyl."
+            <label className="ns-mono" style={{ marginBottom: 6, display: 'block' }}>
+              {tr('setup.bio', language)}
+            </label>
+            <textarea className="ns-input" rows={3} placeholder={tr('setup.bioPh', language)}
+              value={bio} onChange={e => setBio(e.target.value)}
               style={{ height: 'auto', paddingTop: 14, paddingBottom: 14, resize: 'none' }}/>
           </div>
           <div>
-            <label className="ns-mono" style={{ marginBottom: 10, display: 'block' }}>Сонирхол</label>
+            <label className="ns-mono" style={{ marginBottom: 10, display: 'block' }}>
+              {tr('setup.interests', language)}
+            </label>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
               {interests.map(i => (
                 <span key={i} className={`ns-chip ${picked.includes(i) ? 'is-on' : ''}`}
@@ -343,12 +386,273 @@ function ScreenSetup({ go, state }) {
       </div>
 
       <div style={{ padding: '0 28px 28px' }}>
-        <button className="ns-btn-primary" style={{ width: '100%' }} onClick={() => go('feed')}>
-          Үргэлжлүүлэх
+        <button className="ns-btn-primary" style={{ width: '100%' }} onClick={() => {
+          const uname = username.replace(/^@/, '') || 'user';
+          window.__setProfile?.({
+            profileDisplayName: toDisplayName(username),
+            profileUsername:    uname,
+            profileBio:         bio,
+            profileInterests:   picked,
+          });
+          window.__showNotification?.(tr('auth.agreed', language), 'check');
+          setTimeout(() => go('feed'), 500);
+        }}>
+          {tr('btn.continue', language)}
         </button>
       </div>
     </div>
   );
 }
 
-Object.assign(window, { ScreenAuthLanding, ScreenLogin, ScreenRegister, ScreenSetup });
+// ────────────────────────────────────────────────────────────
+// 09 — CHANGE PASSWORD
+// ────────────────────────────────────────────────────────────
+function ScreenChangePassword({ go, state, language }) {
+  const [showCur,  setShowCur]  = React.useState(false);
+  const [showNew,  setShowNew]  = React.useState(false);
+  const [showConf, setShowConf] = React.useState(false);
+  const [saved, setSaved] = React.useState(false);
+
+  const fields = [
+    { id: 'cur',  lKey: 'pw.current',  show: showCur,  toggle: () => setShowCur(v => !v) },
+    { id: 'new',  lKey: 'pw.new',      show: showNew,  toggle: () => setShowNew(v => !v) },
+    { id: 'conf', lKey: 'pw.confirm',  show: showConf, toggle: () => setShowConf(v => !v) },
+  ];
+
+  const save = () => {
+    setSaved(true);
+    window.__showNotification?.(language === 'mn' ? 'Нууц үг амжилттай солигдлоо' : 'Password changed successfully', 'check');
+    setTimeout(() => go('settings'), 600);
+  };
+
+  return (
+    <div className="ns-screen">
+      <div className="ns-aurora" style={{ top: -100, left: -100, opacity: 0.4,
+        background: 'radial-gradient(circle, rgba(123,47,247,0.25), transparent 70%)' }}/>
+      <PhoneStatus/>
+
+      {/* header */}
+      <div style={{
+        flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        padding: '6px 12px 12px',
+      }}>
+        <button style={iconBtn} onClick={() => go('settings')}>
+          <Icon name="arrow-left" size={22}/>
+        </button>
+        <div style={{ fontFamily: 'var(--ff-display)', fontSize: 18, fontWeight: 500 }}>
+          {tr('set.changePassword', language)}
+        </div>
+        <div style={{ width: 40 }}/>
+      </div>
+
+      <div style={{ padding: '12px 28px 0' }}>
+        <p style={{ margin: 0, fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+          {language === 'mn'
+            ? 'Аюулгүй байдлынхаа тулд хүчтэй нууц үг ашиглана уу.'
+            : 'Use a strong password to keep your account secure.'}
+        </p>
+      </div>
+
+      <div style={{ padding: '28px 28px 0', display: 'flex', flexDirection: 'column', gap: 16 }}>
+        {fields.map(f => (
+          <div key={f.id}>
+            <label className="ns-mono" style={{ marginBottom: 8, display: 'block' }}>
+              {tr(f.lKey, language)}
+            </label>
+            <div style={{ position: 'relative' }}>
+              <input className="ns-input"
+                type={f.show ? 'text' : 'password'}
+                placeholder="••••••••"
+                style={{ paddingRight: 48 }}/>
+              <button onClick={f.toggle} style={{
+                position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)',
+                background: 'transparent', border: 0,
+                color: 'var(--text-secondary)', cursor: 'pointer', padding: 6,
+              }}>
+                <Icon name="eye" size={18}/>
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div style={{ flex: 1 }}/>
+
+      <div style={{ padding: '0 28px 40px' }}>
+        <button className="ns-btn-primary" style={{ width: '100%' }} onClick={save}>
+          {language === 'mn' ? 'Хадгалах' : 'Save Changes'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ────────────────────────────────────────────────────────────
+// 10 — FORGOT PASSWORD
+// ────────────────────────────────────────────────────────────
+function ScreenForgotPassword({ go, state, language }) {
+  const [email, setEmail] = React.useState('');
+  const [sent,  setSent]  = React.useState(false);
+  const [loading, setLoading] = React.useState(false);
+  const [countdown, setCountdown] = React.useState(0);
+
+  const send = () => {
+    if (!email) return;
+    setLoading(true);
+    setTimeout(() => {
+      setLoading(false);
+      setSent(true);
+      setCountdown(30);
+    }, 1400);
+  };
+
+  // countdown timer after send
+  React.useEffect(() => {
+    if (countdown <= 0) return;
+    const id = setTimeout(() => setCountdown(c => c - 1), 1000);
+    return () => clearTimeout(id);
+  }, [countdown]);
+
+  const resend = () => {
+    if (countdown > 0) return;
+    setLoading(true);
+    setTimeout(() => { setLoading(false); setCountdown(30); }, 1200);
+  };
+
+  return (
+    <div className="ns-screen">
+      <div className="ns-aurora" style={{ top: -80, right: -80, opacity: 0.45,
+        background: 'radial-gradient(circle, rgba(123,47,247,0.3), transparent 70%)' }}/>
+      <PhoneStatus/>
+
+      {/* header */}
+      <div style={{ padding: '8px 28px 0', display: 'flex', justifyContent: 'space-between' }}>
+        <button onClick={() => go('login')} style={{
+          background: 'transparent', border: 0, color: 'var(--text-secondary)',
+          cursor: 'pointer', padding: 8, marginLeft: -8,
+        }}><Icon name="arrow-left" size={22}/></button>
+        <ScreenMeta index={8} total={24} label="Forgot PW"/>
+      </div>
+
+      {sent ? (
+        /* ── SUCCESS STATE ── */
+        <div style={{
+          flex: 1, display: 'flex', flexDirection: 'column',
+          alignItems: 'center', justifyContent: 'center',
+          padding: '0 32px', gap: 0, position: 'relative', zIndex: 2,
+        }}>
+          {/* envelope icon with glow rings */}
+          <div style={{ position: 'relative', marginBottom: 32 }}>
+            {[100, 76].map((sz, i) => (
+              <div key={i} style={{
+                position: 'absolute', width: sz, height: sz, borderRadius: '50%',
+                border: `1px solid rgba(123,47,247,${0.1 + i * 0.08})`,
+                top: '50%', left: '50%', transform: 'translate(-50%,-50%)',
+              }}/>
+            ))}
+            <div style={{
+              width: 72, height: 72, borderRadius: '50%',
+              background: 'radial-gradient(circle, rgba(123,47,247,0.25), rgba(255,77,141,0.12) 60%, transparent)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              filter: 'drop-shadow(0 0 20px rgba(123,47,247,0.5))',
+              position: 'relative',
+            }}>
+              <svg width="34" height="34" viewBox="0 0 24 24" fill="none"
+                   stroke="var(--accent-start)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="2" y="4" width="20" height="16" rx="2"/>
+                <path d="M2 7l10 7 10-7"/>
+              </svg>
+            </div>
+          </div>
+
+          <h1 style={{ margin: 0, fontFamily: 'var(--ff-display)', fontSize: 26,
+            fontWeight: 700, letterSpacing: '-0.01em', textAlign: 'center' }}>
+            {language === 'mn' ? 'И-мэйл илгээгдлээ!' : 'Email sent!'}
+          </h1>
+          <p style={{ margin: '14px 0 0', fontSize: 14, color: 'var(--text-secondary)',
+            textAlign: 'center', lineHeight: 1.6, maxWidth: 300 }}>
+            {language === 'mn'
+              ? <>
+                  <span style={{ color: 'var(--accent-start)', fontWeight: 600 }}>{email || 'bayar@nightowl.mn'}</span>
+                  {' руу нууц үг сэргээх холбоос явсан.'}
+                </>
+              : <>
+                  {'A reset link was sent to '}
+                  <span style={{ color: 'var(--accent-start)', fontWeight: 600 }}>{email || 'bayar@nightowl.mn'}</span>
+                </>
+            }
+          </p>
+          <p style={{ margin: '8px 0 0', fontSize: 13, color: 'var(--text-tertiary)',
+            textAlign: 'center', lineHeight: 1.5 }}>
+            {language === 'mn'
+              ? 'Спам хавтасаа ч шалгаарай.'
+              : 'Also check your spam folder.'}
+          </p>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12, width: '100%', marginTop: 36 }}>
+            <button className="ns-btn-primary" style={{ width: '100%' }}
+              onClick={() => go('login')}>
+              {language === 'mn' ? 'Нэвтрэх рүү буцах' : 'Back to Sign In'}
+            </button>
+            <button onClick={resend} disabled={countdown > 0} style={{
+              background: 'transparent', border: 0, cursor: countdown > 0 ? 'default' : 'pointer',
+              color: countdown > 0 ? 'var(--text-tertiary)' : 'var(--accent-start)',
+              fontSize: 13, fontWeight: 600, padding: '8px 0',
+            }}>
+              {countdown > 0
+                ? (language === 'mn' ? `Дахин илгээх (${countdown}с)` : `Resend in ${countdown}s`)
+                : (language === 'mn' ? 'Дахин илгээх'                 : 'Resend email')}
+            </button>
+          </div>
+        </div>
+      ) : (
+        /* ── INPUT STATE ── */
+        <>
+          <div style={{ padding: '32px 28px 0' }}>
+            <PageTitle>{language === 'mn' ? 'Нууц үг\nмартсан' : 'Forgot\nPassword'}</PageTitle>
+            <p style={{ margin: '12px 0 0', fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.55 }}>
+              {language === 'mn'
+                ? 'И-мэйл хаягаа оруулна уу. Нууц үг сэргээх холбоос илгээнэ.'
+                : "Enter your email and we'll send you a reset link."}
+            </p>
+          </div>
+
+          {loading ? (
+            <LoadingState label={language === 'mn' ? 'Илгээж байна...' : 'Sending...'}/>
+          ) : (
+            <div style={{ padding: '32px 28px 0' }}>
+              <label className="ns-mono" style={{ marginBottom: 8, display: 'block' }}>
+                {tr('auth.email', language)}
+              </label>
+              <input
+                className="ns-input"
+                type="email"
+                placeholder="you@example.com"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && send()}
+              />
+            </div>
+          )}
+
+          <div style={{ flex: 1 }}/>
+
+          <div style={{ padding: '0 28px 40px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <button className="ns-btn-primary" style={{ width: '100%' }}
+              onClick={send} disabled={!email || loading}>
+              {language === 'mn' ? 'Холбоос илгээх' : 'Send Reset Link'}
+            </button>
+            <button onClick={() => go('login')} style={{
+              background: 'transparent', border: 0, cursor: 'pointer',
+              color: 'var(--text-secondary)', fontSize: 13, fontWeight: 600, padding: '8px 0',
+            }}>
+              {language === 'mn' ? '← Нэвтрэх рүү буцах' : '← Back to Sign In'}
+            </button>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+Object.assign(window, { ScreenAuthLanding, ScreenLogin, ScreenRegister, ScreenSetup, ScreenChangePassword, ScreenForgotPassword });

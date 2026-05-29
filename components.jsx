@@ -1,5 +1,9 @@
 /* components.jsx — Шөнийн шувуухай shared atoms & molecules */
 
+// ─── Translation utility ───
+// Screens receive a 'language' prop and can call t(key, language) to get translated text
+// Example: <div>{t('auth.login', language)}</div>
+
 // ─── Owl mascot (swappable image slot) ───
 // User said: "later we'll swap the logo image". Render as an image-slot custom element
 // so they can drop in a real owl image. Default shows a minimal placeholder glyph.
@@ -272,7 +276,7 @@ function Stars({ value = 4.5, size = 14, showNumber = false }) {
   );
 }
 
-// ─── Status badge: "Нээлттэй" / "Хаалттай" ───
+// ─── Status badge: Open / Closed ───
 function StatusBadge({ open = true }) {
   return (
     <span style={{
@@ -288,19 +292,19 @@ function StatusBadge({ open = true }) {
         background: 'currentColor',
         boxShadow: open ? '0 0 8px currentColor' : 'none',
       }}/>
-      {open ? 'Нээлттэй' : 'Хаалттай'}
+      {open ? tr('status.open') : tr('status.closed')}
     </span>
   );
 }
 
 // ─── Bottom tab bar — renders nothing if hidden ───
-function BottomNav({ tab, onTab, onCenterPress }) {
+function BottomNav({ tab, onTab, onCenterPress, language }) {
   const items = [
-    { key: 'feed',  icon: 'feed',  label: 'Тэжээл' },
-    { key: 'map',   icon: 'map',   label: 'Газар' },
+    { key: 'feed',  icon: 'feed',  label: tr('tab.feed', language) },
+    { key: 'map',   icon: 'map',   label: tr('tab.map', language) },
     { key: 'post',  icon: 'plus',  label: '',       center: true },
-    { key: 'notif', icon: 'bell',  label: 'Мэдэгдэл' },
-    { key: 'me',    icon: 'user',  label: 'Профайл' },
+    { key: 'notif', icon: 'bell',  label: tr('tab.notif', language) },
+    { key: 'me',    icon: 'user',  label: tr('tab.me', language) },
   ];
   return (
     <div style={{
@@ -455,7 +459,8 @@ function EmptyState({ title, body, action, icon = 'sparkles' }) {
   );
 }
 
-function LoadingState({ label = 'Ачаалж байна...' }) {
+function LoadingState({ label }) {
+  if (!label) label = tr('state.loading');
   return (
     <div style={{
       flex: 1, display: 'flex', flexDirection: 'column',
@@ -467,7 +472,9 @@ function LoadingState({ label = 'Ачаалж байна...' }) {
   );
 }
 
-function ErrorState({ title = 'Алдаа гарлаа', body = 'Дахин оролдоно уу', onRetry }) {
+function ErrorState({ title, body, onRetry }) {
+  if (!title) title = tr('state.error');
+  if (!body)  body  = tr('state.errorBody');
   return (
     <div style={{
       flex: 1, display: 'flex', flexDirection: 'column',
@@ -489,7 +496,7 @@ function ErrorState({ title = 'Алдаа гарлаа', body = 'Дахин ор
       }}>{body}</p>
       {onRetry && (
         <button className="ns-btn-secondary" onClick={onRetry}>
-          <Icon name="refresh" size={16}/> Дахин оролдох
+          <Icon name="refresh" size={16}/> {tr('state.retry')}
         </button>
       )}
     </div>
@@ -536,8 +543,318 @@ if (typeof document !== 'undefined' && !document.getElementById('ns-extra-keyfra
       from { transform: translateY(12px); opacity: 0; }
       to   { transform: translateY(0); opacity: 1; }
     }
+    @keyframes ns-fade-in {
+      from { opacity: 0; }
+      to   { opacity: 1; }
+    }
   `;
   document.head.appendChild(s);
+}
+
+// ─── Block / Report bottom sheet ───
+function MoreActionsSheet({ show, onClose, username, language }) {
+  const [view,     setView]     = React.useState('main');
+  const [reason,   setReason]   = React.useState(null);
+  const [done,     setDone]     = React.useState(null);
+
+  // Reset when closed
+  React.useEffect(() => {
+    if (!show) { setTimeout(() => { setView('main'); setReason(null); setDone(null); }, 300); }
+  }, [show]);
+
+  if (!show) return null;
+
+  const reportReasons = [
+    { k: 'spam',       l: language === 'mn' ? 'Спам'               : 'Spam' },
+    { k: 'nsfw',       l: language === 'mn' ? 'Зохисгүй агуулга'  : 'Inappropriate content' },
+    { k: 'harass',     l: language === 'mn' ? 'Дарамт, зүй бус'   : 'Harassment or bullying' },
+    { k: 'false',      l: language === 'mn' ? 'Худал мэдээлэл'    : 'False information' },
+    { k: 'other',      l: language === 'mn' ? 'Бусад'              : 'Other' },
+  ];
+
+  const doBlock = () => {
+    setDone('blocked');
+    window.__showNotification?.(
+      language === 'mn' ? `${username} хэрэглэгч хаагдлаа` : `${username} has been blocked`,
+      'check', 2500
+    );
+    setTimeout(onClose, 1600);
+  };
+
+  const doReport = () => {
+    if (!reason) return;
+    setDone('reported');
+    window.__showNotification?.(
+      language === 'mn' ? 'Мэдээлэл хүлээн авлаа. Баярлалаа.' : 'Report submitted. Thank you.',
+      'check', 2500
+    );
+    setTimeout(onClose, 1600);
+  };
+
+  return (
+    <div
+      style={{
+        position: 'absolute', inset: 0, zIndex: 120,
+        background: 'rgba(0,0,0,0.58)',
+        display: 'flex', flexDirection: 'column', justifyContent: 'flex-end',
+        animation: 'ns-fade-in .2s ease',
+      }}
+      onClick={onClose}
+    >
+      <div
+        style={{
+          background: 'var(--bg-elevated)',
+          borderRadius: '24px 24px 0 0',
+          padding: '10px 20px 44px',
+          border: '1px solid var(--hairline)', borderBottom: 0,
+          boxShadow: '0 -20px 48px rgba(0,0,0,0.55)',
+          animation: 'ns-slide-in-up .25s ease-out',
+        }}
+        onClick={e => e.stopPropagation()}
+      >
+        {/* drag handle */}
+        <div style={{ width: 36, height: 4, borderRadius: 4,
+          background: 'rgba(255,255,255,0.18)', margin: '0 auto 18px' }}/>
+
+        {view === 'main' ? (
+          done === 'blocked' ? (
+            /* blocked success */
+            <div style={{ textAlign: 'center', padding: '16px 0 8px' }}>
+              <span style={{ width: 56, height: 56, borderRadius: '50%',
+                background: 'rgba(255,84,112,0.12)', color: 'var(--error)',
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Icon name="shield" size={24} strokeWidth={1.8}/>
+              </span>
+              <div style={{ marginTop: 12, fontSize: 15, fontWeight: 700 }}>
+                {language === 'mn' ? `${username} хаагдлаа` : `${username} blocked`}
+              </div>
+              <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 6, lineHeight: 1.5 }}>
+                {language === 'mn'
+                  ? 'Тэр хэрэглэгч таны профайл харж, мессеж илгээж чадахгүй.'
+                  : 'They can no longer view your profile or send you messages.'}
+              </div>
+            </div>
+          ) : (
+            /* main options */
+            <>
+              <div className="ns-mono" style={{ marginBottom: 14, fontSize: 10 }}>{username}</div>
+
+              {/* Block */}
+              <button onClick={doBlock} style={{
+                width: '100%', display: 'flex', alignItems: 'center', gap: 14,
+                padding: '14px 2px',
+                background: 'transparent', border: 0, borderBottom: '1px solid var(--hairline)',
+                cursor: 'pointer', color: 'var(--error)', textAlign: 'left',
+              }}>
+                <span style={{ width: 40, height: 40, borderRadius: 12, flexShrink: 0,
+                  background: 'rgba(255,84,112,0.10)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Icon name="shield" size={19} stroke="var(--error)" strokeWidth={1.7}/>
+                </span>
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: 15 }}>
+                    {language === 'mn' ? 'Хэрэглэгч хаах (Block)' : 'Block User'}
+                  </div>
+                  <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2, lineHeight: 1.4 }}>
+                    {language === 'mn'
+                      ? 'Профайл харж, мессеж илгээж болохгүй болно'
+                      : "They won't be able to view your profile or message you"}
+                  </div>
+                </div>
+              </button>
+
+              {/* Report */}
+              <button onClick={() => setView('report')} style={{
+                width: '100%', display: 'flex', alignItems: 'center', gap: 14,
+                padding: '14px 2px',
+                background: 'transparent', border: 0, borderBottom: '1px solid var(--hairline)',
+                cursor: 'pointer', color: 'var(--text-primary)', textAlign: 'left',
+              }}>
+                <span style={{ width: 40, height: 40, borderRadius: 12, flexShrink: 0,
+                  background: 'rgba(255,179,71,0.10)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Icon name="alert" size={19} stroke="var(--warning)" strokeWidth={1.7}/>
+                </span>
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: 15 }}>
+                    {language === 'mn' ? 'Мэдээлэх (Report)' : 'Report'}
+                  </div>
+                  <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2, lineHeight: 1.4 }}>
+                    {language === 'mn'
+                      ? 'Зохисгүй агуулга, дарамт, спамыг мэдэгдэх'
+                      : 'Report inappropriate content or behavior'}
+                  </div>
+                </div>
+              </button>
+
+              <button onClick={onClose} style={{
+                width: '100%', marginTop: 14, height: 48, borderRadius: 14,
+                background: 'rgba(255,255,255,0.05)', border: '1px solid var(--hairline)',
+                color: 'var(--text-secondary)', cursor: 'pointer',
+                fontFamily: 'var(--ff-body)', fontWeight: 600, fontSize: 14,
+              }}>
+                {language === 'mn' ? 'Болих' : 'Cancel'}
+              </button>
+            </>
+          )
+        ) : (
+          /* report sub-view */
+          done === 'reported' ? (
+            <div style={{ textAlign: 'center', padding: '16px 0 8px' }}>
+              <span style={{ width: 56, height: 56, borderRadius: '50%',
+                background: 'rgba(61,214,140,0.12)', color: 'var(--success)',
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Icon name="check" size={26} strokeWidth={2.2}/>
+              </span>
+              <div style={{ marginTop: 12, fontSize: 15, fontWeight: 700 }}>
+                {language === 'mn' ? 'Мэдээлэл хүлээн авлаа' : 'Report submitted'}
+              </div>
+              <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 6 }}>
+                {language === 'mn' ? 'Баярлалаа. Удахгүй шалгана.' : "Thank you. We'll review this soon."}
+              </div>
+            </div>
+          ) : (
+            <>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+                <button onClick={() => setView('main')} style={{
+                  background: 'transparent', border: 0, cursor: 'pointer',
+                  color: 'var(--text-secondary)', padding: 4, marginLeft: -4,
+                }}>
+                  <Icon name="arrow-left" size={20}/>
+                </button>
+                <div style={{ fontFamily: 'var(--ff-display)', fontSize: 17, fontWeight: 600 }}>
+                  {language === 'mn' ? 'Мэдээлэх шалтгаан' : 'Reason for Report'}
+                </div>
+              </div>
+
+              {reportReasons.map((r, i) => (
+                <button key={r.k} onClick={() => setReason(r.k)} style={{
+                  width: '100%', display: 'flex', alignItems: 'center', gap: 12,
+                  padding: '13px 2px',
+                  background: 'transparent', border: 0, cursor: 'pointer',
+                  borderBottom: i < reportReasons.length - 1 ? '1px solid var(--hairline)' : 'none',
+                  color: 'var(--text-primary)', textAlign: 'left',
+                }}>
+                  <span style={{
+                    width: 22, height: 22, borderRadius: '50%', flexShrink: 0,
+                    border: `2px solid ${reason === r.k ? 'var(--accent-start)' : 'rgba(255,255,255,0.2)'}`,
+                    background: reason === r.k ? 'var(--accent-start)' : 'transparent',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    transition: 'all .15s',
+                  }}>
+                    {reason === r.k && <Icon name="check" size={11} stroke="#fff" strokeWidth={3}/>}
+                  </span>
+                  <span style={{ fontSize: 14, fontWeight: reason === r.k ? 600 : 400 }}>{r.l}</span>
+                </button>
+              ))}
+
+              <button onClick={doReport} disabled={!reason} style={{
+                width: '100%', marginTop: 18, height: 48, borderRadius: 14,
+                background: reason ? 'var(--accent-grad)' : 'rgba(255,255,255,0.06)',
+                border: 0, cursor: reason ? 'pointer' : 'default',
+                color: reason ? '#1B0210' : 'var(--text-tertiary)',
+                fontFamily: 'var(--ff-body)', fontWeight: 700, fontSize: 14,
+                letterSpacing: '0.03em', transition: 'all .2s',
+              }}>
+                {language === 'mn' ? 'Илгээх' : 'Submit Report'}
+              </button>
+              <button onClick={onClose} style={{
+                width: '100%', marginTop: 8, height: 38, borderRadius: 14,
+                background: 'transparent', border: 0,
+                color: 'var(--text-secondary)', cursor: 'pointer',
+                fontFamily: 'var(--ff-body)', fontSize: 13,
+              }}>
+                {language === 'mn' ? 'Болих' : 'Cancel'}
+              </button>
+            </>
+          )
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Notification Toast ───
+function NotificationToast({ message, icon = 'check', onDismiss, duration = 3000 }) {
+  React.useEffect(() => {
+    if (duration) {
+      const timer = setTimeout(onDismiss, duration);
+      return () => clearTimeout(timer);
+    }
+  }, [duration, onDismiss]);
+
+  return (
+    <div style={{
+      position: 'fixed', bottom: 24, left: 20, right: 20, zIndex: 9999,
+      padding: '14px 16px', borderRadius: 12,
+      background: 'rgba(11, 1, 24, 0.95)', backdropFilter: 'blur(12px)',
+      border: '1px solid var(--hairline)',
+      display: 'flex', alignItems: 'center', gap: 12,
+      animation: 'ns-toast-slide-up 0.3s ease-out',
+    }}>
+      <div style={{
+        width: 36, height: 36, borderRadius: 18,
+        background: 'var(--accent-grad)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        flexShrink: 0,
+      }}>
+        <Icon name={icon} size={18} stroke="#1B0210" strokeWidth={2.4}/>
+      </div>
+      <span style={{ fontSize: 13, lineHeight: 1.4, color: 'var(--text-primary)' }}>
+        {message}
+      </span>
+      <style>{`
+        @keyframes ns-toast-slide-up {
+          from { transform: translateY(100px); opacity: 0; }
+          to { transform: translateY(0); opacity: 1; }
+        }
+      `}</style>
+    </div>
+  );
+}
+
+// ─── Notification List (persistent) ───
+function NotificationList({ items = [] }) {
+  return (
+    <div style={{
+      position: 'fixed', bottom: 24, left: 20, right: 20, zIndex: 9998,
+      maxHeight: '35vh', overflowY: 'auto',
+      display: 'flex', flexDirection: 'column', gap: 8,
+    }}>
+      {items.map(item => (
+        <div key={item.id} style={{
+          padding: '12px 16px', borderRadius: 12,
+          background: 'rgba(11, 1, 24, 0.92)', backdropFilter: 'blur(12px)',
+          border: '1px solid var(--hairline)',
+          display: 'flex', alignItems: 'center', gap: 10,
+          animation: 'ns-toast-slide-up 0.3s ease-out',
+        }}>
+          <div style={{
+            width: 32, height: 32, borderRadius: 16,
+            background: 'var(--accent-grad)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            flexShrink: 0,
+          }}>
+            <Icon name={item.icon} size={16} stroke="#1B0210" strokeWidth={2.4}/>
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 12, lineHeight: 1.3, color: 'var(--text-primary)' }}>
+              {item.message}
+            </div>
+          </div>
+          <div style={{ fontSize: 10, color: 'var(--text-tertiary)', flexShrink: 0 }}>
+            {item.timestamp}
+          </div>
+        </div>
+      ))}
+      <style>{`
+        @keyframes ns-toast-slide-up {
+          from { transform: translateY(100px); opacity: 0; }
+          to { transform: translateY(0); opacity: 1; }
+        }
+      `}</style>
+    </div>
+  );
 }
 
 // shared style: round 40px icon button (transparent)
@@ -551,6 +868,7 @@ const iconBtn = {
 Object.assign(window, {
   OwlMark, Placeholder, LogoSlot, Avatar, Icon, Stars, StatusBadge,
   BottomNav, PhoneStatus, PageTitle, ScreenMeta,
-  EmptyState, LoadingState, ErrorState, Skel, HeartBurst,
+  EmptyState, LoadingState, ErrorState, Skel, HeartBurst, NotificationToast, NotificationList,
+  MoreActionsSheet,
   iconBtn,
 });

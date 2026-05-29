@@ -17,12 +17,11 @@ const FEED_POSTS = [
 // ────────────────────────────────────────────────────────────
 // 09 — FEED (with three visual variants via tweak)
 // ────────────────────────────────────────────────────────────
-function ScreenFeed({ go, state, variant = 'editorial', accent }) {
+function ScreenFeed({ go, state, variant = 'editorial', language }) {
   return (
     <div className="ns-screen">
-      {/* top bar */}
       <PhoneStatus/>
-      <FeedTopBar go={go}/>
+      <FeedTopBar go={go} language={language}/>
 
       {state === 'loading' ? (
         <div className="ns-screen-scroll" style={{ padding: '0 20px' }}>
@@ -45,29 +44,30 @@ function ScreenFeed({ go, state, variant = 'editorial', accent }) {
       ) : state === 'empty' ? (
         <EmptyState
           icon="sparkles"
-          title="Тэжээл хоосон байна"
-          body="Хэн нэгнийг дага эсвэл эхний зургаа оруулаад тэжээлээ дүүргэж эхэл."
+          title={tr('feed.empty', language)}
+          body={tr('feed.emptyDesc', language)}
           action={
             <button className="ns-btn-primary" onClick={() => go('post')}>
               <Icon name="plus" size={18} stroke="#1B0210" strokeWidth={2.2}/>
-              Зураг оруулах
+              {tr('feed.uploadImage', language)}
             </button>
           }
         />
       ) : state === 'error' ? (
         <ErrorState onRetry={() => go('feed')}/>
       ) : variant === 'magazine' ? (
-        <FeedMagazine go={go}/>
+        <FeedMagazine go={go} language={language}/>
       ) : variant === 'minimal' ? (
-        <FeedMinimal go={go}/>
+        <FeedMinimal go={go} language={language}/>
       ) : (
-        <FeedEditorial go={go}/>
+        <FeedEditorial go={go} language={language}/>
       )}
     </div>
   );
 }
 
-function FeedTopBar({ go }) {
+function FeedTopBar({ go, language }) {
+  const isEN = language === 'en';
   return (
     <div style={{
       flexShrink: 0,
@@ -78,7 +78,10 @@ function FeedTopBar({ go }) {
         <OwlMark size={36} glow={false} slotId="feed-logo"/>
         <div>
           <div style={{ fontFamily: 'var(--ff-display)', fontSize: 22, lineHeight: 1, fontWeight: 800 }}>
-            Шөнийн<span style={{ fontStyle: 'italic' }} className="ns-grad-text"> шувуухай</span>
+            {isEN
+              ? <>Night<span style={{ fontStyle: 'italic' }} className="ns-grad-text"> Owl</span></>
+              : <>Шөнийн<span style={{ fontStyle: 'italic' }} className="ns-grad-text"> шувуухай</span></>
+            }
           </div>
           <div className="ns-mono" style={{ marginTop: 2 }}>UB · ШӨНӨ 21:42</div>
         </div>
@@ -95,16 +98,18 @@ function FeedTopBar({ go }) {
   );
 }
 
-// ─── Variation A: EDITORIAL — large cards, big serif italic tags
-function FeedEditorial({ go }) {
+// ─── Variation A: EDITORIAL ───
+function FeedEditorial({ go, language }) {
+  const [moreUser, setMoreUser] = React.useState(null);
   return (
-    <div className="ns-screen-scroll" style={{ paddingBottom: 16 }}>
+    <div className="ns-screen-scroll" style={{ paddingBottom: 16, position: 'relative' }}>
+      <MoreActionsSheet show={!!moreUser} onClose={() => setMoreUser(null)}
+        username={moreUser} language={language}/>
       {FEED_POSTS.map((p, i) => (
         <article key={p.id} style={{
           padding: '12px 20px 28px',
           borderBottom: i < FEED_POSTS.length - 1 ? '1px solid var(--hairline)' : 'none',
         }}>
-          {/* header */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
             <Avatar size={40} initial={p.initial} ring/>
             <div style={{ flex: 1, minWidth: 0 }}>
@@ -120,12 +125,11 @@ function FeedEditorial({ go }) {
                 <span style={{ opacity: 0.5 }}>· {p.location}</span>
               </div>
             </div>
-            <button style={iconBtn}>
+            <button style={iconBtn} onClick={() => setMoreUser(p.user)}>
               <Icon name="more" size={20} stroke="var(--text-secondary)"/>
             </button>
           </div>
 
-          {/* image */}
           <div style={{ position: 'relative', borderRadius: 22, overflow: 'hidden' }}>
             <Placeholder label={`${p.venue} · зураг`} style={{ aspectRatio: '4 / 5' }}/>
             <span style={{
@@ -140,12 +144,17 @@ function FeedEditorial({ go }) {
             </span>
           </div>
 
-          {/* actions */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginTop: 14 }}>
-            <button style={iconBtn} onClick={() => go('post-detail')}>
+            <button style={iconBtn} onClick={() => {
+              window.__showNotification?.('@odgerel таны зургийг лайклалаа', 'heart', 2500);
+              go('post-detail');
+            }}>
               <Icon name="heart" size={24}/>
             </button>
-            <button style={iconBtn} onClick={() => go('post-detail')}>
+            <button style={iconBtn} onClick={() => {
+              window.__showNotification?.('@solongo таны зургийг коммент хийлээ', 'comment', 2500);
+              go('post-detail');
+            }}>
               <Icon name="comment" size={24}/>
             </button>
             <button style={iconBtn}>
@@ -157,9 +166,8 @@ function FeedEditorial({ go }) {
             </button>
           </div>
 
-          {/* meta + caption */}
           <div style={{ marginTop: 8, fontSize: 13, fontWeight: 700 }}>
-            {p.likes.toLocaleString('en-US')} лайк
+            {p.likes.toLocaleString('en-US')} {tr('lbl.likes', language)}
           </div>
           <p style={{ margin: '6px 0 0', fontSize: 14, lineHeight: 1.5, color: 'var(--text-primary)' }}>
             <span style={{ fontWeight: 700 }}>{p.user}</span>{' '}
@@ -168,7 +176,7 @@ function FeedEditorial({ go }) {
           <div onClick={() => go('post-detail')} style={{
             marginTop: 6, fontSize: 13, color: 'var(--text-tertiary)', cursor: 'pointer',
           }}>
-            Бүх {Math.floor(p.likes / 50)} коммент үзэх
+            {tr('feed.comment', language)} ({Math.floor(p.likes / 50)})
           </div>
         </article>
       ))}
@@ -176,11 +184,10 @@ function FeedEditorial({ go }) {
   );
 }
 
-// ─── Variation B: MAGAZINE — story rail + mixed grid
-function FeedMagazine({ go }) {
+// ─── Variation B: MAGAZINE ───
+function FeedMagazine({ go, language }) {
   return (
     <div className="ns-screen-scroll" style={{ paddingBottom: 16 }}>
-      {/* story rail */}
       <div style={{
         display: 'flex', gap: 14, overflowX: 'auto', padding: '0 20px 14px',
         borderBottom: '1px solid var(--hairline)',
@@ -198,7 +205,6 @@ function FeedMagazine({ go }) {
         ))}
       </div>
 
-      {/* hero post */}
       <article style={{ padding: '16px 20px 20px' }}>
         <div style={{
           position: 'relative', borderRadius: 22, overflow: 'hidden', marginBottom: 12,
@@ -211,20 +217,23 @@ function FeedMagazine({ go }) {
           <div style={{
             position: 'absolute', left: 18, right: 18, bottom: 18,
           }}>
-            <div className="ns-mono" style={{ color: '#FFB347', marginBottom: 6 }}>FEATURED · ӨНӨӨ ШӨНӨ</div>
+            <div className="ns-mono" style={{ color: '#FFB347', marginBottom: 6 }}>
+              {tr('feed.featured', language)}
+            </div>
             <h2 style={{
               margin: 0, fontFamily: 'var(--ff-display)', fontStyle: 'italic',
               fontSize: 28, fontWeight: 500, letterSpacing: '-0.01em', lineHeight: 1.05,
             }}>Vertigo дээр джаз</h2>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 10 }}>
               <Avatar size={22} initial="Н"/>
-              <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>@nara.ulaan · 1,284 лайк</span>
+              <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
+                @nara.ulaan · 1,284 {tr('lbl.likes', language)}
+              </span>
             </div>
           </div>
         </div>
       </article>
 
-      {/* 2-col grid */}
       <div style={{ padding: '0 20px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
         {FEED_POSTS.slice(1).map(p => (
           <article key={p.id} onClick={() => go('post-detail')} style={{ cursor: 'pointer' }}>
@@ -250,16 +259,16 @@ function FeedMagazine({ go }) {
   );
 }
 
-// ─── Variation C: MINIMAL — text forward, sparse imagery
-function FeedMinimal({ go }) {
+// ─── Variation C: MINIMAL ───
+function FeedMinimal({ go, language }) {
   return (
     <div className="ns-screen-scroll" style={{ paddingBottom: 16 }}>
       <div style={{ padding: '8px 24px 16px' }}>
-        <div className="ns-mono" style={{ marginBottom: 6 }}>ӨНӨӨ · 5/28</div>
+        <div className="ns-mono" style={{ marginBottom: 6 }}>{tr('lbl.today', language)} · 5/28</div>
         <h2 style={{
           margin: 0, fontFamily: 'var(--ff-display)', fontWeight: 500,
           fontSize: 26, letterSpacing: '-0.01em', lineHeight: 1.1,
-        }}>4 шинэ <span style={{ fontStyle: 'italic' }} className="ns-grad-text">шөнө</span></h2>
+        }}>4 <span style={{ fontStyle: 'italic' }} className="ns-grad-text">{tr('lbl.newNights', language)}</span></h2>
       </div>
 
       {FEED_POSTS.map((p, i) => (
@@ -276,7 +285,9 @@ function FeedMinimal({ go }) {
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
                 <span style={{ fontWeight: 700, fontSize: 14 }}>{p.user}</span>
-                <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>{i+1}ц өмнө</span>
+                <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>
+                  {i + 1}{tr('lbl.hoursAgo', language)}
+                </span>
               </div>
               <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2,
                     display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -285,7 +296,6 @@ function FeedMinimal({ go }) {
               </div>
               <p style={{ margin: '10px 0 0', fontSize: 14, lineHeight: 1.5 }}>{p.caption}</p>
 
-              {/* small inline image */}
               <div style={{ marginTop: 12, borderRadius: 14, overflow: 'hidden' }}>
                 <Placeholder label={p.tag} style={{ aspectRatio: '16 / 9' }}/>
               </div>
@@ -298,7 +308,7 @@ function FeedMinimal({ go }) {
                   <Icon name="comment" size={14} stroke="var(--text-tertiary)"/> {Math.floor(p.likes/50)}
                 </span>
                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                  <Icon name="send" size={14} stroke="var(--text-tertiary)"/> хуваалцах
+                  <Icon name="send" size={14} stroke="var(--text-tertiary)"/> {tr('lbl.share', language)}
                 </span>
               </div>
             </div>
@@ -312,22 +322,24 @@ function FeedMinimal({ go }) {
 // ────────────────────────────────────────────────────────────
 // 10 — POST DETAIL
 // ────────────────────────────────────────────────────────────
-function ScreenPostDetail({ go, state }) {
+function ScreenPostDetail({ go, state, language }) {
   const [liked, setLiked] = React.useState(false);
   const [burst, setBurst] = React.useState(false);
+  const [showMore, setShowMore] = React.useState(false);
   const post = FEED_POSTS[0];
 
   const tapLike = () => {
     setLiked(true);
     setBurst(true);
     setTimeout(() => setBurst(false), 700);
+    window.__showNotification?.('@nara.ulaan таны зургийг лайклалаа', 'heart', 2500);
   };
 
   if (state === 'loading') {
     return (
       <div className="ns-screen">
         <PhoneStatus/>
-        <DetailHeader go={go}/>
+        <DetailHeader go={go} language={language}/>
         <div className="ns-screen-scroll" style={{ padding: 20 }}>
           <Skel w="100%" h={400} r={20}/>
         </div>
@@ -338,7 +350,7 @@ function ScreenPostDetail({ go, state }) {
     return (
       <div className="ns-screen">
         <PhoneStatus/>
-        <DetailHeader go={go}/>
+        <DetailHeader go={go} language={language}/>
         <ErrorState onRetry={() => go('post-detail')}/>
       </div>
     );
@@ -354,10 +366,12 @@ function ScreenPostDetail({ go, state }) {
   return (
     <div className="ns-screen">
       <PhoneStatus/>
-      <DetailHeader go={go}/>
+      <DetailHeader go={go} language={language} onMore={() => setShowMore(true)}/>
+
+      <MoreActionsSheet show={showMore} onClose={() => setShowMore(false)}
+        username={post.user} language={language}/>
 
       <div className="ns-screen-scroll">
-        {/* author row */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '4px 20px 14px' }}>
           <Avatar size={42} initial={post.initial} ring/>
           <div style={{ flex: 1 }}>
@@ -370,18 +384,16 @@ function ScreenPostDetail({ go, state }) {
             </div>
           </div>
           <button className="ns-btn-secondary" style={{ height: 34, padding: '0 14px', fontSize: 12 }}>
-            Дагах
+            {tr('lbl.follow', language)}
           </button>
         </div>
 
-        {/* image */}
         <div style={{ position: 'relative', margin: '0 20px', borderRadius: 22, overflow: 'hidden' }}
              onDoubleClick={tapLike}>
           <Placeholder label="Vertigo · live джаз" style={{ aspectRatio: '4 / 5' }}/>
           <HeartBurst visible={burst}/>
         </div>
 
-        {/* actions */}
         <div style={{ display: 'flex', gap: 14, padding: '14px 20px 4px', alignItems: 'center' }}>
           <button style={iconBtn} onClick={tapLike}>
             <Icon name="heart" size={26}
@@ -395,7 +407,7 @@ function ScreenPostDetail({ go, state }) {
         </div>
 
         <div style={{ padding: '0 20px', fontSize: 13, fontWeight: 700 }}>
-          {(post.likes + (liked ? 1 : 0)).toLocaleString('en-US')} лайк
+          {(post.likes + (liked ? 1 : 0)).toLocaleString('en-US')} {tr('lbl.likes', language)}
         </div>
         <p style={{ margin: '6px 20px 0', fontSize: 14, lineHeight: 1.5 }}>
           <span style={{ fontWeight: 700 }}>{post.user}</span>{' '}
@@ -404,7 +416,6 @@ function ScreenPostDetail({ go, state }) {
           <span style={{ color: 'var(--accent-start)' }}>#vertigo #jazz #ub_nightlife</span>
         </p>
 
-        {/* location chip */}
         <div style={{ padding: '14px 20px 8px' }}>
           <button onClick={() => go('bar')} style={{
             display: 'inline-flex', alignItems: 'center', gap: 8,
@@ -423,12 +434,13 @@ function ScreenPostDetail({ go, state }) {
           </button>
         </div>
 
-        {/* comments */}
         <div style={{ borderTop: '1px solid var(--hairline)', padding: '14px 20px 8px', marginTop: 8 }}>
-          <div className="ns-mono" style={{ marginBottom: 10 }}>КОММЕНТ · {comments.length}</div>
+          <div className="ns-mono" style={{ marginBottom: 10 }}>
+            {tr('lbl.comments', language)} · {comments.length}
+          </div>
           {comments.length === 0 ? (
             <div style={{ padding: '32px 0', textAlign: 'center', color: 'var(--text-tertiary)', fontSize: 13 }}>
-              Хамгийн түрүүнд коммент бичээрэй.
+              {tr('lbl.beFirstComment', language)}
             </div>
           ) : comments.map((cm, i) => (
             <div key={i} style={{ display: 'flex', gap: 10, marginBottom: 14 }}>
@@ -439,7 +451,7 @@ function ScreenPostDetail({ go, state }) {
                   <span style={{ color: 'var(--text-secondary)' }}>{cm.c}</span>
                 </div>
                 <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 2 }}>
-                  {cm.t} · Хариулах · ♥ 2
+                  {cm.t} · {tr('lbl.reply', language)} · ♥ 2
                 </div>
               </div>
               <button style={{ background: 'transparent', border: 0, cursor: 'pointer', color: 'var(--text-tertiary)' }}>
@@ -451,7 +463,6 @@ function ScreenPostDetail({ go, state }) {
         <div style={{ height: 80 }}/>
       </div>
 
-      {/* comment input */}
       <div style={{
         flexShrink: 0,
         borderTop: '1px solid var(--hairline)',
@@ -460,7 +471,7 @@ function ScreenPostDetail({ go, state }) {
         background: 'rgba(11,1,24,0.92)', backdropFilter: 'blur(12px)',
       }}>
         <Avatar size={32} initial="М"/>
-        <input className="ns-input" placeholder="Коммент бичих..."
+        <input className="ns-input" placeholder={tr('ph.writeComment', language)}
                style={{ height: 40, flex: 1, fontSize: 13 }}/>
         <button style={{
           width: 40, height: 40, borderRadius: '50%',
@@ -475,7 +486,7 @@ function ScreenPostDetail({ go, state }) {
   );
 }
 
-function DetailHeader({ go }) {
+function DetailHeader({ go, language, onMore }) {
   return (
     <div style={{
       flexShrink: 0,
@@ -485,8 +496,10 @@ function DetailHeader({ go }) {
       <button style={iconBtn} onClick={() => go('feed')}>
         <Icon name="arrow-left" size={22}/>
       </button>
-      <div style={{ fontFamily: 'var(--ff-display)', fontSize: 18, fontWeight: 500 }}>Нийтлэл</div>
-      <button style={iconBtn}><Icon name="more" size={22}/></button>
+      <div style={{ fontFamily: 'var(--ff-display)', fontSize: 18, fontWeight: 500 }}>
+        {tr('lbl.post', language)}
+      </div>
+      <button style={iconBtn} onClick={onMore}><Icon name="more" size={22}/></button>
     </div>
   );
 }
@@ -494,13 +507,16 @@ function DetailHeader({ go }) {
 // ────────────────────────────────────────────────────────────
 // 11 — CREATOR PROFILE + LOCKED CONTENT
 // ────────────────────────────────────────────────────────────
-function ScreenCreator({ go, state }) {
+function ScreenCreator({ go, state, language }) {
   const [tab, setTab] = React.useState('posts');
   const [following, setFollowing] = React.useState(false);
+  const [showMore, setShowMore] = React.useState(false);
 
   return (
     <div className="ns-screen">
       <PhoneStatus/>
+      <MoreActionsSheet show={showMore} onClose={() => setShowMore(false)}
+        username="@bayar.dj" language={language}/>
       <div style={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 5,
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
             padding: '52px 12px 0' }}>
@@ -513,7 +529,7 @@ function ScreenCreator({ go, state }) {
             <Icon name="arrow-left" size={20}/>
           </span>
         </button>
-        <button style={iconBtn}>
+        <button style={iconBtn} onClick={() => setShowMore(true)}>
           <span style={{
             width: 36, height: 36, borderRadius: 18,
             background: 'rgba(11,1,24,0.55)', backdropFilter: 'blur(12px)',
@@ -525,7 +541,6 @@ function ScreenCreator({ go, state }) {
       </div>
 
       <div className="ns-screen-scroll">
-        {/* cover */}
         <div style={{ position: 'relative', height: 200, overflow: 'hidden' }}>
           <Placeholder label="creator · cover" style={{ aspectRatio: 'auto', height: '100%' }}/>
           <div style={{
@@ -534,7 +549,6 @@ function ScreenCreator({ go, state }) {
           }}/>
         </div>
 
-        {/* profile head */}
         <div style={{ padding: '0 20px', marginTop: -50, position: 'relative' }}>
           <Avatar size={94} initial="Б" ring/>
           <div style={{ marginTop: 12 }}>
@@ -551,13 +565,16 @@ function ScreenCreator({ go, state }) {
             </p>
           </div>
 
-          {/* stats */}
           <div style={{
             display: 'flex', gap: 22, marginTop: 16, padding: '14px 0',
             borderTop: '1px solid var(--hairline)',
             borderBottom: '1px solid var(--hairline)',
           }}>
-            {[['Пост', '142'], ['Дагагч', '8.4K'], ['Дагаж буй', '231']].map(([l, v]) => (
+            {[
+              [tr('lbl.posts', language), '142'],
+              [tr('lbl.followers', language), '8.4K'],
+              [tr('lbl.followingLbl', language), '231'],
+            ].map(([l, v]) => (
               <div key={l}>
                 <div style={{ fontFamily: 'var(--ff-display)', fontSize: 20, fontWeight: 500 }}>{v}</div>
                 <div className="ns-mono" style={{ marginTop: 2 }}>{l}</div>
@@ -565,25 +582,23 @@ function ScreenCreator({ go, state }) {
             ))}
           </div>
 
-          {/* buttons */}
           <div style={{ display: 'flex', gap: 10, marginTop: 14 }}>
             <button
               className={following ? 'ns-btn-secondary' : 'ns-btn-primary'}
               style={{ flex: 1, height: 44 }}
               onClick={() => setFollowing(!following)}>
-              {following ? 'Дагаж байна' : 'Дагах'}
+              {following ? tr('lbl.following', language) : tr('lbl.follow', language)}
             </button>
             <button className="ns-btn-secondary" style={{ width: 44, height: 44, padding: 0 }}>
               <Icon name="send" size={18}/>
             </button>
           </div>
 
-          {/* tabs */}
           <div style={{
             display: 'flex', gap: 0, marginTop: 22,
             borderBottom: '1px solid var(--hairline)',
           }}>
-            {[['posts', 'Пост'], ['locked', 'Түгжээтэй']].map(([k, l]) => (
+            {[['posts', tr('lbl.posts', language)], ['locked', tr('lbl.locked', language)]].map(([k, l]) => (
               <button key={k} onClick={() => setTab(k)} style={{
                 flex: 1, padding: '14px 0', background: 'transparent', cursor: 'pointer',
                 border: 0, borderBottom: tab === k ? '2px solid var(--accent-start)' : '2px solid transparent',
@@ -594,7 +609,6 @@ function ScreenCreator({ go, state }) {
           </div>
         </div>
 
-        {/* grid */}
         {tab === 'posts' ? (
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 2, marginTop: 2 }}>
             {Array.from({ length: 9 }).map((_, i) => (
@@ -606,7 +620,7 @@ function ScreenCreator({ go, state }) {
             {[
               { title: 'Exclusive DJ set · Vol. 12', price: 5000, dur: '52 мин' },
               { title: 'Backstage · Mass NYE',      price: 8000, dur: '24 мин' },
-              { title: 'Б-сэтгэгдэл · 1 цаг',         price: 3000, dur: '1ц 04м' },
+              { title: 'Б-сэтгэгдэл · 1 цаг',       price: 3000, dur: '1ц 04м' },
             ].map((it, i) => (
               <div key={i} style={{
                 position: 'relative', borderRadius: 18, overflow: 'hidden',
@@ -633,7 +647,7 @@ function ScreenCreator({ go, state }) {
                     <div className="ns-mono" style={{ marginTop: 6 }}>{it.dur} · ₮{it.price.toLocaleString('en-US')}</div>
                   </div>
                   <button className="ns-btn-primary" style={{ height: 40, fontSize: 12 }} onClick={() => go('qpay')}>
-                    Контент үзэх
+                    {tr('btn.viewContent', language)}
                   </button>
                 </div>
               </div>
@@ -649,7 +663,7 @@ function ScreenCreator({ go, state }) {
 // ────────────────────────────────────────────────────────────
 // 12 — QPAY PAYMENT SHEET
 // ────────────────────────────────────────────────────────────
-function ScreenQPay({ go, state }) {
+function ScreenQPay({ go, state, language }) {
   const banks = [
     { id: 'b1', name: 'Bank A' },
     { id: 'b2', name: 'Bank B' },
@@ -660,12 +674,11 @@ function ScreenQPay({ go, state }) {
   ];
 
   const isLoading = state === 'loading';
-  const isSuccess = state === 'empty'; // reusing empty as the success path here
-  const isError = state === 'error';
+  const isSuccess = state === 'empty';
+  const isError   = state === 'error';
 
   return (
     <div className="ns-screen" style={{ background: 'rgba(11,1,24,0.4)' }}>
-      {/* faded creator behind */}
       <div style={{
         position: 'absolute', inset: 0,
         background: 'radial-gradient(circle at 30% 20%, rgba(255,77,141,0.18), transparent 50%), var(--bg-base)',
@@ -673,7 +686,6 @@ function ScreenQPay({ go, state }) {
       <PhoneStatus/>
 
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
-        {/* sheet */}
         <div style={{
           background: 'var(--bg-elevated)',
           borderRadius: '28px 28px 0 0',
@@ -689,7 +701,7 @@ function ScreenQPay({ go, state }) {
 
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div>
-              <div className="ns-mono">QPAY · ТӨЛБӨР</div>
+              <div className="ns-mono">{tr('qpay.payment', language)}</div>
               <h2 style={{ margin: '4px 0 0', fontFamily: 'var(--ff-display)', fontSize: 22, fontWeight: 500 }}>
                 Exclusive DJ set · Vol. 12
               </h2>
@@ -704,7 +716,7 @@ function ScreenQPay({ go, state }) {
                   alignItems: 'center', gap: 14 }}>
               <div className="ns-spin"/>
               <div style={{ fontSize: 14, color: 'var(--text-secondary)' }}>
-                Төлбөр баталгаажихыг хүлээж байна...
+                {tr('qpay.waiting', language)}
               </div>
               <div className="ns-mono">QPay · #2024-05-28-4821</div>
             </div>
@@ -722,13 +734,15 @@ function ScreenQPay({ go, state }) {
               </span>
               <div>
                 <div style={{ fontFamily: 'var(--ff-display)', fontSize: 22, fontWeight: 500 }}>
-                  Контент нээгдлээ
+                  {tr('qpay.success', language)}
                 </div>
                 <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginTop: 4 }}>
-                  ₮5,000 төлсөн · #2024-05-28-4821
+                  ₮5,000 · #2024-05-28-4821
                 </div>
               </div>
-              <button className="ns-btn-primary" onClick={() => go('creator')}>Үзэж эхлэх</button>
+              <button className="ns-btn-primary" onClick={() => go('creator')}>
+                {tr('btn.startWatching', language)}
+              </button>
             </div>
           ) : isError ? (
             <div style={{ padding: '32px 0', display: 'flex', flexDirection: 'column',
@@ -739,18 +753,17 @@ function ScreenQPay({ go, state }) {
                 display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
               }}><Icon name="alert" size={28}/></span>
               <div style={{ fontFamily: 'var(--ff-display)', fontSize: 20 }}>
-                Төлбөр амжилтгүй
+                {tr('qpay.failed', language)}
               </div>
               <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
-                Дансанд хүрэлцэхгүй эсвэл сүлжээ салсан.
+                {tr('qpay.failedBody', language)}
               </div>
               <button className="ns-btn-primary" onClick={() => go('qpay')}>
-                Дахин оролдох
+                {tr('state.retry', language)}
               </button>
             </div>
           ) : (
             <>
-              {/* amount */}
               <div style={{ textAlign: 'center', padding: '20px 0 8px' }}>
                 <div style={{
                   fontFamily: 'var(--ff-display)', fontSize: 56, fontWeight: 500,
@@ -761,7 +774,6 @@ function ScreenQPay({ go, state }) {
                 </div>
               </div>
 
-              {/* QR */}
               <div style={{
                 margin: '14px auto 18px', width: 200, height: 200,
                 background: '#fff', borderRadius: 18, padding: 14, position: 'relative',
@@ -780,7 +792,7 @@ function ScreenQPay({ go, state }) {
               </div>
 
               <div className="ns-mono" style={{ textAlign: 'center', marginBottom: 14 }}>
-                ЭСВЭЛ ДАНСАА СОНГО
+                {tr('qpay.selectBank', language)}
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
@@ -804,7 +816,7 @@ function ScreenQPay({ go, state }) {
                 fontSize: 11, color: 'var(--text-secondary)', lineHeight: 1.5,
               }}>
                 <Icon name="shield" size={16} stroke="var(--warning)"/>
-                <span>Төлбөр аюулгүйгээр QPay-ээр шилжих. Логог дараа нь солих.</span>
+                <span>{tr('qpay.secure', language)}</span>
               </div>
             </>
           )}
@@ -820,7 +832,6 @@ function QRPattern() {
   const cells = React.useMemo(() => {
     const arr = [];
     for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) {
-      // corner anchors
       const corner = (x < 3 && y < 3) || (x > size-4 && y < 3) || (x < 3 && y > size-4);
       arr.push({ x, y, on: corner ? true : Math.random() > 0.5 });
     }
@@ -831,7 +842,6 @@ function QRPattern() {
       {cells.map((c, i) => c.on && (
         <rect key={i} x={c.x} y={c.y} width={1} height={1} fill="#0B0118"/>
       ))}
-      {/* anchor squares */}
       {[[0,0], [size-3, 0], [0, size-3]].map(([ax, ay], i) => (
         <g key={i}>
           <rect x={ax} y={ay} width={3} height={3} fill="#0B0118"/>
