@@ -1,0 +1,43 @@
+{
+  "manifest_version": 3,
+  "name": "Night Owl UB — Admin",
+  "short_name": "NightOwl Admin",
+  "description": "NightOwl UB нийгэм сүлжээний admin dashboard — Supabase powered",
+  "version": "1.0.0",
+  "icons": {
+    "16":  "icons/icon16.png",
+    "48":  "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "action": {
+    "default_popup": "popup/popup.html",
+    "default_title": "Night Owl Admin",
+    "default_icon": {
+      "16":  "icons/icon16.png",
+      "48":  "icons/icon48.png"
+    }
+  },
+  "background": {
+    "service_worker": "background/service_worker.js",
+    "type": "module"
+  },
+  "options_page": "dashboard/dashboard.html",
+  "permissions": [
+    "storage",
+    "alarms",
+    "notifications",
+    "badges"
+  ],
+  "host_permissions": [
+    "https://jbbdnpsvstwxtgtjoeru.supabase.co/*"
+  ],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'"
+  },
+  "web_accessible_resources": [
+    {
+      "resources": ["lib/*", "styles/*", "icons/*"],
+      "matches": ["<all_urls>"]
+    }
+  ]
+}

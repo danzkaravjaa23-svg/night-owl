@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="mn">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Night Owl Admin</title>
+  <style>
+    /* ── Reset ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #0a0a12;
+      --surface:   #13131f;
+      --border:    #1e1e30;
+      --purple:    #7c3aed;
+      --purple2:   #9d5cff;
+      --teal:      #14b8a6;
+      --text:      #f0f0ff;
+      --muted:     #7b7b9a;
+      --danger:    #ef4444;
+      --success:   #22c55e;
+      --radius:    12px;
+    }
+
+    body {
+      width: 380px;
+      min-height: 200px;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, 'SF Pro Display', 'Segoe UI', sans-serif;
+      font-size: 14px;
+      overflow-x: hidden;
+    }
+
+    /* ── Header ── */
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 16px;
+      border-bottom: 1px solid var(--border);
+      background: linear-gradient(135deg, #0d0d1a 0%, #130f2a 100%);
+    }
+    .logo {
+      width: 32px; height: 32px;
+      background: linear-gradient(135deg, var(--purple), var(--teal));
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px; flex-shrink: 0;
+    }
+    .header-text h1 { font-size: 15px; font-weight: 700; letter-spacing: -0.3px; }
+    .header-text p  { font-size: 11px; color: var(--muted); margin-top: 1px; }
+    .header-actions { margin-left: auto; display: flex; gap: 8px; }
+    .icon-btn {
+      background: none; border: none; cursor: pointer;
+      color: var(--muted); padding: 4px; border-radius: 6px;
+      transition: color .15s, background .15s;
+    }
+    .icon-btn:hover { color: var(--text); background: var(--border); }
+
+    /* ── Login Form ── */
+    #login-view { padding: 20px 16px; }
+    .form-group { margin-bottom: 14px; }
+    label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 6px; font-weight: 500; }
+    input[type="email"], input[type="password"] {
+      width: 100%; padding: 10px 12px;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); color: var(--text);
+      font-size: 14px; outline: none;
+      transition: border-color .15s;
+    }
+    input:focus { border-color: var(--purple); }
+    .btn-primary {
+      width: 100%; padding: 11px;
+      background: linear-gradient(135deg, var(--purple), #5b21b6);
+      color: #fff; border: none; border-radius: var(--radius);
+      font-size: 14px; font-weight: 600; cursor: pointer;
+      transition: opacity .15s, transform .1s;
+      margin-top: 4px;
+    }
+    .btn-primary:hover   { opacity: .92; }
+    .btn-primary:active  { transform: scale(.98); }
+    .btn-primary:disabled { opacity: .5; cursor: not-allowed; }
+    .error-msg {
+      background: rgba(239,68,68,.1); border: 1px solid rgba(239,68,68,.3);
+      color: #fca5a5; border-radius: 8px; padding: 8px 12px;
+      font-size: 12px; margin-bottom: 12px; display: none;
+    }
+    .error-msg.show { display: block; }
+
+    /* ── Dashboard View ── */
+    #dash-view { display: none; }
+    .user-bar {
+      display: flex; align-items: center; gap: 10px;
+      padding: 12px 16px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+    }
+    .user-avatar {
+      width: 30px; height: 30px; border-radius: 50%;
+      background: linear-gradient(135deg, var(--purple), var(--teal));
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px; font-weight: 700; flex-shrink: 0;
+    }
+    .user-name  { font-size: 13px; font-weight: 600; }
+    .user-email { font-size: 11px; color: var(--muted); }
+    .badge-admin {
+      margin-left: auto; font-size: 10px; font-weight: 700;
+      background: linear-gradient(135deg, var(--purple), var(--purple2));
+      padding: 3px 8px; border-radius: 20px; color: #fff;
+      letter-spacing: .5px; text-transform: uppercase;
+    }
+
+    /* ── Stats grid ── */
+    .stats-grid {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 10px; padding: 14px 16px;
+    }
+    .stat-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 12px 14px;
+      position: relative; overflow: hidden;
+    }
+    .stat-card::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, var(--purple), var(--teal));
+    }
+    .stat-icon  { font-size: 18px; margin-bottom: 6px; }
+    .stat-value {
+      font-size: 22px; font-weight: 800; letter-spacing: -1px;
+      background: linear-gradient(135deg, #fff, #a78bfa);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    }
+    .stat-label { font-size: 11px; color: var(--muted); margin-top: 2px; font-weight: 500; }
+    .stat-loading { opacity: .4; animation: pulse 1.2s ease-in-out infinite; }
+
+    @keyframes pulse {
+      0%, 100% { opacity: .4 } 50% { opacity: .8 }
+    }
+
+    /* ── Quick actions ── */
+    .actions { padding: 0 16px 16px; display: flex; flex-direction: column; gap: 8px; }
+    .btn-action {
+      display: flex; align-items: center; gap: 10px;
+      padding: 11px 14px;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); color: var(--text);
+      font-size: 13px; font-weight: 500; cursor: pointer;
+      transition: border-color .15s, background .15s;
+      text-decoration: none;
+    }
+    .btn-action:hover { border-color: var(--purple); background: rgba(124,58,237,.08); }
+    .btn-action .arrow { margin-left: auto; color: var(--muted); }
+    .btn-danger { border-color: transparent; }
+    .btn-danger:hover { border-color: var(--danger); background: rgba(239,68,68,.06); color: #fca5a5; }
+
+    /* ── Footer ── */
+    .footer {
+      padding: 8px 16px;
+      border-top: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .footer-text { font-size: 11px; color: var(--muted); }
+    .online-dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--success); display: inline-block;
+      margin-right: 5px; animation: blink 2s ease-in-out infinite;
+    }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.4} }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <div class="header">
+    <div class="logo">🦉</div>
+    <div class="header-text">
+      <h1>Night Owl UB</h1>
+      <p>Admin Panel</p>
+    </div>
+  </div>
+
+  <!-- Login -->
+  <div id="login-view">
+    <div class="form-group" style="margin-top:4px">
+      <div class="error-msg" id="login-error"></div>
+    </div>
+    <div class="form-group">
+      <label>И-мэйл</label>
+      <input type="email" id="email" placeholder="admin@nightowl.mn" autocomplete="email" />
+    </div>
+    <div class="form-group">
+      <label>Нууц үг</label>
+      <input type="password" id="password" placeholder="••••••••" autocomplete="current-password" />
+    </div>
+    <button class="btn-primary" id="login-btn">Нэвтрэх</button>
+  </div>
+
+  <!-- Dashboard -->
+  <div id="dash-view">
+    <div class="user-bar">
+      <div class="user-avatar" id="user-initials">A</div>
+      <div>
+        <div class="user-name" id="user-email-display">—</div>
+        <div class="user-email">Supabase холбоотой</div>
+      </div>
+      <div class="badge-admin">Admin</div>
+    </div>
+
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-icon">👤</div>
+        <div class="stat-value stat-loading" id="stat-users">—</div>
+        <div class="stat-label">Нийт хэрэглэгч</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">📸</div>
+        <div class="stat-value stat-loading" id="stat-posts">—</div>
+        <div class="stat-label">Нийт пост</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">📍</div>
+        <div class="stat-value stat-loading" id="stat-venues">—</div>
+        <div class="stat-label">Venues</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">🔔</div>
+        <div class="stat-value stat-loading" id="stat-notifs">—</div>
+        <div class="stat-label">Уншаагүй мэдэгдэл</div>
+      </div>
+    </div>
+
+    <div class="actions">
+      <a class="btn-action" id="open-dashboard">
+        <span>🖥️</span>
+        <span>Бүрэн Dashboard нээх</span>
+        <span class="arrow">›</span>
+      </a>
+      <button class="btn-action btn-danger" id="logout-btn">
+        <span>🚪</span>
+        <span>Гарах</span>
+      </button>
+    </div>
+
+    <div class="footer">
+      <span class="footer-text">
+        <span class="online-dot"></span>Supabase холбоотой
+      </span>
+      <span class="footer-text" id="last-refresh">—</span>
+    </div>
+  </div>
+
+  <script type="module" src="popup.js"></script>
+</body>
+</html>
