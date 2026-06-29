@@ -18,7 +18,6 @@ import '../../features/feed/screens/post_detail_screen.dart';
 import '../../features/feed/screens/creator_screen.dart';
 import '../../features/feed/screens/qpay_screen.dart';
 import '../../features/map/screens/map_screen.dart';
-import '../../features/map/screens/bar_screen.dart';
 import '../../features/post/screens/create_post_screen.dart';
 import '../../features/notifications/screens/notifications_screen.dart';
 import '../../features/dm/screens/dm_list_screen.dart';
@@ -29,6 +28,11 @@ import '../../features/profile/screens/change_password_screen.dart';
 import '../../features/profile/screens/business_screen.dart';
 import '../../features/profile/screens/venue_edit_screen.dart';
 import '../../features/map/screens/venue_reviews_screen.dart';
+import '../../features/search/screens/search_screen.dart';
+import '../../features/feed/screens/saved_posts_screen.dart';
+import '../../features/admin/screens/admin_reports_screen.dart';
+import '../../features/admin/screens/admin_panel_screen.dart';
+import '../../features/admin/screens/admin_users_screen.dart';
 import '../../features/profile/screens/affiliate_screen.dart';
 import '../../features/live/screens/go_live_screen.dart';
 import '../../features/live/screens/live_viewer_screen.dart';
@@ -54,7 +58,6 @@ abstract class AppRoutes {
   static const creator         = '/creator/:id';
   static const qpay            = '/qpay/:id';
   static const map             = '/map';
-  static const bar             = '/bar/:id';
   static const createPost      = '/post/create';
   static const notifications   = '/notifications';
   static const dmList          = '/dm';
@@ -73,6 +76,11 @@ abstract class AppRoutes {
   static const createEvent     = '/event/create';
   static const venueEdit       = '/venue/edit';
   static const venueReviews    = '/venue/reviews/:id';
+  static const search          = '/search';
+  static const saved           = '/saved';
+  static const adminPanel      = '/admin';
+  static const adminReports    = '/admin/reports';
+  static const adminUsers      = '/admin/users';
 
   // Нэвтрэлт шаардахгүй routes
   static const _publicRoutes = {
@@ -151,11 +159,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (_, s) => CreatorScreen(creatorId: s.pathParameters['id'] ?? '')),
       GoRoute(path: AppRoutes.qpay,
         builder: (_, s) => QPayScreen(contentId: s.pathParameters['id'] ?? '')),
-      GoRoute(path: AppRoutes.bar,
-        builder: (_, s) => BarScreen(venueId: s.pathParameters['id'] ?? '')),
       GoRoute(path: AppRoutes.dmList,       builder: (_, __) => const DmListScreen()),
       GoRoute(path: AppRoutes.dmThread,
-        builder: (_, s) => DmThreadScreen(threadId: s.pathParameters['id'] ?? '')),
+        builder: (_, s) => DmThreadScreen(
+          threadId: s.pathParameters['id'] ?? '',
+          replyNote: s.uri.queryParameters['note'])),
       GoRoute(path: AppRoutes.settings,     builder: (_, __) => const SettingsScreen()),
       GoRoute(path: AppRoutes.changePassword,builder: (_, __) => const ChangePasswordScreen()),
       GoRoute(path: AppRoutes.business,     builder: (_, __) => const BusinessScreen()),
@@ -177,6 +185,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (_, __) => const VenueEditScreen()),
       GoRoute(path: AppRoutes.venueReviews,
         builder: (_, s) => VenueDetailScreen(venueId: s.pathParameters['id'] ?? '')),
+      GoRoute(path: AppRoutes.search, builder: (_, __) => const SearchScreen()),
+      GoRoute(path: AppRoutes.saved,  builder: (_, __) => const SavedPostsScreen()),
+      GoRoute(path: AppRoutes.adminPanel,   builder: (_, __) => const AdminPanelScreen()),
+      GoRoute(path: AppRoutes.adminReports, builder: (_, __) => const AdminReportsScreen()),
+      GoRoute(path: AppRoutes.adminUsers,   builder: (_, __) => const AdminUsersScreen()),
     ],
 
     errorBuilder: (_, state) => Scaffold(

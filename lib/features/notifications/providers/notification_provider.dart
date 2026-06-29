@@ -25,13 +25,13 @@ class AppNotification {
   factory AppNotification.fromJson(Map<String, dynamic> json) =>
       AppNotification(
         id:          json['id'] as String,
-        type:        json['type'] as String,
-        actorId:     json['actor_id'] as String,
+        type:        json['type'] as String? ?? '',
+        actorId:     json['actor_id'] as String? ?? '',
         actorName:   json['actor_name'] as String?,
         actorAvatar: json['actor_avatar'] as String?,
-        message:     json['message'] as String,
+        message:     json['message'] as String? ?? '',
         isRead:      json['is_read'] as bool? ?? false,
-        createdAt:   DateTime.parse(json['created_at'] as String),
+        createdAt:   DateTime.tryParse(json['created_at']?.toString() ?? '') ?? DateTime.now(),
       );
 }
 
@@ -48,7 +48,7 @@ final notificationsProvider =
       .order('created_at', ascending: false)
       .limit(50)
       .map((rows) => rows
-          .map((r) => AppNotification.fromJson(r as Map<String, dynamic>))
+          .map((r) => AppNotification.fromJson(r))
           .toList());
 });
 

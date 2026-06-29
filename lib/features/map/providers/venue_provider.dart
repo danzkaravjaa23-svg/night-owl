@@ -3,15 +3,31 @@ import '../../../core/services/supabase_service.dart';
 import '../../../models/venue.dart';
 import '../../../models/event.dart';
 
-// ─── All venues + realtime check-in count ───
-final venuesProvider = StreamProvider<List<Venue>>((ref) {
-  // Realtime: check-in тоо өөрчлөгдөхөд автоматаар шинэчлэгдэнэ
-  return SupabaseService.client
+// ─── All venues — нэг удаагийн fetch (realtime биш) ───
+// Venue ховор өөрчлөгддөг тул table-wide realtime sub шаардлагагүй.
+// (Шинэчлэхдээ ref.invalidate(venuesProvider) дуудна.)
+final venuesProvider = FutureProvider<List<Venue>>((ref) async {
+  final data = await SupabaseService.client
       .from('venues')
-      .stream(primaryKey: ['id'])
-      .map((rows) => rows
-          .map((r) => Venue.fromJson(r as Map<String, dynamic>))
-          .toList());
+      .select()
+      .order('name')
+      .limit(2000); // 700+ venue-г бүгдийг харуулна
+  return (data as List)
+      .map((j) => Venue.fromJson(j as Map<String, dynamic>))
+      .toList();
+});
+
+// ─── Одоогийн хэрэглэгч venue эзэмшдэг эсэх (Discovery контент оруулах эрх) ───
+final isVenueOwnerProvider = FutureProvider<bool>((ref) async {
+  final me = SupabaseService.currentUser?.id;
+  if (me == null) return false;
+  try {
+    final r = await SupabaseService.client
+        .from('venues').select('id').eq('owner_id', me).limit(1).maybeSingle();
+    return r != null;
+  } catch (_) {
+    return false;
+  }
 });
 
 // ─── Single venue detail ───

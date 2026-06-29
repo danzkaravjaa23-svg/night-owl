@@ -6,6 +6,7 @@ import '../../../core/theme/app_text_styles.dart';
 import '../../../core/widgets/app_avatar.dart';
 import '../../../core/services/supabase_service.dart';
 import '../../../core/router/app_router.dart' show AppRoutes;
+import '../../profile/widgets/block_report_sheet.dart';
 
 class CreatorScreen extends StatefulWidget {
   final String creatorId;
@@ -103,7 +104,16 @@ class _CreatorScreenState extends State<CreatorScreen> {
                   if (isMe)
                     IconButton(
                       onPressed: () => context.push(AppRoutes.settings),
-                      icon: const Icon(Icons.settings_outlined, size: 22)),
+                      icon: const Icon(Icons.settings_outlined, size: 22))
+                  else
+                    IconButton(
+                      onPressed: () => showUserOptionsSheet(
+                        context,
+                        userId: widget.creatorId,
+                        username: username.replaceAll('@', ''),
+                        onBlocked: () => context.pop(),
+                      ),
+                      icon: const Icon(Icons.more_horiz, size: 24)),
                 ],
                 flexibleSpace: FlexibleSpaceBar(
                   background: Container(
@@ -111,7 +121,7 @@ class _CreatorScreenState extends State<CreatorScreen> {
                       gradient: LinearGradient(
                         begin: Alignment.topCenter, end: Alignment.bottomCenter,
                         colors: [
-                          AppColors.accentStart.withOpacity(0.3),
+                          AppColors.accentStart.withValues(alpha: 0.3),
                           AppColors.bgBase,
                         ])),
                   ),

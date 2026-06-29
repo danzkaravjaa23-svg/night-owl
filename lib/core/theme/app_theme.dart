@@ -30,7 +30,7 @@ class AppTheme {
         surface:   surface,
         onSurface: textPri,
       ),
-      textTheme: GoogleFonts.manropeTextTheme(
+      textTheme: GoogleFonts.interTextTheme(
         isDark ? ThemeData.dark().textTheme : ThemeData.light().textTheme,
       ).copyWith(
         bodyLarge:  TextStyle(color: textPri, fontSize: 16),
@@ -46,7 +46,7 @@ class AppTheme {
             ? SystemUiOverlayStyle.light
             : SystemUiOverlayStyle.dark,
         centerTitle: false,
-        titleTextStyle: GoogleFonts.manrope(
+        titleTextStyle: GoogleFonts.inter(
           fontSize: 17, fontWeight: FontWeight.w700, color: textPri,
         ),
       ),
@@ -92,7 +92,7 @@ class AppTheme {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(14),
           ),
-          textStyle: GoogleFonts.manrope(
+          textStyle: GoogleFonts.inter(
             fontSize: 15, fontWeight: FontWeight.w700,
           ),
           elevation: 0,
@@ -106,7 +106,7 @@ class AppTheme {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(14),
           ),
-          textStyle: GoogleFonts.manrope(
+          textStyle: GoogleFonts.inter(
             fontSize: 15, fontWeight: FontWeight.w600,
           ),
         ),

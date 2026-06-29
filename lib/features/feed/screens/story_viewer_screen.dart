@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:go_router/go_router.dart';
+import '../../../core/utils/web_audio.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/widgets/app_avatar.dart';
@@ -32,6 +33,10 @@ class _StoryViewerScreenState extends State<StoryViewerScreen>
   late PageController _pageCtrl;
   final _replyCtrl = TextEditingController();
   final _replyFocus = FocusNode();
+  final WebAudio _musicPlayer = WebAudio();
+  String? _playingMusicUrl;
+  // story_id → лайк дарсан эсэх (одоогийн харагдаж буй story-ийн төлөв)
+  final Map<String, bool> _likedMap = {};
 
   String get _myId => SupabaseService.currentUser?.id ?? '';
 
@@ -41,8 +46,14 @@ class _StoryViewerScreenState extends State<StoryViewerScreen>
     _ringIndex = widget.initialRingIndex;
     _pageCtrl  = PageController(initialPage: _ringIndex);
     _progressCtrl = AnimationController(vsync: this);
+    // Зөвхөн жинхэнэ дуустал л дараагийн story руу шилжинэ.
+    // (stop() дуудахад .then() callback давхар ажиллаж story-г хурдасгадаг
+    //  байсныг status listener-ээр зассан.)
+    _progressCtrl.addStatusListener((s) {
+      if (s == AnimationStatus.completed && mounted) _nextStory();
+    });
     _replyFocus.addListener(() {
-      if (_replyFocus.hasFocus) _progressCtrl.stop();
+      if (_replyFocus.hasFocus) { _progressCtrl.stop(); _musicPlayer.pause(); }
     });
     _startProgress();
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersive);
@@ -54,8 +65,25 @@ class _StoryViewerScreenState extends State<StoryViewerScreen>
     _pageCtrl.dispose();
     _replyCtrl.dispose();
     _replyFocus.dispose();
+    _musicPlayer.dispose();
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     super.dispose();
+  }
+
+  // Идэвхтэй story-ийн хөгжмийг тааруулж тоглуулна
+  void _syncMusic() {
+    final url = _currentStory.musicUrl;
+    if (url == null || url.isEmpty) {
+      _playingMusicUrl = null;
+      _musicPlayer.stop();
+      return;
+    }
+    if (url == _playingMusicUrl) {
+      _musicPlayer.resume();
+      return;
+    }
+    _playingMusicUrl = url;
+    _musicPlayer.play(url, loop: true);
   }
 
   Future<void> _sendReply(String body) async {
@@ -68,6 +96,7 @@ class _StoryViewerScreenState extends State<StoryViewerScreen>
       await SupabaseService.client.from('messages').insert({
         'sender_id': _myId, 'receiver_id': authorId,
         'body': text, 'is_read': false,
+        'story_media_url': _currentStory.mediaUrl, // story-д хариулсан тэмдэг
       });
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
@@ -75,9 +104,15 @@ class _StoryViewerScreenState extends State<StoryViewerScreen>
           duration: Duration(seconds: 1),
           behavior: SnackBarBehavior.floating));
       }
-    } catch (_) {}
-    // үргэлжлүүлэх
-    _progressCtrl.forward().then((_) { if (mounted) _nextStory(); });
+    } catch (_) {
+      if (mounted) {
+        _replyCtrl.text = text;
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Илгээж чадсангүй'), backgroundColor: AppColors.error));
+      }
+    }
+    // үргэлжлүүлэх (дуустал нь status listener шилжүүлнэ)
+    _progressCtrl.forward();
   }
 
   StoryRing get _currentRing => widget.rings[_ringIndex];
@@ -86,12 +121,29 @@ class _StoryViewerScreenState extends State<StoryViewerScreen>
 
   void _startProgress() {
     _progressCtrl.reset();
-    final duration = Duration(seconds: _currentStory.duration);
-    _progressCtrl.duration = duration;
-    _progressCtrl.forward().then((_) {
-      if (mounted) _nextStory();
-    });
+    // Бага/буруу утганаас хамгаалж доод хязгаар тавина (story хэт хурдан
+    // солигдохгүй байх) — зураг ~5с, видео арай урт байж болно.
+    final secs = _currentStory.duration.clamp(5, 30).toInt();
+    _progressCtrl.duration = Duration(seconds: secs);
+    _progressCtrl.forward();
+    _syncMusic();
     StoryService.markViewed(_currentStory.id);
+    _loadLiked(_currentStory.id);
+  }
+
+  // Лайкийн төлөвийг ачаална
+  Future<void> _loadLiked(String storyId) async {
+    if (_likedMap.containsKey(storyId)) return;
+    final liked = await StoryService.isLiked(storyId);
+    if (mounted) setState(() => _likedMap[storyId] = liked);
+  }
+
+  // Зүрх дарж лайк toggle хийнэ (DM илгээхгүй)
+  void _toggleLike() {
+    final id = _currentStory.id;
+    final now = !(_likedMap[id] ?? false);
+    setState(() => _likedMap[id] = now);
+    StoryService.toggleLike(id, now);
   }
 
   void _nextStory() {
@@ -112,7 +164,7 @@ class _StoryViewerScreenState extends State<StoryViewerScreen>
         _ringIndex--;
         _storyIndex = widget.rings[_ringIndex].stories.length - 1;
       });
-      _pageCtrl.jumpToPage(_ringIndex);
+      if (_pageCtrl.hasClients) _pageCtrl.jumpToPage(_ringIndex);
       _startProgress();
     }
   }
@@ -120,9 +172,11 @@ class _StoryViewerScreenState extends State<StoryViewerScreen>
   void _nextRing() {
     if (_ringIndex < widget.rings.length - 1) {
       setState(() { _ringIndex++; _storyIndex = 0; });
-      _pageCtrl.animateToPage(_ringIndex,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeInOut);
+      if (_pageCtrl.hasClients) {
+        _pageCtrl.animateToPage(_ringIndex,
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeInOut);
+      }
       _startProgress();
     } else {
       context.pop();
@@ -150,17 +204,18 @@ class _StoryViewerScreenState extends State<StoryViewerScreen>
             // Center tap: pause/resume
             if (_progressCtrl.isAnimating) {
               _progressCtrl.stop();
+              _musicPlayer.pause();
             } else {
-              _progressCtrl.forward().then((_) {
-                if (mounted) _nextStory();
-              });
+              _musicPlayer.resume();
+              _progressCtrl.forward();
             }
           }
         },
-        onLongPressStart: (_) => _progressCtrl.stop(),
-        onLongPressEnd:   (_) => _progressCtrl.forward().then((_) {
-          if (mounted) _nextStory();
-        }),
+        onLongPressStart: (_) { _progressCtrl.stop(); _musicPlayer.pause(); },
+        onLongPressEnd:   (_) {
+          _musicPlayer.resume();
+          _progressCtrl.forward();
+        },
         child: Stack(fit: StackFit.expand, children: [
           // ── Media (зураг эсвэл видео) ──
           if (isVideoUrl(story.mediaUrl))
@@ -272,6 +327,34 @@ class _StoryViewerScreenState extends State<StoryViewerScreen>
             ]),
           ),
 
+          // ── Хөгжмийн шошго ──
+          if (story.musicUrl != null && story.musicUrl!.isNotEmpty)
+            Positioned(
+              top: MediaQuery.of(context).padding.top + 66,
+              left: 12,
+              child: Container(
+                padding: const EdgeInsets.fromLTRB(8, 5, 12, 5),
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.45),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: Colors.white24)),
+                child: Row(mainAxisSize: MainAxisSize.min, children: [
+                  const Icon(Icons.music_note_rounded,
+                    color: Colors.white, size: 14),
+                  const SizedBox(width: 5),
+                  ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxWidth: MediaQuery.of(context).size.width * 0.6),
+                    child: Text(
+                      [story.musicTitle, story.musicArtist]
+                          .where((e) => e != null && e.isNotEmpty).join(' · '),
+                      maxLines: 1, overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(color: Colors.white,
+                        fontSize: 12, fontWeight: FontWeight.w600))),
+                ]),
+              ),
+            ),
+
           // ── Доод хэсэг: venue/mention + caption + reply ──
           Positioned(
             left: 0, right: 0, bottom: 0,
@@ -315,7 +398,7 @@ class _StoryViewerScreenState extends State<StoryViewerScreen>
                         decoration: InputDecoration(
                           hintText: 'Мессеж илгээх...',
                           hintStyle: const TextStyle(color: Colors.white70),
-                          filled: true, fillColor: Colors.white.withOpacity(0.12),
+                          filled: true, fillColor: Colors.white.withValues(alpha: 0.12),
                           isDense: true,
                           contentPadding: const EdgeInsets.symmetric(
                             horizontal: 18, vertical: 13),
@@ -331,9 +414,13 @@ class _StoryViewerScreenState extends State<StoryViewerScreen>
                         ))),
                       const SizedBox(width: 12),
                       GestureDetector(
-                        onTap: () => _sendReply('❤️'),
-                        child: const Icon(Icons.favorite_border,
-                            color: Colors.white, size: 28)),
+                        onTap: _toggleLike,
+                        child: Icon(
+                          (_likedMap[story.id] ?? false)
+                              ? Icons.favorite : Icons.favorite_border,
+                          color: (_likedMap[story.id] ?? false)
+                              ? const Color(0xFFFF3B5C) : Colors.white,
+                          size: 28)),
                       const SizedBox(width: 14),
                       GestureDetector(
                         onTap: () => _sendReply(_replyCtrl.text),
@@ -466,7 +553,7 @@ class _StoryRingItem extends StatelessWidget {
                       colors: [Color(0xFF444444), Color(0xFF444444)]),
               boxShadow: ring.hasUnseenStories
                   ? [BoxShadow(
-                      color: AppColors.accentStart.withOpacity(0.35),
+                      color: AppColors.accentStart.withValues(alpha: 0.35),
                       blurRadius: 10, spreadRadius: 1)]
                   : null,
             ),

@@ -14,6 +14,16 @@ import '../../../core/constants/app_constants.dart';
 import '../../../core/services/supabase_service.dart';
 import '../../feed/providers/feed_provider.dart';
 
+const int _maxImages = 10;
+
+/// Сонгосон media нэгж
+class _Picked {
+  final html.File file;
+  final String previewUrl;
+  final bool isVideo;
+  _Picked(this.file, this.previewUrl, this.isVideo);
+}
+
 class CreatePostScreen extends ConsumerStatefulWidget {
   const CreatePostScreen({super.key});
 
@@ -22,68 +32,129 @@ class CreatePostScreen extends ConsumerStatefulWidget {
 }
 
 class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
-  html.File? _htmlFile;
-  String? _previewUrl;
-  bool _isVideo = false;
-  String? _fileName;
-  double? _uploadProgress;
+  final List<_Picked> _media = [];
+  final PageController _pageCtrl = PageController();
+  int _page = 0;
 
   VideoPlayerController? _videoCtrl;
   bool _videoPlaying = false;
 
   final _captionCtrl = TextEditingController();
-  String? _venueId;
   String? _venueName;
   bool _loading = false;
   String? _error;
+  double? _uploadProgress;
+  int _uploadIndex = 0;
 
-  // ─── Pick image OR video via native file input ───
-  Future<void> _pickMedia() async {
+  bool get _hasMedia    => _media.isNotEmpty;
+  bool get _isVideoPost => _media.length == 1 && _media.first.isVideo;
+
+  // ─── Media сонгох (олон зураг эсвэл нэг видео) ───
+  Future<void> _pickMedia({bool append = false}) async {
     final input = html.FileUploadInputElement()
       ..accept = 'image/*,video/*'
+      ..multiple = !append || !_isVideoPost
       ..click();
 
     await input.onChange.first;
-    if (input.files == null || input.files!.isEmpty) return;
+    final files = input.files;
+    if (files == null || files.isEmpty) return;
 
-    final file = input.files!.first;
-    final isVid = file.type.startsWith('video/');
+    final firstIsVideo = files.first.type.startsWith('video/');
 
-    // Cleanup previous
-    _videoCtrl?.dispose();
-    _videoCtrl = null;
-    if (_previewUrl != null) html.Url.revokeObjectUrl(_previewUrl!);
+    if (!append) {
+      // Цэвэрлэх
+      _videoCtrl?.dispose();
+      _videoCtrl = null;
+      for (final m in _media) {
+        html.Url.revokeObjectUrl(m.previewUrl);
+      }
+      _media.clear();
+      _page = 0;
+    }
 
-    final objectUrl = html.Url.createObjectUrl(file);
-
-    setState(() {
-      _htmlFile = file;
-      _fileName = file.name;
-      _previewUrl = objectUrl;
-      _isVideo = isVid;
-      _error = null;
-      _uploadProgress = null;
-      _videoPlaying = false;
-    });
-
-    if (isVid) {
-      final ctrl = VideoPlayerController.networkUrl(Uri.parse(objectUrl));
+    if (firstIsVideo && !append) {
+      // Нэг видеоны пост
+      final f = files.first;
+      final url = html.Url.createObjectUrl(f);
+      _media.add(_Picked(f, url, true));
+      setState(() {
+        _error = null;
+        _uploadProgress = null;
+        _videoPlaying = false;
+      });
+      final ctrl = VideoPlayerController.networkUrl(Uri.parse(url));
       try {
         await ctrl.initialize();
         if (mounted) setState(() => _videoCtrl = ctrl);
-      } catch (_) {
-        // Preview init failed — still allow upload
-      }
+      } catch (_) {}
+      return;
+    }
+
+    // Зургийн carousel (видео файлуудыг алгасна)
+    for (final f in files) {
+      if (_media.length >= _maxImages) break;
+      if (f.type.startsWith('video/')) continue;
+      final url = html.Url.createObjectUrl(f);
+      _media.add(_Picked(f, url, false));
+    }
+    setState(() {
+      _error = null;
+      _uploadProgress = null;
+    });
+  }
+
+  void _removeAt(int i) {
+    if (i < 0 || i >= _media.length) return;
+    html.Url.revokeObjectUrl(_media[i].previewUrl);
+    if (_media[i].isVideo) {
+      _videoCtrl?.dispose();
+      _videoCtrl = null;
+    }
+    setState(() {
+      _media.removeAt(i);
+      if (_page >= _media.length) _page = _media.isEmpty ? 0 : _media.length - 1;
+    });
+  }
+
+  // ─── Зураг resize + JPEG compress (canvas) ───
+  // 500к scale — түүхий 5–20MB зургийг ~1440px / JPEG q0.82 болгож
+  // багасгана (ихэвчлэн 200–600KB). Алдаа гарвал эх файлаараа буцаана.
+  Future<html.Blob> _resizeImage(html.File file,
+      {int maxDim = 1440, num quality = 0.82}) async {
+    final objUrl = html.Url.createObjectUrl(file);
+    try {
+      final img = html.ImageElement(src: objUrl);
+      await img.onLoad.first;
+      final w = img.naturalWidth;
+      final h = img.naturalHeight;
+      if (w == 0 || h == 0) return file;
+
+      final longest = w > h ? w : h;
+      final scale = longest > maxDim ? maxDim / longest : 1.0;
+      final tw = (w * scale).round();
+      final th = (h * scale).round();
+
+      final canvas = html.CanvasElement(width: tw, height: th);
+      final ctx = canvas.context2D;
+      ctx.drawImageScaled(img, 0, 0, tw.toDouble(), th.toDouble());
+
+      final blob = await canvas.toBlob('image/jpeg', quality);
+      // Хэрэв ямар нэг шалтгаанаар томрсон бол эх файлаа хэрэглэнэ
+      if (blob.size >= file.size && scale == 1.0) return file;
+      return blob;
+    } catch (_) {
+      return file; // fallback — эх файл
+    } finally {
+      html.Url.revokeObjectUrl(objUrl);
     }
   }
 
-  // ─── Streaming XHR upload — works for 500MB without loading into RAM ───
-  Future<void> _uploadViaXhr(html.File file, String path) async {
+  // ─── Streaming XHR upload ───
+  Future<void> _uploadViaXhr(html.Blob blob, String path, String mime) async {
     final token = SupabaseService.client.auth.currentSession?.accessToken
         ?? AppConstants.supabaseAnonKey;
     final url = '${AppConstants.supabaseUrl}/storage/v1/object/posts/$path';
-
-    final mime = file.type.isNotEmpty ? file.type : 'application/octet-stream';
 
     final completer = Completer<void>();
     final xhr = html.HttpRequest()
@@ -97,7 +168,6 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
         setState(() => _uploadProgress = (e.loaded ?? 0) / (e.total ?? 1));
       }
     });
-
     xhr.onLoad.listen((_) {
       final s = xhr.status ?? 0;
       if (s >= 200 && s < 300) {
@@ -106,40 +176,58 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
         completer.completeError('Upload failed ($s): ${xhr.responseText}');
       }
     });
-
     xhr.onError.listen((_) =>
         completer.completeError('Network error — check Supabase Storage policies'));
-
-    xhr.send(file);
+    xhr.send(blob);
     await completer.future;
   }
 
-  // ─── Share ───
+  // ─── Хуваалцах ───
   Future<void> _post() async {
-    if (_htmlFile == null) {
-      setState(() => _error = 'Please select a photo or video first');
+    if (_media.isEmpty) {
+      setState(() => _error = 'Зураг эсвэл видео сонгоно уу');
       return;
     }
-    setState(() { _loading = true; _error = null; _uploadProgress = 0; });
+    setState(() { _loading = true; _error = null; _uploadProgress = 0; _uploadIndex = 0; });
 
     try {
       final user = SupabaseService.currentUser;
       if (user == null) { if (mounted) context.pop(); return; }
 
-      final ts = DateTime.now().millisecondsSinceEpoch;
-      final ext = (_fileName?.split('.').last.toLowerCase()) ??
-          (_isVideo ? 'mp4' : 'jpg');
-      final path = '${user.id}/$ts.$ext';
+      final urls = <String>[];
+      for (var i = 0; i < _media.length; i++) {
+        final m = _media[i];
+        if (mounted) setState(() { _uploadIndex = i; _uploadProgress = 0; });
+        final ts = DateTime.now().millisecondsSinceEpoch;
 
-      await _uploadViaXhr(_htmlFile!, path);
+        html.Blob blob;
+        String mime;
+        String ext;
+        if (m.isVideo) {
+          // Видеог хэвээр нь (browser-д найдвартай compress хийх боломжгүй)
+          blob = m.file;
+          mime = m.file.type.isNotEmpty ? m.file.type : 'video/mp4';
+          ext = (m.file.name.contains('.')
+              ? m.file.name.split('.').last.toLowerCase()
+              : 'mp4');
+        } else {
+          // Зургийг resize + compress
+          blob = await _resizeImage(m.file);
+          mime = 'image/jpeg';
+          ext = 'jpg';
+        }
 
-      final mediaUrl = SupabaseService.client.storage
-          .from('posts').getPublicUrl(path);
+        final path = '${user.id}/${ts}_$i.$ext';
+        await _uploadViaXhr(blob, path, mime);
+        urls.add(SupabaseService.client.storage.from('posts').getPublicUrl(path));
+      }
 
       await SupabaseService.client.from('posts').insert({
         'user_id':    user.id,
         'caption':    _captionCtrl.text.trim(),
-        'media_url':  mediaUrl,
+        'media_url':  urls.first,
+        'media_urls': urls,
+        'media_type': _isVideoPost ? 'video' : 'image',
         if (_venueName != null) 'venue_name': _venueName,
       });
 
@@ -157,8 +245,11 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
   @override
   void dispose() {
     _captionCtrl.dispose();
+    _pageCtrl.dispose();
     _videoCtrl?.dispose();
-    if (_previewUrl != null) html.Url.revokeObjectUrl(_previewUrl!);
+    for (final m in _media) {
+      html.Url.revokeObjectUrl(m.previewUrl);
+    }
     super.dispose();
   }
 
@@ -176,9 +267,9 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
         Padding(
           padding: const EdgeInsets.only(right: 8),
           child: TextButton(
-            onPressed: (_loading || _htmlFile == null) ? null : _post,
+            onPressed: (_loading || !_hasMedia) ? null : _post,
             style: TextButton.styleFrom(
-              backgroundColor: _htmlFile != null
+              backgroundColor: _hasMedia
                   ? AppColors.accentStart : AppColors.bgSurface,
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(10)),
@@ -190,22 +281,20 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                         strokeWidth: 2, color: Colors.white))
                 : Text('Share',
                     style: AppTextStyles.labelMd.copyWith(
-                      color: _htmlFile != null
-                          ? Colors.white : AppColors.textTertiary)),
+                      color: _hasMedia ? Colors.white : AppColors.textTertiary)),
           ),
         ),
       ],
     ),
     body: ListView(padding: const EdgeInsets.all(20), children: [
-      // Error banner
       if (_error != null)
         Container(
           margin: const EdgeInsets.only(bottom: 16),
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: AppColors.error.withOpacity(0.1),
+            color: AppColors.error.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: AppColors.error.withOpacity(0.4)),
+            border: Border.all(color: AppColors.error.withValues(alpha: 0.4)),
           ),
           child: Row(children: [
             const Icon(Icons.error_outline, color: AppColors.error, size: 18),
@@ -215,51 +304,63 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
           ]),
         ),
 
-      // Media picker tile
-      GestureDetector(
-        onTap: _loading ? null : _pickMedia,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          height: _htmlFile != null ? 380 : 280,
+      // ── Media picker / carousel preview ──
+      _hasMedia ? _buildPreview() : GestureDetector(
+        onTap: _loading ? null : () => _pickMedia(),
+        child: Container(
+          height: 280,
           decoration: BoxDecoration(
             color: AppColors.bgSurface,
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(
-              color: _htmlFile != null
-                  ? AppColors.accentStart.withOpacity(0.4)
-                  : AppColors.hairline,
-              width: _htmlFile != null ? 1.5 : 1,
-            ),
+            border: Border.all(color: AppColors.hairline),
           ),
           clipBehavior: Clip.antiAlias,
-          child: _htmlFile != null
-              ? _MediaPreview(
-                  previewUrl: _previewUrl!,
-                  isVideo: _isVideo,
-                  videoCtrl: _videoCtrl,
-                  videoPlaying: _videoPlaying,
-                  fileName: _fileName ?? '',
-                  fileSize: _htmlFile!.size,
-                  loading: _loading,
-                  uploadProgress: _uploadProgress,
-                  onTogglePlay: () {
-                    if (_videoCtrl == null) return;
-                    setState(() {
-                      _videoPlaying = !_videoPlaying;
-                      _videoPlaying
-                          ? _videoCtrl!.play()
-                          : _videoCtrl!.pause();
-                    });
-                  },
-                  onChange: _pickMedia,
-                )
-              : _PickerPlaceholder(),
+          child: _PickerPlaceholder(),
         ),
       ),
 
+      // ── Thumbnail strip (зургийн пост дээр) ──
+      if (_hasMedia && !_isVideoPost) ...[
+        const SizedBox(height: 12),
+        SizedBox(
+          height: 64,
+          child: ListView(
+            scrollDirection: Axis.horizontal,
+            children: [
+              for (var i = 0; i < _media.length; i++)
+                _Thumb(
+                  url: _media[i].previewUrl,
+                  selected: i == _page,
+                  onTap: () {
+                    setState(() => _page = i);
+                    _pageCtrl.animateToPage(i,
+                        duration: const Duration(milliseconds: 250),
+                        curve: Curves.easeOut);
+                  },
+                  onRemove: _loading ? null : () => _removeAt(i),
+                ),
+              if (_media.length < _maxImages)
+                GestureDetector(
+                  onTap: _loading ? null : () => _pickMedia(append: true),
+                  child: Container(
+                    width: 56, height: 56,
+                    margin: const EdgeInsets.only(right: 8),
+                    decoration: BoxDecoration(
+                      color: AppColors.bgSurface,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: AppColors.hairline),
+                    ),
+                    child: const Icon(Icons.add,
+                        color: AppColors.textSecondary, size: 24),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ],
+
       const SizedBox(height: 24),
 
-      // Caption
       Text('CAPTION', style: AppTextStyles.labelSm.copyWith(
           color: AppColors.textSecondary, letterSpacing: 0.8)),
       const SizedBox(height: 8),
@@ -275,7 +376,6 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
       ),
       const SizedBox(height: 20),
 
-      // Venue
       Text('LOCATION', style: AppTextStyles.labelSm.copyWith(
           color: AppColors.textSecondary, letterSpacing: 0.8)),
       const SizedBox(height: 8),
@@ -287,13 +387,13 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
             color: AppColors.bgSurface,
             borderRadius: BorderRadius.circular(14),
             border: Border.all(
-              color: _venueId != null
-                  ? AppColors.accentStart.withOpacity(0.4)
+              color: _venueName != null
+                  ? AppColors.accentStart.withValues(alpha: 0.4)
                   : AppColors.hairline),
           ),
           child: Row(children: [
             Icon(Icons.location_on_outlined,
-              color: _venueId != null
+              color: _venueName != null
                   ? AppColors.accentStart : AppColors.textSecondary,
               size: 20),
             const SizedBox(width: 10),
@@ -302,10 +402,9 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
               style: AppTextStyles.bodyMd.copyWith(
                 color: _venueName != null
                     ? AppColors.textPrimary : AppColors.textTertiary))),
-            if (_venueId != null)
+            if (_venueName != null)
               GestureDetector(
-                onTap: () => setState(
-                    () { _venueId = null; _venueName = null; }),
+                onTap: () => setState(() => _venueName = null),
                 child: const Icon(Icons.close,
                     color: AppColors.textTertiary, size: 18))
             else
@@ -316,12 +415,123 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
       const SizedBox(height: 40),
 
       GradientButton(
-        label: 'Share Post',
-        onPressed: (_htmlFile == null || _loading) ? null : _post,
+        label: _media.length > 1 ? 'Хуваалцах (${_media.length})' : 'Share Post',
+        onPressed: (!_hasMedia || _loading) ? null : _post,
       ),
       const SizedBox(height: 40),
     ]),
   );
+
+  Widget _buildPreview() {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(20),
+      child: SizedBox(
+        height: 380,
+        child: Stack(children: [
+          // PageView of media
+          PageView.builder(
+            controller: _pageCtrl,
+            itemCount: _media.length,
+            onPageChanged: (i) => setState(() => _page = i),
+            itemBuilder: (_, i) {
+              final m = _media[i];
+              if (m.isVideo) {
+                if (_videoCtrl != null && _videoCtrl!.value.isInitialized) {
+                  return GestureDetector(
+                    onTap: () {
+                      setState(() {
+                        _videoPlaying = !_videoPlaying;
+                        _videoPlaying ? _videoCtrl!.play() : _videoCtrl!.pause();
+                      });
+                    },
+                    child: Stack(children: [
+                      SizedBox.expand(child: FittedBox(
+                        fit: BoxFit.cover,
+                        child: SizedBox(
+                          width: _videoCtrl!.value.size.width,
+                          height: _videoCtrl!.value.size.height,
+                          child: VideoPlayer(_videoCtrl!),
+                        ),
+                      )),
+                      if (!_videoPlaying)
+                        const Center(child: Icon(Icons.play_circle_fill,
+                            color: Colors.white70, size: 60)),
+                    ]),
+                  );
+                }
+                return Container(color: Colors.black87, child: const Center(
+                  child: Icon(Icons.videocam_rounded, color: Colors.white54, size: 64)));
+              }
+              return Image.network(m.previewUrl,
+                fit: BoxFit.cover, width: double.infinity, height: double.infinity);
+            },
+          ),
+
+          // Count badge (1/3)
+          if (_media.length > 1)
+            Positioned(top: 12, left: 12, child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              decoration: BoxDecoration(
+                color: Colors.black54, borderRadius: BorderRadius.circular(20)),
+              child: Text('${_page + 1}/${_media.length}',
+                style: AppTextStyles.bodyXs.copyWith(color: Colors.white)),
+            )),
+
+          // Remove current
+          if (!_loading)
+            Positioned(top: 12, right: 12, child: GestureDetector(
+              onTap: () => _removeAt(_page),
+              child: Container(
+                padding: const EdgeInsets.all(6),
+                decoration: const BoxDecoration(
+                  color: Colors.black54, shape: BoxShape.circle),
+                child: const Icon(Icons.close, color: Colors.white, size: 16),
+              ),
+            )),
+
+          // Dots
+          if (_media.length > 1)
+            Positioned(bottom: 12, left: 0, right: 0, child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                for (var i = 0; i < _media.length; i++)
+                  Container(
+                    width: 7, height: 7,
+                    margin: const EdgeInsets.symmetric(horizontal: 3),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: i == _page
+                          ? AppColors.accentStart : Colors.white54),
+                  ),
+              ],
+            )),
+
+          // Upload overlay
+          if (_loading)
+            Positioned.fill(child: Container(
+              color: Colors.black.withValues(alpha: 0.65),
+              child: Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
+                SizedBox(width: 72, height: 72, child: CircularProgressIndicator(
+                  value: _uploadProgress,
+                  color: AppColors.accentStart,
+                  backgroundColor: Colors.white24,
+                  strokeWidth: 4,
+                )),
+                const SizedBox(height: 16),
+                if (_uploadProgress != null)
+                  Text('${((_uploadProgress ?? 0) * 100).toStringAsFixed(0)}%',
+                    style: AppTextStyles.h2.copyWith(color: Colors.white)),
+                const SizedBox(height: 4),
+                Text(_media.length > 1
+                  ? 'Uploading ${_uploadIndex + 1}/${_media.length}...'
+                  : 'Uploading...',
+                  style: AppTextStyles.bodyMd.copyWith(color: Colors.white70)),
+              ])),
+            )),
+        ]),
+      ),
+    );
+  }
 
   void _showVenuePicker() {
     showModalBottomSheet(
@@ -331,12 +541,49 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
       builder: (_) => _VenuePicker(
-        onSelect: (name) {
-          setState(() { _venueId = name; _venueName = name; });
-        },
+        onSelect: (name) => setState(() => _venueName = name),
       ),
     );
   }
+}
+
+// ─── Thumbnail ───
+class _Thumb extends StatelessWidget {
+  final String url;
+  final bool selected;
+  final VoidCallback onTap;
+  final VoidCallback? onRemove;
+  const _Thumb({required this.url, required this.selected,
+    required this.onTap, this.onRemove});
+
+  @override
+  Widget build(BuildContext context) => GestureDetector(
+    onTap: onTap,
+    child: Container(
+      width: 56, height: 56,
+      margin: const EdgeInsets.only(right: 8),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: selected ? AppColors.accentStart : AppColors.hairline,
+          width: selected ? 2 : 1),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Stack(fit: StackFit.expand, children: [
+        Image.network(url, fit: BoxFit.cover),
+        if (onRemove != null)
+          Positioned(top: 2, right: 2, child: GestureDetector(
+            onTap: onRemove,
+            child: Container(
+              padding: const EdgeInsets.all(2),
+              decoration: const BoxDecoration(
+                color: Colors.black54, shape: BoxShape.circle),
+              child: const Icon(Icons.close, color: Colors.white, size: 12),
+            ),
+          )),
+      ]),
+    ),
+  );
 }
 
 // ─── Picker placeholder ───
@@ -355,169 +602,14 @@ class _PickerPlaceholder extends StatelessWidget {
             color: AppColors.accentStart, size: 38),
       ),
       const SizedBox(height: 16),
-      Text('Tap to select photo or video',
-          style: AppTextStyles.labelLg),
+      Text('Зураг (10 хүртэл) эсвэл видео сонгох',
+          style: AppTextStyles.labelLg, textAlign: TextAlign.center),
       const SizedBox(height: 6),
       Text('Up to 500MB  ·  MP4, MOV, JPG, PNG',
           style: AppTextStyles.bodyXs.copyWith(
               color: AppColors.textTertiary)),
     ],
   );
-}
-
-// ─── Media preview (image or video) ───
-class _MediaPreview extends StatelessWidget {
-  final String previewUrl;
-  final bool isVideo;
-  final VideoPlayerController? videoCtrl;
-  final bool videoPlaying;
-  final String fileName;
-  final int fileSize;
-  final bool loading;
-  final double? uploadProgress;
-  final VoidCallback onTogglePlay;
-  final VoidCallback onChange;
-
-  const _MediaPreview({
-    required this.previewUrl,
-    required this.isVideo,
-    required this.videoCtrl,
-    required this.videoPlaying,
-    required this.fileName,
-    required this.fileSize,
-    required this.loading,
-    required this.uploadProgress,
-    required this.onTogglePlay,
-    required this.onChange,
-  });
-
-  String _fmt(int bytes) {
-    if (bytes < 1 << 20) return '${(bytes / 1024).toStringAsFixed(0)} KB';
-    if (bytes < 1 << 30) return '${(bytes / (1 << 20)).toStringAsFixed(1)} MB';
-    return '${(bytes / (1 << 30)).toStringAsFixed(2)} GB';
-  }
-
-  @override
-  Widget build(BuildContext context) => Stack(children: [
-    // Content
-    if (isVideo && videoCtrl != null && videoCtrl!.value.isInitialized)
-      SizedBox.expand(
-        child: FittedBox(
-          fit: BoxFit.cover,
-          child: SizedBox(
-            width: videoCtrl!.value.size.width,
-            height: videoCtrl!.value.size.height,
-            child: VideoPlayer(videoCtrl!),
-          ),
-        ),
-      )
-    else if (isVideo)
-      Container(
-        color: Colors.black87,
-        child: Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-          const Icon(Icons.videocam_rounded, color: Colors.white54, size: 64),
-          const SizedBox(height: 12),
-          Text(fileName,
-            style: AppTextStyles.bodyMd.copyWith(color: Colors.white54),
-            textAlign: TextAlign.center,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis),
-        ])),
-      )
-    else
-      Image.network(previewUrl,
-        fit: BoxFit.cover,
-        width: double.infinity,
-        height: double.infinity),
-
-    // Video play/pause overlay
-    if (isVideo && !loading)
-      Positioned.fill(
-        child: GestureDetector(
-          onTap: onTogglePlay,
-          child: AnimatedOpacity(
-            opacity: videoPlaying ? 0.0 : 1.0,
-            duration: const Duration(milliseconds: 200),
-            child: Center(
-              child: Container(
-                width: 60, height: 60,
-                decoration: const BoxDecoration(
-                    shape: BoxShape.circle, color: Colors.black54),
-                child: const Icon(Icons.play_arrow_rounded,
-                    color: Colors.white, size: 36),
-              ),
-            ),
-          ),
-        ),
-      ),
-
-    // Upload progress overlay
-    if (loading)
-      Positioned.fill(
-        child: Container(
-          color: Colors.black.withOpacity(0.65),
-          child: Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-            SizedBox(
-              width: 72, height: 72,
-              child: CircularProgressIndicator(
-                value: uploadProgress,
-                color: AppColors.accentStart,
-                backgroundColor: Colors.white24,
-                strokeWidth: 4,
-              ),
-            ),
-            const SizedBox(height: 16),
-            if (uploadProgress != null)
-              Text('${((uploadProgress ?? 0) * 100).toStringAsFixed(0)}%',
-                style: AppTextStyles.h2.copyWith(color: Colors.white)),
-            const SizedBox(height: 4),
-            Text('Uploading${isVideo ? ' video' : ''}...',
-              style: AppTextStyles.bodyMd.copyWith(color: Colors.white70)),
-          ])),
-        ),
-      ),
-
-    // Change button
-    if (!loading)
-      Positioned(
-        top: 12, right: 12,
-        child: GestureDetector(
-          onTap: onChange,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            decoration: BoxDecoration(
-              color: Colors.black54,
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Row(mainAxisSize: MainAxisSize.min, children: [
-              const Icon(Icons.edit_rounded, color: Colors.white, size: 13),
-              const SizedBox(width: 4),
-              Text('Change',
-                  style: AppTextStyles.bodyXs.copyWith(color: Colors.white)),
-            ]),
-          ),
-        ),
-      ),
-
-    // File info badge
-    Positioned(
-      bottom: 12, left: 12,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-        decoration: BoxDecoration(
-          color: Colors.black54,
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Row(mainAxisSize: MainAxisSize.min, children: [
-          Icon(isVideo ? Icons.videocam_rounded : Icons.image_rounded,
-              color: Colors.white70, size: 13),
-          const SizedBox(width: 4),
-          Text(_fmt(fileSize),
-              style: AppTextStyles.bodyXs.copyWith(color: Colors.white70)),
-        ]),
-      ),
-    ),
-  ]);
 }
 
 // ─── Venue picker bottom sheet with search ───
@@ -573,8 +665,6 @@ class _VenuePickerState extends State<_VenuePicker> {
           ]),
         ),
         const SizedBox(height: 12),
-
-        // Search bar
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20),
           child: Container(
@@ -608,8 +698,6 @@ class _VenuePickerState extends State<_VenuePicker> {
         ),
         const SizedBox(height: 8),
         const Divider(color: AppColors.hairline),
-
-        // Venue list
         Expanded(
           child: _filtered.isEmpty
               ? Center(child: Text('No venues found',

@@ -8,6 +8,7 @@ class Post {
   final String? venueId;
   final String? caption;
   final String? mediaUrl;
+  final List<String> mediaUrls; // carousel — олон зураг (1+)
   final String mediaType;       // 'image' | 'video'
   final int likesCount;
   final int commentsCount;
@@ -25,6 +26,7 @@ class Post {
     this.venueId,
     this.caption,
     this.mediaUrl,
+    this.mediaUrls = const [],
     this.mediaType = 'image',
     this.likesCount = 0,
     this.commentsCount = 0,
@@ -53,17 +55,29 @@ class Post {
       author = _parseProfile(json['profiles']);
     }
 
+    final mediaUrl = json['media_url'] as String?;
+    final rawUrls = json['media_urls'];
+    List<String> mediaUrls = [];
+    if (rawUrls is List) {
+      mediaUrls = rawUrls.whereType<String>().toList();
+    }
+    // Backfill: хуучин пост нэг л media_url-тэй
+    if (mediaUrls.isEmpty && mediaUrl != null && mediaUrl.isNotEmpty) {
+      mediaUrls = [mediaUrl];
+    }
+
     return Post(
       id:            json['id'] as String,
       userId:        (json['user_id'] ?? json['author_id']) as String,
       venueId:       json['venue_id'] as String?,
       caption:       json['caption'] as String?,
-      mediaUrl:      json['media_url'] as String?,
+      mediaUrl:      mediaUrl,
+      mediaUrls:     mediaUrls,
       mediaType:     json['media_type'] as String? ?? 'image',
       likesCount:    (json['likes_count'] as num?)?.toInt() ?? 0,
       commentsCount: (json['comments_count'] as num?)?.toInt() ?? 0,
       isLikedByMe:   json['is_liked_by_me'] as bool? ?? false,
-      createdAt:     DateTime.parse(json['created_at'] as String),
+      createdAt:     DateTime.tryParse(json['created_at']?.toString() ?? '') ?? DateTime.now(),
       venueName:     (json['venue_name'] ?? json['venues']?['name']) as String?,
       author:        author,
       venue:         isRpc ? null : _parseVenue(json['venues']),
@@ -74,9 +88,11 @@ class Post {
     bool? isLikedByMe,
     int? likesCount,
     int? commentsCount,
+    String? caption,
   }) => Post(
     id: id, userId: userId, venueId: venueId,
-    caption: caption, mediaUrl: mediaUrl, mediaType: mediaType,
+    caption: caption ?? this.caption, mediaUrl: mediaUrl, mediaUrls: mediaUrls,
+    mediaType: mediaType,
     likesCount:    likesCount    ?? this.likesCount,
     commentsCount: commentsCount ?? this.commentsCount,
     isLikedByMe:   isLikedByMe   ?? this.isLikedByMe,
@@ -96,12 +112,16 @@ class Post {
   }
 
   String get timeAgo {
-    final diff = DateTime.now().difference(createdAt);
+    final now = DateTime.now();
+    final diff = now.difference(createdAt);
     if (diff.inSeconds < 60)  return 'Одоо';
     if (diff.inMinutes < 60)  return '${diff.inMinutes}м өмнө';
     if (diff.inHours   < 24)  return '${diff.inHours}ц өмнө';
     if (diff.inDays    < 7)   return '${diff.inDays}х өмнө';
-    return '${createdAt.month}/${createdAt.day}';
+    final d = createdAt.toLocal();
+    // 7 хоногоос дээш — он сар өдрийг харуулна
+    if (d.year == now.year) return '${d.month}-р сарын ${d.day}';
+    return '${d.year}.${d.month.toString().padLeft(2, '0')}.${d.day.toString().padLeft(2, '0')}';
   }
 
   String get formattedLikes =>

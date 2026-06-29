@@ -5,6 +5,17 @@ import '../../../core/theme/app_text_styles.dart';
 import '../../../core/widgets/app_avatar.dart';
 import '../../../core/services/supabase_service.dart';
 
+/// Note үүссэн хугацааг "Xм/Xц өмнө" болгож харуулна
+String _noteTimeAgo(String? iso) {
+  if (iso == null) return '';
+  final dt = DateTime.tryParse(iso);
+  if (dt == null) return '';
+  final diff = DateTime.now().difference(dt.toLocal());
+  if (diff.inMinutes < 1) return 'дөнгөж сая';
+  if (diff.inMinutes < 60) return '${diff.inMinutes}м өмнө';
+  return '${diff.inHours}ц өмнө';
+}
+
 /// Instagram-маягийн Note мөр — DM жагсаалтын дээр. Note нь 24ц богино статус,
 /// зөвхөн venue таглаж болно. Өөрийн bubble дарвал бичих/засах composer нээгдэнэ.
 class NotesRow extends StatefulWidget {
@@ -34,8 +45,12 @@ class _NotesRowState extends State<NotesRow> {
         _me = await SupabaseService.client.from('profiles')
             .select('id, username, avatar_url').eq('id', me).maybeSingle();
       }
+      // Зөвхөн сүүлийн 24 цагийн note (хугацаа дууссаныг харуулахгүй)
+      final cutoff = DateTime.now()
+          .subtract(const Duration(hours: 24)).toIso8601String();
       final data = await SupabaseService.client.from('notes')
           .select('user_id, text, venue_id, created_at')
+          .gt('created_at', cutoff)
           .order('created_at', ascending: false).limit(50);
       final rows = (data as List).cast<Map<String, dynamic>>();
 
@@ -65,6 +80,7 @@ class _NotesRowState extends State<NotesRow> {
           'avatar_url': p?['avatar_url'],
           'text': r['text'],
           'venue_name': r['venue_id'] != null ? vmap[r['venue_id']] : null,
+          'created_at': r['created_at'],
         };
       }).toList();
       // Өөрийн note-г эхэнд
@@ -110,7 +126,14 @@ class _NotesRowState extends State<NotesRow> {
               AppAvatar(imageUrl: n['avatar_url'] as String?,
                 initial: username.isNotEmpty ? username[0].toUpperCase() : '?', size: 40),
               const SizedBox(width: 10),
-              Text('@$username', style: AppTextStyles.labelLg),
+              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('@$username', style: AppTextStyles.labelLg),
+                  if (_noteTimeAgo(n['created_at'] as String?).isNotEmpty)
+                    Text(_noteTimeAgo(n['created_at'] as String?),
+                      style: AppTextStyles.bodyXs.copyWith(
+                        color: AppColors.textTertiary)),
+                ])),
             ]),
             const SizedBox(height: 14),
             // Бүрэн текст
@@ -135,14 +158,16 @@ class _NotesRowState extends State<NotesRow> {
             GestureDetector(
               onTap: () {
                 Navigator.pop(sheetCtx);
-                context.push('/dm/${n['user_id']}');
+                final note = (n['text'] as String? ?? '').trim();
+                final q = note.isEmpty ? '' : '?note=${Uri.encodeComponent(note)}';
+                context.push('/dm/${n['user_id']}$q');
               },
               child: Container(
                 height: 48, width: double.infinity,
                 decoration: BoxDecoration(
                   gradient: AppColors.accentGradient, borderRadius: BorderRadius.circular(14)),
                 alignment: Alignment.center,
-                child: Text('Мессеж бичих', style: AppTextStyles.btn.copyWith(color: Colors.white))),
+                child: Text('Note-д хариулах', style: AppTextStyles.btn.copyWith(color: Colors.white))),
             ),
           ]),
       ),
@@ -158,7 +183,7 @@ class _NotesRowState extends State<NotesRow> {
     return Container(
       padding: const EdgeInsets.only(top: 4, bottom: 6),
       child: SizedBox(
-        height: 128,
+        height: 142,
         child: ListView(
           scrollDirection: Axis.horizontal,
           padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -169,6 +194,7 @@ class _NotesRowState extends State<NotesRow> {
               username: 'Та',
               noteText: mine?['text'] as String?,
               venueName: mine?['venue_name'] as String?,
+              createdAt: mine?['created_at'] as String?,
               isMine: true,
               onTap: _openComposer,
             ),
@@ -178,6 +204,7 @@ class _NotesRowState extends State<NotesRow> {
                 username: (n['username'] as String).replaceAll('@', ''),
                 noteText: n['text'] as String?,
                 venueName: n['venue_name'] as String?,
+                createdAt: n['created_at'] as String?,
                 isMine: false,
                 onTap: () => _showNoteDetail(n),
               ),
@@ -193,11 +220,13 @@ class _NoteBubble extends StatelessWidget {
   final String username;
   final String? noteText;
   final String? venueName;
+  final String? createdAt;
   final bool isMine;
   final VoidCallback onTap;
   const _NoteBubble({
     required this.avatarUrl, required this.username, required this.noteText,
-    required this.venueName, required this.isMine, required this.onTap,
+    required this.venueName, required this.createdAt,
+    required this.isMine, required this.onTap,
   });
 
   @override
@@ -243,6 +272,9 @@ class _NoteBubble extends StatelessWidget {
           SizedBox(width: 100, child: Text(username,
             maxLines: 1, overflow: TextOverflow.ellipsis, textAlign: TextAlign.center,
             style: AppTextStyles.bodyXs.copyWith(color: AppColors.textSecondary))),
+          if (hasNote && _noteTimeAgo(createdAt).isNotEmpty)
+            Text(_noteTimeAgo(createdAt), textAlign: TextAlign.center,
+              style: const TextStyle(color: AppColors.textTertiary, fontSize: 9)),
         ])),
       ),
     );

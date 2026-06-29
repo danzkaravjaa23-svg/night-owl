@@ -9,7 +9,8 @@ import '../../../core/constants/stickers.dart';
 
 class DmThreadScreen extends StatefulWidget {
   final String threadId; // partner's user_id
-  const DmThreadScreen({super.key, required this.threadId});
+  final String? replyNote; // note-д хариулж байгаа бол түүний текст
+  const DmThreadScreen({super.key, required this.threadId, this.replyNote});
   @override State<DmThreadScreen> createState() => _DmThreadScreenState();
 }
 
@@ -25,12 +26,15 @@ class _DmThreadScreenState extends State<DmThreadScreen> {
   String _emojiTab = 'emoji'; // 'emoji' | 'sticker'
 
   StreamSubscription? _sub;
+  String? _pendingNote; // note-д хариулж байгаа эсэх
 
   String get _myId => SupabaseService.currentUser?.id ?? '';
 
   @override
   void initState() {
     super.initState();
+    final n = widget.replyNote?.trim();
+    if (n != null && n.isNotEmpty) _pendingNote = n;
     _loadPartner();
     _subscribe();
   }
@@ -42,31 +46,42 @@ class _DmThreadScreenState extends State<DmThreadScreen> {
           .select('id, username, avatar_url')
           .eq('id', widget.threadId)
           .maybeSingle();
-      if (mounted) setState(() => _partner = p as Map<String, dynamic>?);
+      if (mounted) setState(() => _partner = p);
     } catch (_) {}
   }
 
   void _subscribe() {
     final me = _myId;
+    // conversation_id-р scope — бүх messages хүснэгтийг sub хийхгүй
+    final cid = ([me, widget.threadId]..sort()).join('_');
     _sub = SupabaseService.client
         .from('messages')
         .stream(primaryKey: ['id'])
+        .eq('conversation_id', cid)
         .order('created_at')
         .listen((data) {
-          final filtered = (data as List)
-              .cast<Map<String, dynamic>>()
-              .where((m) =>
-                (m['sender_id'] == me && m['receiver_id'] == widget.threadId) ||
-                (m['sender_id'] == widget.threadId && m['receiver_id'] == me))
-              .toList();
-          // Хамгийн сүүлд бичсэн нь доор гарахаар цагаар нь эрэмбэлэх
-          filtered.sort((a, b) => (a['created_at'] as String? ?? '')
-              .compareTo(b['created_at'] as String? ?? ''));
-          if (mounted) {
-            setState(() { _msgs = filtered; _loading = false; });
-            _scrollToBottom();
-          }
+          if (!mounted) return;
+          final msgs = (data as List).cast<Map<String, dynamic>>().toList()
+            ..sort((a, b) => (a['created_at'] as String? ?? '')
+                .compareTo(b['created_at'] as String? ?? ''));
+          setState(() { _msgs = msgs; _loading = false; });
+          _scrollToBottom();
+          _markRead(); // ирсэн мессежийг уншсан болгоно
         });
+  }
+
+  // Партнёроос ирсэн мессежийг "уншсан" болгож тэмдэглэнэ
+  Future<void> _markRead() async {
+    final me = _myId;
+    if (me.isEmpty) return;
+    try {
+      await SupabaseService.client
+          .from('messages')
+          .update({'is_read': true})
+          .eq('sender_id', widget.threadId)
+          .eq('receiver_id', me)
+          .eq('is_read', false);
+    } catch (_) {}
   }
 
   void _scrollToBottom() {
@@ -85,15 +100,26 @@ class _DmThreadScreenState extends State<DmThreadScreen> {
     final text = raw.trim();
     if (text.isEmpty || _sending) return;
     _ctrl.clear();
-    setState(() => _sending = true);
+    final noteRef = _pendingNote; // эхний мессежид л note ишлэлийг хавсаргана
+    setState(() { _sending = true; _pendingNote = null; });
     try {
       await SupabaseService.client.from('messages').insert({
         'sender_id':   _myId,
         'receiver_id': widget.threadId,
         'body':        text,
         'is_read':     false,
+        if (noteRef != null) 'note_text': noteRef,
       });
-    } catch (_) {}
+    } catch (_) {
+      // Илгээж чадаагүй — текст + note ишлэлийг сэргээж, мэдэгдэнэ
+      if (mounted) {
+        _ctrl.text = text;
+        setState(() => _pendingNote = noteRef);
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Илгээж чадсангүй. Дахин оролдоно уу.'),
+          backgroundColor: AppColors.error));
+      }
+    }
     if (mounted) setState(() => _sending = false);
   }
 
@@ -121,6 +147,8 @@ class _DmThreadScreenState extends State<DmThreadScreen> {
     final avatarUrl = _partner?['avatar_url'] as String?;
     final initial   = username.replaceAll('@','').isNotEmpty
         ? username.replaceAll('@','')[0].toUpperCase() : '?';
+    // Өөрийн илгээсэн хамгийн сүүлийн мессеж (түүн дор "Үзсэн" харуулна)
+    final lastMineIdx = _msgs.lastIndexWhere((m) => m['sender_id'] == _myId);
 
     return Scaffold(
       backgroundColor: AppColors.bgBase,
@@ -133,14 +161,9 @@ class _DmThreadScreenState extends State<DmThreadScreen> {
         title: GestureDetector(
           onTap: () => context.push('/creator/${widget.threadId}'),
           child: Row(children: [
-            AppAvatar(imageUrl: avatarUrl, initial: initial, size: 36,
-              showOnlineDot: true),
+            AppAvatar(imageUrl: avatarUrl, initial: initial, size: 36),
             const SizedBox(width: 10),
-            Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(username, style: AppTextStyles.labelLg),
-              Text('online', style: AppTextStyles.bodyXs.copyWith(
-                color: AppColors.success)),
-            ]),
+            Text(username, style: AppTextStyles.labelLg),
           ])),
         titleSpacing: 0,
         bottom: const PreferredSize(
@@ -183,12 +206,52 @@ class _DmThreadScreenState extends State<DmThreadScreen> {
                             child: Text(_dateLabel(time),
                               style: AppTextStyles.bodyXs.copyWith(
                                 color: AppColors.textTertiary)))),
-                        _Bubble(text: text, isMe: isMe, time: _timeStr(time)),
+                        _Bubble(text: text, isMe: isMe, time: _timeStr(time),
+                          storyMediaUrl: m['story_media_url'] as String?,
+                          noteText: m['note_text'] as String?),
+                        // "Үзсэн" — зөвхөн өөрийн сүүлийн мессеж уншигдсан үед
+                        if (isMe && i == lastMineIdx && (m['is_read'] == true))
+                          Padding(
+                            padding: const EdgeInsets.only(right: 2, bottom: 6),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.end,
+                              children: [
+                                const Icon(Icons.done_all_rounded,
+                                  size: 13, color: AppColors.accentStart),
+                                const SizedBox(width: 3),
+                                Text('Үзсэн', style: AppTextStyles.bodyXs.copyWith(
+                                  color: AppColors.textTertiary)),
+                              ])),
                       ]);
                   })),
 
         // Input + emoji panel
         SafeArea(top: false, child: Column(mainAxisSize: MainAxisSize.min, children: [
+          // Note-д хариулж байгаа бол ишлэл харуулна
+          if (_pendingNote != null)
+            Container(
+              padding: const EdgeInsets.fromLTRB(14, 8, 10, 8),
+              color: AppColors.bgElevated,
+              child: Row(children: [
+                Container(width: 3, height: 32,
+                  decoration: BoxDecoration(color: AppColors.accentStart,
+                    borderRadius: BorderRadius.circular(2))),
+                const SizedBox(width: 10),
+                Expanded(child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text('$username-ийн note-д хариулж байна',
+                      style: AppTextStyles.bodyXs.copyWith(
+                        color: AppColors.accentStart, fontWeight: FontWeight.w600)),
+                    Text(_pendingNote!, maxLines: 1, overflow: TextOverflow.ellipsis,
+                      style: AppTextStyles.bodyXs.copyWith(
+                        color: AppColors.textSecondary)),
+                  ])),
+                GestureDetector(
+                  onTap: () => setState(() => _pendingNote = null),
+                  child: const Icon(Icons.close, size: 18,
+                    color: AppColors.textTertiary)),
+              ]),
+            ),
           Container(
             padding: const EdgeInsets.fromLTRB(4, 8, 12, 8),
             decoration: const BoxDecoration(
@@ -357,10 +420,99 @@ bool _isEmojiOnly(String s) {
 class _Bubble extends StatelessWidget {
   final String text, time;
   final bool isMe;
-  const _Bubble({required this.text, required this.isMe, required this.time});
+  final String? storyMediaUrl;
+  final String? noteText;
+  const _Bubble({required this.text, required this.isMe, required this.time,
+    this.storyMediaUrl, this.noteText});
 
   @override
   Widget build(BuildContext context) {
+    // 📝 Note-д хариулсан → note ишлэл + хариу bubble
+    if (noteText != null && noteText!.trim().isNotEmpty) {
+      return Align(
+        alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
+        child: Padding(
+          padding: const EdgeInsets.only(bottom: 6, top: 2),
+          child: Column(
+            crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+            children: [
+              Text(isMe ? 'Note-д хариулсан' : 'Таны note-д хариулсан',
+                style: AppTextStyles.bodyXs.copyWith(
+                  color: AppColors.textTertiary, fontStyle: FontStyle.italic)),
+              const SizedBox(height: 3),
+              // Note ишлэл
+              Container(
+                constraints: BoxConstraints(
+                  maxWidth: MediaQuery.of(context).size.width * 0.72),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: AppColors.bgSurface,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border(left: BorderSide(
+                    color: AppColors.accentStart, width: 3))),
+                child: Text(noteText!, maxLines: 3, overflow: TextOverflow.ellipsis,
+                  style: AppTextStyles.bodyXs.copyWith(
+                    color: AppColors.textSecondary)),
+              ),
+              const SizedBox(height: 4),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                constraints: BoxConstraints(
+                  maxWidth: MediaQuery.of(context).size.width * 0.72),
+                decoration: BoxDecoration(
+                  gradient: isMe ? AppColors.accentGradient : null,
+                  color: isMe ? null : AppColors.bgSurface,
+                  borderRadius: BorderRadius.circular(16)),
+                child: Text(text, style: AppTextStyles.bodyMd.copyWith(
+                  color: isMe ? Colors.white : AppColors.textPrimary)),
+              ),
+              const SizedBox(height: 2),
+              Text(time, style: const TextStyle(
+                fontSize: 10, color: AppColors.textTertiary)),
+            ])));
+    }
+    // 📷 Story-д хариулсан → story thumbnail + тэмдэг + хариу bubble
+    if (storyMediaUrl != null) {
+      return Align(
+        alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
+        child: Padding(
+          padding: const EdgeInsets.only(bottom: 6, top: 2),
+          child: Column(
+            crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+            children: [
+              Row(mainAxisSize: MainAxisSize.min, children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(6),
+                  child: SizedBox(width: 30, height: 42,
+                    child: Image.network(storyMediaUrl!, fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => Container(
+                        color: AppColors.bgSurface,
+                        child: const Icon(Icons.auto_stories,
+                            size: 16, color: AppColors.textTertiary)))),
+                ),
+                const SizedBox(width: 6),
+                Text(isMe ? 'Story-д хариулсан' : 'Таны story-д хариулсан',
+                  style: AppTextStyles.bodyXs.copyWith(
+                    color: AppColors.textTertiary, fontStyle: FontStyle.italic)),
+              ]),
+              const SizedBox(height: 4),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                constraints: BoxConstraints(
+                  maxWidth: MediaQuery.of(context).size.width * 0.72),
+                decoration: BoxDecoration(
+                  gradient: isMe ? AppColors.accentGradient : null,
+                  color: isMe ? null : AppColors.bgSurface,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border(left: BorderSide(
+                    color: isMe ? Colors.white54 : AppColors.accentStart, width: 3))),
+                child: Text(text, style: AppTextStyles.bodyMd.copyWith(
+                  color: isMe ? Colors.white : AppColors.textPrimary)),
+              ),
+              const SizedBox(height: 2),
+              Text(time, style: TextStyle(fontSize: 10, color: AppColors.textTertiary)),
+            ])));
+    }
     // 🦉 Owl sticker → онцгой gradient pill
     if (isOwlSticker(text)) {
       return Align(

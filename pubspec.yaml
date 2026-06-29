@@ -55,6 +55,9 @@ dependencies:
   equatable: ^2.0.5
   cupertino_icons: ^1.0.8
 
+  # Phone-frame preview (debug орчинд утсан дээр шиг харуулна)
+  device_preview: ^1.2.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

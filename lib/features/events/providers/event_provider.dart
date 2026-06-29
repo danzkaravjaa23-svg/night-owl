@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' show CountOption;
 import '../../../core/services/supabase_service.dart';
 
 class EventItem {
@@ -62,3 +63,48 @@ final upcomingEventsProvider = FutureProvider<List<EventItem>>((ref) async {
     organizerName: r['organizer_id'] != null ? omap[r['organizer_id']] : null,
   )).toList();
 });
+
+// ─── Event RSVP (Going / Interested) ───
+class EventRsvpService {
+  static final _c = SupabaseService.client;
+
+  /// Тухайн эвентийн going/interested тоо + миний төлөв
+  static Future<({int going, int interested, String? mine})> load(String eventId) async {
+    int going = 0, interested = 0;
+    String? mine;
+    try {
+      final g = await _c.from('event_rsvps').select('user_id')
+          .eq('event_id', eventId).eq('status', 'going').count(CountOption.exact);
+      going = g.count;
+      final i = await _c.from('event_rsvps').select('user_id')
+          .eq('event_id', eventId).eq('status', 'interested').count(CountOption.exact);
+      interested = i.count;
+      final me = SupabaseService.currentUser?.id;
+      if (me != null) {
+        final r = await _c.from('event_rsvps').select('status')
+            .eq('event_id', eventId).eq('user_id', me).maybeSingle();
+        mine = r?['status'] as String?;
+      }
+    } catch (_) {}
+    return (going: going, interested: interested, mine: mine);
+  }
+
+  /// RSVP тохируулах (status=null бол хасах)
+  static Future<String?> setRsvp(String eventId, String? status) async {
+    final me = SupabaseService.currentUser?.id;
+    if (me == null) return 'Нэвтэрнэ үү';
+    try {
+      if (status == null) {
+        await _c.from('event_rsvps').delete()
+            .match({'event_id': eventId, 'user_id': me});
+      } else {
+        await _c.from('event_rsvps').upsert(
+            {'event_id': eventId, 'user_id': me, 'status': status},
+            onConflict: 'event_id, user_id');
+      }
+      return null;
+    } catch (e) {
+      return e.toString();
+    }
+  }
+}

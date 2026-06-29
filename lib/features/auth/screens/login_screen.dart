@@ -33,14 +33,35 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() { _loading = true; _error = null; });
 
     try {
-      await Supabase.instance.client.auth.signInWithPassword(
+      // Хуучин session-ийг бүрэн цэвэрлэж байж шинээр нэвтрэх
+      // (өөр хаягаар солих үед хуучин нь үлдэхээс сэргийлнэ)
+      if (Supabase.instance.client.auth.currentUser != null) {
+        await Supabase.instance.client.auth.signOut();
+      }
+      final res = await Supabase.instance.client.auth.signInWithPassword(
         email: _emailCtrl.text.trim(),
         password: _pwCtrl.text,
       );
       if (!mounted) return;
+      if (res.session == null) {
+        setState(() => _error = 'Нэвтрэх боломжгүй. И-мэйл баталгаажаагүй байж магадгүй.');
+        return;
+      }
       context.go(AppRoutes.feed);
     } on AuthException catch (e) {
-      setState(() { _error = e.message; });
+      // Supabase-ийн тодорхой алдааг ойлгомжтой болгох
+      final m = e.message.toLowerCase();
+      setState(() {
+        if (m.contains('invalid login') || m.contains('credentials')) {
+          _error = 'И-мэйл эсвэл нууц үг буруу байна.';
+        } else if (m.contains('email not confirmed') || m.contains('confirm')) {
+          _error = 'И-мэйл хаягаа баталгаажуулаагүй байна.';
+        } else {
+          _error = e.message;
+        }
+      });
+    } catch (e) {
+      setState(() => _error = 'Нэвтрэхэд алдаа гарлаа. Сүлжээгээ шалгана уу.');
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -60,7 +81,7 @@ class _LoginScreenState extends State<LoginScreen> {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 gradient: RadialGradient(
-                  colors: [AppColors.accentPurple.withOpacity(0.35), Colors.transparent],
+                  colors: [AppColors.accentPurple.withValues(alpha: 0.35), Colors.transparent],
                 ),
               ),
             ),
@@ -85,10 +106,10 @@ class _LoginScreenState extends State<LoginScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('Welcome back\nto the night',
+                          Text('The night\nmissed you 🌙',
                             style: AppTextStyles.displayMd.copyWith(height: 1.2)),
                           const SizedBox(height: 8),
-                          Text('Sign in to continue',
+                          Text('Дахин нэвтрээд party-даа эргэн нэгдээрэй',
                             style: AppTextStyles.bodyMd.copyWith(
                               color: AppColors.textSecondary)),
                           const SizedBox(height: 40),
@@ -130,9 +151,9 @@ class _LoginScreenState extends State<LoginScreen> {
                             Container(
                               padding: const EdgeInsets.all(12),
                               decoration: BoxDecoration(
-                                color: AppColors.error.withOpacity(0.12),
+                                color: AppColors.error.withValues(alpha: 0.12),
                                 borderRadius: BorderRadius.circular(10),
-                                border: Border.all(color: AppColors.error.withOpacity(0.3)),
+                                border: Border.all(color: AppColors.error.withValues(alpha: 0.3)),
                               ),
                               child: Row(
                                 children: [

@@ -52,13 +52,13 @@ class VenueEvent {
   factory VenueEvent.fromJson(Map<String, dynamic> json) => VenueEvent(
     id:          json['id'] as String,
     venueId:     json['venue_id'] as String,
-    title:       json['title'] as String,
+    title:       json['title'] as String? ?? '',
     description: json['description'] as String?,
-    date:        DateTime.parse(json['starts_at'] as String),
-    ticketPrice: json['price'] as int?,
-    capacity:    json['capacity'] as int?,
+    date:        DateTime.tryParse(json['starts_at']?.toString() ?? '') ?? DateTime.now(),
+    ticketPrice: (json['price'] as num?)?.toInt(),
+    capacity:    (json['capacity'] as num?)?.toInt(),
     status:      json['status'] as String? ?? 'active',
-    goingCount:  json['attendee_count'] as int? ?? 0,
+    goingCount:  (json['attendee_count'] as num?)?.toInt() ?? 0,
     isGoing:     json['is_going'] as bool? ?? false,
     venue:       json['venues'] != null
         ? Venue.fromJson(json['venues'] as Map<String, dynamic>)

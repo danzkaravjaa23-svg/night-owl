@@ -91,7 +91,7 @@ final followCountsProvider =
       .maybeSingle();
 
   if (data == null) return const FollowCounts();
-  final d = data as Map<String, dynamic>;
+  final d = data;
   return FollowCounts(
     followers: d['followers_count'] as int? ?? 0,
     following: d['following_count'] as int? ?? 0,

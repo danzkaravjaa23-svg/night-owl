@@ -30,12 +30,18 @@ class GradientButton extends StatelessWidget {
               ? AppColors.accentGradient
               : const LinearGradient(colors: [Color(0xFF3A2A4A), Color(0xFF3A2A4A)]),
           borderRadius: BorderRadius.circular(borderRadius),
+          // Неон glow — pink + amber давхар зөөлөн сүүдэр
           boxShadow: onPressed != null
               ? [
                   BoxShadow(
-                    color: AppColors.accentStart.withOpacity(0.35),
-                    blurRadius: 20,
-                    offset: const Offset(0, 6),
+                    color: AppColors.accentStart.withValues(alpha: 0.50),
+                    blurRadius: 26, spreadRadius: -2,
+                    offset: const Offset(0, 8),
+                  ),
+                  BoxShadow(
+                    color: AppColors.accentEnd.withValues(alpha: 0.32),
+                    blurRadius: 34, spreadRadius: 0,
+                    offset: const Offset(0, 4),
                   ),
                 ]
               : [],

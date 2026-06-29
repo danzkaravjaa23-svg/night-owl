@@ -5,6 +5,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/widgets/app_avatar.dart';
 import '../../../core/services/supabase_service.dart';
+import '../providers/notification_provider.dart' show markAllNotifsRead;
 
 class NotificationsScreen extends ConsumerStatefulWidget {
   const NotificationsScreen({super.key});
@@ -19,7 +20,9 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
   @override
   void initState() {
     super.initState();
-    _load();
+    // Дэлгэц нээхэд DB-д уншсан болгоно (bottom-nav badge арилна).
+    // Local _notifs-ийг шууд өөрчлөхгүй — энэ session-д "шинэ"-г онцолж харуулна.
+    _load().then((_) => markAllNotifsRead());
   }
 
   Future<void> _load() async {
@@ -188,7 +191,7 @@ class _NotifTile extends StatelessWidget {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 300),
         color: isRead ? Colors.transparent
-            : AppColors.accentStart.withOpacity(0.06),
+            : AppColors.accentStart.withValues(alpha: 0.06),
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
         child: Row(children: [
           Stack(children: [

@@ -26,7 +26,7 @@ class EventsRail extends ConsumerWidget {
         ]),
       ),
       SizedBox(
-        height: 184,
+        height: 210,
         child: ListView.separated(
           scrollDirection: Axis.horizontal,
           padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -44,41 +44,7 @@ class _EventCard extends StatelessWidget {
   final EventItem event;
   const _EventCard({required this.event});
 
-  void _showDetail(BuildContext context) {
-    showModalBottomSheet(
-      context: context, backgroundColor: AppColors.bgElevated,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (_) => Padding(
-        padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
-        child: Column(mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(
-              color: AppColors.hairline, borderRadius: BorderRadius.circular(2)))),
-            const SizedBox(height: 16),
-            Text(event.title, style: AppTextStyles.h2),
-            const SizedBox(height: 8),
-            _line(Icons.location_on_outlined, event.venueName ?? '—'),
-            _line(Icons.schedule, _dateStr(event.startsAt)),
-            _line(Icons.confirmation_num_outlined,
-              event.price == 0 ? 'Үнэгүй' : '₮${event.price}'),
-            if (event.description?.isNotEmpty == true) ...[
-              const SizedBox(height: 12),
-              Text(event.description!, style: AppTextStyles.bodyMd.copyWith(
-                color: AppColors.textSecondary, height: 1.4)),
-            ],
-          ]),
-      ),
-    );
-  }
-
-  Widget _line(IconData i, String t) => Padding(
-    padding: const EdgeInsets.only(bottom: 6),
-    child: Row(children: [
-      Icon(i, size: 16, color: AppColors.accentStart),
-      const SizedBox(width: 8),
-      Expanded(child: Text(t, style: AppTextStyles.bodyMd.copyWith(color: AppColors.textPrimary))),
-    ]));
+  void _showDetail(BuildContext context) => showEventDetailSheet(context, event);
 
   static String _dateStr(DateTime d) {
     final l = d.toLocal();
@@ -91,51 +57,240 @@ class _EventCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () => _showDetail(context),
-      child: Container(
-        width: 200,
-        decoration: BoxDecoration(
-          color: AppColors.bgElevated,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.hairline)),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          // Cover
-          ClipRRect(
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-            child: SizedBox(height: 96, width: double.infinity,
-              child: event.coverUrl != null
-                ? CachedNetworkImage(imageUrl: event.coverUrl!, fit: BoxFit.cover,
-                    errorWidget: (_, __, ___) => _coverPlaceholder())
-                : _coverPlaceholder()),
-          ),
-          Padding(padding: const EdgeInsets.all(10),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(event.title, maxLines: 1, overflow: TextOverflow.ellipsis,
-                style: AppTextStyles.labelMd.copyWith(color: AppColors.textPrimary)),
-              const SizedBox(height: 4),
-              Row(children: [
-                const Icon(Icons.location_on, size: 11, color: AppColors.textSecondary),
-                const SizedBox(width: 3),
-                Expanded(child: Text(event.venueName ?? '—',
-                  maxLines: 1, overflow: TextOverflow.ellipsis,
-                  style: AppTextStyles.bodyXs.copyWith(color: AppColors.textSecondary))),
-              ]),
-              const SizedBox(height: 4),
-              Row(children: [
-                Text(_dateStr(event.startsAt),
-                  style: AppTextStyles.bodyXs.copyWith(color: AppColors.accentStart,
-                    fontWeight: FontWeight.w600)),
-                const Spacer(),
-                Text(event.price == 0 ? 'Үнэгүй' : '₮${event.price}',
-                  style: AppTextStyles.bodyXs.copyWith(color: AppColors.textPrimary,
-                    fontWeight: FontWeight.w700)),
-              ]),
-            ])),
-        ]),
+      child: SizedBox(
+        width: 210,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(20),
+          child: Stack(fit: StackFit.expand, children: [
+            // ── Бүтэн зураг (full-bleed) ──
+            event.coverUrl != null
+              ? CachedNetworkImage(imageUrl: event.coverUrl!, fit: BoxFit.cover,
+                  placeholder: (_, __) => _coverPlaceholder(),
+                  errorWidget: (_, __, ___) => _coverPlaceholder())
+              : _coverPlaceholder(),
+
+            // ── Доод бараан gradient (текст уншигдахуйц) ──
+            const DecoratedBox(decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter, end: Alignment.bottomCenter,
+                colors: [
+                  Colors.transparent,
+                  Color(0x33000000),
+                  Color(0xCC000000),
+                  Color(0xF2000000),
+                ],
+                stops: [0.32, 0.52, 0.78, 1.0]))),
+
+            // ── Неон social-proof badge (баруун дээд буланд) ──
+            Positioned(top: 10, right: 10, child: _SocialBadge(text: _socialProof())),
+
+            // ── Текст контент (доод хэсэг) ──
+            Positioned(left: 12, right: 12, bottom: 12,
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min, children: [
+                  Text(event.title, maxLines: 2, overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(color: Colors.white, fontSize: 16,
+                      fontWeight: FontWeight.w800, height: 1.15,
+                      shadows: [Shadow(blurRadius: 8, color: Colors.black87)])),
+                  const SizedBox(height: 5),
+                  Row(children: [
+                    const Icon(Icons.location_on, size: 12, color: Colors.white70),
+                    const SizedBox(width: 3),
+                    Expanded(child: Text(event.venueName ?? '—',
+                      maxLines: 1, overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(color: Colors.white70, fontSize: 12,
+                        shadows: [Shadow(blurRadius: 6, color: Colors.black87)]))),
+                  ]),
+                  const SizedBox(height: 6),
+                  Row(children: [
+                    Text(_dateStr(event.startsAt),
+                      style: const TextStyle(color: Colors.white, fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        shadows: [Shadow(blurRadius: 6, color: Colors.black87)])),
+                    const Spacer(),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.18),
+                        borderRadius: BorderRadius.circular(10)),
+                      child: Text(event.price == 0 ? 'Үнэгүй' : '₮${event.price}',
+                        style: const TextStyle(color: Colors.white, fontSize: 11,
+                          fontWeight: FontWeight.w800))),
+                  ]),
+                ])),
+          ]),
+        ),
       ),
     );
+  }
+
+  // Динамик social proof — event id-ээс тогтвортой утга үүсгэнэ
+  String _socialProof() {
+    final h = event.id.hashCode.abs();
+    if (h % 3 == 0) return '⚡️ High Energy';
+    final n = 300 + (h % 1700); // 300..1999
+    final label = n >= 1000 ? '${(n / 100).round() / 10}k' : '$n';
+    return '🔥 $label hyped';
   }
 
   Widget _coverPlaceholder() => Container(
     decoration: const BoxDecoration(gradient: AppColors.accentGradient),
     child: const Center(child: Text('🎉', style: TextStyle(fontSize: 36))));
+}
+
+/// Хөвдөг неон badge — social proof харуулна
+class _SocialBadge extends StatelessWidget {
+  final String text;
+  const _SocialBadge({required this.text});
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+    decoration: BoxDecoration(
+      color: Colors.black.withValues(alpha: 0.45),
+      borderRadius: BorderRadius.circular(20),
+      border: Border.all(color: AppColors.accentStart.withValues(alpha: 0.9), width: 1),
+      boxShadow: [
+        BoxShadow(color: AppColors.accentStart.withValues(alpha: 0.55),
+          blurRadius: 12, spreadRadius: 0.5),
+        BoxShadow(color: AppColors.accentEnd.withValues(alpha: 0.3),
+          blurRadius: 16, spreadRadius: 1),
+      ]),
+    child: Text(text, style: const TextStyle(
+      color: Colors.white, fontSize: 11, fontWeight: FontWeight.w800,
+      letterSpacing: 0.2)),
+  );
+}
+
+/// Event detail-ийг RSVP-тэй sheet-ээр нээх (feed rail + venue detail-аас дуудна)
+void showEventDetailSheet(BuildContext context, EventItem event) {
+  showModalBottomSheet(
+    context: context, backgroundColor: AppColors.bgElevated,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+    builder: (_) => _EventDetailSheet(event: event),
+  );
+}
+
+// ─── Event detail + RSVP (Going / Interested) ───
+class _EventDetailSheet extends StatefulWidget {
+  final EventItem event;
+  const _EventDetailSheet({required this.event});
+  @override
+  State<_EventDetailSheet> createState() => _EventDetailSheetState();
+}
+
+class _EventDetailSheetState extends State<_EventDetailSheet> {
+  int _going = 0, _interested = 0;
+  String? _mine; // 'going' | 'interested' | null
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    final r = await EventRsvpService.load(widget.event.id);
+    if (mounted) {
+      setState(() {
+        _going = r.going; _interested = r.interested; _mine = r.mine;
+        _loading = false;
+      });
+    }
+  }
+
+  Future<void> _toggle(String status) async {
+    final prev = _mine, pg = _going, pi = _interested;
+    final next = _mine == status ? null : status; // дахин дарвал болих
+    setState(() {
+      // хуучин төлвөөс хасах
+      if (_mine == 'going') _going--;
+      if (_mine == 'interested') _interested--;
+      // шинэ төлөв
+      if (next == 'going') _going++;
+      if (next == 'interested') _interested++;
+      _mine = next;
+    });
+    final err = await EventRsvpService.setRsvp(widget.event.id, next);
+    if (err != null && mounted) {
+      setState(() { _mine = prev; _going = pg; _interested = pi; });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final e = widget.event;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
+      child: Column(mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(
+            color: AppColors.hairline, borderRadius: BorderRadius.circular(2)))),
+          const SizedBox(height: 16),
+          Text(e.title, style: AppTextStyles.h2),
+          const SizedBox(height: 8),
+          _line(Icons.location_on_outlined, e.venueName ?? '—'),
+          _line(Icons.schedule, _EventCard._dateStr(e.startsAt)),
+          _line(Icons.confirmation_num_outlined,
+            e.price == 0 ? 'Үнэгүй' : '₮${e.price}'),
+          if (e.description?.isNotEmpty == true) ...[
+            const SizedBox(height: 12),
+            Text(e.description!, style: AppTextStyles.bodyMd.copyWith(
+              color: AppColors.textSecondary, height: 1.4)),
+          ],
+          const SizedBox(height: 16),
+
+          // ── RSVP товчнууд ──
+          Row(children: [
+            Expanded(child: _rsvpBtn(
+              label: 'Очно', count: _going, active: _mine == 'going',
+              icon: Icons.check_circle, color: AppColors.success,
+              onTap: () => _toggle('going'))),
+            const SizedBox(width: 10),
+            Expanded(child: _rsvpBtn(
+              label: 'Сонирхож байна', count: _interested,
+              active: _mine == 'interested',
+              icon: Icons.star, color: AppColors.accentStart,
+              onTap: () => _toggle('interested'))),
+          ]),
+          const SizedBox(height: 8),
+          if (!_loading)
+            Text('$_going очно · $_interested сонирхож байна',
+              style: AppTextStyles.bodyXs.copyWith(color: AppColors.textTertiary)),
+        ]),
+    );
+  }
+
+  Widget _rsvpBtn({
+    required String label, required int count, required bool active,
+    required IconData icon, required Color color, required VoidCallback onTap,
+  }) => GestureDetector(
+    onTap: onTap,
+    child: Container(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      decoration: BoxDecoration(
+        color: active ? color.withValues(alpha: 0.18) : AppColors.bgSurface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: active ? color : AppColors.hairline,
+          width: active ? 1.5 : 1),
+      ),
+      child: Column(children: [
+        Icon(icon, color: active ? color : AppColors.textSecondary, size: 20),
+        const SizedBox(height: 4),
+        Text('$label${count > 0 ? '  ·  $count' : ''}',
+          style: AppTextStyles.bodyXs.copyWith(
+            color: active ? color : AppColors.textPrimary,
+            fontWeight: FontWeight.w600)),
+      ]),
+    ),
+  );
+
+  Widget _line(IconData i, String t) => Padding(
+    padding: const EdgeInsets.only(bottom: 6),
+    child: Row(children: [
+      Icon(i, size: 16, color: AppColors.accentStart),
+      const SizedBox(width: 8),
+      Expanded(child: Text(t, style: AppTextStyles.bodyMd.copyWith(color: AppColors.textPrimary))),
+    ]));
 }

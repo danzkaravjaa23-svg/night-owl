@@ -1,6 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/services/supabase_service.dart';
-import '../../../core/constants/app_constants.dart';
 import '../../../models/message.dart';
 
 // ─── Thread messages — realtime ───
@@ -9,16 +8,15 @@ final threadMessagesProvider =
   final me = SupabaseService.currentUser?.id;
   if (me == null) return const Stream.empty();
 
+  // conversation_id-р scope — бүх messages хүснэгтийг sub хийхгүй
+  final cid = ([me, peerId]..sort()).join('_');
+
   return SupabaseService.client
       .from('messages')
       .stream(primaryKey: ['id'])
+      .eq('conversation_id', cid)
       .order('created_at')
-      .map((rows) => rows
-          .where((r) =>
-              (r['sender_id'] == me && r['receiver_id'] == peerId) ||
-              (r['sender_id'] == peerId && r['receiver_id'] == me))
-          .map((r) => Message.fromJson(r as Map<String, dynamic>))
-          .toList());
+      .map((rows) => rows.map((r) => Message.fromJson(r)).toList());
 });
 
 // ─── Send message ───

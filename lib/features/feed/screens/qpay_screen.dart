@@ -16,10 +16,27 @@ class _QPayScreenState extends State<QPayScreen> {
   bool _paid = false;
   bool _loading = false;
 
+  // ⚠️ QPay merchant холболт хараахан хийгдээгүй. Хуурамч unlock хийхгүй
+  // (өмнө 2сек delay-ээр үнэгүй нээдэг байсныг хаасан).
   Future<void> _pay() async {
-    setState(() => _loading = true);
-    await Future.delayed(const Duration(seconds: 2));
-    setState(() { _loading = false; _paid = true; });
+    showDialog(
+      context: context,
+      builder: (dCtx) => AlertDialog(
+        backgroundColor: AppColors.bgElevated,
+        title: Text('Төлбөрийн систем', style: AppTextStyles.h3),
+        content: Text(
+          'QPay төлбөрийн холболт удахгүй идэвхжинэ. Одоогоор төлбөр '
+          'хийх боломжгүй байна.',
+          style: AppTextStyles.bodySm.copyWith(
+            color: AppColors.textSecondary, height: 1.5)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dCtx).pop(),
+            child: Text('Ойлголоо', style: AppTextStyles.bodyMd.copyWith(
+              color: AppColors.accentStart))),
+        ],
+      ),
+    );
   }
 
   @override
@@ -101,7 +118,7 @@ class _SuccessView extends StatelessWidget {
           width: 80, height: 80,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: AppColors.success.withOpacity(0.15),
+            color: AppColors.success.withValues(alpha: 0.15),
           ),
           child: const Icon(Icons.check_circle_outline,
             color: AppColors.success, size: 48),

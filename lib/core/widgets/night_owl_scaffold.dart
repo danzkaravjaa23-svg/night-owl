@@ -56,7 +56,7 @@ class _AuroraPainter extends CustomPainter {
     final paint1 = Paint()
       ..shader = RadialGradient(
         colors: [
-          AppColors.accentPurple.withOpacity(0.12),
+          AppColors.accentPurple.withValues(alpha: 0.12),
           Colors.transparent,
         ],
       ).createShader(Rect.fromCircle(
@@ -73,7 +73,7 @@ class _AuroraPainter extends CustomPainter {
     final paint2 = Paint()
       ..shader = RadialGradient(
         colors: [
-          AppColors.accentStart.withOpacity(0.10),
+          AppColors.accentStart.withValues(alpha: 0.10),
           Colors.transparent,
         ],
       ).createShader(Rect.fromCircle(

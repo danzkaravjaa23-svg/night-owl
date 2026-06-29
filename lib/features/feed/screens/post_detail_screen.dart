@@ -12,6 +12,7 @@ import '../../../models/post.dart';
 import '../../../models/comment.dart';
 import '../providers/comment_provider.dart';
 import '../providers/feed_provider.dart';
+import '../../profile/widgets/block_report_sheet.dart';
 
 class PostDetailScreen extends ConsumerStatefulWidget {
   final String postId;
@@ -28,6 +29,7 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
   bool  _sending      = false;
   Post? _post;
   bool  _postLoading  = true;
+  Comment? _replyTo;
 
   @override
   void initState() {
@@ -45,32 +47,32 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
 
   Future<void> _fetchPost() async {
     try {
-      final userId = SupabaseService.currentUser?.id;
-      if (userId != null) {
-        // Use RPC for isLikedByMe
-        final data = await SupabaseService.client.rpc('get_feed_posts', params: {
-          'p_user_id': userId,
-          'p_limit':   1,
-          'p_offset':  0,
-        });
-        final rows = (data as List).cast<Map<String, dynamic>>();
-        final match = rows.where((r) => r['id'] == widget.postId).firstOrNull;
-        if (match != null && mounted) {
-          setState(() { _post = Post.fromJson(match); _postLoading = false; });
-          return;
-        }
-      }
-      // Fallback
+      final me = SupabaseService.currentUser?.id;
+      // Постыг id-аар шууд татна (хуучин get_feed_posts(limit 1)-ийн оронд)
       final raw = await SupabaseService.client
           .from('posts')
           .select('*, profiles!user_id (id, username, avatar_url, is_verified)')
           .eq('id', widget.postId)
           .maybeSingle();
+      if (raw == null) {
+        if (mounted) setState(() { _post = null; _postLoading = false; });
+        return;
+      }
+      // isLikedByMe — нэг индекстэй query (likes unique(user_id,post_id))
+      bool liked = false;
+      if (me != null) {
+        final l = await SupabaseService.client
+            .from('likes')
+            .select('post_id')
+            .eq('post_id', widget.postId)
+            .eq('user_id', me)
+            .maybeSingle();
+        liked = l != null;
+      }
+      final map = Map<String, dynamic>.from(raw as Map);
+      map['is_liked_by_me'] = liked;
       if (mounted) {
-        setState(() {
-          _post = raw != null ? Post.fromJson(raw as Map<String, dynamic>) : null;
-          _postLoading = false;
-        });
+        setState(() { _post = Post.fromJson(map); _postLoading = false; });
       }
     } catch (_) {
       if (mounted) setState(() => _postLoading = false);
@@ -82,12 +84,17 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
     if (text.trim().isEmpty || _sending) return;
 
     setState(() => _sending = true);
+    // Reply бол эх сэтгэгдэлд (нэг түвшний thread): reply-д хариулбал эхэнд нь
+    final parentId = _replyTo == null
+        ? null
+        : (_replyTo!.parentId ?? _replyTo!.id);
     final err = await CommentService.addComment(
-      postId: widget.postId,
-      body:   text,
+      postId:   widget.postId,
+      body:     text,
+      parentId: parentId,
     );
     if (!mounted) return;
-    setState(() => _sending = false);
+    setState(() { _sending = false; _replyTo = null; });
 
     if (err != null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -109,6 +116,56 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
     });
   }
 
+  void _startReply(Comment c) {
+    setState(() => _replyTo = c);
+    _focusNode.requestFocus();
+  }
+
+  /// Сэтгэгдлийг thread болгон бүлэглэх: эх сэтгэгдэл + доор нь reply-ууд
+  Widget _buildCommentSliver(List<Comment> comments, String? me) {
+    final tops = comments.where((c) => c.parentId == null).toList();
+    final repliesByParent = <String, List<Comment>>{};
+    for (final c in comments) {
+      if (c.parentId != null) {
+        repliesByParent.putIfAbsent(c.parentId!, () => []).add(c);
+      }
+    }
+    // Орфан reply (эх нь устсан) — top болгож харуулна
+    for (final c in comments) {
+      if (c.parentId != null && !comments.any((t) => t.id == c.parentId)) {
+        tops.add(c);
+      }
+    }
+    tops.sort((a, b) => a.createdAt.compareTo(b.createdAt));
+
+    // Хавтгай жагсаалт: (comment, isReply)
+    final flat = <(Comment, bool)>[];
+    for (final t in tops) {
+      flat.add((t, false));
+      final replies = repliesByParent[t.id] ?? [];
+      replies.sort((a, b) => a.createdAt.compareTo(b.createdAt));
+      for (final r in replies) {
+        flat.add((r, true));
+      }
+    }
+
+    return SliverList(
+      delegate: SliverChildBuilderDelegate(
+        (ctx, i) {
+          final (comment, isReply) = flat[i];
+          return _CommentTile(
+            comment:  comment,
+            isOwn:    comment.userId == me,
+            isReply:  isReply,
+            onDelete: () => CommentService.deleteComment(comment.id),
+            onReply:  () => _startReply(comment),
+          );
+        },
+        childCount: flat.length,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final commentsAsync = ref.watch(commentsProvider(widget.postId));
@@ -126,6 +183,38 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
         ),
         title: Text('Пост', style: AppTextStyles.h2),
         centerTitle: true,
+        actions: [
+          // Өөрийн пост (live бичлэг ч мөн адил)-ыг засах/устгах
+          if (_post != null && _post!.userId == me)
+            IconButton(
+              icon: const Icon(Icons.more_horiz, color: AppColors.textPrimary),
+              onPressed: () => showPostOptionsSheet(
+                context,
+                postId: _post!.id,
+                authorId: _post!.userId,
+                authorUsername: _post!.author?.username?.replaceAll('@', '') ?? '',
+                isOwn: true,
+                currentCaption: _post!.caption,
+                onEditCaption: (text) async {
+                  await ref.read(feedProvider.notifier)
+                      .editCaption(_post!.id, text);
+                  if (mounted) setState(() => _post = _post!.copyWith(caption: text));
+                },
+                onDelete: () async {
+                  final ok = await ref.read(feedProvider.notifier)
+                      .deletePost(_post!.id);
+                  if (!mounted) return;
+                  if (ok) {
+                    context.pop();
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                      content: Text('Устгаж чадсангүй. Дахин оролдоно уу.'),
+                      backgroundColor: AppColors.error));
+                  }
+                },
+              ),
+            ),
+        ],
       ),
       body: Column(children: [
         Expanded(
@@ -207,17 +296,7 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
                           ]),
                         ),
                       )
-                    : SliverList(
-                        delegate: SliverChildBuilderDelegate(
-                          (ctx, i) => _CommentTile(
-                            comment: comments[i],
-                            isOwn:   comments[i].userId == me,
-                            onDelete: () => CommentService.deleteComment(
-                                comments[i].id),
-                          ),
-                          childCount: comments.length,
-                        ),
-                      ),
+                    : _buildCommentSliver(comments, me),
               ),
 
               const SliverToBoxAdapter(child: SizedBox(height: 16)),
@@ -231,6 +310,8 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
           focusNode:  _focusNode,
           sending:    _sending,
           onSend:     _sendComment,
+          replyingTo: _replyTo?.author?.username,
+          onCancelReply: () => setState(() => _replyTo = null),
         ),
       ]),
     );
@@ -288,8 +369,10 @@ class _PostHeader extends StatelessWidget {
         ]),
       ),
 
-      // Media — видео бол тоглуулна, эс бол зураг
-      if (post.mediaUrl != null)
+      // Media — олон зураг бол carousel, видео бол тоглуулна, эс бол зураг
+      if (post.mediaUrls.length > 1)
+        _DetailCarousel(urls: post.mediaUrls)
+      else if (post.mediaUrl != null)
         isVideoUrl(post.mediaUrl)
           ? NetworkVideo(url: post.mediaUrl!)
           : CachedNetworkImage(
@@ -357,28 +440,68 @@ class _PostHeader extends StatelessWidget {
 }
 
 // ─── Comment tile ─────────────────────────────────────────────────────────────
-class _CommentTile extends StatelessWidget {
+class _CommentTile extends StatefulWidget {
   final Comment comment;
   final bool isOwn;
+  final bool isReply;
   final VoidCallback onDelete;
+  final VoidCallback onReply;
   const _CommentTile({
     required this.comment,
     required this.isOwn,
+    this.isReply = false,
     required this.onDelete,
+    required this.onReply,
   });
 
   @override
+  State<_CommentTile> createState() => _CommentTileState();
+}
+
+class _CommentTileState extends State<_CommentTile> {
+  late bool _liked;
+  late int _likes;
+
+  @override
+  void initState() {
+    super.initState();
+    _liked = widget.comment.isLikedByMe;
+    _likes = widget.comment.likesCount;
+  }
+
+  @override
+  void didUpdateWidget(_CommentTile old) {
+    super.didUpdateWidget(old);
+    // Stream шинэчлэгдвэл серверийн утгаар дахин тааруулна
+    if (old.comment.likesCount != widget.comment.likesCount ||
+        old.comment.isLikedByMe != widget.comment.isLikedByMe) {
+      _liked = widget.comment.isLikedByMe;
+      _likes = widget.comment.likesCount;
+    }
+  }
+
+  Future<void> _toggleLike() async {
+    final was = _liked;
+    setState(() { _liked = !was; _likes += was ? -1 : 1; });
+    final err = await CommentService.toggleLike(widget.comment.id, was);
+    if (err != null && mounted) {
+      setState(() { _liked = was; _likes += was ? 1 : -1; });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final comment = widget.comment;
     final author = comment.author;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 10, 16, 4),
+      padding: EdgeInsets.fromLTRB(widget.isReply ? 48 : 16, 10, 16, 4),
       child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
         GestureDetector(
           onTap: () => context.push('/creator/${comment.userId}'),
           child: AppAvatar(
             imageUrl: author?.avatarUrl,
             initial:  author?.initial ?? '?',
-            size: 32,
+            size: widget.isReply ? 26 : 32,
           ),
         ),
         const SizedBox(width: 10),
@@ -395,17 +518,45 @@ class _CommentTile extends StatelessWidget {
             const SizedBox(height: 3),
             Text(comment.body,
                 style: AppTextStyles.bodyMd.copyWith(height: 1.4)),
+            const SizedBox(height: 4),
+            Row(children: [
+              GestureDetector(
+                onTap: widget.onReply,
+                child: Text('Хариулах',
+                    style: AppTextStyles.bodyXs.copyWith(
+                        color: AppColors.textSecondary,
+                        fontWeight: FontWeight.w600)),
+              ),
+              if (widget.isOwn) ...[
+                const SizedBox(width: 16),
+                GestureDetector(
+                  onTap: () => _confirmDelete(context),
+                  child: Text('Устгах',
+                      style: AppTextStyles.bodyXs.copyWith(
+                          color: AppColors.textTertiary)),
+                ),
+              ],
+            ]),
           ]),
         ),
-        if (isOwn)
-          GestureDetector(
-            onTap: () => _confirmDelete(context),
-            child: const Padding(
-              padding: EdgeInsets.only(left: 8, top: 2),
-              child: Icon(Icons.delete_outline,
-                  color: AppColors.textTertiary, size: 16),
-            ),
+        // Like
+        GestureDetector(
+          onTap: _toggleLike,
+          child: Padding(
+            padding: const EdgeInsets.only(left: 8, top: 2),
+            child: Column(children: [
+              Icon(_liked ? Icons.favorite : Icons.favorite_border,
+                  color: _liked ? AppColors.accentStart : AppColors.textTertiary,
+                  size: 16),
+              if (_likes > 0) ...[
+                const SizedBox(height: 2),
+                Text('$_likes',
+                    style: AppTextStyles.bodyXs.copyWith(
+                        color: AppColors.textTertiary)),
+              ],
+            ]),
           ),
+        ),
       ]),
     );
   }
@@ -428,7 +579,7 @@ class _CommentTile extends StatelessWidget {
             Text('Сэтгэгдэл устгах уу?',
                 style: AppTextStyles.labelLg),
             const SizedBox(height: 8),
-            Text('"${comment.body.length > 60 ? '${comment.body.substring(0, 60)}…' : comment.body}"',
+            Text('"${widget.comment.body.length > 60 ? '${widget.comment.body.substring(0, 60)}…' : widget.comment.body}"',
                 style: AppTextStyles.bodyMd.copyWith(
                     color: AppColors.textSecondary),
                 textAlign: TextAlign.center),
@@ -445,7 +596,7 @@ class _CommentTile extends StatelessWidget {
               const SizedBox(width: 12),
               Expanded(
                 child: ElevatedButton(
-                  onPressed: () { Navigator.pop(ctx); onDelete(); },
+                  onPressed: () { Navigator.pop(ctx); widget.onDelete(); },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.error),
                   child: const Text('Устгах'),
@@ -465,11 +616,15 @@ class _CommentInput extends StatelessWidget {
   final FocusNode focusNode;
   final bool sending;
   final VoidCallback onSend;
+  final String? replyingTo;
+  final VoidCallback onCancelReply;
   const _CommentInput({
     required this.controller,
     required this.focusNode,
     required this.sending,
     required this.onSend,
+    this.replyingTo,
+    required this.onCancelReply,
   });
 
   @override
@@ -477,13 +632,31 @@ class _CommentInput extends StatelessWidget {
     return Container(
       padding: EdgeInsets.only(
         left: 16, right: 8,
-        top: 10, bottom: MediaQuery.of(context).viewInsets.bottom + 10,
+        top: replyingTo != null ? 0 : 10,
+        bottom: MediaQuery.of(context).viewInsets.bottom + 10,
       ),
       decoration: const BoxDecoration(
         color: AppColors.bgElevated,
         border: Border(top: BorderSide(color: AppColors.hairline)),
       ),
-      child: Row(children: [
+      child: Column(mainAxisSize: MainAxisSize.min, children: [
+      // Reply banner
+      if (replyingTo != null)
+        Padding(
+          padding: const EdgeInsets.only(right: 8, top: 8, bottom: 6),
+          child: Row(children: [
+            Icon(Icons.reply, size: 14, color: AppColors.textSecondary),
+            const SizedBox(width: 6),
+            Expanded(child: Text('@$replyingTo-д хариулж байна',
+                style: AppTextStyles.bodyXs.copyWith(
+                    color: AppColors.textSecondary))),
+            GestureDetector(
+              onTap: onCancelReply,
+              child: const Icon(Icons.close,
+                  size: 16, color: AppColors.textTertiary)),
+          ]),
+        ),
+      Row(children: [
         AppAvatar(
           imageUrl: null,
           initial: SupabaseService.currentUser?.email?[0].toUpperCase() ?? 'U',
@@ -537,6 +710,7 @@ class _CommentInput extends StatelessWidget {
           ),
         ),
       ]),
+      ]),
     );
   }
 }
@@ -550,11 +724,80 @@ class _CountBadge extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
     decoration: BoxDecoration(
-      color: AppColors.accentStart.withOpacity(0.12),
+      color: AppColors.accentStart.withValues(alpha: 0.12),
       borderRadius: BorderRadius.circular(12),
     ),
     child: Text('$count',
         style: AppTextStyles.bodyXs.copyWith(
             color: AppColors.accentStart, fontWeight: FontWeight.w700)),
   );
+}
+
+// ─── Олон зурагтай пост carousel (detail) ───
+class _DetailCarousel extends StatefulWidget {
+  final List<String> urls;
+  const _DetailCarousel({required this.urls});
+  @override
+  State<_DetailCarousel> createState() => _DetailCarouselState();
+}
+
+class _DetailCarouselState extends State<_DetailCarousel> {
+  final _ctrl = PageController();
+  int _page = 0;
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 380,
+      child: Stack(children: [
+        PageView.builder(
+          controller: _ctrl,
+          itemCount: widget.urls.length,
+          onPageChanged: (i) => setState(() => _page = i),
+          itemBuilder: (_, i) {
+            final url = widget.urls[i];
+            if (isVideoUrl(url)) return NetworkVideo(url: url, height: 380);
+            return CachedNetworkImage(
+              imageUrl: url,
+              width: double.infinity,
+              fit: BoxFit.cover,
+              placeholder: (_, __) => Container(color: AppColors.bgSurface),
+              errorWidget: (_, __, ___) => Container(
+                color: AppColors.bgSurface,
+                child: const Center(
+                    child: Text('📸', style: TextStyle(fontSize: 48))),
+              ),
+            );
+          },
+        ),
+        Positioned(top: 12, right: 12, child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          decoration: BoxDecoration(
+            color: Colors.black54, borderRadius: BorderRadius.circular(20)),
+          child: Text('${_page + 1}/${widget.urls.length}',
+            style: const TextStyle(color: Colors.white, fontSize: 11,
+              fontWeight: FontWeight.w600)),
+        )),
+        Positioned(bottom: 12, left: 0, right: 0, child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            for (var i = 0; i < widget.urls.length; i++)
+              Container(
+                width: 6, height: 6,
+                margin: const EdgeInsets.symmetric(horizontal: 3),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: i == _page ? Colors.white : Colors.white38),
+              ),
+          ],
+        )),
+      ]),
+    );
+  }
 }

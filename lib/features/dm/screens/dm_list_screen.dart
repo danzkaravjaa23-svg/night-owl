@@ -152,7 +152,8 @@ class _DmListScreenState extends State<DmListScreen> {
                   child: ListView.builder(
                     physics: const AlwaysScrollableScrollPhysics(),
                     itemCount: _filtered.length,
-                    itemBuilder: (_, i) => _ConvoTile(convo: _filtered[i])))),
+                    itemBuilder: (_, i) => _ConvoTile(
+                      convo: _filtered[i], onChanged: _load)))),
       ])),
     );
   }
@@ -160,7 +161,70 @@ class _DmListScreenState extends State<DmListScreen> {
 
 class _ConvoTile extends StatelessWidget {
   final Map<String, dynamic> convo;
-  const _ConvoTile({required this.convo});
+  final VoidCallback onChanged;
+  const _ConvoTile({required this.convo, required this.onChanged});
+
+  String get _myId => SupabaseService.currentUser?.id ?? '';
+
+  // Партнёроос ирсэн мессежийг уншсан/уншаагүй болгоно
+  Future<void> _setRead(String partnerId, bool read) async {
+    final me = _myId;
+    if (me.isEmpty) return;
+    try {
+      await SupabaseService.client
+          .from('messages')
+          .update({'is_read': read})
+          .eq('sender_id', partnerId)
+          .eq('receiver_id', me);
+    } catch (_) {}
+  }
+
+  void _showOptions(BuildContext context, String partnerId,
+      String username, bool isRead) {
+    showModalBottomSheet(
+      context: context, backgroundColor: AppColors.bgElevated,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (sheetCtx) => SafeArea(child: Column(
+        mainAxisSize: MainAxisSize.min, children: [
+          const SizedBox(height: 10),
+          Container(width: 40, height: 4, decoration: BoxDecoration(
+            color: AppColors.hairline, borderRadius: BorderRadius.circular(2))),
+          const SizedBox(height: 12),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Row(children: [
+              Text(username.replaceAll('@', ''), style: AppTextStyles.labelLg),
+            ])),
+          const SizedBox(height: 8),
+          if (!isRead)
+            _OptTile(icon: Icons.mark_chat_read_outlined, label: 'Уншсан болгох',
+              onTap: () async {
+                Navigator.pop(sheetCtx);
+                await _setRead(partnerId, true);
+                onChanged();
+              })
+          else
+            _OptTile(icon: Icons.mark_chat_unread_outlined, label: 'Уншаагүй болгох',
+              onTap: () async {
+                Navigator.pop(sheetCtx);
+                await _setRead(partnerId, false);
+                onChanged();
+              }),
+          _OptTile(icon: Icons.chat_bubble_outline, label: 'Чат нээх',
+            onTap: () {
+              Navigator.pop(sheetCtx);
+              context.push('/dm/$partnerId').then((_) => onChanged());
+            }),
+          _OptTile(icon: Icons.person_outline, label: 'Профайл харах',
+            onTap: () {
+              Navigator.pop(sheetCtx);
+              context.push('/creator/$partnerId');
+            }),
+          const SizedBox(height: 12),
+        ])),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -176,7 +240,8 @@ class _ConvoTile extends StatelessWidget {
     final time       = _ago(convo['created_at'] as String?);
 
     return InkWell(
-      onTap: () => context.push('/dm/$partnerId'),
+      onTap: () => context.push('/dm/$partnerId').then((_) => onChanged()),
+      onLongPress: () => _showOptions(context, partnerId, username, isRead),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
         child: Row(children: [
@@ -231,6 +296,18 @@ class _ConvoTile extends StatelessWidget {
     if (d.inDays < 7)     return '${d.inDays}d';
     return '${(d.inDays/7).floor()}w';
   }
+}
+
+class _OptTile extends StatelessWidget {
+  final IconData icon; final String label; final VoidCallback onTap;
+  const _OptTile({required this.icon, required this.label, required this.onTap});
+  @override
+  Widget build(BuildContext context) => ListTile(
+    leading: Icon(icon, color: AppColors.textSecondary, size: 22),
+    title: Text(label, style: AppTextStyles.bodyMd.copyWith(
+      color: AppColors.textPrimary)),
+    onTap: onTap,
+  );
 }
 
 class _EmptyState extends StatelessWidget {

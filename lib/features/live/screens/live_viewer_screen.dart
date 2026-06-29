@@ -58,8 +58,8 @@ class _LiveViewerScreenState extends State<LiveViewerScreen> {
       }
       if (mounted) {
         setState(() {
-          _stream = s as Map<String, dynamic>;
-          _host = host as Map<String, dynamic>?;
+          _stream = s;
+          _host = host;
           _venueName = venueName;
           _ended = s['is_live'] != true;
         });
@@ -139,7 +139,13 @@ class _LiveViewerScreenState extends State<LiveViewerScreen> {
         'user_id': _myId,
         'text': text,
       });
-    } catch (_) {}
+    } catch (_) {
+      if (mounted) {
+        _ctrl.text = text;
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Илгээж чадсангүй'), backgroundColor: AppColors.error));
+      }
+    }
   }
 
   @override

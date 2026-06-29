@@ -58,6 +58,7 @@ class _WebCameraScreenState extends State<_WebCameraScreen> {
         ..width = '100%'
         ..height = '100%'
         ..objectFit = 'cover'
+        ..pointerEvents = 'none' // shutter/flip товчнууд ажиллахын тулд
         ..transform = _front ? 'scaleX(-1)' : 'none';
       _video = v;
       ui_web.platformViewRegistry.registerViewFactory(_viewType, (_) => v);

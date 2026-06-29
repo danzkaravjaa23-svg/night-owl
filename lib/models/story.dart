@@ -14,6 +14,9 @@ class Story {
   final String? venueId;
   final String? venueName;
   final List<String> mentions;
+  final String? musicUrl;
+  final String? musicTitle;
+  final String? musicArtist;
 
   const Story({
     required this.id,
@@ -29,6 +32,9 @@ class Story {
     this.venueId,
     this.venueName,
     this.mentions = const [],
+    this.musicUrl,
+    this.musicTitle,
+    this.musicArtist,
   });
 
   bool get isExpired => DateTime.now().isAfter(expiresAt);
@@ -39,15 +45,19 @@ class Story {
     mediaUrl:  json['media_url'] as String,
     mediaType: json['media_type'] as String? ?? 'image',
     caption:   json['caption'] as String?,
-    duration:  json['duration'] as int? ?? 5,
-    viewCount: json['view_count'] as int? ?? 0,
-    expiresAt: DateTime.parse(json['expires_at'] as String),
-    createdAt: DateTime.parse(json['created_at'] as String),
+    duration:  (json['duration'] as num?)?.toInt() ?? 5,
+    viewCount: (json['view_count'] as num?)?.toInt() ?? 0,
+    expiresAt: DateTime.tryParse(json['expires_at']?.toString() ?? '')
+        ?? DateTime.now().add(const Duration(hours: 24)),
+    createdAt: DateTime.tryParse(json['created_at']?.toString() ?? '') ?? DateTime.now(),
     author:    _parseProfile(json['profiles']),
     venueId:   json['venue_id'] as String?,
     venueName: (json['venues'] as Map?)?['name'] as String?,
     mentions:  (json['mentions'] as List?)?.map((e) => e.toString()).toList()
                  ?? const [],
+    musicUrl:    json['music_url'] as String?,
+    musicTitle:  json['music_title'] as String?,
+    musicArtist: json['music_artist'] as String?,
   );
 
   static UserProfile? _parseProfile(dynamic p) {

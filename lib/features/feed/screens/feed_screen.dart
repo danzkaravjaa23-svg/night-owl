@@ -13,9 +13,14 @@ import '../../../core/widgets/network_video.dart';
 import '../../../core/router/app_router.dart';
 import '../providers/feed_provider.dart';
 import '../providers/stories_provider.dart';
+import '../providers/saved_provider.dart';
+import '../../../core/services/supabase_service.dart';
 import '../widgets/live_story_bar.dart';
 import '../../live/providers/live_provider.dart';
+import '../../notifications/providers/notification_provider.dart';
 import '../../events/widgets/events_rail.dart';
+import '../../profile/widgets/block_report_sheet.dart';
+import '../../../core/widgets/ger_icon.dart';
 import '../../events/providers/event_provider.dart';
 import '../../../models/post.dart';
 
@@ -52,6 +57,7 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
 
   @override
   void dispose() {
+    _scrollCtrl.removeListener(_onScroll);
     _scrollCtrl.dispose();
     super.dispose();
   }
@@ -131,9 +137,10 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
 }
 
 // ─── Top bar ───
-class _FeedTopBar extends StatelessWidget {
+class _FeedTopBar extends ConsumerWidget {
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final unread = ref.watch(unreadNotifCountProvider);
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 8, 16, 12),
       child: Row(children: [
@@ -150,17 +157,40 @@ class _FeedTopBar extends StatelessWidget {
           const SizedBox(width: 10),
           Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             NightOwlLogoText(fontSize: 20),
-            Text('UB · Шөнийн нийгэм',
+            Text('UB · ШӨНӨ ХЭЗЭЭ Ч ЗОГСОХГҮЙ',
                 style: AppTextStyles.mono
                     .copyWith(fontSize: 9, color: AppColors.textTertiary)),
           ]),
         ]),
         const Spacer(),
         IconButton(
-          onPressed: () => context.push(AppRoutes.notifications),
-          icon: const Icon(Icons.favorite_border,
-              color: AppColors.textPrimary, size: 22),
+          onPressed: () => context.push(AppRoutes.search),
+          icon: const Icon(Icons.search,
+              color: AppColors.textPrimary, size: 24),
         ),
+        Stack(clipBehavior: Clip.none, children: [
+          IconButton(
+            onPressed: () => context.push(AppRoutes.notifications),
+            icon: const GerIcon(size: 26),
+            tooltip: 'Мэдэгдэл',
+          ),
+          if (unread > 0)
+            Positioned(
+              right: 6, top: 6,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                constraints: const BoxConstraints(minWidth: 16),
+                decoration: BoxDecoration(
+                  color: AppColors.accentStart,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: AppColors.bgBase, width: 1.5)),
+                child: Text(unread > 99 ? '99+' : '$unread',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: Colors.white, fontSize: 9,
+                    fontWeight: FontWeight.w800)),
+              ),
+            ),
+        ]),
         IconButton(
           onPressed: () => context.push(AppRoutes.dmList),
           icon: const Icon(Icons.send_outlined,
@@ -172,7 +202,7 @@ class _FeedTopBar extends StatelessWidget {
 }
 
 // ─── Post card with double-tap like ───
-class _PostCard extends StatefulWidget {
+class _PostCard extends ConsumerStatefulWidget {
   final Post post;
   final bool isLast;
   final VoidCallback onLike;
@@ -181,14 +211,16 @@ class _PostCard extends StatefulWidget {
       {required this.post, this.isLast = false, required this.onLike});
 
   @override
-  State<_PostCard> createState() => _PostCardState();
+  ConsumerState<_PostCard> createState() => _PostCardState();
 }
 
-class _PostCardState extends State<_PostCard>
+class _PostCardState extends ConsumerState<_PostCard>
     with SingleTickerProviderStateMixin {
   late AnimationController _heartCtrl;
   late Animation<double> _heartAnim;
   bool _showHeart = false;
+  bool? _savedOverride; // optimistic; null бол provider-оос уншина
+  bool _hidden = false;
 
   @override
   void initState() {
@@ -204,6 +236,23 @@ class _PostCardState extends State<_PostCard>
         _heartCtrl.reset();
       }
     });
+  }
+
+  /// Хадгалсан эсэх: optimistic override эсвэл нийтлэг provider-оос
+  /// (бүх карт нэг л query хуваалцана — N+1 байхгүй)
+  bool get _saved => _savedOverride ??
+      (ref.watch(savedPostIdsProvider).valueOrNull?.contains(widget.post.id) ?? false);
+
+  Future<void> _toggleSave() async {
+    final was = _savedOverride ??
+        (ref.read(savedPostIdsProvider).valueOrNull?.contains(widget.post.id) ?? false);
+    setState(() => _savedOverride = !was);
+    HapticFeedback.lightImpact();
+    await SavedService.toggle(widget.post.id, was);
+    if (!mounted) return;
+    // Нийтлэг set-ийг шинэчилж, optimistic-ийг арилгана
+    ref.invalidate(savedPostIdsProvider);
+    setState(() => _savedOverride = null);
   }
 
   @override
@@ -223,6 +272,8 @@ class _PostCardState extends State<_PostCard>
   Widget build(BuildContext context) {
     final author = widget.post.author;
     final venue = widget.post.venue;
+
+    if (_hidden) return const SizedBox.shrink();
 
     return Container(
       padding: const EdgeInsets.fromLTRB(0, 0, 0, 4),
@@ -269,8 +320,26 @@ class _PostCardState extends State<_PostCard>
             ),
             Text(widget.post.timeAgo, style: AppTextStyles.bodyXs),
             const SizedBox(width: 4),
-            const Icon(Icons.more_horiz,
-                color: AppColors.textTertiary, size: 20),
+            GestureDetector(
+              onTap: () => showPostOptionsSheet(
+                context,
+                postId: widget.post.id,
+                authorId: widget.post.userId,
+                authorUsername: (author?.username ?? 'user').replaceAll('@', ''),
+                isOwn: widget.post.userId == SupabaseService.currentUser?.id,
+                currentCaption: widget.post.caption,
+                onBlocked: () => setState(() => _hidden = true),
+                onDelete: () async {
+                  final ok = await ref.read(feedProvider.notifier)
+                      .deletePost(widget.post.id);
+                  if (mounted && ok) setState(() => _hidden = true);
+                },
+                onEditCaption: (text) => ref.read(feedProvider.notifier)
+                    .editCaption(widget.post.id, text),
+              ),
+              child: const Icon(Icons.more_horiz,
+                  color: AppColors.textTertiary, size: 20),
+            ),
           ]),
         ),
 
@@ -279,7 +348,9 @@ class _PostCardState extends State<_PostCard>
           onDoubleTap: _doubleTapLike,
           onTap: () => context.push('/post/${widget.post.id}'),
           child: Stack(children: [
-            if (widget.post.mediaUrl != null)
+            if (widget.post.mediaUrls.length > 1)
+              _PostCarousel(urls: widget.post.mediaUrls)
+            else if (widget.post.mediaUrl != null)
               _isVideoUrl(widget.post.mediaUrl)
                   ? NetworkVideo(url: widget.post.mediaUrl!, height: 380)
                   : CachedNetworkImage(
@@ -348,9 +419,25 @@ class _PostCardState extends State<_PostCard>
             const Spacer(),
             // Share
             GestureDetector(
-              onTap: () {},
+              onTap: () async {
+                final link = 'https://nightowl.ub/post/${widget.post.id}';
+                await Clipboard.setData(ClipboardData(text: link));
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                    content: Text('Холбоос хуулагдлаа 🔗'),
+                    duration: Duration(seconds: 2)));
+                }
+              },
               child: const Icon(Icons.send_outlined,
                   color: AppColors.textSecondary, size: 22),
+            ),
+            const SizedBox(width: 16),
+            // Save / bookmark
+            GestureDetector(
+              onTap: _toggleSave,
+              child: Icon(_saved ? Icons.bookmark : Icons.bookmark_border,
+                  color: _saved ? AppColors.accentStart : AppColors.textSecondary,
+                  size: 22),
             ),
           ]),
         ),
@@ -434,13 +521,13 @@ class _FeedVideoPlayerState extends State<_FeedVideoPlayer> {
           child: Stack(children: [
             // Dark overlay with play icon
             Positioned.fill(child: Container(
-              color: Colors.black.withOpacity(0.3),
+              color: Colors.black.withValues(alpha: 0.3),
               child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
                 Container(
                   width: 64, height: 64,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: Colors.black.withOpacity(0.6),
+                    color: Colors.black.withValues(alpha: 0.6),
                     border: Border.all(color: Colors.white54, width: 2)),
                   child: _loading
                     ? const Padding(
@@ -507,6 +594,79 @@ class _FeedVideoPlayerState extends State<_FeedVideoPlayer> {
                 color: Colors.white70, fontSize: 10,
                 fontWeight: FontWeight.w600)),
             ]))),
+      ]),
+    );
+  }
+}
+
+// ─── Олон зурагтай пост carousel ───
+class _PostCarousel extends StatefulWidget {
+  final List<String> urls;
+  const _PostCarousel({required this.urls});
+  @override
+  State<_PostCarousel> createState() => _PostCarouselState();
+}
+
+class _PostCarouselState extends State<_PostCarousel> {
+  final _ctrl = PageController();
+  int _page = 0;
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 380,
+      child: Stack(children: [
+        PageView.builder(
+          controller: _ctrl,
+          itemCount: widget.urls.length,
+          onPageChanged: (i) => setState(() => _page = i),
+          itemBuilder: (_, i) {
+            final url = widget.urls[i];
+            if (_isVideoUrl(url)) {
+              return NetworkVideo(url: url, height: 380);
+            }
+            return CachedNetworkImage(
+              imageUrl: url,
+              width: double.infinity,
+              fit: BoxFit.cover,
+              placeholder: (_, __) => Container(color: AppColors.bgSurface),
+              errorWidget: (_, __, ___) => Container(
+                color: AppColors.bgSurface,
+                child: const Center(
+                    child: Text('📸', style: TextStyle(fontSize: 48))),
+              ),
+            );
+          },
+        ),
+        // Count badge (1/3)
+        Positioned(top: 12, right: 12, child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          decoration: BoxDecoration(
+            color: Colors.black54, borderRadius: BorderRadius.circular(20)),
+          child: Text('${_page + 1}/${widget.urls.length}',
+            style: const TextStyle(color: Colors.white, fontSize: 11,
+              fontWeight: FontWeight.w600)),
+        )),
+        // Dots
+        Positioned(bottom: 12, left: 0, right: 0, child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            for (var i = 0; i < widget.urls.length; i++)
+              Container(
+                width: 6, height: 6,
+                margin: const EdgeInsets.symmetric(horizontal: 3),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: i == _page ? Colors.white : Colors.white38),
+              ),
+          ],
+        )),
       ]),
     );
   }

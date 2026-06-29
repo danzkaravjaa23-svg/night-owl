@@ -49,8 +49,8 @@ class PermissionScreen extends StatelessWidget {
                 width: 110, height: 110,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: color.withOpacity(0.15),
-                  border: Border.all(color: color.withOpacity(0.3)),
+                  color: color.withValues(alpha: 0.15),
+                  border: Border.all(color: color.withValues(alpha: 0.3)),
                 ),
                 child: Center(child: Text(emoji, style: const TextStyle(fontSize: 52))),
               ),

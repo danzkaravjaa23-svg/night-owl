@@ -15,6 +15,7 @@ class ReelsScreen extends StatefulWidget {
 class _ReelsScreenState extends State<ReelsScreen> {
   List<Map<String, dynamic>> _reels = [];
   bool _loading = true;
+  bool _canCreate = false; // зөвхөн venue эзэн оруулна
   final Set<String> _liked = {};
 
   String get _myId => SupabaseService.currentUser?.id ?? '';
@@ -23,6 +24,16 @@ class _ReelsScreenState extends State<ReelsScreen> {
   void initState() {
     super.initState();
     _load();
+    _checkOwner();
+  }
+
+  Future<void> _checkOwner() async {
+    if (_myId.isEmpty) return;
+    try {
+      final r = await SupabaseService.client.from('venues')
+          .select('id').eq('owner_id', _myId).limit(1).maybeSingle();
+      if (mounted) setState(() => _canCreate = r != null);
+    } catch (_) {}
   }
 
   Future<void> _load() async {
@@ -73,6 +84,42 @@ class _ReelsScreenState extends State<ReelsScreen> {
     } catch (_) {}
   }
 
+  Future<void> _deleteReel(Map<String, dynamic> reel) async {
+    final id = reel['id'] as String;
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (d) => AlertDialog(
+        backgroundColor: AppColors.bgElevated,
+        title: Text('Бичлэг устгах уу?', style: AppTextStyles.h3),
+        content: Text('Энэ live/reel бичлэгийг бүрмөсөн устгана.',
+            style: AppTextStyles.bodySm.copyWith(color: AppColors.textSecondary)),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(d, false),
+              child: Text('Болих', style: AppTextStyles.bodyMd.copyWith(
+                  color: AppColors.textSecondary))),
+          TextButton(onPressed: () => Navigator.pop(d, true),
+              child: Text('Устгах', style: AppTextStyles.bodyMd.copyWith(
+                  color: AppColors.error, fontWeight: FontWeight.w600))),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    try {
+      await SupabaseService.client.from('posts')
+          .delete().eq('id', id).eq('user_id', _myId);
+      if (mounted) {
+        setState(() => _reels.removeWhere((r) => r['id'] == id));
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Бичлэг устгагдлаа')));
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('Устгаж чадсангүй'), backgroundColor: AppColors.error));
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final h = MediaQuery.of(context).size.height;
@@ -92,17 +139,20 @@ class _ReelsScreenState extends State<ReelsScreen> {
                   height: h,
                   liked: _liked.contains(_reels[i]['id']),
                   onLike: () => _toggleLike(_reels[i]),
+                  isOwn: _reels[i]['user_id'] == _myId,
+                  onDelete: () => _deleteReel(_reels[i]),
                 ),
               ),
-              // Дээд гарчиг + Reel нэмэх
+              // Дээд гарчиг + нэмэх (зөвхөн venue эзэн)
               SafeArea(child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 child: Row(children: [
-                  Text('Reels', style: AppTextStyles.h2.copyWith(color: Colors.white)),
+                  Text('Discovery', style: AppTextStyles.h2.copyWith(color: Colors.white)),
                   const Spacer(),
-                  GestureDetector(
-                    onTap: () => context.push('/reels/create'),
-                    child: const Icon(Icons.add_box_outlined, color: Colors.white, size: 28)),
+                  if (_canCreate)
+                    GestureDetector(
+                      onTap: () => context.push('/reels/create'),
+                      child: const Icon(Icons.add_box_outlined, color: Colors.white, size: 28)),
                 ]))),
             ]),
     );
@@ -110,24 +160,29 @@ class _ReelsScreenState extends State<ReelsScreen> {
 
   Widget _empty(BuildContext context) => SafeArea(child: Stack(children: [
     Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-      const Icon(Icons.slow_motion_video_outlined, color: Colors.white38, size: 72),
+      const Icon(Icons.explore_outlined, color: Colors.white38, size: 72),
       const SizedBox(height: 16),
-      Text('Reel алга байна', style: AppTextStyles.h2.copyWith(color: Colors.white)),
+      Text('Контент алга байна', style: AppTextStyles.h2.copyWith(color: Colors.white)),
       const SizedBox(height: 8),
-      Text('Эхний reel-ээ хуваалцаарай!',
+      Text(_canCreate
+          ? 'Эхний бичлэгээ хуваалцаарай!'
+          : 'Venue эзэд богино видео нийтэлдэг',
+        textAlign: TextAlign.center,
         style: AppTextStyles.bodyMd.copyWith(color: Colors.white54)),
-      const SizedBox(height: 20),
-      GestureDetector(
-        onTap: () => context.push('/reels/create'),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-          decoration: BoxDecoration(
-            gradient: AppColors.accentGradient, borderRadius: BorderRadius.circular(14)),
-          child: Text('Reel нэмэх', style: AppTextStyles.btn.copyWith(color: Colors.white)))),
+      if (_canCreate) ...[
+        const SizedBox(height: 20),
+        GestureDetector(
+          onTap: () => context.push('/reels/create'),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+            decoration: BoxDecoration(
+              gradient: AppColors.accentGradient, borderRadius: BorderRadius.circular(14)),
+            child: Text('Бичлэг нэмэх', style: AppTextStyles.btn.copyWith(color: Colors.white)))),
+      ],
     ])),
     Align(alignment: Alignment.topLeft, child: Padding(
       padding: const EdgeInsets.all(16),
-      child: Text('Reels', style: AppTextStyles.h2.copyWith(color: Colors.white)))),
+      child: Text('Discovery', style: AppTextStyles.h2.copyWith(color: Colors.white)))),
   ]));
 }
 
@@ -136,9 +191,12 @@ class _ReelPage extends StatelessWidget {
   final double height;
   final bool liked;
   final VoidCallback onLike;
+  final bool isOwn;
+  final VoidCallback? onDelete;
   const _ReelPage({
     required this.reel, required this.height,
     required this.liked, required this.onLike,
+    this.isOwn = false, this.onDelete,
   });
 
   @override
@@ -179,6 +237,13 @@ class _ReelPage extends StatelessWidget {
           ])),
         const SizedBox(height: 20),
         const Icon(Icons.send_outlined, color: Colors.white, size: 30),
+        // Өөрийн бичлэг (live/reel) бол устгах
+        if (isOwn) ...[
+          const SizedBox(height: 20),
+          GestureDetector(
+            onTap: onDelete,
+            child: const Icon(Icons.delete_outline, color: Colors.white, size: 30)),
+        ],
       ])),
 
       // Доод зүүн: зохиогч + тайлбар

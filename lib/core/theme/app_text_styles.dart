@@ -3,71 +3,71 @@ import 'package:google_fonts/google_fonts.dart';
 import 'app_colors.dart';
 
 abstract class AppTextStyles {
-  // ─── Display (Manrope bold — heading) ───
-  static TextStyle get displayLg => GoogleFonts.manrope(
+  // ─── Display (Inter — монгол кириллд тод, геометрик heading) ───
+  static TextStyle get displayLg => GoogleFonts.inter(
     fontSize: 36, fontWeight: FontWeight.w800,
     letterSpacing: -0.72, color: AppColors.textPrimary,
   );
 
-  static TextStyle get displayMd => GoogleFonts.manrope(
+  static TextStyle get displayMd => GoogleFonts.inter(
     fontSize: 28, fontWeight: FontWeight.w800,
     letterSpacing: -0.56, color: AppColors.textPrimary,
   );
 
-  static TextStyle get displaySm => GoogleFonts.manrope(
+  static TextStyle get displaySm => GoogleFonts.inter(
     fontSize: 22, fontWeight: FontWeight.w800,
     letterSpacing: -0.44, color: AppColors.textPrimary,
   );
 
-  // ─── Heading ───
-  static TextStyle get h1 => GoogleFonts.manrope(
+  // ─── Heading (Inter) ───
+  static TextStyle get h1 => GoogleFonts.inter(
     fontSize: 20, fontWeight: FontWeight.w700,
-    color: AppColors.textPrimary,
+    letterSpacing: -0.2, color: AppColors.textPrimary,
   );
 
-  static TextStyle get h2 => GoogleFonts.manrope(
+  static TextStyle get h2 => GoogleFonts.inter(
     fontSize: 17, fontWeight: FontWeight.w700,
     color: AppColors.textPrimary,
   );
 
-  static TextStyle get h3 => GoogleFonts.manrope(
+  static TextStyle get h3 => GoogleFonts.inter(
     fontSize: 15, fontWeight: FontWeight.w600,
     color: AppColors.textPrimary,
   );
 
   // ─── Body ───
-  static TextStyle get bodyLg => GoogleFonts.manrope(
+  static TextStyle get bodyLg => GoogleFonts.inter(
     fontSize: 16, fontWeight: FontWeight.w400,
     color: AppColors.textPrimary,
   );
 
-  static TextStyle get bodyMd => GoogleFonts.manrope(
+  static TextStyle get bodyMd => GoogleFonts.inter(
     fontSize: 14, fontWeight: FontWeight.w400,
     color: AppColors.textPrimary,
   );
 
-  static TextStyle get bodySm => GoogleFonts.manrope(
+  static TextStyle get bodySm => GoogleFonts.inter(
     fontSize: 13, fontWeight: FontWeight.w400,
     color: AppColors.textSecondary,
   );
 
-  static TextStyle get bodyXs => GoogleFonts.manrope(
+  static TextStyle get bodyXs => GoogleFonts.inter(
     fontSize: 11, fontWeight: FontWeight.w400,
     color: AppColors.textSecondary,
   );
 
   // ─── Label ───
-  static TextStyle get labelLg => GoogleFonts.manrope(
+  static TextStyle get labelLg => GoogleFonts.inter(
     fontSize: 14, fontWeight: FontWeight.w600,
     color: AppColors.textPrimary,
   );
 
-  static TextStyle get labelMd => GoogleFonts.manrope(
+  static TextStyle get labelMd => GoogleFonts.inter(
     fontSize: 12, fontWeight: FontWeight.w600,
     color: AppColors.textPrimary, letterSpacing: 0.2,
   );
 
-  static TextStyle get labelSm => GoogleFonts.manrope(
+  static TextStyle get labelSm => GoogleFonts.inter(
     fontSize: 10, fontWeight: FontWeight.w600,
     color: AppColors.textSecondary,
     letterSpacing: 0.8, height: 1.2,
@@ -85,12 +85,12 @@ abstract class AppTextStyles {
   );
 
   // ─── Button ───
-  static TextStyle get btn => GoogleFonts.manrope(
+  static TextStyle get btn => GoogleFonts.inter(
     fontSize: 15, fontWeight: FontWeight.w700,
     letterSpacing: 0.2, color: AppColors.textPrimary,
   );
 
-  static TextStyle get btnSm => GoogleFonts.manrope(
+  static TextStyle get btnSm => GoogleFonts.inter(
     fontSize: 13, fontWeight: FontWeight.w600,
     color: AppColors.textPrimary,
   );

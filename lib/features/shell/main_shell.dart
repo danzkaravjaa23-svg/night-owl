@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -14,6 +15,7 @@ class MainShell extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.bgBase,
+      extendBody: true, // floating bar контентын дээгүүр хөвнө
       body: child,
       bottomNavigationBar: _BottomNav(),
     );
@@ -25,35 +27,48 @@ class _BottomNav extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final location = GoRouterState.of(context).uri.toString();
     final currentIndex = _indexFromLocation(location);
+    final bottomInset = MediaQuery.of(context).padding.bottom;
 
-    return Container(
-      decoration: const BoxDecoration(
-        color: AppColors.bgElevated,
-        border: Border(top: BorderSide(color: AppColors.hairline)),
-      ),
-      child: SafeArea(
-        top: false,
-        child: SizedBox(
-          height: 60,
-          child: Row(children: [
-            _NavItem(
-              icon: Icons.home_outlined, activeIcon: Icons.home,
-              label: 'Feed', isActive: currentIndex == 0,
-              onTap: () => context.go(AppRoutes.feed)),
-            _NavItem(
-              icon: Icons.map_outlined, activeIcon: Icons.map,
-              label: 'Map', isActive: currentIndex == 1,
-              onTap: () => context.go(AppRoutes.map)),
-            _CreateButton(onTap: () => _showCreateSheet(context)),
-            _NavItem(
-              icon: Icons.slow_motion_video_outlined, activeIcon: Icons.slow_motion_video,
-              label: 'Reels', isActive: currentIndex == 3,
-              onTap: () => context.go(AppRoutes.reels)),
-            _NavItem(
-              icon: Icons.person_outline, activeIcon: Icons.person,
-              label: 'Profile', isActive: currentIndex == 4,
-              onTap: () => context.go(AppRoutes.profile)),
-          ]),
+    return Padding(
+      // Доод ирмэгээс хөвүүлж, хажуу талаас зай авна
+      padding: EdgeInsets.fromLTRB(16, 0, 16, 12 + bottomInset),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(24),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15), // glassmorphism
+          child: Container(
+            height: 64,
+            decoration: BoxDecoration(
+              color: const Color(0xB3121212), // rgba(18,18,18,0.7)
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(
+                color: Colors.white.withValues(alpha: 0.10), width: 1),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.45),
+                  blurRadius: 24, offset: const Offset(0, 8)),
+              ],
+            ),
+            child: Row(children: [
+              _NavItem(
+                icon: Icons.home_outlined, activeIcon: Icons.home,
+                label: 'Feed', isActive: currentIndex == 0,
+                onTap: () => context.go(AppRoutes.feed)),
+              _NavItem(
+                icon: Icons.map_outlined, activeIcon: Icons.map,
+                label: 'Map', isActive: currentIndex == 1,
+                onTap: () => context.go(AppRoutes.map)),
+              _CreateButton(onTap: () => _showCreateSheet(context)),
+              _NavItem(
+                icon: Icons.explore_outlined, activeIcon: Icons.explore,
+                label: 'Discovery', isActive: currentIndex == 3,
+                onTap: () => context.go(AppRoutes.reels)),
+              _NavItem(
+                icon: Icons.person_outline, activeIcon: Icons.person,
+                label: 'Profile', isActive: currentIndex == 4,
+                onTap: () => context.go(AppRoutes.profile)),
+            ]),
+          ),
         ),
       ),
     );
@@ -63,6 +78,7 @@ class _BottomNav extends ConsumerWidget {
     showModalBottomSheet(
       context: context,
       backgroundColor: AppColors.bgElevated,
+      isScrollControlled: true, // контентдээ багтаж overflow гарахгүй
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
       builder: (_) => SafeArea(
@@ -90,11 +106,11 @@ class _BottomNav extends ConsumerWidget {
             ),
             const SizedBox(height: 12),
 
-            // Reel
+            // Discovery (зөвхөн venue эзэд)
             _CreateOption(
-              icon: Icons.slow_motion_video_outlined,
-              label: 'Reel',
-              subtitle: 'Богино видео хуваалцах',
+              icon: Icons.explore_outlined,
+              label: 'Discovery',
+              subtitle: 'Богино видео — зөвхөн venue эзэд',
               gradient: const LinearGradient(
                   colors: [Color(0xFF7B2FF7), Color(0xFFF107A3)]),
               onTap: () {
@@ -164,7 +180,22 @@ class _NavItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = isActive ? AppColors.accentStart : AppColors.textTertiary;
+    const mutedGray = Color(0xFF8A8A95); // идэвхгүй — намуухан саарал
+    final color = isActive ? AppColors.silver : mutedGray;
+    final iconData = isActive ? activeIcon : icon;
+    // Идэвхтэй icon — pink→orange неон gradient + гэрэлтэх glow
+    Widget iconWidget = isActive
+        ? ShaderMask(
+            shaderCallback: (bounds) =>
+                AppColors.chromeGradient.createShader(bounds),
+            blendMode: BlendMode.srcIn,
+            child: Icon(iconData, color: Colors.white, size: 26, shadows: [
+              Shadow(color: Colors.white.withValues(alpha: 0.55),
+                  blurRadius: 14),
+              Shadow(color: AppColors.silver.withValues(alpha: 0.4),
+                  blurRadius: 22),
+            ]))
+        : Icon(iconData, color: mutedGray, size: 24);
     return Expanded(
       child: GestureDetector(
         onTap: onTap,
@@ -173,7 +204,7 @@ class _NavItem extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Stack(clipBehavior: Clip.none, children: [
-              Icon(isActive ? activeIcon : icon, color: color, size: 24),
+              iconWidget,
               if (badge > 0)
                 Positioned(
                   top: -4, right: -8,
@@ -224,7 +255,7 @@ class _CreateButton extends StatelessWidget {
                 gradient: AppColors.accentGradient,
                 borderRadius: BorderRadius.circular(14),
                 boxShadow: [BoxShadow(
-                  color: AppColors.accentStart.withOpacity(0.4),
+                  color: AppColors.accentStart.withValues(alpha: 0.4),
                   blurRadius: 12, offset: const Offset(0, 4),
                 )],
               ),

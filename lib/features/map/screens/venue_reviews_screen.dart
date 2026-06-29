@@ -6,6 +6,8 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/widgets/app_avatar.dart';
 import '../../../core/services/supabase_service.dart';
+import '../../events/providers/event_provider.dart' show EventItem;
+import '../../events/widgets/events_rail.dart' show showEventDetailSheet;
 
 const _kMonths = ['', '1-р сар','2-р сар','3-р сар','4-р сар','5-р сар','6-р сар',
   '7-р сар','8-р сар','9-р сар','10-р сар','11-р сар','12-р сар'];
@@ -100,7 +102,7 @@ class _VenueDetailScreenState extends State<VenueDetailScreen> {
               leading: IconButton(onPressed: () => context.pop(),
                 icon: Container(width: 36, height: 36,
                   decoration: BoxDecoration(shape: BoxShape.circle,
-                    color: Colors.black.withOpacity(0.5)),
+                    color: Colors.black.withValues(alpha: 0.5)),
                   child: const Icon(Icons.arrow_back_ios_new, size: 18, color: Colors.white))),
               flexibleSpace: FlexibleSpaceBar(
                 background: cover != null
@@ -221,7 +223,16 @@ class _VenueDetailScreenState extends State<VenueDetailScreen> {
       '${starts.toLocal().day} ${_kMonths[starts.toLocal().month]}, '
       '${starts.toLocal().hour.toString().padLeft(2,'0')}:${starts.toLocal().minute.toString().padLeft(2,'0')}';
     final price = e['price'] as int? ?? 0;
-    return Container(
+    return GestureDetector(
+      onTap: () => showEventDetailSheet(context, EventItem(
+        id: e['id'] as String,
+        title: e['title'] as String? ?? 'Event',
+        coverUrl: e['cover_url'] as String?,
+        startsAt: starts ?? DateTime.now(),
+        price: price,
+        venueName: _venue?['name'] as String?,
+      )),
+      child: Container(
       margin: const EdgeInsets.only(bottom: 10),
       decoration: BoxDecoration(
         color: AppColors.bgElevated, borderRadius: BorderRadius.circular(14),
@@ -247,6 +258,7 @@ class _VenueDetailScreenState extends State<VenueDetailScreen> {
             style: AppTextStyles.bodyXs.copyWith(
               color: AppColors.textPrimary, fontWeight: FontWeight.w700))),
       ]),
+    ),
     );
   }
 

@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/widgets/gradient_button.dart';
+import '../../../core/widgets/mesh_gradient.dart';
 import '../../../core/l10n/app_strings.dart';
 import '../../../core/router/app_router.dart';
 
@@ -20,10 +21,15 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   late AnimationController _ctrl;
   late Animation<double> _fade;
   late Animation<Offset> _slide;
+  String _locale = 'en';
 
   @override
   void initState() {
     super.initState();
+    // Сонгосон хэлийг уншина (lang_select дээр хадгалсан)
+    SharedPreferences.getInstance().then((p) {
+      if (mounted) setState(() => _locale = p.getString('locale') ?? 'en');
+    });
     _ctrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 500));
     _fade  = CurvedAnimation(parent: _ctrl, curve: Curves.easeOut);
     _slide = Tween<Offset>(begin: const Offset(0, 0.08), end: Offset.zero).animate(
@@ -52,10 +58,9 @@ class _OnboardingScreenState extends State<OnboardingScreen>
 
   @override
   Widget build(BuildContext context) {
-    final locale = 'en'; // will come from provider
-    final s = AppStrings.of(locale);
+    final s = AppStrings.of(_locale);
     final slides = [
-      _SlideData(emoji: '🌃', title: s.onb1Title, sub: s.onb1Sub, color: AppColors.accentStart),
+      _SlideData(emoji: '🍸', title: s.onb1Title, sub: s.onb1Sub, color: AppColors.accentStart),
       _SlideData(emoji: '📡', title: s.onb2Title, sub: s.onb2Sub, color: AppColors.accentPurple),
       _SlideData(emoji: '🗺️', title: s.onb3Title, sub: s.onb3Sub, color: AppColors.accentEnd),
     ];
@@ -65,19 +70,8 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       backgroundColor: AppColors.bgBase,
       body: Stack(
         children: [
-          // Aurora
-          Positioned(
-            top: -80, right: -60,
-            child: Container(
-              width: 300, height: 300,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: RadialGradient(
-                  colors: [data.color.withOpacity(0.3), Colors.transparent],
-                ),
-              ),
-            ),
-          ),
+          // Удаан хөдөлдөг mesh gradient дэвсгэр
+          const Positioned.fill(child: MeshGradientBackground()),
           SafeArea(
             child: Column(
               children: [
@@ -100,7 +94,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Text(data.emoji, style: const TextStyle(fontSize: 80)),
+                          GlassMedallion(emoji: data.emoji, glow: data.color, size: 168),
                           const SizedBox(height: 32),
                           Text(data.title,
                             style: AppTextStyles.displayMd,

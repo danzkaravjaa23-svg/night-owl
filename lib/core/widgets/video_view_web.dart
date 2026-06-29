@@ -11,12 +11,14 @@ class VideoView extends StatefulWidget {
   final bool posterOnly;
   final double? height;
   final bool autoplay;
+  final bool showPosterIcon;
   const VideoView({
     super.key,
     required this.url,
     this.posterOnly = false,
     this.height,
     this.autoplay = false,
+    this.showPosterIcon = true,
   });
 
   @override
@@ -45,8 +47,9 @@ class _VideoViewState extends State<VideoView> {
         ..objectFit = (widget.posterOnly || widget.autoplay) ? 'cover' : 'contain'
         ..backgroundColor = 'black'
         ..border = 'none';
-      // Grid poster: tap эцэг рүү дамжуулахын тулд элементийг pointer-гүй болгох
-      if (widget.posterOnly) v.style.pointerEvents = 'none';
+      // Poster болон autoplay (Reels) дээр товшилтыг Flutter overlay руу
+      // дамжуулахын тулд видеог pointer-гүй болгоно (like/comment/устгах ажиллана).
+      if (widget.posterOnly || widget.autoplay) v.style.pointerEvents = 'none';
       return v;
     });
   }
@@ -59,10 +62,12 @@ class _VideoViewState extends State<VideoView> {
       return Stack(fit: StackFit.expand, children: [
         Container(color: Colors.black),
         view,
-        const IgnorePointer(child: Center(child: Icon(
-            Icons.play_circle_fill_rounded, color: Colors.white, size: 34))),
-        const Positioned(top: 6, right: 6, child: IgnorePointer(
-            child: Icon(Icons.videocam_rounded, color: Colors.white70, size: 16))),
+        if (widget.showPosterIcon) ...[
+          const IgnorePointer(child: Center(child: Icon(
+              Icons.play_circle_fill_rounded, color: Colors.white, size: 34))),
+          const Positioned(top: 6, right: 6, child: IgnorePointer(
+              child: Icon(Icons.videocam_rounded, color: Colors.white70, size: 16))),
+        ],
       ]);
     }
 

@@ -9,6 +9,7 @@ class Message {
   final bool isRead;
   final DateTime createdAt;
   final UserProfile? sender;
+  final String? storyMediaUrl; // story-д хариулсан бол story-н зураг
 
   const Message({
     required this.id,
@@ -18,6 +19,7 @@ class Message {
     this.isRead = false,
     required this.createdAt,
     this.sender,
+    this.storyMediaUrl,
   });
 
   factory Message.fromJson(Map<String, dynamic> json) => Message(
@@ -26,10 +28,11 @@ class Message {
     receiverId: json['receiver_id'] as String,
     content:    json['body'] as String? ?? '',
     isRead:     json['is_read'] as bool? ?? false,
-    createdAt:  DateTime.parse(json['created_at'] as String),
+    createdAt:  DateTime.tryParse(json['created_at']?.toString() ?? '') ?? DateTime.now(),
     sender:     json['sender'] != null
         ? UserProfile.fromJson(json['sender'] as Map<String, dynamic>)
         : null,
+    storyMediaUrl: json['story_media_url'] as String?,
   );
 }
 
@@ -57,8 +60,8 @@ class ChatThread {
         ? UserProfile.fromJson(json['peer'] as Map<String, dynamic>)
         : null,
     lastMessage: json['last_message'] as String? ?? '',
-    lastAt:      DateTime.parse(json['last_at'] as String),
-    unreadCount: json['unread_count'] as int? ?? 0,
+    lastAt:      DateTime.tryParse(json['last_at']?.toString() ?? '') ?? DateTime.now(),
+    unreadCount: (json['unread_count'] as num?)?.toInt() ?? 0,
     peerOnline:  json['peer_online'] as bool? ?? false,
   );
 }

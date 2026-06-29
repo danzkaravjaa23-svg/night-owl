@@ -8,6 +8,7 @@ class UserProfile {
   final List<String> interests;
   final bool isVerified;
   final bool isBusiness;
+  final bool isAdmin;
   final int followersCount;
   final int followingCount;
   final int postsCount;
@@ -22,6 +23,7 @@ class UserProfile {
     this.interests      = const [],
     this.isVerified     = false,
     this.isBusiness     = false,
+    this.isAdmin        = false,
     this.followersCount = 0,
     this.followingCount = 0,
     this.postsCount     = 0,
@@ -37,12 +39,11 @@ class UserProfile {
     interests:      List<String>.from(json['interests'] ?? []),
     isVerified:     json['is_verified'] as bool? ?? false,
     isBusiness:     json['is_business'] as bool? ?? false,
-    followersCount: json['followers_count'] as int? ?? 0,
-    followingCount: json['following_count'] as int? ?? 0,
-    postsCount:     json['posts_count'] as int? ?? 0,
-    createdAt:      json['created_at'] != null
-        ? DateTime.parse(json['created_at'] as String)
-        : null,
+    isAdmin:        json['is_admin'] as bool? ?? false,
+    followersCount: (json['followers_count'] as num?)?.toInt() ?? 0,
+    followingCount: (json['following_count'] as num?)?.toInt() ?? 0,
+    postsCount:     (json['posts_count'] as num?)?.toInt() ?? 0,
+    createdAt:      DateTime.tryParse(json['created_at']?.toString() ?? ''),
   );
 
   Map<String, dynamic> toJson() => {
@@ -76,8 +77,11 @@ class UserProfile {
     createdAt:      createdAt,
   );
 
-  /// Avatar initial letter
-  String get initial => (name?.isNotEmpty == true
-      ? name![0]
-      : username?.replaceAll('@', '')[0] ?? '?').toUpperCase();
+  /// Avatar initial letter (хоосон тэмдэгт дээр RangeError гаргахгүй)
+  String get initial {
+    final n = name?.trim() ?? '';
+    if (n.isNotEmpty) return n[0].toUpperCase();
+    final u = (username ?? '').replaceAll('@', '').trim();
+    return (u.isNotEmpty ? u[0] : '?').toUpperCase();
+  }
 }

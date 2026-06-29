@@ -196,7 +196,7 @@ class _SetupScreenState extends State<SetupScreen> {
                                         fit: BoxFit.cover)
                                     : null,
                                 border: Border.all(
-                                  color: AppColors.accentStart.withOpacity(0.4),
+                                  color: AppColors.accentStart.withValues(alpha: 0.4),
                                   width: 2),
                               ),
                               child: _avatarBytes == null
@@ -267,7 +267,7 @@ class _SetupScreenState extends State<SetupScreen> {
                               horizontal: 14, vertical: 8),
                             decoration: BoxDecoration(
                               color: active
-                                  ? AppColors.accentStart.withOpacity(0.18)
+                                  ? AppColors.accentStart.withValues(alpha: 0.18)
                                   : AppColors.bgSurface,
                               borderRadius: BorderRadius.circular(20),
                               border: Border.all(

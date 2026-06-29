@@ -4,9 +4,6 @@ abstract class AppConstants {
   static const String supabaseUrl    = 'https://jbbdnpsvstwxtgtjoeru.supabase.co';
   static const String supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpiYmRucHN2c3R3eHRndGpvZXJ1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNzg1ODIsImV4cCI6MjA5NTY1NDU4Mn0.90qjYby2XNwierEh9XORoP2FEs2LPlRqBC6W74_2oqE';
 
-  // Google Maps
-  static const String googleMapsApiKey = 'YOUR_GOOGLE_MAPS_API_KEY';
-
   // UB location (Сүхбаатар талбай)
   static const double ubLat = 47.9077;
   static const double ubLng = 106.8832;

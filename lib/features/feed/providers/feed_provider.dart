@@ -9,14 +9,15 @@ class FeedNotifier extends StateNotifier<AsyncValue<List<Post>>> {
     loadFeed();
   }
 
-  int  _page    = 0;
+  DateTime? _cursor;   // сүүлд татсан постын created_at (keyset pagination)
   bool _hasMore = true;
   bool _loading = false;
 
   Future<void> loadFeed({bool refresh = false}) async {
-    if (_loading && !refresh) return;
+    // refresh ч in-flight ачааллыг дайрахгүй (cursor/state race-ээс сэргийлнэ)
+    if (_loading) return;
     if (refresh) {
-      _page    = 0;
+      _cursor  = null;
       _hasMore = true;
       state    = const AsyncValue.loading();
     }
@@ -25,38 +26,43 @@ class FeedNotifier extends StateNotifier<AsyncValue<List<Post>>> {
 
     try {
       final userId = SupabaseService.currentUser?.id;
-      final offset = _page * AppConstants.feedPageSize;
-
       List<Map<String, dynamic>> rows;
 
       if (userId != null) {
-        // RPC: correct isLikedByMe + commentsCount
+        // RPC: cursor (keyset) — offset scan байхгүй, давхардахгүй
         final data = await SupabaseService.client.rpc(
-          'get_feed_posts',
+          'get_feed_cursor',
           params: {
             'p_user_id': userId,
             'p_limit':   AppConstants.feedPageSize,
-            'p_offset':  offset,
+            'p_before':  _cursor?.toIso8601String(),
           },
         );
         rows = (data as List).cast<Map<String, dynamic>>();
       } else {
-        // Fallback: plain query
-        final data = await SupabaseService.client
+        // Fallback: plain query with cursor
+        var q = SupabaseService.client
             .from('posts')
-            .select('*, profiles!user_id (id, username, avatar_url, is_verified)')
+            .select('*, profiles!user_id (id, username, avatar_url, is_verified)');
+        if (_cursor != null) {
+          q = q.lt('created_at', _cursor!.toIso8601String());
+        }
+        final data = await q
             .order('created_at', ascending: false)
-            .range(offset, offset + AppConstants.feedPageSize - 1);
+            .limit(AppConstants.feedPageSize);
         rows = (data as List).cast<Map<String, dynamic>>();
       }
 
-      final posts = rows.map((j) => Post.fromJson(j)).toList();
-      _hasMore = posts.length == AppConstants.feedPageSize;
-      _page++;
+      final fetched = rows.map((j) => Post.fromJson(j)).toList();
+      _hasMore = fetched.length == AppConstants.feedPageSize;
+      if (fetched.isNotEmpty) _cursor = fetched.last.createdAt;
 
-      state = AsyncValue.data(
-        refresh ? posts : [...(state.value ?? []), ...posts],
-      );
+      // Давхардлаас сэргийлэх (cursor хилийн ижил timestamp edge case)
+      final existing = refresh ? <Post>[] : (state.value ?? []);
+      final seen = existing.map((p) => p.id).toSet();
+      final merged = [...existing, ...fetched.where((p) => seen.add(p.id))];
+
+      state = AsyncValue.data(merged);
     } catch (e, st) {
       if (refresh) state = AsyncValue.error(e, st);
     } finally {
@@ -130,17 +136,39 @@ class FeedNotifier extends StateNotifier<AsyncValue<List<Post>>> {
     }
   }
 
-  // ── Delete own post ─────────────────────────────────────────────────────────
-  Future<void> deletePost(String postId) async {
+  // ── Edit own post caption ───────────────────────────────────────────────────
+  Future<void> editCaption(String postId, String caption) async {
     final user = SupabaseService.currentUser;
     if (user == null) return;
-    await SupabaseService.client
-        .from('posts')
-        .delete()
-        .eq('id', postId)
-        .eq('user_id', user.id);
+    final trimmed = caption.trim();
+    try {
+      await SupabaseService.client
+          .from('posts')
+          .update({'caption': trimmed})
+          .eq('id', postId)
+          .eq('user_id', user.id);
+    } catch (_) { return; }
+    final list = (state.value ?? []).map((p) =>
+        p.id == postId ? p.copyWith(caption: trimmed) : p).toList();
+    state = AsyncValue.data(list);
+  }
+
+  // ── Delete own post ─────────────────────────────────────────────────────────
+  Future<bool> deletePost(String postId) async {
+    final user = SupabaseService.currentUser;
+    if (user == null) return false;
+    try {
+      await SupabaseService.client
+          .from('posts')
+          .delete()
+          .eq('id', postId)
+          .eq('user_id', user.id);
+    } catch (_) {
+      return false; // устгаж чадсангүй
+    }
     final updated = (state.value ?? []).where((p) => p.id != postId).toList();
     state = AsyncValue.data(updated);
+    return true;
   }
 }
 

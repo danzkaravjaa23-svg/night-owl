@@ -29,6 +29,24 @@ class _RegisterScreenState extends State<RegisterScreen> {
     super.dispose();
   }
 
+  void _showLegal(BuildContext context, String title, String body) {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        backgroundColor: AppColors.bgElevated,
+        title: Text(title, style: AppTextStyles.h3),
+        content: Text(body, style: AppTextStyles.bodySm.copyWith(
+          color: AppColors.textSecondary, height: 1.5)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text('Хаах', style: AppTextStyles.bodyMd.copyWith(
+              color: AppColors.accentStart))),
+        ],
+      ),
+    );
+  }
+
   Future<void> _register() async {
     if (!_formKey.currentState!.validate()) return;
     if (!_agreedTos) {
@@ -76,9 +94,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Create Account', style: AppTextStyles.displayMd),
+                      Text('Join the\nnight crew ✨', style: AppTextStyles.displayMd.copyWith(height: 1.2)),
                       const SizedBox(height: 8),
-                      Text('Create an account and join the club',
+                      Text('UB-гийн шилдэг party-нуудад VIP эрх нээ',
                         style: AppTextStyles.bodyMd.copyWith(
                           color: AppColors.textSecondary)),
                       const SizedBox(height: 36),
@@ -87,6 +105,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       const SizedBox(height: 8),
                       TextFormField(
                         controller: _nameCtrl,
+                        autofillHints: const [AutofillHints.name],
                         style: const TextStyle(color: AppColors.textPrimary),
                         decoration: const InputDecoration(hintText: 'Your name'),
                         validator: (v) => v!.isNotEmpty ? null : 'Required',
@@ -98,6 +117,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       TextFormField(
                         controller: _emailCtrl,
                         keyboardType: TextInputType.emailAddress,
+                        autofillHints: const [AutofillHints.newUsername, AutofillHints.email],
                         style: const TextStyle(color: AppColors.textPrimary),
                         decoration: const InputDecoration(hintText: 'your@email.com'),
                         validator: (v) => v!.contains('@') ? null : 'Valid email required',
@@ -109,6 +129,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       TextFormField(
                         controller: _pwCtrl,
                         obscureText: !_showPw,
+                        autofillHints: const [AutofillHints.newPassword],
                         style: const TextStyle(color: AppColors.textPrimary),
                         decoration: InputDecoration(
                           hintText: 'Min 8 characters',
@@ -155,14 +176,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 Text('I agree to the ',
                                   style: AppTextStyles.bodySm),
                                 GestureDetector(
-                                  onTap: () {},
+                                  onTap: () => _showLegal(context, 'Terms of Service',
+                                    'Night Owl UB-г ашигласнаар та манай үйлчилгээний нөхцөлийг хүлээн зөвшөөрч байна. Хууль бус контент, дарамт, спам хориотой. Бид дансыг түр болон бүрмөсөн хаах эрхтэй.'),
                                   child: Text('Terms of Service',
                                     style: AppTextStyles.bodySm.copyWith(
                                       color: AppColors.accentStart)),
                                 ),
                                 Text(' and ', style: AppTextStyles.bodySm),
                                 GestureDetector(
-                                  onTap: () {},
+                                  onTap: () => _showLegal(context, 'Privacy Policy',
+                                    'Бид таны мэдээллийг зөвхөн үйлчилгээгээ сайжруулах зорилгоор ашиглана. Таны өгөгдлийг гуравдагч этгээдэд зарахгүй. Та хүссэн үедээ дансаа устгаж болно.'),
                                   child: Text('Privacy Policy',
                                     style: AppTextStyles.bodySm.copyWith(
                                       color: AppColors.accentStart)),

@@ -18,15 +18,18 @@ class NetworkVideo extends StatelessWidget {
   final bool posterOnly;
   final double? height;
   final bool autoplay;
+  final bool showPosterIcon;
   const NetworkVideo({
     super.key,
     required this.url,
     this.posterOnly = false,
     this.height,
     this.autoplay = false,
+    this.showPosterIcon = true,
   });
 
   @override
   Widget build(BuildContext context) =>
-      VideoView(url: url, posterOnly: posterOnly, height: height, autoplay: autoplay);
+      VideoView(url: url, posterOnly: posterOnly, height: height,
+          autoplay: autoplay, showPosterIcon: showPosterIcon);
 }

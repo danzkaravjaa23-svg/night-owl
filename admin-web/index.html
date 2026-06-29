@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="mn">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>NightOwl UB — Админ</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root {
+    --bg-base: #0B0118; --bg-elev: #1A0B2E; --bg-surf: #241141;
+    --txt: #FFFFFF; --txt2: #B9A9D4; --txt3: #6E5E8A;
+    --pink: #FF4D8D; --coral: #FF7B5C; --amber: #FFB347; --purple: #7B2FF7;
+    --ok: #3DD68C; --err: #FF5470; --line: rgba(255,255,255,.08);
+  }
+  body { background: var(--bg-base); color: var(--txt); font-family: ui-sans-serif, system-ui, -apple-system, sans-serif; }
+  .grad { background: linear-gradient(135deg, var(--pink), var(--coral), var(--amber)); }
+  .grad-text { background: linear-gradient(135deg, var(--pink), var(--amber)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .card { background: var(--bg-elev); border: 1px solid var(--line); border-radius: 16px; }
+  .surf { background: var(--bg-surf); }
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-thumb { background: #3a2a55; border-radius: 8px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  input, select, textarea { color-scheme: dark; }
+  .spinner { border: 3px solid rgba(255,255,255,.15); border-top-color: var(--pink); border-radius: 50%; width: 28px; height: 28px; animation: spin .8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .nav-btn.active { background: var(--bg-surf); color: #fff; }
+  .nav-btn.active .nav-ico { color: var(--pink); }
+  .toast { animation: toastIn .25s ease; }
+  @keyframes toastIn { from { opacity: 0; transform: translateY(10px); } }
+</style>
+</head>
+<body class="min-h-screen">
+
+<!-- ══════════ LOGIN ══════════ -->
+<div id="login" class="hidden min-h-screen items-center justify-center p-4">
+  <div class="card w-full max-w-sm p-8">
+    <div class="grad w-12 h-12 rounded-2xl flex items-center justify-center text-2xl mb-5">🦉</div>
+    <h1 class="text-2xl font-bold mb-1">NightOwl <span class="grad-text">Админ</span></h1>
+    <p class="text-sm mb-6" style="color:var(--txt2)">Админ эрхээр нэвтэрнэ үү.</p>
+    <form id="loginForm" class="space-y-3">
+      <input id="email" type="email" required placeholder="И-мэйл"
+        class="w-full surf rounded-xl px-4 py-3 outline-none border border-transparent focus:border-[#FF4D8D] transition" />
+      <input id="password" type="password" required placeholder="Нууц үг"
+        class="w-full surf rounded-xl px-4 py-3 outline-none border border-transparent focus:border-[#FF4D8D] transition" />
+      <button type="submit" id="loginBtn"
+        class="grad w-full rounded-xl py-3 font-semibold text-white disabled:opacity-60">Нэвтрэх</button>
+      <p id="loginErr" class="text-sm text-center hidden" style="color:var(--err)"></p>
+    </form>
+  </div>
+</div>
+
+<!-- ══════════ APP ══════════ -->
+<div id="app" class="hidden">
+  <div class="flex min-h-screen">
+    <!-- Sidebar -->
+    <aside class="w-60 shrink-0 border-r p-4 flex flex-col gap-1" style="border-color:var(--line)">
+      <div class="flex items-center gap-2 px-2 py-3 mb-3">
+        <div class="grad w-9 h-9 rounded-xl flex items-center justify-center text-lg">🦉</div>
+        <div class="font-bold leading-tight">NightOwl<br><span class="text-xs font-normal grad-text">Админ панел</span></div>
+      </div>
+      <nav id="nav" class="flex flex-col gap-1 text-sm"></nav>
+      <div class="mt-auto pt-4 border-t" style="border-color:var(--line)">
+        <div id="whoami" class="px-2 text-xs mb-2" style="color:var(--txt3)"></div>
+        <button id="logout" class="w-full text-left px-3 py-2 rounded-lg text-sm hover:bg-[#241141]" style="color:var(--txt2)">↩ Гарах</button>
+      </div>
+    </aside>
+
+    <!-- Main -->
+    <main class="flex-1 overflow-x-hidden">
+      <header class="flex items-center justify-between px-8 py-5 border-b" style="border-color:var(--line)">
+        <h2 id="pageTitle" class="text-xl font-bold">Хяналтын самбар</h2>
+        <button id="refresh" class="surf rounded-lg px-3 py-2 text-sm hover:opacity-80">↻ Сэргээх</button>
+      </header>
+      <div id="view" class="p-8"></div>
+    </main>
+  </div>
+</div>
+
+<!-- Toasts -->
+<div id="toasts" class="fixed bottom-6 right-6 flex flex-col gap-2 z-50"></div>
+
+<script>
+// ══════════════════ CONFIG ══════════════════
+const SUPABASE_URL  = 'https://jbbdnpsvstwxtgtjoeru.supabase.co';
+const SUPABASE_ANON  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpiYmRucHN2c3R3eHRndGpvZXJ1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNzg1ODIsImV4cCI6MjA5NTY1NDU4Mn0.90qjYby2XNwierEh9XORoP2FEs2LPlRqBC6W74_2oqE';
+
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+// ══════════════════ HELPERS ══════════════════
+const $ = (id) => document.getElementById(id);
+const el = (html) => { const t = document.createElement('template'); t.innerHTML = html.trim(); return t.content.firstElementChild; };
+const esc = (s) => (s ?? '').toString().replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const fmtDate = (s) => s ? new Date(s).toLocaleString('mn-MN', { year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit' }) : '—';
+const fmtNum = (n) => n == null ? '—' : new Intl.NumberFormat('en-US').format(n);
+
+function toast(msg, kind = 'ok') {
+  const color = kind === 'err' ? 'var(--err)' : kind === 'warn' ? 'var(--amber)' : 'var(--ok)';
+  const t = el(`<div class="toast card px-4 py-3 text-sm shadow-xl flex items-center gap-2" style="border-left:3px solid ${color}">${esc(msg)}</div>`);
+  $('toasts').appendChild(t);
+  setTimeout(() => { t.style.transition = 'opacity .3s'; t.style.opacity = '0'; setTimeout(() => t.remove(), 300); }, 3200);
+}
+async function confirmBox(msg) { return window.confirm(msg); }
+
+function avatar(url, initial, size = 36) {
+  if (url) return `<img src="${esc(url)}" class="rounded-full object-cover" style="width:${size}px;height:${size}px" onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'grad rounded-full flex items-center justify-center font-semibold',style:'width:${size}px;height:${size}px',textContent:'${esc((initial||'?')[0])}'}))" />`;
+  return `<div class="grad rounded-full flex items-center justify-center font-semibold" style="width:${size}px;height:${size}px;font-size:${size*0.4}px">${esc((initial||'?')[0].toUpperCase())}</div>`;
+}
+function badge(text, color) {
+  return `<span class="text-xs px-2 py-0.5 rounded-md font-medium" style="background:${color}22;color:${color}">${esc(text)}</span>`;
+}
+function spinner() { return `<div class="flex justify-center py-16"><div class="spinner"></div></div>`; }
+
+// ══════════════════ AUTH ══════════════════
+let CURRENT = null; // {id, username, is_admin}
+
+$('loginForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const btn = $('loginBtn'); const err = $('loginErr');
+  err.classList.add('hidden'); btn.disabled = true; btn.textContent = 'Нэвтэрч байна…';
+  const { error } = await sb.auth.signInWithPassword({ email: $('email').value.trim(), password: $('password').value });
+  btn.disabled = false; btn.textContent = 'Нэвтрэх';
+  if (error) { err.textContent = 'Нэвтрэх амжилтгүй: ' + error.message; err.classList.remove('hidden'); }
+});
+
+$('logout').addEventListener('click', async () => { await sb.auth.signOut(); location.reload(); });
+
+async function checkSessionAndRender() {
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) { showLogin(); return; }
+  // Профайл + админ эрх шалгах
+  const { data: prof, error } = await sb.from('profiles')
+    .select('id, username, full_name, avatar_url, is_admin').eq('id', session.user.id).single();
+  if (error || !prof) { await sb.auth.signOut(); showLogin('Профайл олдсонгүй.'); return; }
+  if (!prof.is_admin) { await sb.auth.signOut(); showLogin('Танд админ эрх алга.'); return; }
+  CURRENT = prof;
+  showApp();
+}
+
+function showLogin(msg) {
+  $('app').classList.add('hidden'); $('app').classList.remove('flex');
+  $('login').classList.remove('hidden'); $('login').classList.add('flex');
+  if (msg) { const e = $('loginErr'); e.textContent = msg; e.classList.remove('hidden'); }
+}
+function showApp() {
+  $('login').classList.add('hidden'); $('login').classList.remove('flex');
+  $('app').classList.remove('hidden');
+  $('whoami').textContent = '@' + CURRENT.username;
+  buildNav(); navigate('dashboard');
+}
+
+// ══════════════════ NAVIGATION ══════════════════
+const PAGES = [
+  { id: 'dashboard', label: 'Хяналтын самбар', icon: '📊', render: renderDashboard },
+  { id: 'reports',   label: 'Мэдээллүүд',      icon: '🚩', render: renderReports },
+  { id: 'users',     label: 'Хэрэглэгчид',     icon: '👥', render: renderUsers },
+  { id: 'posts',     label: 'Постууд',         icon: '🖼️', render: renderPosts },
+  { id: 'venues',    label: 'Газрууд',         icon: '📍', render: renderVenues },
+  { id: 'events',    label: 'Эвентүүд',        icon: '🎉', render: renderEvents },
+];
+let activePage = 'dashboard';
+
+function buildNav() {
+  $('nav').innerHTML = '';
+  PAGES.forEach(p => {
+    const b = el(`<button class="nav-btn flex items-center gap-3 px-3 py-2.5 rounded-lg text-left hover:bg-[#241141] transition" style="color:var(--txt2)" data-id="${p.id}">
+      <span class="nav-ico text-base">${p.icon}</span><span>${p.label}</span>
+      <span class="ml-auto badge-slot"></span></button>`);
+    b.addEventListener('click', () => navigate(p.id));
+    $('nav').appendChild(b);
+  });
+}
+function navigate(id) {
+  activePage = id;
+  const page = PAGES.find(p => p.id === id);
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.toggle('active', b.dataset.id === id));
+  $('pageTitle').textContent = page.label;
+  $('view').innerHTML = spinner();
+  page.render();
+}
+$('refresh').addEventListener('click', () => navigate(activePage));
+
+// ══════════════════ DASHBOARD ══════════════════
+async function count(table, filters) {
+  let q = sb.from(table).select('id', { count: 'exact', head: true });
+  if (filters) for (const [k, v] of Object.entries(filters)) q = q.eq(k, v);
+  const { count, error } = await q;
+  return error ? null : count;
+}
+async function renderDashboard() {
+  const [users, posts, venues, events, pending, banned, verified, comments] = await Promise.all([
+    count('profiles'), count('posts'), count('venues'), count('events'),
+    count('reports', { status: 'pending' }), count('profiles', { is_banned: true }),
+    count('profiles', { is_verified: true }), count('comments'),
+  ]);
+  const stat = (label, val, icon, color) => `
+    <div class="card p-5">
+      <div class="text-2xl mb-2" style="color:${color}">${icon}</div>
+      <div class="text-3xl font-bold">${fmtNum(val)}</div>
+      <div class="text-sm mt-1" style="color:var(--txt2)">${label}</div>
+    </div>`;
+  $('view').innerHTML = `
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+      ${stat('Хэрэглэгч', users, '👥', 'var(--pink)')}
+      ${stat('Пост', posts, '🖼️', 'var(--purple)')}
+      ${stat('Газар', venues, '📍', 'var(--coral)')}
+      ${stat('Эвент', events, '🎉', 'var(--amber)')}
+      ${stat('Хүлээгдэж буй мэдээлэл', pending, '🚩', 'var(--err)')}
+      ${stat('Хориглосон', banned, '🚫', 'var(--err)')}
+      ${stat('Баталгаажсан', verified, '✅', 'var(--ok)')}
+      ${stat('Сэтгэгдэл', comments, '💬', 'var(--txt2)')}
+    </div>
+    ${pending > 0 ? `<div class="card p-4 flex items-center justify-between" style="border-color:var(--err)">
+      <div><span style="color:var(--err)">⚠ ${pending}</span> хүлээгдэж буй мэдээлэл байна.</div>
+      <button onclick="navigate('reports')" class="grad rounded-lg px-4 py-2 text-sm font-medium">Хянах →</button>
+    </div>` : ''}`;
+  // pending badge on nav
+  const slot = document.querySelector(`.nav-btn[data-id="reports"] .badge-slot`);
+  if (slot) slot.innerHTML = pending > 0 ? `<span class="text-xs px-1.5 rounded-md grad font-semibold">${pending}</span>` : '';
+}
+
+// ══════════════════ REPORTS ══════════════════
+const REASON = { spam:'Спам', harassment:'Дарамт', nudity:'Бэлгийн агуулга', violence:'Хүчирхийлэл', hate:'Үзэн ядалт', other:'Бусад' };
+
+async function renderReports() {
+  const { data, error } = await sb.from('reports')
+    .select('*, reporter:profiles!reporter_id(username, avatar_url)')
+    .eq('status', 'pending').order('created_at', { ascending: false }).limit(100);
+  if (error) { $('view').innerHTML = errBox(error); return; }
+  if (!data.length) { $('view').innerHTML = empty('✅', 'Хүлээгдэж буй мэдээлэл алга'); return; }
+
+  // Enrich target details
+  await Promise.all(data.map(async (r) => {
+    try {
+      if (r.target_type === 'post') {
+        const { data: p } = await sb.from('posts').select('caption, media_url, user_id, profiles!user_id(username)').eq('id', r.target_id).maybeSingle();
+        r._target = p;
+      } else if (r.target_type === 'user') {
+        const { data: u } = await sb.from('profiles').select('username, full_name, avatar_url, is_banned').eq('id', r.target_id).maybeSingle();
+        r._target = u;
+      } else if (r.target_type === 'venue') {
+        const { data: v } = await sb.from('venues').select('name, district').eq('id', r.target_id).maybeSingle();
+        r._target = v;
+      }
+    } catch (_) {}
+  }));
+
+  const wrap = el(`<div class="space-y-3 max-w-3xl"></div>`);
+  data.forEach(r => wrap.appendChild(reportCard(r)));
+  $('view').innerHTML = ''; $('view').appendChild(wrap);
+}
+
+function reportCard(r) {
+  const t = r._target || {};
+  let targetHtml = `<span style="color:var(--txt3)">${esc(r.target_id)}</span>`;
+  if (r.target_type === 'post' && r._target) {
+    targetHtml = `<div class="flex gap-3 items-center surf rounded-lg p-2">
+      ${t.media_url ? `<img src="${esc(t.media_url)}" class="w-12 h-12 rounded-lg object-cover" />` : ''}
+      <div class="min-w-0"><div class="text-sm truncate">${esc(t.caption) || '<i style="color:var(--txt3)">тайлбаргүй</i>'}</div>
+      <div class="text-xs" style="color:var(--txt3)">@${esc(t.profiles?.username || '?')}</div></div></div>`;
+  } else if (r.target_type === 'user' && r._target) {
+    targetHtml = `<div class="flex gap-2 items-center">${avatar(t.avatar_url, t.username, 32)}
+      <div><div class="text-sm">@${esc(t.username)} ${t.is_banned ? badge('Хориглосон','var(--err)') : ''}</div>
+      <div class="text-xs" style="color:var(--txt3)">${esc(t.full_name||'')}</div></div></div>`;
+  } else if (r.target_type === 'venue' && r._target) {
+    targetHtml = `<div class="text-sm">📍 ${esc(t.name)} <span style="color:var(--txt3)">${esc(t.district||'')}</span></div>`;
+  }
+
+  const card = el(`<div class="card p-4">
+    <div class="flex items-center gap-2 mb-3">
+      ${badge(REASON[r.reason] || r.reason, 'var(--err)')}
+      <span class="text-xs uppercase tracking-wide" style="color:var(--txt2)">${esc(r.target_type)}</span>
+      <span class="ml-auto text-xs" style="color:var(--txt3)">${fmtDate(r.created_at)}${r.reporter ? ' · @'+esc(r.reporter.username) : ''}</span>
+    </div>
+    ${r.details ? `<div class="text-sm mb-3 surf rounded-lg p-2" style="color:var(--txt2)">${esc(r.details)}</div>` : ''}
+    <div class="mb-3">${targetHtml}</div>
+    <div class="flex gap-2 flex-wrap"></div>
+  </div>`);
+  const actions = card.querySelector('.flex.gap-2.flex-wrap');
+
+  if (r.target_type === 'post') {
+    const del = el(`<button class="rounded-lg px-3 py-2 text-sm font-medium text-white" style="background:var(--err)">🗑 Пост устгах</button>`);
+    del.onclick = () => resolveReport(r, async () => { await sb.from('posts').delete().eq('id', r.target_id); }, 'Пост устгагдлаа', card);
+    actions.appendChild(del);
+  }
+  if (r.target_type === 'user') {
+    const ban = el(`<button class="rounded-lg px-3 py-2 text-sm font-medium text-white" style="background:var(--err)">⚖ Хэрэглэгч хориглох</button>`);
+    ban.onclick = () => resolveReport(r, async () => { await sb.from('profiles').update({ is_banned: true }).eq('id', r.target_id); }, 'Хэрэглэгч хориглогдлоо', card);
+    actions.appendChild(ban);
+  }
+  const resolve = el(`<button class="surf rounded-lg px-3 py-2 text-sm" style="color:var(--txt2)">✓ Шийдсэн</button>`);
+  resolve.onclick = () => resolveReport(r, null, 'Тэмдэглэгдлээ', card);
+  actions.appendChild(resolve);
+  return card;
+}
+
+async function resolveReport(r, action, okMsg, card) {
+  if (!(await confirmBox('Итгэлтэй байна уу?'))) return;
+  try {
+    if (action) await action();
+    await sb.from('reports').update({ status: 'resolved' }).eq('id', r.id);
+    card.style.transition = 'opacity .3s'; card.style.opacity = '0';
+    setTimeout(() => card.remove(), 300);
+    toast(okMsg);
+  } catch (e) { toast('Алдаа: ' + e.message, 'err'); }
+}
+
+// ══════════════════ USERS ══════════════════
+let userSearchTimer;
+async function renderUsers() {
+  $('view').innerHTML = `
+    <div class="max-w-3xl">
+      <input id="userSearch" placeholder="Хэрэглэгч хайх (@username эсвэл нэр)…"
+        class="w-full surf rounded-xl px-4 py-3 mb-4 outline-none border border-transparent focus:border-[#FF4D8D]" />
+      <div id="userList">${spinner()}</div>
+    </div>`;
+  $('userSearch').addEventListener('input', (e) => {
+    clearTimeout(userSearchTimer);
+    userSearchTimer = setTimeout(() => loadUsers(e.target.value), 300);
+  });
+  loadUsers('');
+}
+async function loadUsers(q) {
+  let query = sb.from('profiles').select('id, username, full_name, avatar_url, is_banned, is_admin, is_verified, created_at');
+  if (q.trim()) query = query.or(`username.ilike.%${q}%,full_name.ilike.%${q}%`);
+  const { data, error } = await query.order('created_at', { ascending: false }).limit(50);
+  const list = $('userList'); if (!list) return;
+  if (error) { list.innerHTML = errBox(error); return; }
+  if (!data.length) { list.innerHTML = empty('🔍', 'Хэрэглэгч олдсонгүй'); return; }
+  list.innerHTML = '';
+  data.forEach(u => list.appendChild(userRow(u)));
+}
+function userRow(u) {
+  const row = el(`<div class="card p-3 mb-2 flex items-center gap-3">
+    ${avatar(u.avatar_url, u.username, 40)}
+    <div class="min-w-0 flex-1">
+      <div class="flex items-center gap-2">
+        <span class="font-medium truncate">@${esc(u.username)}</span>
+        ${u.is_admin ? badge('Админ','var(--purple)') : ''}
+        ${u.is_verified ? badge('✓','var(--ok)') : ''}
+        ${u.is_banned ? badge('Хориглосон','var(--err)') : ''}
+      </div>
+      <div class="text-xs truncate" style="color:var(--txt3)">${esc(u.full_name||'')} · ${fmtDate(u.created_at)}</div>
+    </div>
+    <div class="flex gap-2 shrink-0"></div>
+  </div>`);
+  const actions = row.querySelector('.flex.gap-2.shrink-0');
+  const isSelf = CURRENT && CURRENT.id === u.id;
+
+  if (!u.is_admin) {
+    const ban = el(`<button class="rounded-lg px-3 py-2 text-sm font-medium" style="${u.is_banned ? 'color:var(--ok)' : 'color:var(--err)'}">${u.is_banned ? 'Сэргээх' : 'Хориглох'}</button>`);
+    ban.onclick = async () => {
+      if (!(await confirmBox(`@${u.username}-г ${u.is_banned ? 'сэргээх' : 'хориглох'} уу?`))) return;
+      const { error } = await sb.from('profiles').update({ is_banned: !u.is_banned }).eq('id', u.id);
+      if (error) return toast('Алдаа: ' + error.message, 'err');
+      u.is_banned = !u.is_banned; row.replaceWith(userRow(u)); toast(u.is_banned ? 'Хориглолоо' : 'Сэргээлээ');
+    };
+    actions.appendChild(ban);
+    const verify = el(`<button class="surf rounded-lg px-3 py-2 text-sm" style="color:var(--txt2)">${u.is_verified ? 'Баталгаа цуцлах' : 'Баталгаажуулах'}</button>`);
+    verify.onclick = async () => {
+      const { error } = await sb.from('profiles').update({ is_verified: !u.is_verified }).eq('id', u.id);
+      if (error) return toast('Алдаа: ' + error.message, 'err');
+      u.is_verified = !u.is_verified; row.replaceWith(userRow(u)); toast('Шинэчлэгдлээ');
+    };
+    actions.appendChild(verify);
+  }
+
+  // ── Админ болгох / цуцлах ──
+  if (isSelf) {
+    actions.appendChild(el(`<span class="px-3 py-2 text-sm" style="color:var(--txt3)">Та өөрөө</span>`));
+  } else {
+    const makeAdmin = el(`<button class="rounded-lg px-3 py-2 text-sm font-medium" style="${u.is_admin ? 'color:var(--err)' : 'color:#fff;background:var(--purple)'}">${u.is_admin ? '⚙ Админ цуцлах' : '⚙ Админ болгох'}</button>`);
+    makeAdmin.onclick = async () => {
+      const promote = !u.is_admin;
+      if (!(await confirmBox(promote
+        ? `@${u.username}-д АДМИН эрх олгох уу? Тэр бүх удирдлагын эрхтэй болно.`
+        : `@${u.username}-ийн админ эрхийг цуцлах уу?`))) return;
+      const { error } = await sb.from('profiles').update({ is_admin: promote }).eq('id', u.id);
+      if (error) return toast('Алдаа: ' + error.message, 'err');
+      u.is_admin = promote; row.replaceWith(userRow(u));
+      toast(promote ? `@${u.username} админ боллоо` : 'Админ эрх цуцлагдлаа');
+    };
+    actions.appendChild(makeAdmin);
+  }
+  return row;
+}
+
+// ══════════════════ POSTS ══════════════════
+async function renderPosts() {
+  const { data, error } = await sb.from('posts')
+    .select('id, caption, media_url, likes_count, created_at, profiles!user_id(username, avatar_url)')
+    .order('created_at', { ascending: false }).limit(60);
+  if (error) { $('view').innerHTML = errBox(error); return; }
+  if (!data.length) { $('view').innerHTML = empty('🖼️', 'Пост алга'); return; }
+  const grid = el(`<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4"></div>`);
+  data.forEach(p => {
+    const c = el(`<div class="card overflow-hidden">
+      ${p.media_url ? `<img src="${esc(p.media_url)}" class="w-full aspect-square object-cover" onerror="this.style.display='none'" />` : `<div class="w-full aspect-square surf flex items-center justify-center text-3xl">📝</div>`}
+      <div class="p-3">
+        <div class="flex items-center gap-2 mb-1">${avatar(p.profiles?.avatar_url, p.profiles?.username, 22)}
+          <span class="text-xs truncate">@${esc(p.profiles?.username||'?')}</span></div>
+        <div class="text-xs mb-2 line-clamp-2" style="color:var(--txt2)">${esc(p.caption||'')}</div>
+        <div class="flex items-center justify-between text-xs" style="color:var(--txt3)">
+          <span>♥ ${fmtNum(p.likes_count)}</span>
+          <button class="del-btn" style="color:var(--err)">Устгах</button>
+        </div>
+      </div></div>`);
+    c.querySelector('.del-btn').onclick = async () => {
+      if (!(await confirmBox('Энэ постыг устгах уу?'))) return;
+      const { error } = await sb.from('posts').delete().eq('id', p.id);
+      if (error) return toast('Алдаа: ' + error.message, 'err');
+      c.remove(); toast('Пост устгагдлаа');
+    };
+    grid.appendChild(c);
+  });
+  $('view').innerHTML = ''; $('view').appendChild(grid);
+}
+
+// ══════════════════ VENUES ══════════════════
+async function renderVenues() {
+  const { data, error } = await sb.from('venues').select('*').order('checkin_count', { ascending: false }).limit(100);
+  if (error) { $('view').innerHTML = errBox(error); return; }
+  const head = el(`<div class="flex items-center justify-between mb-4 max-w-4xl">
+    <span class="text-sm" style="color:var(--txt2)">${data.length} газар</span>
+    <button id="addVenue" class="grad rounded-lg px-4 py-2 text-sm font-medium">+ Газар нэмэх</button></div>`);
+  const wrap = el(`<div class="max-w-4xl"></div>`);
+  wrap.appendChild(head);
+  if (!data.length) wrap.appendChild(el(empty('📍', 'Газар алга')));
+  data.forEach(v => wrap.appendChild(venueRow(v)));
+  $('view').innerHTML = ''; $('view').appendChild(wrap);
+  $('addVenue').onclick = () => venueForm(null);
+}
+function venueRow(v) {
+  const row = el(`<div class="card p-3 mb-2 flex items-center gap-3">
+    ${v.cover_url ? `<img src="${esc(v.cover_url)}" class="w-12 h-12 rounded-lg object-cover" />` : `<div class="w-12 h-12 surf rounded-lg flex items-center justify-center">📍</div>`}
+    <div class="flex-1 min-w-0">
+      <div class="font-medium truncate">${esc(v.name)} ${v.venue_type ? badge(v.venue_type,'var(--coral)') : ''}</div>
+      <div class="text-xs truncate" style="color:var(--txt3)">${esc(v.district||'')} · ✓ ${fmtNum(v.checkin_count)} checkin</div>
+    </div>
+    <button class="edit surf rounded-lg px-3 py-2 text-sm" style="color:var(--txt2)">Засах</button>
+    <button class="del rounded-lg px-3 py-2 text-sm" style="color:var(--err)">Устгах</button>
+  </div>`);
+  row.querySelector('.edit').onclick = () => venueForm(v);
+  row.querySelector('.del').onclick = async () => {
+    if (!(await confirmBox(`"${v.name}" газрыг устгах уу?`))) return;
+    const { error } = await sb.from('venues').delete().eq('id', v.id);
+    if (error) return toast('Алдаа: ' + error.message, 'err');
+    row.remove(); toast('Устгагдлаа');
+  };
+  return row;
+}
+function venueForm(v) {
+  const isEdit = !!v;
+  const modal = el(`<div class="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+    <div class="card w-full max-w-md p-6">
+      <h3 class="text-lg font-bold mb-4">${isEdit ? 'Газар засах' : 'Газар нэмэх'}</h3>
+      <div class="space-y-3">
+        <input id="vName" placeholder="Нэр *" value="${esc(v?.name||'')}" class="w-full surf rounded-xl px-4 py-2.5 outline-none" />
+        <input id="vType" placeholder="Төрөл (bar, club, lounge…)" value="${esc(v?.venue_type||'')}" class="w-full surf rounded-xl px-4 py-2.5 outline-none" />
+        <input id="vDistrict" placeholder="Дүүрэг" value="${esc(v?.district||'')}" class="w-full surf rounded-xl px-4 py-2.5 outline-none" />
+        <div class="flex gap-3">
+          <input id="vLat" placeholder="Lat" value="${v?.lat ?? ''}" class="w-full surf rounded-xl px-4 py-2.5 outline-none" />
+          <input id="vLng" placeholder="Lng" value="${v?.lng ?? ''}" class="w-full surf rounded-xl px-4 py-2.5 outline-none" />
+        </div>
+        <input id="vCover" placeholder="Cover зураг URL" value="${esc(v?.cover_url||'')}" class="w-full surf rounded-xl px-4 py-2.5 outline-none" />
+        <textarea id="vDesc" placeholder="Тайлбар" rows="2" class="w-full surf rounded-xl px-4 py-2.5 outline-none">${esc(v?.description||'')}</textarea>
+      </div>
+      <div class="flex gap-2 mt-5">
+        <button id="vCancel" class="flex-1 surf rounded-xl py-2.5" style="color:var(--txt2)">Болих</button>
+        <button id="vSave" class="flex-1 grad rounded-xl py-2.5 font-medium">Хадгалах</button>
+      </div>
+    </div></div>`);
+  document.body.appendChild(modal);
+  modal.querySelector('#vCancel').onclick = () => modal.remove();
+  modal.querySelector('#vSave').onclick = async () => {
+    const payload = {
+      name: modal.querySelector('#vName').value.trim(),
+      venue_type: modal.querySelector('#vType').value.trim() || null,
+      district: modal.querySelector('#vDistrict').value.trim() || null,
+      lat: parseFloat(modal.querySelector('#vLat').value) || null,
+      lng: parseFloat(modal.querySelector('#vLng').value) || null,
+      cover_url: modal.querySelector('#vCover').value.trim() || null,
+      description: modal.querySelector('#vDesc').value.trim() || null,
+    };
+    if (!payload.name) return toast('Нэр оруулна уу', 'warn');
+    const { error } = isEdit
+      ? await sb.from('venues').update(payload).eq('id', v.id)
+      : await sb.from('venues').insert(payload);
+    if (error) return toast('Алдаа: ' + error.message, 'err');
+    modal.remove(); toast(isEdit ? 'Шинэчлэгдлээ' : 'Нэмэгдлээ'); navigate('venues');
+  };
+}
+
+// ══════════════════ EVENTS ══════════════════
+async function renderEvents() {
+  const { data, error } = await sb.from('events')
+    .select('*, venues(name)').order('starts_at', { ascending: false }).limit(100);
+  if (error) { $('view').innerHTML = errBox(error); return; }
+  if (!data.length) { $('view').innerHTML = empty('🎉', 'Эвент алга'); return; }
+  const wrap = el(`<div class="max-w-4xl space-y-2"></div>`);
+  data.forEach(ev => {
+    const past = ev.starts_at && new Date(ev.starts_at) < new Date();
+    const row = el(`<div class="card p-3 flex items-center gap-3">
+      ${ev.cover_url ? `<img src="${esc(ev.cover_url)}" class="w-12 h-12 rounded-lg object-cover" />` : `<div class="w-12 h-12 surf rounded-lg flex items-center justify-center">🎉</div>`}
+      <div class="flex-1 min-w-0">
+        <div class="font-medium truncate">${esc(ev.title)} ${past ? badge('Өнгөрсөн','var(--txt3)') : badge('Удахгүй','var(--ok)')}</div>
+        <div class="text-xs truncate" style="color:var(--txt3)">📍 ${esc(ev.venues?.name||'—')} · ${fmtDate(ev.starts_at)} · 👤 ${fmtNum(ev.attendee_count)}</div>
+      </div>
+      <button class="del rounded-lg px-3 py-2 text-sm" style="color:var(--err)">Устгах</button>
+    </div>`);
+    row.querySelector('.del').onclick = async () => {
+      if (!(await confirmBox(`"${ev.title}" эвентийг устгах уу?`))) return;
+      const { error } = await sb.from('events').delete().eq('id', ev.id);
+      if (error) return toast('Алдаа: ' + error.message, 'err');
+      row.remove(); toast('Устгагдлаа');
+    };
+    wrap.appendChild(row);
+  });
+  $('view').innerHTML = ''; $('view').appendChild(wrap);
+}
+
+// ══════════════════ SHARED UI ══════════════════
+function empty(icon, msg) {
+  return `<div class="flex flex-col items-center justify-center py-20" style="color:var(--txt2)">
+    <div class="text-5xl mb-3">${icon}</div><div>${esc(msg)}</div></div>`;
+}
+function errBox(error) {
+  return `<div class="card p-6 max-w-lg" style="border-color:var(--err)">
+    <div class="font-semibold mb-1" style="color:var(--err)">Алдаа гарлаа</div>
+    <div class="text-sm" style="color:var(--txt2)">${esc(error.message)}</div>
+    <div class="text-xs mt-2" style="color:var(--txt3)">RLS policy эсвэл багана дутуу байж магадгүй.</div></div>`;
+}
+
+// ══════════════════ BOOT ══════════════════
+checkSessionAndRender();
+sb.auth.onAuthStateChange((evt) => { if (evt === 'SIGNED_IN') checkSessionAndRender(); });
+</script>
+</body>
+</html>

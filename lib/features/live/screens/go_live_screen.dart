@@ -8,7 +8,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_text_styles.dart';
 import '../../../core/services/supabase_service.dart';
 import '../../../core/widgets/app_avatar.dart';
 import '../../auth/providers/auth_provider.dart';
@@ -271,7 +270,13 @@ class _GoLiveScreenState extends ConsumerState<GoLiveScreen> {
       await SupabaseService.client.from('live_comments').insert({
         'stream_id': _streamId, 'user_id': user.id, 'text': text,
       });
-    } catch (_) {}
+    } catch (_) {
+      if (mounted) {
+        _chatCtrl.text = text;
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Илгээж чадсангүй'), backgroundColor: AppColors.error));
+      }
+    }
   }
 
   @override
@@ -327,12 +332,12 @@ class _GoLiveScreenState extends ConsumerState<GoLiveScreen> {
           Positioned(top: 0, left: 0, right: 0, height: size.height * 0.25,
             child: Container(decoration: BoxDecoration(gradient: LinearGradient(
               begin: Alignment.topCenter, end: Alignment.bottomCenter,
-              colors: [Colors.black.withOpacity(0.8), Colors.transparent])))),
+              colors: [Colors.black.withValues(alpha: 0.8), Colors.transparent])))),
 
           Positioned(bottom: 0, left: 0, right: 0, height: size.height * 0.45,
             child: Container(decoration: BoxDecoration(gradient: LinearGradient(
               begin: Alignment.bottomCenter, end: Alignment.topCenter,
-              colors: [Colors.black.withOpacity(0.95), Colors.transparent])))),
+              colors: [Colors.black.withValues(alpha: 0.95), Colors.transparent])))),
 
           // ── Top bar ─────────────────────────────────
           Positioned(top: 0, left: 0, right: 0,
@@ -448,8 +453,8 @@ class _PreLivePanel extends StatelessWidget {
     children: [
       if (error != null)
         Container(margin: const EdgeInsets.only(bottom: 12), padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(color: Colors.red.withOpacity(0.15),
-            borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.red.withOpacity(0.3))),
+          decoration: BoxDecoration(color: Colors.red.withValues(alpha: 0.15),
+            borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.red.withValues(alpha: 0.3))),
           child: Text(error!, style: const TextStyle(color: Colors.white70, fontSize: 13))),
 
       Container(

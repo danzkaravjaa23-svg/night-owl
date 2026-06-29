@@ -4,6 +4,17 @@
 <dict>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
+	<!-- ── Permission usage descriptions (App Store шаардлага) ── -->
+	<key>NSCameraUsageDescription</key>
+	<string>Story, reel, шууд дамжуулалт хийхэд камер ашиглана.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Шууд дамжуулалт болон видеонд дуу бичихэд микрофон ашиглана.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Зураг, видео хуваалцахад зургийн сангаас сонгоно.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Контентыг таны зургийн санд хадгална.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Ойролцоох газрууд, өөрийн байршлыг газрын зураг дээр харуулахад байршил ашиглана.</string>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>

@@ -20,6 +20,21 @@ final storiesProvider = FutureProvider<List<StoryRing>>((ref) async {
       .where((s) => !s.isExpired)
       .toList();
 
+  // Which stories has the current user already seen?
+  final Set<String> viewedIds = {};
+  if (me != null) {
+    try {
+      final views = await SupabaseService.client
+          .from('story_views')
+          .select('story_id')
+          .eq('viewer_id', me);
+      for (final v in (views as List)) {
+        final id = v['story_id'];
+        if (id != null) viewedIds.add(id.toString());
+      }
+    } catch (_) {}
+  }
+
   // Group by userId, put own stories first
   final Map<String, List<Story>> grouped = {};
   for (final s in stories) {
@@ -36,7 +51,7 @@ final storiesProvider = FutureProvider<List<StoryRing>>((ref) async {
       userId:           userId,
       author:           author,
       stories:          userStories,
-      hasUnseenStories: true, // TODO: check story_views table
+      hasUnseenStories: userStories.any((s) => !viewedIds.contains(s.id)),
     );
   }).toList();
 
@@ -59,6 +74,9 @@ class StoryService {
     int duration = 5,
     String? venueId,
     List<String> mentions = const [],
+    String? musicUrl,
+    String? musicTitle,
+    String? musicArtist,
   }) async {
     final user = SupabaseService.currentUser;
     if (user == null) return 'Нэвтэрнэ үү';
@@ -71,6 +89,9 @@ class StoryService {
         'duration':   duration,
         if (venueId != null) 'venue_id': venueId,
         if (mentions.isNotEmpty) 'mentions': mentions,
+        if (musicUrl != null) 'music_url': musicUrl,
+        if (musicTitle != null) 'music_title': musicTitle,
+        if (musicArtist != null) 'music_artist': musicArtist,
       });
       return null;
     } catch (e) {
@@ -89,6 +110,43 @@ class StoryService {
       // Increment view_count
       await SupabaseService.client.rpc('increment_story_views',
           params: {'story_id': storyId}).catchError((_) => null);
+    } catch (_) {}
+  }
+
+  /// Тухайн story-г одоогийн хэрэглэгч лайк дарсан эсэх
+  static Future<bool> isLiked(String storyId) async {
+    final me = SupabaseService.currentUser?.id;
+    if (me == null) return false;
+    try {
+      final rows = await SupabaseService.client
+          .from('story_likes')
+          .select('story_id')
+          .eq('story_id', storyId)
+          .eq('user_id', me)
+          .limit(1);
+      return (rows as List).isNotEmpty;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Story лайк toggle (like=true → нэмэх, false → хасах)
+  static Future<void> toggleLike(String storyId, bool like) async {
+    final me = SupabaseService.currentUser?.id;
+    if (me == null) return;
+    try {
+      if (like) {
+        await SupabaseService.client.from('story_likes').upsert({
+          'story_id': storyId,
+          'user_id':  me,
+        }, onConflict: 'story_id, user_id');
+      } else {
+        await SupabaseService.client
+            .from('story_likes')
+            .delete()
+            .eq('story_id', storyId)
+            .eq('user_id', me);
+      }
     } catch (_) {}
   }
 }

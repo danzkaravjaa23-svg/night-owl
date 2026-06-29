@@ -100,17 +100,27 @@ class _LangTile extends StatelessWidget {
           ),
         ),
         child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Text(flag, style: const TextStyle(fontSize: 28)),
             const SizedBox(width: 16),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(native, style: AppTextStyles.h3),
-                Text(lang, style: AppTextStyles.bodyXs),
-              ],
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    native,
+                    style: AppTextStyles.h3,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  Text(
+                    lang,
+                    style: AppTextStyles.bodyXs,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
             ),
-            const Spacer(),
             if (isSelected)
               Container(
                 width: 22, height: 22,

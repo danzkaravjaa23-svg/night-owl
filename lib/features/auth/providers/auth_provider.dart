@@ -9,8 +9,11 @@ final authUserProvider = StreamProvider<User?>((ref) {
 });
 
 // ─── Current user profile ───
+// authUserProvider-ийг watch хийснээр хаяг солиход (signOut→signIn) автоматаар
+// дахин уншиж, хуучин хэрэглэгчийн профайл cache-д үлдэхээс сэргийлнэ.
 final currentProfileProvider = FutureProvider<UserProfile?>((ref) async {
-  final user = SupabaseService.currentUser;
+  final user = ref.watch(authUserProvider).valueOrNull
+      ?? SupabaseService.currentUser;
   if (user == null) return null;
 
   final data = await SupabaseService.client

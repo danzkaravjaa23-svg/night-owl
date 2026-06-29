@@ -4,6 +4,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/widgets/gradient_button.dart';
 import '../../../core/widgets/gradient_text.dart';
+import '../../../core/widgets/mesh_gradient.dart';
 import '../../../core/router/app_router.dart';
 
 class AuthLandingScreen extends StatelessWidget {
@@ -15,8 +16,8 @@ class AuthLandingScreen extends StatelessWidget {
       backgroundColor: AppColors.bgBase,
       body: Stack(
         children: [
-          // Multi-color aurora
-          Positioned.fill(child: CustomPaint(painter: _AuthAuroraPainter())),
+          // Удаан хөдөлдөг mesh gradient дэвсгэр
+          const Positioned.fill(child: MeshGradientBackground()),
           // Starfield
           Positioned.fill(child: CustomPaint(painter: _StarPainter())),
           // Content
@@ -28,8 +29,8 @@ class AuthLandingScreen extends StatelessWidget {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.end,
                     children: [
-                      // Owl mark
-                      _OwlMark(),
+                      // Owl mark — disco owl брэнд тэмдэг
+                      const OwlLogoMark(size: 150),
                       const SizedBox(height: 24),
                       // Title
                       RichText(
@@ -52,7 +53,7 @@ class AuthLandingScreen extends StatelessWidget {
                       ),
                       const SizedBox(height: 12),
                       Text(
-                        "UB's bar & lounge social",
+                        "UB-гийн шөнийн амьдрал · нэг tap-аар",
                         style: AppTextStyles.bodyMd.copyWith(
                           color: AppColors.textSecondary,
                         ),
@@ -120,26 +121,6 @@ class AuthLandingScreen extends StatelessWidget {
   }
 }
 
-class _OwlMark extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 100, height: 100,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        gradient: AppColors.accentGradient,
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.accentStart.withOpacity(0.5),
-            blurRadius: 40, spreadRadius: 4,
-          ),
-        ],
-      ),
-      child: const Center(child: Text('🦉', style: TextStyle(fontSize: 48))),
-    );
-  }
-}
-
 class _OutlineBtn extends StatelessWidget {
   final String label;
   final VoidCallback onTap;
@@ -176,28 +157,10 @@ class _OutlineBtn extends StatelessWidget {
   }
 }
 
-class _AuthAuroraPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    void g(Offset c, Color col, double r) {
-      canvas.drawCircle(c, r, Paint()
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 40)
-        ..color = col.withOpacity(0.35));
-    }
-    g(Offset(size.width * 0.2, size.height * 0.3), AppColors.accentStart,  size.width * 0.45);
-    g(Offset(size.width * 0.8, size.height * 0.25), AppColors.accentEnd,   size.width * 0.45);
-    g(Offset(size.width * 0.5, size.height * 0.7), AppColors.accentPurple, size.width * 0.5);
-    g(Offset(size.width * 0.15, size.height * 0.8), AppColors.accentStart, size.width * 0.35);
-  }
-
-  @override
-  bool shouldRepaint(_) => false;
-}
-
 class _StarPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
-    final p = Paint()..color = Colors.white.withOpacity(0.35);
+    final p = Paint()..color = Colors.white.withValues(alpha: 0.35);
     for (var i = 0; i < 50; i++) {
       canvas.drawCircle(
         Offset(i * 137.5 % size.width, i * 97.3 % size.height),

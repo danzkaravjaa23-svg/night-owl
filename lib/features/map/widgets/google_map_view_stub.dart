@@ -9,12 +9,14 @@ class GoogleMapView extends StatelessWidget {
   final double lng;
   final int zoom;
   final String markersJson;
+  final void Function(String venueId)? onVenueTap;
   const GoogleMapView({
     super.key,
     required this.lat,
     required this.lng,
     this.zoom = 13,
     this.markersJson = '[]',
+    this.onVenueTap,
   });
 
   @override

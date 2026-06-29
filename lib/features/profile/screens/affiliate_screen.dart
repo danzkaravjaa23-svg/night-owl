@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/widgets/gradient_button.dart';
@@ -31,7 +33,19 @@ class AffiliateScreen extends StatelessWidget {
         const SizedBox(height: 40),
         GradientButton(
           label: unlockMode ? 'Unlock Affiliate Access' : 'Share Your Link',
-          onPressed: () {},
+          onPressed: () async {
+            final uid = Supabase.instance.client.auth.currentUser?.id ?? '';
+            final ref = uid.length >= 8 ? uid.substring(0, 8) : uid;
+            final link = 'https://nightowl.ub/join?ref=$ref';
+            await Clipboard.setData(ClipboardData(text: link));
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                content: Text(unlockMode
+                  ? 'Урилгын холбоос хуулагдлаа: $link'
+                  : 'Холбоос хуулагдлаа 🔗 $link'),
+                duration: const Duration(seconds: 3)));
+            }
+          },
         ),
       ]),
     ),

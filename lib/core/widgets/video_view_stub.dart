@@ -6,12 +6,14 @@ class VideoView extends StatelessWidget {
   final bool posterOnly;
   final double? height;
   final bool autoplay;
+  final bool showPosterIcon;
   const VideoView({
     super.key,
     required this.url,
     this.posterOnly = false,
     this.height,
     this.autoplay = false,
+    this.showPosterIcon = true,
   });
 
   @override

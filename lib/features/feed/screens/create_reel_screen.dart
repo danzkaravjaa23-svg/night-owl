@@ -7,6 +7,7 @@ import '../../../core/theme/app_text_styles.dart';
 import '../../../core/services/supabase_service.dart';
 import '../../../core/utils/image_uploader.dart';
 import '../providers/feed_provider.dart';
+import '../../map/providers/venue_provider.dart' show isVenueOwnerProvider;
 
 class CreateReelScreen extends ConsumerStatefulWidget {
   const CreateReelScreen({super.key});
@@ -69,15 +70,29 @@ class _CreateReelScreenState extends ConsumerState<CreateReelScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isOwner = ref.watch(isVenueOwnerProvider).valueOrNull;
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: AppBar(
         backgroundColor: Colors.black, elevation: 0,
         leading: IconButton(onPressed: () => context.pop(),
           icon: const Icon(Icons.close, color: Colors.white)),
-        title: Text('Шинэ Reel', style: AppTextStyles.labelLg.copyWith(color: Colors.white)),
+        title: Text('Шинэ Discovery', style: AppTextStyles.labelLg.copyWith(color: Colors.white)),
       ),
-      body: Column(children: [
+      body: isOwner == false
+          ? Center(child: Padding(
+              padding: const EdgeInsets.all(32),
+              child: Column(mainAxisSize: MainAxisSize.min, children: [
+                const Icon(Icons.storefront_outlined, color: Colors.white38, size: 64),
+                const SizedBox(height: 16),
+                Text('Зөвхөн venue эзэд', style: AppTextStyles.h2.copyWith(color: Colors.white)),
+                const SizedBox(height: 8),
+                Text('Discovery контентыг зөвхөн газрын эзэд оруулна. '
+                    'Та эхлээд газраа бүртгүүлнэ үү.',
+                  textAlign: TextAlign.center,
+                  style: AppTextStyles.bodyMd.copyWith(color: Colors.white54)),
+              ])))
+          : Column(children: [
         Expanded(child: Center(child: _bytes == null
           ? GestureDetector(
               onTap: _pick,

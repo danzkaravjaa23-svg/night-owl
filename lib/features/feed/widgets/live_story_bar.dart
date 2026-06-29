@@ -22,7 +22,7 @@ class LiveStoryBar extends ConsumerWidget {
     final itemCount = lives.length + 1 + rings.length;
 
     return SizedBox(
-      height: 100,
+      height: 108,
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),

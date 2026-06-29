@@ -19,6 +19,24 @@ final commentsProvider =
         // Enrich with author profiles in one batch query
         if (comments.isEmpty) return comments;
         final userIds = comments.map((c) => c.userId).toSet().toList();
+        final me = SupabaseService.currentUser?.id;
+
+        // Аль сэтгэгдлийг би лайк хийсэн бэ?
+        final Set<String> likedIds = {};
+        if (me != null) {
+          try {
+            final likes = await SupabaseService.client
+                .from('comment_likes')
+                .select('comment_id')
+                .eq('user_id', me)
+                .inFilter('comment_id', comments.map((c) => c.id).toList());
+            for (final l in (likes as List)) {
+              final id = l['comment_id'];
+              if (id != null) likedIds.add(id.toString());
+            }
+          } catch (_) {}
+        }
+
         try {
           final profiles = await SupabaseService.client
               .from('profiles')
@@ -32,17 +50,16 @@ final commentsProvider =
 
           return comments.map((c) {
             final p = profileMap[c.userId];
-            if (p == null) return c;
             return Comment.fromJson({
-              ...{
-                'id': c.id,
-                'post_id': c.postId,
-                'user_id': c.userId,
-                'body': c.body,
-                'likes_count': c.likesCount,
-                'created_at': c.createdAt.toIso8601String(),
-              },
-              'profiles': p,
+              'id': c.id,
+              'post_id': c.postId,
+              'user_id': c.userId,
+              'body': c.body,
+              'parent_id': c.parentId,
+              'likes_count': c.likesCount,
+              'is_liked_by_me': likedIds.contains(c.id),
+              'created_at': c.createdAt.toIso8601String(),
+              if (p != null) 'profiles': p,
             });
           }).toList();
         } catch (_) {
@@ -62,6 +79,7 @@ class CommentService {
   static Future<String?> addComment({
     required String postId,
     required String body,
+    String? parentId,
   }) async {
     final user = SupabaseService.currentUser;
     if (user == null) return 'Нэвтэрнэ үү';
@@ -74,7 +92,28 @@ class CommentService {
         'post_id': postId,
         'user_id': user.id,
         'body':    trimmed,
+        if (parentId != null) 'parent_id': parentId,
       });
+      return null;
+    } catch (e) {
+      return e.toString();
+    }
+  }
+
+  /// Сэтгэгдэл лайк toggle
+  static Future<String?> toggleLike(String commentId, bool currentlyLiked) async {
+    final user = SupabaseService.currentUser;
+    if (user == null) return 'Нэвтэрнэ үү';
+    try {
+      if (currentlyLiked) {
+        await SupabaseService.client.from('comment_likes').delete().match({
+          'comment_id': commentId, 'user_id': user.id,
+        });
+      } else {
+        await SupabaseService.client.from('comment_likes').upsert({
+          'comment_id': commentId, 'user_id': user.id,
+        }, onConflict: 'comment_id, user_id');
+      }
       return null;
     } catch (e) {
       return e.toString();
