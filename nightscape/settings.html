@@ -1,0 +1,254 @@
+<!DOCTYPE html><html lang="mn"><head><meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+<title>Тохиргоо · Night Owl</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="nightscape.css"/>
+<script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body class="ns">
+<div class="aura"></div>
+<div class="grain"></div>
+
+<div class="app">
+
+  <!-- ───── Header ───── -->
+  <header class="sticky top-0 z-50 px-5 pt-4 pb-3"
+          style="background:linear-gradient(180deg,rgba(5,5,5,.9),rgba(5,5,5,.55) 70%,transparent);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)">
+    <div class="flex items-center gap-4">
+<a href="profile.html" class="tap" aria-label="Буцах" style="display:grid;place-items:center;width:40px;height:40px;border-radius:50%;background:var(--glass);backdrop-filter:blur(20px) saturate(160%);-webkit-backdrop-filter:blur(20px) saturate(160%);border:1px solid var(--hair-2);color:var(--t1);flex:none;"><i data-lucide="chevron-left" style="width:20px;height:20px;"></i></a>
+      <div class="flex flex-col">
+        <span class="eyebrow">NIGHT OWL</span>
+        <h1 class="h1">Тохиргоо</h1>
+      </div>
+    </div>
+  </header>
+
+  <!-- ───── Content ───── -->
+  <main class="px-5 pb-40 pt-2 flex flex-col gap-7">
+
+    <!-- Profile glance -->
+    <section class="card card-hover flex items-center gap-4 p-4">
+      <div class="ring live" style="width:62px;height:62px">
+        <img src="https://i.pravatar.cc/160?img=12" alt="profile"
+             style="background:var(--grad-primary)"/>
+      </div>
+      <div class="flex flex-col min-w-0 flex-1">
+        <span class="h2 truncate">Тэмүүлэн Б.</span>
+        <span class="sub truncate">@temuulen · Шөнийн шар шувуу</span>
+      </div>
+      <span class="pill pill-live"><span class="dot"></span>LIVE</span>
+    </section>
+
+    <!-- ── БҮРТГЭЛ ── -->
+    <section class="flex flex-col gap-2.5">
+      <span class="eyebrow px-1">Бүртгэл</span>
+      <div class="glass overflow-hidden p-1.5">
+        <button class="row w-full text-left tap">
+          <span class="row-ic"><i data-lucide="user" class="w-[18px] h-[18px]"></i></span>
+          <span class="h3 flex-1">Профайл засах</span>
+          <i data-lucide="chevron-right" class="w-[18px] h-[18px]" style="color:var(--t3)"></i>
+        </button>
+        <hr class="divider mx-4"/>
+        <button class="row w-full text-left tap">
+          <span class="row-ic"><i data-lucide="lock" class="w-[18px] h-[18px]"></i></span>
+          <span class="h3 flex-1">Нууцлал</span>
+          <i data-lucide="chevron-right" class="w-[18px] h-[18px]" style="color:var(--t3)"></i>
+        </button>
+        <hr class="divider mx-4"/>
+        <button class="row w-full text-left tap">
+          <span class="row-ic"><i data-lucide="shield" class="w-[18px] h-[18px]"></i></span>
+          <span class="h3 flex-1">Аюулгүй байдал</span>
+          <i data-lucide="chevron-right" class="w-[18px] h-[18px]" style="color:var(--t3)"></i>
+        </button>
+      </div>
+    </section>
+
+    <!-- ── ТОХИРГОО ── -->
+    <section class="flex flex-col gap-2.5">
+      <span class="eyebrow px-1">Тохиргоо</span>
+      <div class="glass overflow-hidden p-1.5">
+        <button class="row w-full text-left tap" onclick="openLang()">
+          <span class="row-ic"><i data-lucide="languages" class="w-[18px] h-[18px]"></i></span>
+          <span class="h3 flex-1">Хэл</span>
+          <span class="sub" id="langValue" style="color:var(--t2)">Монгол</span>
+          <i data-lucide="chevron-right" class="w-[18px] h-[18px]" style="color:var(--t3)"></i>
+        </button>
+        <hr class="divider mx-4"/>
+        <div class="row">
+          <span class="row-ic"><i data-lucide="moon" class="w-[18px] h-[18px]"></i></span>
+          <span class="h3 flex-1">Харанхуй горим</span>
+          <button class="switch on" role="switch" aria-checked="true" onclick="toggleSwitch(this)"></button>
+        </div>
+        <hr class="divider mx-4"/>
+        <div class="row">
+          <span class="row-ic"><i data-lucide="bell" class="w-[18px] h-[18px]"></i></span>
+          <span class="h3 flex-1">Мэдэгдэл</span>
+          <button class="switch on" role="switch" aria-checked="true" onclick="toggleSwitch(this)"></button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── ШӨНИЙН АМЬДРАЛ ── -->
+    <section class="flex flex-col gap-2.5">
+      <span class="eyebrow px-1">Шөнийн амьдрал</span>
+      <div class="glass overflow-hidden p-1.5">
+        <button class="row w-full text-left tap">
+          <span class="row-ic"><i data-lucide="map-pin" class="w-[18px] h-[18px]"></i></span>
+          <span class="h3 flex-1">Байршил</span>
+          <span class="sub" style="color:var(--t2)">Улаанбаатар</span>
+          <i data-lucide="chevron-right" class="w-[18px] h-[18px]" style="color:var(--t3)"></i>
+        </button>
+        <hr class="divider mx-4"/>
+        <div class="row">
+          <span class="row-ic"><i data-lucide="radar" class="w-[18px] h-[18px]"></i></span>
+          <span class="flex-1 flex flex-col">
+            <span class="h3">Олдоцтой байх</span>
+            <span class="sub" style="color:var(--t3)">Найзууд таныг шөнө олох боломжтой</span>
+          </span>
+          <button class="switch" role="switch" aria-checked="false" onclick="toggleSwitch(this)"></button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── ТУХАЙ ── -->
+    <section class="flex flex-col gap-2.5">
+      <span class="eyebrow px-1">Тухай</span>
+      <div class="glass overflow-hidden p-1.5">
+        <button class="row w-full text-left tap">
+          <span class="row-ic"><i data-lucide="help-circle" class="w-[18px] h-[18px]"></i></span>
+          <span class="h3 flex-1">Тусламж</span>
+          <i data-lucide="chevron-right" class="w-[18px] h-[18px]" style="color:var(--t3)"></i>
+        </button>
+        <hr class="divider mx-4"/>
+        <button class="row w-full text-left tap">
+          <span class="row-ic"><i data-lucide="file-text" class="w-[18px] h-[18px]"></i></span>
+          <span class="h3 flex-1">Үйлчилгээний нөхцөл</span>
+          <i data-lucide="chevron-right" class="w-[18px] h-[18px]" style="color:var(--t3)"></i>
+        </button>
+        <hr class="divider mx-4"/>
+        <div class="row">
+          <span class="row-ic"><i data-lucide="git-branch" class="w-[18px] h-[18px]"></i></span>
+          <span class="h3 flex-1">Хувилбар</span>
+          <span class="font-mono text-[12px]" style="color:var(--t3)">1.0.0</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Actions ── -->
+    <div class="flex flex-col items-center gap-5 mt-1">
+      <button class="btn btn-danger btn-block tap" onclick="openLogout()">
+        <i data-lucide="log-out" class="w-[18px] h-[18px]"></i>
+        Гарах
+      </button>
+      <button class="btn-ghost tap text-[13px] font-semibold" style="color:var(--t3)"
+              onclick="document.getElementById('toast').classList.remove('hidden')">
+        Бүртгэл устгах
+      </button>
+    </div>
+
+  </main>
+
+  <!-- ───── Language Sheet ───── -->
+  <div id="langScrim" class="scrim hidden" onclick="closeLang()"></div>
+  <div id="langSheet" class="sheet hidden" style="transform:translateY(100%);transition:transform .34s cubic-bezier(.4,1.3,.5,1)">
+    <div class="sheet-handle"></div>
+    <div class="px-1 pb-2">
+      <h2 class="h2">Хэл сонгох</h2>
+      <p class="sub mt-1" style="color:var(--t3)">Аппликейшний хэлийг өөрчлөх</p>
+    </div>
+    <div class="flex flex-col gap-1.5 pt-2 pb-2">
+      <button class="row w-full text-left lang-opt tap" data-lang="Монгол" onclick="pickLang(this)">
+        <span class="row-ic"><i data-lucide="check" class="w-[18px] h-[18px] lang-check"></i></span>
+        <span class="h3 flex-1">Монгол</span>
+        <span class="sub font-mono" style="color:var(--t3)">MN</span>
+      </button>
+      <button class="row w-full text-left lang-opt tap" data-lang="English" onclick="pickLang(this)">
+        <span class="row-ic" style="background:var(--surface-2);color:var(--t3);border-color:var(--hair)">
+          <i data-lucide="check" class="w-[18px] h-[18px] lang-check opacity-0"></i>
+        </span>
+        <span class="h3 flex-1">English</span>
+        <span class="sub font-mono" style="color:var(--t3)">EN</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ───── Logout Dialog ───── -->
+  <div id="logoutScrim" class="scrim hidden grid place-items-center px-6" onclick="closeLogout(event)">
+    <div class="dialog anim-pop" onclick="event.stopPropagation()">
+      <div class="grid place-items-center w-14 h-14 rounded-2xl mx-auto mb-4"
+           style="background:rgba(255,69,102,.12);border:1px solid rgba(255,69,102,.3)">
+        <i data-lucide="log-out" class="w-6 h-6" style="color:#ff8197"></i>
+      </div>
+      <h2 class="h2 text-center">Гарах уу?</h2>
+      <p class="sub text-center mt-2" style="color:var(--t2)">Та дахин нэвтрэхдээ нэвтрэх мэдээллээ оруулна.</p>
+      <div class="flex flex-col gap-2.5 mt-6">
+        <button class="btn btn-danger btn-block tap" onclick="closeLogout()">Тийм, гарах</button>
+        <button class="btn btn-ghost btn-block tap" onclick="closeLogout()">Болих</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ───── Toast ───── -->
+  <div id="toast" class="hidden fixed left-1/2 -translate-x-1/2 z-[100]" style="bottom:28px;width:calc(100% - 40px);max-width:400px">
+    <div class="toast anim-pop">
+      <span class="ic" style="background:rgba(255,69,102,.14)">
+        <i data-lucide="trash-2" class="w-[18px] h-[18px]" style="color:#ff8197"></i>
+      </span>
+      <span class="flex-1 sub" style="color:var(--t1)">Бүртгэл устгах хүсэлт хүлээн авлаа.</span>
+      <button class="tap" onclick="document.getElementById('toast').classList.add('hidden')">
+        <i data-lucide="x" class="w-4 h-4" style="color:var(--t3)"></i>
+      </button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+lucide.createIcons();
+
+/* Switches */
+function toggleSwitch(el){
+  el.classList.toggle('on');
+  el.setAttribute('aria-checked', el.classList.contains('on'));
+}
+
+/* Language sheet */
+const langScrim = document.getElementById('langScrim');
+const langSheet = document.getElementById('langSheet');
+function openLang(){
+  langScrim.classList.remove('hidden');
+  langSheet.classList.remove('hidden');
+  requestAnimationFrame(()=>{ langSheet.style.transform='translateY(0)'; });
+}
+function closeLang(){
+  langSheet.style.transform='translateY(100%)';
+  langScrim.classList.add('hidden');
+  setTimeout(()=> langSheet.classList.add('hidden'), 320);
+}
+function pickLang(btn){
+  document.querySelectorAll('.lang-opt').forEach(opt=>{
+    const active = opt === btn;
+    const ic = opt.querySelector('.row-ic');
+    const chk = opt.querySelector('.lang-check');
+    if(active){
+      ic.style.background=''; ic.style.color=''; ic.style.borderColor='';
+      ic.classList.add('row-ic');
+      chk.classList.remove('opacity-0');
+    } else {
+      ic.style.background='var(--surface-2)'; ic.style.color='var(--t3)'; ic.style.borderColor='var(--hair)';
+      chk.classList.add('opacity-0');
+    }
+  });
+  document.getElementById('langValue').textContent = btn.dataset.lang;
+  setTimeout(closeLang, 180);
+}
+
+/* Logout dialog */
+const logoutScrim = document.getElementById('logoutScrim');
+function openLogout(){ logoutScrim.classList.remove('hidden'); }
+function closeLogout(e){
+  if(e && e.target !== logoutScrim && e.currentTarget === logoutScrim) return;
+  logoutScrim.classList.add('hidden');
+}
+</script>
+</body></html>

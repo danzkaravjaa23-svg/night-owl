@@ -1,0 +1,198 @@
+<!DOCTYPE html><html lang="mn"><head><meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+<title>Night Owl · Futurist Nightscape — Launcher</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="nightscape.css"/>
+<script src="https://unpkg.com/lucide@latest"></script>
+<style>
+  /* Launcher allows a wider canvas than the 440px mobile frame */
+  .launch{max-width:64rem;margin-inline:auto;padding:0 20px}
+
+  /* ── Phone-frame live thumbnail ── */
+  .thumb{
+    position:relative;width:220px;height:460px;margin-inline:auto;
+    border-radius:34px;padding:8px;
+    background:linear-gradient(160deg,rgba(255,255,255,.10),rgba(255,255,255,.02));
+    border:1px solid var(--hair-2);
+    box-shadow:0 30px 70px -28px rgba(0,0,0,.9),inset 0 1px 0 rgba(255,255,255,.12);
+    transition:transform .35s cubic-bezier(.34,1.2,.64,1),box-shadow .35s;
+  }
+  .thumb-screen{
+    position:relative;width:100%;height:100%;
+    border-radius:27px;overflow:hidden;background:var(--void);
+    border:1px solid rgba(255,255,255,.06);
+  }
+  .thumb-screen iframe{
+    width:390px;height:844px;border:0;
+    transform:scale(.5226);transform-origin:top left;
+    pointer-events:none;background:var(--void);
+  }
+  /* notch */
+  .thumb::before{
+    content:'';position:absolute;top:14px;left:50%;transform:translateX(-50%);
+    width:66px;height:7px;border-radius:6px;background:rgba(0,0,0,.6);z-index:3;
+    box-shadow:inset 0 0 0 1px rgba(255,255,255,.06);
+  }
+  /* sheen on screen */
+  .thumb-screen::after{
+    content:'';position:absolute;inset:0;z-index:2;pointer-events:none;
+    background:linear-gradient(150deg,rgba(255,255,255,.10),transparent 38%);
+    mix-blend-mode:screen;opacity:.7;
+  }
+  .gcard:hover .thumb{transform:translateY(-6px) rotateX(4deg);box-shadow:0 40px 90px -30px rgba(34,231,255,.35),0 30px 70px -28px rgba(0,0,0,.9)}
+  .gcard{perspective:1200px}
+  .glink{position:absolute;inset:0;z-index:5;border-radius:var(--r-lg)}
+
+  /* feature span */
+  @media(min-width:768px){.feat{grid-column:span 2}}
+  .marq{white-space:nowrap;animation:marq 26s linear infinite}
+  @keyframes marq{to{transform:translateX(-50%)}}
+</style>
+</head>
+<body class="ns">
+<div class="aura"></div>
+<div class="grain"></div>
+
+<div class="app" style="max-width:none">
+  <div class="launch pt-9 pb-24">
+
+    <!-- ══ Top bar ══ -->
+    <header class="flex items-center justify-between mb-12">
+      <div class="flex items-center gap-3">
+        <div class="grid place-items-center w-11 h-11 rounded-2xl glass-strong anim-breathe" style="border-color:var(--hair-2)">
+          <i data-lucide="moon-star" style="color:var(--cyan)"></i>
+        </div>
+        <div class="leading-tight">
+          <div class="h3" style="letter-spacing:-.02em">Night&nbsp;Owl</div>
+          <div class="eyebrow">v1 · NIGHTSCAPE</div>
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <span class="pill pill-live"><span class="dot"></span>10 SCREENS</span>
+        <a href="design-system.html" class="btn btn-glass btn-sm tap"><i data-lucide="palette" style="width:16px;height:16px"></i>Tokens</a>
+      </div>
+    </header>
+
+    <!-- ══ Hero ══ -->
+    <section class="relative mb-12">
+      <div class="eyebrow mb-4">FUTURIST NIGHTSCAPE · DESIGN SYSTEM</div>
+      <h1 class="display grad-text" style="font-size:clamp(46px,9vw,84px);line-height:.98">Night&nbsp;Owl</h1>
+      <p class="body mt-5 max-w-xl" style="color:var(--t2);font-size:16px">
+        Шөнийн амьдралын бүрэн дизайн систем — нэг л неон гялбаатай хэл.
+        Glassmorphism, цахилгаан цэнхэр фокус, магента→ягаан градиент.
+        Доорх дэлгэц бүр <span style="color:var(--t1);font-weight:600">амьд хувилбар</span>.
+      </p>
+
+      <!-- stat chips -->
+      <div class="flex flex-wrap gap-2.5 mt-7">
+        <span class="chip active"><i data-lucide="sparkles" style="width:15px;height:15px"></i>Production-grade</span>
+        <span class="chip"><i data-lucide="smartphone" style="width:15px;height:15px"></i>Mobile-first</span>
+        <span class="chip"><i data-lucide="layers" style="width:15px;height:15px"></i>1 CSS source</span>
+        <span class="chip"><i data-lucide="zap" style="width:15px;height:15px"></i>Micro-interactions</span>
+      </div>
+
+      <!-- palette strip -->
+      <div class="mt-8 glass rounded-[var(--r-lg)] p-4 overflow-hidden">
+        <div class="flex items-center justify-between mb-3 px-1">
+          <span class="label">ПАЛИТР</span>
+          <span class="eyebrow">VOID · NEON · GRADIENT</span>
+        </div>
+        <div class="flex gap-2.5 flex-wrap">
+          <div class="flex-1 min-w-[64px] h-12 rounded-xl hairline" style="background:var(--void-2)"></div>
+          <div class="flex-1 min-w-[64px] h-12 rounded-xl" style="background:var(--cyan);box-shadow:var(--glow-cyan)"></div>
+          <div class="flex-1 min-w-[64px] h-12 rounded-xl" style="background:var(--grad-primary);box-shadow:var(--glow-magenta)"></div>
+          <div class="flex-1 min-w-[64px] h-12 rounded-xl" style="background:var(--lime);box-shadow:var(--glow-lime)"></div>
+          <div class="flex-1 min-w-[64px] h-12 rounded-xl" style="background:var(--amber)"></div>
+          <div class="flex-1 min-w-[64px] h-12 rounded-xl" style="background:var(--orange)"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══ Gallery header ══ -->
+    <div class="flex items-end justify-between mb-6">
+      <div>
+        <h2 class="title">Дэлгэцүүд</h2>
+        <p class="sub mt-1">Урьдчилан харах хэсэг дээр дарж бүтэн дэлгэцийг нээ.</p>
+      </div>
+      <span class="hidden sm:flex eyebrow items-center gap-1.5"><i data-lucide="mouse-pointer-click" style="width:13px;height:13px"></i>LIVE PREVIEW</span>
+    </div>
+
+    <!-- ══ Gallery grid ══ -->
+    <div class="grid grid-cols-2 md:grid-cols-3 gap-4 sm:gap-5" id="grid"></div>
+
+    <!-- ══ Footer ══ -->
+    <footer class="mt-16 glass rounded-[var(--r-xl)] p-6 relative overflow-hidden">
+      <div class="absolute -right-10 -top-10 w-44 h-44 rounded-full" style="background:var(--grad-primary);filter:blur(60px);opacity:.4"></div>
+      <div class="relative flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <div class="eyebrow mb-2">READY TO SHIP</div>
+          <div class="h2">Шөнө хотыг чинийх болго. 🌙</div>
+          <p class="sub mt-1">Бүх дэлгэц <span class="font-mono" style="color:var(--cyan)">nightscape.css</span> дээр суурилсан.</p>
+        </div>
+        <a href="welcome.html" class="btn btn-primary tap"><i data-lucide="play" style="width:18px;height:18px;fill:#fff"></i>Эхлэх</a>
+      </div>
+    </footer>
+
+    <div class="text-center mt-8 eyebrow">© 2026 NIGHT OWL · CRAFTED FOR THE NIGHT</div>
+  </div>
+</div>
+
+<script>
+  const screens = [
+    {file:'design-system.html', name:'Design System', desc:'Tokens · components · type', icon:'palette',     tag:'CORE',   feat:true},
+    {file:'welcome.html',       name:'Welcome',       desc:'Onboarding hero',          icon:'sparkles',    tag:'ONBOARD'},
+    {file:'signin.html',        name:'Sign In',       desc:'Нэвтрэх',                   icon:'log-in',      tag:'AUTH'},
+    {file:'register.html',      name:'Register',      desc:'Бүртгүүлэх',                icon:'user-plus',   tag:'AUTH'},
+    {file:'feed.html',          name:'Feed',          desc:'Шөнийн урсгал',             icon:'layout-grid', tag:'SOCIAL'},
+    {file:'explore.html',       name:'Explore',       desc:'Газрууд илрүүл',            icon:'compass',     tag:'DISCOVER'},
+    {file:'discovery.html',     name:'Discovery',     desc:'Discovery reels',          icon:'clapperboard', tag:'DISCOVER'},
+    {file:'profile.html',       name:'Profile',       desc:'Хэрэглэгчийн профайл',      icon:'user',        tag:'SOCIAL'},
+    {file:'settings.html',      name:'Settings',      desc:'Тохиргоо',                  icon:'settings-2',  tag:'SYSTEM'},
+    {file:'chat.html',          name:'Chat',          desc:'Шууд харилцаа',             icon:'message-circle', tag:'SOCIAL'},
+    {file:'components.html',    name:'Components',    desc:'Бүх UI хэсгүүд',            icon:'blocks',      tag:'CORE'},
+  ];
+
+  const grid = document.getElementById('grid');
+  screens.forEach((s, i) => {
+    const card = document.createElement('div');
+    card.className = 'gcard card card-hover relative p-3.5 sm:p-4' + (s.feat ? ' feat' : '');
+    card.style.borderRadius = 'var(--r-lg)';
+    card.style.animation = 'pop .4s cubic-bezier(.34,1.56,.64,1) both';
+    card.style.animationDelay = (i * 0.05) + 's';
+
+    card.innerHTML = `
+      <a href="${s.file}" class="glink" aria-label="Open ${s.name}"></a>
+      <div class="flex items-center justify-between mb-3 px-0.5">
+        <div class="flex items-center gap-2.5 min-w-0">
+          <div class="grid place-items-center w-9 h-9 rounded-xl flex-none"
+               style="background:var(--surface-2);border:1px solid var(--hair);color:var(--cyan)">
+            <i data-lucide="${s.icon}" style="width:17px;height:17px"></i>
+          </div>
+          <div class="min-w-0">
+            <div class="h3 truncate">${s.name}</div>
+            <div class="eyebrow" style="font-size:9px">${s.tag}</div>
+          </div>
+        </div>
+        <div class="grid place-items-center w-8 h-8 rounded-full tap flex-none"
+             style="background:var(--surface);border:1px solid var(--hair);color:var(--t2)">
+          <i data-lucide="arrow-up-right" style="width:15px;height:15px"></i>
+        </div>
+      </div>
+
+      <div class="thumb">
+        <div class="thumb-screen">
+          <iframe src="${s.file}" loading="lazy" scrolling="no" tabindex="-1" title="${s.name} preview"></iframe>
+        </div>
+      </div>
+
+      <div class="flex items-center justify-between mt-3 px-0.5">
+        <span class="sub truncate" style="font-size:12px">${s.desc}</span>
+        <span class="pill pill-cyan" style="height:22px;font-size:10px"><span class="dot"></span>LIVE</span>
+      </div>
+    `;
+    grid.appendChild(card);
+  });
+
+  lucide.createIcons();
+</script>
+</body></html>

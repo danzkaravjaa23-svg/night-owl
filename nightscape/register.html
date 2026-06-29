@@ -1,0 +1,170 @@
+<!DOCTYPE html><html lang="mn"><head><meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+<title>Night Owl — Бүртгүүлэх</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="nightscape.css"/>
+<script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body class="ns">
+<div class="aura"></div>
+<div class="grain"></div>
+
+<div class="app">
+  <div class="relative flex flex-col min-h-screen px-6 pb-10">
+
+    <!-- Top bar -->
+    <div class="flex items-center pt-6">
+      <a href="welcome.html" class="tap" aria-label="Буцах" style="display:grid;place-items:center;width:40px;height:40px;border-radius:50%;background:var(--glass);backdrop-filter:blur(20px) saturate(160%);-webkit-backdrop-filter:blur(20px) saturate(160%);border:1px solid var(--hair-2);color:var(--t1);flex:none;"><i data-lucide="chevron-left" style="width:20px;height:20px;"></i></a>
+    </div>
+
+    <!-- Brand glyph -->
+    <div class="mt-7 flex items-center gap-3">
+      <div class="anim-breathe grid place-items-center w-12 h-12 rounded-2xl"
+           style="background:var(--grad-primary);box-shadow:0 10px 30px -8px rgba(233,53,200,.55)">
+        <i data-lucide="moon-star" class="w-6 h-6 text-white"></i>
+      </div>
+      <span class="eyebrow">NIGHT&nbsp;OWL · UB</span>
+    </div>
+
+    <!-- Heading -->
+    <div class="mt-6">
+      <h1 class="title inline-flex items-center gap-2">Join the night crew
+        <i data-lucide="sparkles" class="w-6 h-6" style="color:var(--magenta)"></i>
+      </h1>
+      <p class="sub mt-2">UB-гийн шилдэг party-нуудад VIP эрх нээ</p>
+    </div>
+
+    <!-- Perks -->
+    <div class="mt-5 flex flex-wrap gap-2">
+      <span class="pill pill-cyan"><span class="dot"></span>VIP эрх</span>
+      <span class="pill pill-live"><span class="dot"></span>Live эвентүүд</span>
+      <span class="pill pill-lively"><span class="dot"></span>Priority орц</span>
+    </div>
+
+    <!-- Form -->
+    <form class="mt-8 flex flex-col gap-4" onsubmit="return false">
+
+      <!-- Name -->
+      <div class="field">
+        <label class="label" for="name">Нэр</label>
+        <div class="input-group">
+          <span class="lead"><i data-lucide="user" class="w-[18px] h-[18px]"></i></span>
+          <input id="name" class="input" type="text" autocomplete="name" placeholder="Чиний нэр" />
+        </div>
+      </div>
+
+      <!-- Email -->
+      <div class="field">
+        <label class="label" for="email">И-мэйл</label>
+        <div class="input-group">
+          <span class="lead"><i data-lucide="mail" class="w-[18px] h-[18px]"></i></span>
+          <input id="email" class="input" type="email" autocomplete="email" placeholder="name@email.com" />
+        </div>
+      </div>
+
+      <!-- Password -->
+      <div class="field">
+        <label class="label" for="pass">Нууц үг</label>
+        <div class="input-group">
+          <span class="lead"><i data-lucide="lock" class="w-[18px] h-[18px]"></i></span>
+          <input id="pass" class="input" type="password" autocomplete="new-password" placeholder="••••••••" />
+          <span class="trail tap" id="eyeBtn" role="button" tabindex="0" aria-label="Нууц үг харах">
+            <i data-lucide="eye" class="w-[18px] h-[18px]" id="eyeIcon"></i>
+          </span>
+        </div>
+      </div>
+
+      <!-- Custom checkbox / terms -->
+      <button type="button" id="termsRow" aria-pressed="false"
+              class="tap flex items-start gap-3 text-left mt-1 px-1">
+        <span id="checkBox"
+              class="grid place-items-center w-[22px] h-[22px] rounded-[7px] flex-none mt-[1px]
+                     border border-[var(--hair-2)] bg-[var(--surface)] transition-all duration-200">
+          <i data-lucide="check" class="w-[14px] h-[14px] opacity-0 scale-50 transition-all duration-200"
+             id="checkIcon" style="color:var(--void)"></i>
+        </span>
+        <span class="sub leading-snug">
+          <a href="#" class="font-semibold" style="color:var(--cyan)">Үйлчилгээний нөхцөл</a>
+          болон
+          <a href="#" class="font-semibold" style="color:var(--cyan)">Нууцлалын бодлогыг</a>
+          зөвшөөрч байна
+        </span>
+      </button>
+
+      <!-- Primary CTA -->
+      <button type="submit" class="btn btn-primary btn-block mt-3">
+        Create Account
+        <i data-lucide="arrow-right" class="w-[18px] h-[18px]"></i>
+      </button>
+    </form>
+
+    <!-- OR divider -->
+    <div class="flex items-center gap-3 my-6">
+      <span class="flex-1 divider"></span>
+      <span class="eyebrow">OR</span>
+      <span class="flex-1 divider"></span>
+    </div>
+
+    <!-- Google -->
+    <button type="button" class="btn btn-outline btn-block">
+      <svg class="w-[18px] h-[18px]" viewBox="0 0 24 24" aria-hidden="true">
+        <path fill="#EA4335" d="M12 10.2v3.9h5.5c-.24 1.5-1.7 4.4-5.5 4.4-3.3 0-6-2.7-6-6.1s2.7-6.1 6-6.1c1.9 0 3.2.8 3.9 1.5l2.7-2.6C17.1 3.1 14.8 2 12 2 6.9 2 2.8 6.1 2.8 11.2S6.9 20.4 12 20.4c5.7 0 9.5-4 9.5-9.6 0-.6-.07-1.1-.16-1.6H12z"/>
+        <path fill="#34A853" d="M3.8 7.4l3.2 2.3c.9-2.6 3.1-3.5 5-3.5 1.9 0 3.2.8 3.9 1.5l2.7-2.6C17.1 3.1 14.8 2 12 2 8.4 2 5.3 4.1 3.8 7.4z" opacity="0"/>
+      </svg>
+      Continue with Google
+    </button>
+
+    <!-- Bottom link -->
+    <p class="sub text-center mt-auto pt-8">
+      Бүртгэлтэй юу?
+      <a href="signin.html" class="font-semibold ml-1" style="color:var(--cyan)">Нэвтрэх</a>
+    </p>
+
+  </div>
+</div>
+
+<script>
+lucide.createIcons();
+
+/* Password eye toggle */
+(function(){
+  const btn  = document.getElementById('eyeBtn');
+  const inp  = document.getElementById('pass');
+  const icon = document.getElementById('eyeIcon');
+  function toggle(){
+    const show = inp.type === 'password';
+    inp.type = show ? 'text' : 'password';
+    icon.setAttribute('data-lucide', show ? 'eye-off' : 'eye');
+    lucide.createIcons();
+  }
+  btn.addEventListener('click', toggle);
+  btn.addEventListener('keydown', e => { if(e.key==='Enter'||e.key===' '){ e.preventDefault(); toggle(); }});
+})();
+
+/* Custom terms checkbox */
+(function(){
+  const row  = document.getElementById('termsRow');
+  const box  = document.getElementById('checkBox');
+  const ic   = document.getElementById('checkIcon');
+  let on = false;
+  row.addEventListener('click', e => {
+    if (e.target.closest('a')) return;          // let term links behave as links
+    on = !on;
+    row.setAttribute('aria-pressed', on);
+    if(on){
+      box.style.background   = 'var(--cyan)';
+      box.style.borderColor  = 'transparent';
+      box.style.boxShadow    = 'var(--glow-cyan)';
+      ic.classList.remove('opacity-0','scale-50');
+      ic.classList.add('anim-pop');
+    } else {
+      box.style.background   = 'var(--surface)';
+      box.style.borderColor  = 'var(--hair-2)';
+      box.style.boxShadow    = 'none';
+      ic.classList.add('opacity-0','scale-50');
+      ic.classList.remove('anim-pop');
+    }
+  });
+})();
+</script>
+</body></html>

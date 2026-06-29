@@ -1,42 +1,50 @@
 import 'package:flutter/material.dart';
 
 /// NightOwl UB — Design tokens
-/// Дизайн токенүүд — styles.css-с шууд хөрвүүлсэн
+/// "FUTURIST NIGHTSCAPE" — neon палитр.
+/// ⚠️ Token НЭРС хэвээр (бүх дэлгэц эдгээрийг уншдаг) — зөвхөн УТГА нь neon болсон.
 abstract class AppColors {
-  // ─── Dark theme (default) — Liquid Chrome Disco ───
-  // Disco owl logo шиг цэвэр хар + графит ертөнц
-  static const Color bgBase      = Color(0xFF050507);
-  static const Color bgElevated  = Color(0xFF101015);
-  static const Color bgSurface   = Color(0xFF1A1A21);
-  static const Color bgOverlay   = Color(0xC0050507); // rgba(5,5,7,0.75)
+  // ─── Deep void (dark theme, default) ───
+  static const Color bgBase      = Color(0xFF050505); // void black
+  static const Color bgElevated  = Color(0xFF0D0D12);
+  static const Color bgSurface   = Color(0xFF15151C);
+  static const Color bgOverlay   = Color(0xC0050505); // rgba(5,5,5,0.75)
 
-  // Borders — мөнгөлөг chrome ирмэг
+  // Borders — ultra-thin glass hairline
   static const Color hairline    = Color(0x1FFFFFFF); // rgba(255,255,255,0.12)
-  static const Color hairline2   = Color(0x33FFFFFF); // rgba(255,255,255,0.20)
+  static const Color hairline2   = Color(0x26FFFFFF); // rgba(255,255,255,0.15)
 
-  // Text — хүйтэн цагаан/мөнгө
-  static const Color textPrimary   = Color(0xFFF5F6FA);
-  static const Color textSecondary = Color(0xFFB6BAC6);
-  static const Color textTertiary  = Color(0xFF7A7E8C);
-  static const Color textMono      = Color(0xFFC2C6D2);
+  // Text — cool white / steel
+  static const Color textPrimary   = Color(0xFFF4F6FA);
+  static const Color textSecondary = Color(0xFFA7ADBA);
+  static const Color textTertiary  = Color(0xFF6A7080);
+  static const Color textMono      = Color(0xFF9FB6C2);
 
-  // ─── Chrome / silver (брэнд тэмдэг — disco owl) ───
-  static const Color silver      = Color(0xFFD8DCE6);
-  static const Color silverLight = Color(0xFFFFFFFF);
-  static const Color silverDark  = Color(0xFF8A8E9C);
-  static const Color steel       = Color(0xFF5A5E6C);
+  // ─── Electric cyan (active / selected / focus — "silver" нэрээр) ───
+  // Хуучин "silver" токенуудыг neon cyan болгосон тул nav-active, брэнд гялбаа cyan болно.
+  static const Color silver      = Color(0xFF22E7FF); // neon cyan (active)
+  static const Color silverLight = Color(0xFFBDF6FF);
+  static const Color silverDark  = Color(0xFF15C2DA);
+  static const Color steel       = Color(0xFF0E7F90); // deep cyan
 
-  // Accent — brushed chrome / silver (disco owl брэнд).
-  // Цагаан текст уншигдахуйц гүн ган + мөнгөлөг гялбаа.
-  static const Color accentStart  = Color(0xFF7E84A0); // steel-silver (signature)
-  static const Color accentMid    = Color(0xFF626780); // graphite steel
-  static const Color accentEnd    = Color(0xFFA8AEC4); // light silver edge
-  static const Color accentPurple = Color(0xFF6E73D0); // cool steel-violet
+  // Дөт хандалт (шинэ alias — нэмэлт, аюулгүй)
+  static const Color neonCyan = Color(0xFF22E7FF);
+  static const Color magenta  = Color(0xFFE935C8);
+  static const Color lime     = Color(0xFFB4FF2E);
+  static const Color amber    = Color(0xFFFFB020);
+  static const Color orange   = Color(0xFFFF6A2B);
+
+  // ─── Primary accent (magenta/purple — primary action, like, badge, pin) ───
+  // Цагаан текст уншигдахуйц гүн magenta-purple.
+  static const Color accentStart  = Color(0xFFC026D3); // vivid magenta (primary/solid)
+  static const Color accentMid    = Color(0xFF9333EA); // purple (gradient mid)
+  static const Color accentEnd    = Color(0xFFFF2D8E); // pink (gradient end)
+  static const Color accentPurple = Color(0xFF7C3AED); // purple
 
   // Status
-  static const Color success = Color(0xFF3DD68C);
-  static const Color error   = Color(0xFFFF5470);
-  static const Color warning = Color(0xFFFFB347);
+  static const Color success = Color(0xFFB4FF2E); // glowing lime (live/active)
+  static const Color error   = Color(0xFFFF4566);
+  static const Color warning = Color(0xFFFFB020); // amber
 
   // ─── Light theme ───
   static const Color bgBaseLight      = Color(0xFFFAF6EE);
@@ -46,32 +54,31 @@ abstract class AppColors {
   static const Color hairlineLight    = Color(0x141A0B2E);
   static const Color hairline2Light   = Color(0x291A0B2E);
 
-  static const Color textPrimaryLight   = Color(0xFF1A0B2E);
+  static const Color textPrimaryLight   = Color(0xFF13031F);
   static const Color textSecondaryLight = Color(0xFF5C4A82);
   static const Color textTertiaryLight  = Color(0xFF9A8DB8);
 
-  // ─── Accent gradient helper ───
-  // Brushed chrome — гэрэлтэх мөнгөн ирмэг → ган төв (цагаан текст уншигдана)
+  // ─── Primary action gradient — magenta → purple → pink ───
   static const LinearGradient accentGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [Color(0xFF9DA3BC), Color(0xFF5E6379), Color(0xFF868CA6)],
+    colors: [Color(0xFF7C3AED), Color(0xFFC026D3), Color(0xFFFF2D8E)],
     stops: [0.0, 0.55, 1.0],
   );
 
   static const LinearGradient accentGradientSoft = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [Color(0x55A8AEC4), Color(0x33808698)],
+    colors: [Color(0x55C026D3), Color(0x337C3AED)],
   );
 
   static const LinearGradient purpleGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [Color(0xFF7B2FF7), Color(0xFFB14CF7), accentStart],
+    colors: [Color(0xFF7C3AED), Color(0xFFC026D3), accentEnd],
   );
 
-  // ─── Chrome / mirror gradient (disco owl брэнд) ───
+  // ─── Cyan glow gradient ("chrome" нэрээр — nav active / брэнд гялбаа) ───
   static const LinearGradient chromeGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
@@ -85,10 +92,10 @@ abstract class AppColors {
     colors: [silverLight, silverDark],
   );
 
-  // Aurora background
+  // Aurora background glow — neon cyan/magenta
   static const RadialGradient auroraGradient = RadialGradient(
     center: Alignment(-0.6, -0.6),
     radius: 1.2,
-    colors: [Color(0x40FF4D8D), Colors.transparent],
+    colors: [Color(0x4022E7FF), Colors.transparent],
   );
 }

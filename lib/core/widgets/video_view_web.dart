@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:html' as html;
 import 'dart:ui_web' as ui_web;
 import 'package:flutter/material.dart';
@@ -12,6 +13,8 @@ class VideoView extends StatefulWidget {
   final double? height;
   final bool autoplay;
   final bool showPosterIcon;
+  final bool active;
+  final ValueNotifier<double>? progress;
   const VideoView({
     super.key,
     required this.url,
@@ -19,6 +22,8 @@ class VideoView extends StatefulWidget {
     this.height,
     this.autoplay = false,
     this.showPosterIcon = true,
+    this.active = true,
+    this.progress,
   });
 
   @override
@@ -27,20 +32,42 @@ class VideoView extends StatefulWidget {
 
 class _VideoViewState extends State<VideoView> {
   late final String _viewType;
+  html.VideoElement? _video; // дуу/тоглуулалт удирдахад
+  StreamSubscription? _gestureSub;
+
+  @override
+  void didUpdateWidget(covariant VideoView old) {
+    super.didUpdateWidget(old);
+    // Reel идэвхжих/идэвхгүйжихэд — идэвхтэй нь дуутай тоглож, бусад нь зогсоно
+    final v = _video;
+    if (v == null || !widget.autoplay) return;
+    if (widget.active != old.active) {
+      if (widget.active) {
+        v.muted = false;
+        v.play();
+      } else {
+        v.pause();
+        v.muted = true;
+      }
+    }
+  }
 
   @override
   void initState() {
     super.initState();
     _viewType = 'nightowl-video-${_viewCounter++}';
     ui_web.platformViewRegistry.registerViewFactory(_viewType, (int _) {
+      // Reel: зөвхөн идэвхтэй нь дуутай. Poster (grid) үргэлж дуугүй.
+      final reelMuted = widget.autoplay && !widget.active;
       final v = html.VideoElement()
         ..src = widget.url
         ..controls = !widget.posterOnly && !widget.autoplay
         ..autoplay = widget.autoplay
         ..loop = widget.autoplay
-        ..muted = widget.posterOnly || widget.autoplay
+        ..muted = widget.posterOnly || reelMuted
         ..setAttribute('playsinline', '')
         ..setAttribute('preload', 'metadata');
+      _video = v;
       v.style
         ..width = '100%'
         ..height = '100%'
@@ -50,8 +77,36 @@ class _VideoViewState extends State<VideoView> {
       // Poster болон autoplay (Reels) дээр товшилтыг Flutter overlay руу
       // дамжуулахын тулд видеог pointer-гүй болгоно (like/comment/устгах ажиллана).
       if (widget.posterOnly || widget.autoplay) v.style.pointerEvents = 'none';
+      // Тоглуулах явцыг (0..1) гадагш дамжуулна — reel-ийн доод progress bar.
+      final prog = widget.progress;
+      if (prog != null) {
+        v.onTimeUpdate.listen((_) {
+          final d = v.duration;
+          if (d.isFinite && d > 0) {
+            prog.value = (v.currentTime / d).clamp(0.0, 1.0).toDouble();
+          }
+        });
+      }
       return v;
     });
+
+    // Browser нь дуутай autoplay-г заримдаа блоклодог — хэрэглэгчийн анхны
+    // товшилт дээр идэвхтэй reel-ийг unmute хийж тоглуулна (дуу гаргана).
+    if (widget.autoplay) {
+      _gestureSub = html.document.onClick.listen((_) {
+        final v = _video;
+        if (v != null && widget.active && v.paused) {
+          v.muted = false;
+          v.play();
+        }
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _gestureSub?.cancel();
+    super.dispose();
   }
 
   @override

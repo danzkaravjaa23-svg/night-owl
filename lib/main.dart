@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:device_preview/device_preview.dart';
 
 import 'core/theme/app_theme.dart';
+import 'core/theme/theme_provider.dart';
 import 'core/router/app_router.dart';
 import 'core/services/supabase_service.dart';
 import 'features/auth/providers/auth_provider.dart';
@@ -48,6 +49,7 @@ class NightOwlApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final router = ref.watch(appRouterProvider);
+    final themeMode = ref.watch(themeModeProvider);
 
     // Хаяг солигдоход (signOut→signIn өөр хэрэглэгч) хуучин хэрэглэгчийн
     // cache-ийг цэвэрлэнэ — өөр хаягийн дата харагдахаас сэргийлнэ.
@@ -71,7 +73,7 @@ class NightOwlApp extends ConsumerWidget {
       // Theme
       theme: AppTheme.light,
       darkTheme: AppTheme.dark,
-      themeMode: ThemeMode.dark, // start dark; user can switch in Settings
+      themeMode: themeMode, // System / Light / Dark — Settings → Appearance
 
       // Router
       routerConfig: router,

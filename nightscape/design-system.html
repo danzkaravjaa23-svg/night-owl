@@ -1,0 +1,487 @@
+<!DOCTYPE html><html lang="mn"><head><meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+<title>Futurist Nightscape · Design System</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="nightscape.css"/>
+<script src="https://unpkg.com/lucide@latest"></script>
+<style>
+  /* Doc-page only: allow a wider centered column while keeping .ns identity */
+  .doc{max-width:48rem;margin-inline:auto;padding:0 18px 96px}
+  .swatch{height:64px;border-radius:var(--r);border:1px solid var(--hair)}
+  .tok{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--t-mono)}
+  .specrow{display:flex;align-items:baseline;justify-content:space-between;gap:16px}
+  .anchor{scroll-margin-top:24px}
+  .gridline{height:1px;background:var(--hair)}
+  a.navlink{color:var(--t2);transition:color .2s}
+  a.navlink:hover{color:var(--cyan)}
+</style>
+</head>
+<body class="ns">
+<div class="aura"></div>
+<div class="grain"></div>
+
+<div class="doc">
+
+  <!-- ═══════════════ TOP BAR ═══════════════ -->
+  <header class="flex items-center justify-between py-6 sticky top-0 z-30"
+          style="background:linear-gradient(180deg,var(--void) 60%,transparent)">
+    <a href="index.html" class="tap inline-flex items-center gap-2 px-3.5 h-10 rounded-full glass hairline navlink" style="color:var(--t1)">
+      <i data-lucide="arrow-left" class="w-4 h-4"></i>
+      <span class="label" style="color:inherit">index.html</span>
+    </a>
+    <div class="flex items-center gap-2">
+      <span class="dot-live"></span>
+      <span class="eyebrow">v1.0 · LIVE</span>
+    </div>
+  </header>
+
+  <!-- ═══════════════ HERO / INTRO ═══════════════ -->
+  <section class="glass anchor anim-float" id="intro" style="padding:34px 26px;animation-duration:9s">
+    <div class="eyebrow mb-4">FUTURIST NIGHTSCAPE · DESIGN SYSTEM</div>
+    <div class="anim-breathe mb-4" style="width:108px;height:108px;">
+      <svg width="108" height="108" viewBox="0 0 152 152" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="Night Owl logo" style="overflow:visible;">
+        <defs>
+          <linearGradient id="dsCyan" x1="0" y1="0" x2="152" y2="152" gradientUnits="userSpaceOnUse">
+            <stop stop-color="#cbf8ff"/><stop offset=".55" stop-color="#22e7ff"/><stop offset="1" stop-color="#3aa0ff"/>
+          </linearGradient>
+          <linearGradient id="dsMag" x1="20" y1="120" x2="132" y2="30" gradientUnits="userSpaceOnUse">
+            <stop stop-color="#7c3aed"/><stop offset=".5" stop-color="#e935c8"/><stop offset="1" stop-color="#ff2d8e"/>
+          </linearGradient>
+          <radialGradient id="dsEye" cx="50%" cy="42%" r="62%">
+            <stop offset="0" stop-color="#ffffff"/><stop offset=".35" stop-color="#a6efff"/>
+            <stop offset=".7" stop-color="#22e7ff"/><stop offset="1" stop-color="#06343d"/>
+          </radialGradient>
+          <filter id="dsGlow" x="-60%" y="-60%" width="220%" height="220%">
+            <feGaussianBlur stdDeviation="2.3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+          <filter id="dsGlowSoft" x="-90%" y="-90%" width="280%" height="280%">
+            <feGaussianBlur stdDeviation="5.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+        </defs>
+        <g filter="url(#dsGlow)">
+          <g stroke="url(#dsMag)" stroke-width="1.7" stroke-linecap="round">
+            <path d="M44 30 L34 12 M34 12 L24 14"/><path d="M108 30 L118 12 M118 12 L128 14"/>
+          </g>
+          <circle cx="24" cy="14" r="2.9" fill="#ff2d8e"/><circle cx="128" cy="14" r="2.9" fill="#ff2d8e"/>
+          <path d="M76 24 L118 38 L122 60 Q123 70 116 76 L76 96 L36 76 Q29 70 30 60 L34 38 Z"
+                fill="rgba(34,231,255,.05)" stroke="url(#dsCyan)" stroke-width="2.7" stroke-linejoin="round"/>
+          <path d="M76 30 L76 86 M44 42 L70 70 M108 42 L82 70" stroke="url(#dsCyan)" stroke-width="1.2" stroke-linecap="round" opacity=".4"/>
+          <g filter="url(#dsGlowSoft)">
+            <polygon points="56,46 68,46 74,57 68,68 56,68 50,57" fill="rgba(34,231,255,.08)" stroke="url(#dsCyan)" stroke-width="2.5" stroke-linejoin="round"/>
+            <polygon points="84,46 96,46 102,57 96,68 84,68 78,57" fill="rgba(34,231,255,.08)" stroke="url(#dsCyan)" stroke-width="2.5" stroke-linejoin="round"/>
+            <circle cx="62" cy="57" r="6.8" fill="url(#dsEye)"/><circle cx="90" cy="57" r="6.8" fill="url(#dsEye)"/>
+          </g>
+          <path d="M76 70 L83 83 L76 90 L69 83 Z" fill="url(#dsMag)"/>
+          <path d="M44 78 L30 96 Q26 112 40 122 L60 110 M60 110 L76 118 L92 110 M92 110 L112 122 Q126 112 122 96 L108 78"
+                fill="none" stroke="url(#dsCyan)" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+          <path d="M64 104 L76 110 L88 104 M66 96 L76 101 L86 96" stroke="url(#dsMag)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" opacity=".9"/>
+          <path d="M76 118 L76 132" stroke="url(#dsCyan)" stroke-width="1.7" stroke-linecap="round" opacity=".6"/>
+          <circle cx="76" cy="134" r="3" fill="#22e7ff"/>
+        </g>
+      </svg>
+    </div>
+    <h1 class="display"><span class="grad-text">Night&nbsp;Owl</span></h1>
+    <p class="body mt-4" style="color:var(--t2);max-width:42ch">
+      Гүн хар хоосон орон зайд (deep void) бүтээгдсэн нэг эх сурвалжтай дизайн систем.
+      Шилэн морфизм гадаргуу, неон өнгөний өргөлт, геометрийн нарийн typography.
+      Чанарын босго: <span style="color:var(--t1)">Linear · Apple · high-end Web3</span>.
+    </p>
+    <div class="flex flex-wrap gap-2 mt-6">
+      <span class="pill pill-cyan"><span class="dot"></span>Glassmorphism</span>
+      <span class="pill pill-live"><span class="dot"></span>Neon accents</span>
+      <span class="pill"><i data-lucide="moon" class="w-3 h-3"></i>Void black</span>
+      <span class="pill"><i data-lucide="type" class="w-3 h-3"></i>Inter</span>
+    </div>
+  </section>
+
+  <!-- ═══════════════ TABLE OF CONTENTS ═══════════════ -->
+  <nav class="card mt-4 p-5 grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-2">
+    <a href="#colors"     class="navlink sub flex items-center gap-2"><i data-lucide="palette" class="w-3.5 h-3.5"></i>Colors</a>
+    <a href="#type"       class="navlink sub flex items-center gap-2"><i data-lucide="type" class="w-3.5 h-3.5"></i>Typography</a>
+    <a href="#glass"      class="navlink sub flex items-center gap-2"><i data-lucide="layers" class="w-3.5 h-3.5"></i>Glass</a>
+    <a href="#geometry"   class="navlink sub flex items-center gap-2"><i data-lucide="scan" class="w-3.5 h-3.5"></i>Radius &amp; Glow</a>
+    <a href="#buttons"    class="navlink sub flex items-center gap-2"><i data-lucide="mouse-pointer-click" class="w-3.5 h-3.5"></i>Buttons</a>
+    <a href="#inputs"     class="navlink sub flex items-center gap-2"><i data-lucide="text-cursor-input" class="w-3.5 h-3.5"></i>Inputs</a>
+    <a href="#status"     class="navlink sub flex items-center gap-2"><i data-lucide="circle-dot" class="w-3.5 h-3.5"></i>Status</a>
+    <a href="#controls"   class="navlink sub flex items-center gap-2"><i data-lucide="sliders-horizontal" class="w-3.5 h-3.5"></i>Controls</a>
+    <a href="#avatars"    class="navlink sub flex items-center gap-2"><i data-lucide="circle-user" class="w-3.5 h-3.5"></i>Avatars</a>
+    <a href="#feedback"   class="navlink sub flex items-center gap-2"><i data-lucide="bell" class="w-3.5 h-3.5"></i>Feedback</a>
+    <a href="#nav"        class="navlink sub flex items-center gap-2"><i data-lucide="navigation" class="w-3.5 h-3.5"></i>Nav</a>
+    <a href="#icons"      class="navlink sub flex items-center gap-2"><i data-lucide="sparkles" class="w-3.5 h-3.5"></i>Icons</a>
+  </nav>
+
+  <!-- ═══════════════ COLORS ═══════════════ -->
+  <section class="glass anchor mt-4" id="colors" style="padding:26px 24px">
+    <div class="eyebrow mb-1">01 · TOKENS</div>
+    <h2 class="title">Өнгөний систем</h2>
+    <p class="sub mt-2" style="max-width:48ch">Void хар суурь, идэвхтэй/фокус төлөвт неон цэнхэр, primary үйлдэлд magenta→purple gradient, live статуст гэрэлтэх лайм.</p>
+
+    <!-- Void & surfaces -->
+    <div class="eyebrow mt-7 mb-3">VOID &amp; SURFACES</div>
+    <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+      <div><div class="swatch" style="background:#050505"></div><div class="flex justify-between mt-2"><span class="label">Void</span><span class="tok">#050505</span></div><div class="tok mt-0.5" style="color:var(--t3)">--void</div></div>
+      <div><div class="swatch" style="background:#0a0a0e"></div><div class="flex justify-between mt-2"><span class="label">Void 2</span><span class="tok">#0a0a0e</span></div><div class="tok mt-0.5" style="color:var(--t3)">--void-2</div></div>
+      <div><div class="swatch" style="background:#101016"></div><div class="flex justify-between mt-2"><span class="label">Void 3</span><span class="tok">#101016</span></div><div class="tok mt-0.5" style="color:var(--t3)">--void-3</div></div>
+      <div><div class="swatch" style="background:rgba(255,255,255,.04)"></div><div class="flex justify-between mt-2"><span class="label">Surface</span><span class="tok">·04</span></div><div class="tok mt-0.5" style="color:var(--t3)">--surface</div></div>
+      <div><div class="swatch" style="background:rgba(15,15,21,.55);backdrop-filter:blur(8px)"></div><div class="flex justify-between mt-2"><span class="label">Glass</span><span class="tok">·55</span></div><div class="tok mt-0.5" style="color:var(--t3)">--glass</div></div>
+      <div><div class="swatch" style="background:rgba(13,13,19,.74);backdrop-filter:blur(8px)"></div><div class="flex justify-between mt-2"><span class="label">Glass strong</span><span class="tok">·74</span></div><div class="tok mt-0.5" style="color:var(--t3)">--glass-strong</div></div>
+    </div>
+
+    <!-- Neon palette -->
+    <div class="eyebrow mt-7 mb-3">NEON PALETTE</div>
+    <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+      <div><div class="swatch glow-cyan" style="background:#22e7ff"></div><div class="flex justify-between mt-2"><span class="label" style="color:var(--t1)">Cyan</span><span class="tok">#22e7ff</span></div><div class="tok mt-0.5" style="color:var(--t3)">--cyan · фокус/идэвхтэй</div></div>
+      <div><div class="swatch" style="background:#e935c8"></div><div class="flex justify-between mt-2"><span class="label" style="color:var(--t1)">Magenta</span><span class="tok">#e935c8</span></div><div class="tok mt-0.5" style="color:var(--t3)">--magenta</div></div>
+      <div><div class="swatch" style="background:#7c3aed"></div><div class="flex justify-between mt-2"><span class="label" style="color:var(--t1)">Purple</span><span class="tok">#7c3aed</span></div><div class="tok mt-0.5" style="color:var(--t3)">--purple</div></div>
+      <div><div class="swatch" style="background:#ff2d8e"></div><div class="flex justify-between mt-2"><span class="label" style="color:var(--t1)">Pink</span><span class="tok">#ff2d8e</span></div><div class="tok mt-0.5" style="color:var(--t3)">--pink · badge/like</div></div>
+      <div><div class="swatch glow-lime" style="background:#b4ff2e"></div><div class="flex justify-between mt-2"><span class="label" style="color:var(--t1)">Lime</span><span class="tok">#b4ff2e</span></div><div class="tok mt-0.5" style="color:var(--t3)">--lime · live</div></div>
+      <div><div class="swatch" style="background:#ffb020"></div><div class="flex justify-between mt-2"><span class="label" style="color:var(--t1)">Amber</span><span class="tok">#ffb020</span></div><div class="tok mt-0.5" style="color:var(--t3)">--amber</div></div>
+      <div><div class="swatch" style="background:#ff6a2b"></div><div class="flex justify-between mt-2"><span class="label" style="color:var(--t1)">Orange</span><span class="tok">#ff6a2b</span></div><div class="tok mt-0.5" style="color:var(--t3)">--orange</div></div>
+      <div><div class="swatch" style="background:#ff4566"></div><div class="flex justify-between mt-2"><span class="label" style="color:var(--t1)">Red</span><span class="tok">#ff4566</span></div><div class="tok mt-0.5" style="color:var(--t3)">--red · danger</div></div>
+    </div>
+
+    <!-- Gradients -->
+    <div class="eyebrow mt-7 mb-3">GRADIENTS</div>
+    <div class="grid sm:grid-cols-2 gap-3">
+      <div><div class="swatch glow-magenta" style="background:var(--grad-primary)"></div><div class="flex justify-between mt-2"><span class="label" style="color:var(--t1)">Primary action</span></div><div class="tok mt-0.5" style="color:var(--t3)">--grad-primary · purple→magenta→pink</div></div>
+      <div><div class="swatch" style="background:var(--grad-cyan)"></div><div class="flex justify-between mt-2"><span class="label" style="color:var(--t1)">Cyan</span></div><div class="tok mt-0.5" style="color:var(--t3)">--grad-cyan</div></div>
+      <div><div class="swatch" style="background:var(--grad-ring)"></div><div class="flex justify-between mt-2"><span class="label" style="color:var(--t1)">Story ring</span></div><div class="tok mt-0.5" style="color:var(--t3)">--grad-ring · conic</div></div>
+      <div><div class="swatch grid place-items-center" style="background:var(--void-2)"><span class="h2 grad-text">Aa Бб Вв</span></div><div class="flex justify-between mt-2"><span class="label" style="color:var(--t1)">Text gradient</span></div><div class="tok mt-0.5" style="color:var(--t3)">--grad-text · .grad-text</div></div>
+    </div>
+
+    <!-- Text tints -->
+    <div class="eyebrow mt-7 mb-3">TEXT TINTS</div>
+    <div class="card p-5 space-y-3" style="background:var(--void-2)">
+      <div class="specrow"><span class="body" style="color:var(--t1)">Primary текст — гарчиг ба чухал контент</span><span class="tok">--t1 · #f4f6fa</span></div>
+      <div class="gridline"></div>
+      <div class="specrow"><span class="body" style="color:var(--t2)">Secondary текст — тайлбар, дэд мэдээлэл</span><span class="tok">--t2 · #a7adba</span></div>
+      <div class="gridline"></div>
+      <div class="specrow"><span class="body" style="color:var(--t3)">Tertiary текст — placeholder, hint</span><span class="tok">--t3 · #6a7080</span></div>
+      <div class="gridline"></div>
+      <div class="specrow"><span class="body font-mono" style="color:var(--t-mono)">Mono текст — code / eyebrow</span><span class="tok">--t-mono · #9fb6c2</span></div>
+    </div>
+  </section>
+
+  <!-- ═══════════════ TYPOGRAPHY ═══════════════ -->
+  <section class="glass anchor mt-4" id="type" style="padding:26px 24px">
+    <div class="eyebrow mb-1">02 · TYPE</div>
+    <h2 class="title">Typography</h2>
+    <p class="sub mt-2">Inter, нягт letter-spacing (-.011em суурь). Mono = JetBrains Mono (eyebrow / code).</p>
+
+    <div class="card mt-6 divide-y" style="background:var(--void-2);border-color:var(--hair)">
+      <div class="p-5 specrow"><span class="display grad-text">Display</span><span class="tok">.display · 38 / 800 / -.03em</span></div>
+      <div class="p-5 specrow" style="border-top:1px solid var(--hair)"><span class="title">Title гарчиг</span><span class="tok">.title · 28 / 800</span></div>
+      <div class="p-5 specrow" style="border-top:1px solid var(--hair)"><span class="h1">Heading нэг</span><span class="tok">.h1 · 22 / 700</span></div>
+      <div class="p-5 specrow" style="border-top:1px solid var(--hair)"><span class="h2">Heading хоёр</span><span class="tok">.h2 · 18 / 700</span></div>
+      <div class="p-5 specrow" style="border-top:1px solid var(--hair)"><span class="h3">Heading гурав</span><span class="tok">.h3 · 15 / 600</span></div>
+      <div class="p-5 specrow" style="border-top:1px solid var(--hair)"><span class="body">Body текст — үндсэн уншлагын хэмжээ</span><span class="tok">.body · 14 / 400</span></div>
+      <div class="p-5 specrow" style="border-top:1px solid var(--hair)"><span class="sub">Sub текст — туслах мэдээлэл</span><span class="tok">.sub · 13 / 400</span></div>
+      <div class="p-5 specrow" style="border-top:1px solid var(--hair)"><span class="label">LABEL ТЕКСТ</span><span class="tok">.label · 12 / 600</span></div>
+      <div class="p-5 specrow" style="border-top:1px solid var(--hair)"><span class="eyebrow">EYEBROW MONO</span><span class="tok">.eyebrow · 10 / mono / .22em</span></div>
+    </div>
+  </section>
+
+  <!-- ═══════════════ GLASS ═══════════════ -->
+  <section class="glass anchor mt-4" id="glass" style="padding:26px 24px">
+    <div class="eyebrow mb-1">03 · SURFACES</div>
+    <h2 class="title">Шилэн морфизм</h2>
+    <p class="sub mt-2">Бүх карт/popup/sheet нь ультра-нимгэн (--hair) хүрээтэй frosted glass.</p>
+
+    <div class="grid sm:grid-cols-3 gap-3 mt-6">
+      <div class="glass p-5 h-36 flex flex-col justify-between"><i data-lucide="square" class="w-5 h-5" style="color:var(--cyan)"></i><div><div class="h3">.glass</div><div class="tok mt-1" style="color:var(--t3)">blur 20 · ·55</div></div></div>
+      <div class="glass-strong p-5 h-36 flex flex-col justify-between"><i data-lucide="layers-2" class="w-5 h-5" style="color:var(--cyan)"></i><div><div class="h3">.glass-strong</div><div class="tok mt-1" style="color:var(--t3)">blur 30 · ·74</div></div></div>
+      <div class="card card-hover p-5 h-36 flex flex-col justify-between"><i data-lucide="credit-card" class="w-5 h-5" style="color:var(--cyan)"></i><div><div class="h3">.card / .card-hover</div><div class="tok mt-1" style="color:var(--t3)">hover → lift + glow</div></div></div>
+    </div>
+    <p class="sub mt-4 flex items-center gap-2"><i data-lucide="info" class="w-4 h-4" style="color:var(--t3)"></i><span style="color:var(--t3)">Hairline хүрээ: <span class="tok">--hair (·08)</span> / <span class="tok">--hair-2 (·15)</span> — <span class="hairline px-2 py-0.5 rounded-md">.hairline</span></span></p>
+  </section>
+
+  <!-- ═══════════════ RADIUS & GLOW ═══════════════ -->
+  <section class="glass anchor mt-4" id="geometry" style="padding:26px 24px">
+    <div class="eyebrow mb-1">04 · GEOMETRY</div>
+    <h2 class="title">Радиус ба гэрэлтэлт</h2>
+
+    <div class="eyebrow mt-6 mb-3">CORNER RADIUS</div>
+    <div class="grid grid-cols-2 sm:grid-cols-5 gap-3">
+      <div class="text-center"><div class="mx-auto" style="height:70px;background:var(--surface-2);border:1px solid var(--hair-2);border-radius:14px"></div><div class="tok mt-2">--r-sm · 14</div></div>
+      <div class="text-center"><div class="mx-auto" style="height:70px;background:var(--surface-2);border:1px solid var(--hair-2);border-radius:18px"></div><div class="tok mt-2">--r · 18</div></div>
+      <div class="text-center"><div class="mx-auto" style="height:70px;background:var(--surface-2);border:1px solid var(--hair-2);border-radius:24px"></div><div class="tok mt-2">--r-lg · 24</div></div>
+      <div class="text-center"><div class="mx-auto" style="height:70px;background:var(--surface-2);border:1px solid var(--hair-2);border-radius:30px"></div><div class="tok mt-2">--r-xl · 30</div></div>
+      <div class="text-center"><div class="mx-auto" style="height:70px;background:var(--surface-2);border:1px solid var(--hair-2);border-radius:999px"></div><div class="tok mt-2">--r-pill</div></div>
+    </div>
+
+    <div class="eyebrow mt-7 mb-3">GLOWS</div>
+    <div class="grid grid-cols-3 gap-3">
+      <div class="grid place-items-center h-24 rounded-2xl glow-cyan" style="background:var(--void-2)"><span class="label" style="color:var(--cyan)">cyan</span></div>
+      <div class="grid place-items-center h-24 rounded-2xl glow-magenta" style="background:var(--void-2)"><span class="label" style="color:#ff8be3">magenta</span></div>
+      <div class="grid place-items-center h-24 rounded-2xl glow-lime" style="background:var(--void-2)"><span class="label" style="color:#caff6e">lime</span></div>
+    </div>
+    <div class="grid grid-cols-3 gap-3 mt-2">
+      <div class="tok text-center" style="color:var(--t3)">.glow-cyan</div>
+      <div class="tok text-center" style="color:var(--t3)">.glow-magenta</div>
+      <div class="tok text-center" style="color:var(--t3)">.glow-lime</div>
+    </div>
+    <div class="card mt-5 p-4 flex items-center gap-4" style="background:var(--void-2)">
+      <i data-lucide="sparkle" class="w-8 h-8 anim-breathe" style="color:var(--cyan)"></i>
+      <div><div class="h3">.anim-breathe / .anim-float / .anim-pop</div><div class="tok mt-1" style="color:var(--t3)">микро-интеракцууд + .tap идэвхтэй scale</div></div>
+    </div>
+  </section>
+
+  <!-- ═══════════════ BUTTONS ═══════════════ -->
+  <section class="glass anchor mt-4" id="buttons" style="padding:26px 24px">
+    <div class="eyebrow mb-1">05 · ACTIONS</div>
+    <h2 class="title">Товчлуурууд</h2>
+    <p class="sub mt-2">Primary = magenta→purple gradient. Glass = frosted + cyan glow hover дээр.</p>
+
+    <div class="grid sm:grid-cols-2 gap-3 mt-6">
+      <button class="btn btn-primary"><i data-lucide="zap" class="w-4 h-4"></i>.btn-primary</button>
+      <button class="btn btn-glass"><i data-lucide="snowflake" class="w-4 h-4"></i>.btn-glass</button>
+      <button class="btn btn-outline">.btn-outline</button>
+      <button class="btn btn-ghost">.btn-ghost</button>
+      <button class="btn btn-danger"><i data-lucide="trash-2" class="w-4 h-4"></i>.btn-danger</button>
+      <button class="btn btn-sm btn-glass"><i data-lucide="plus" class="w-4 h-4"></i>.btn-sm</button>
+    </div>
+    <button class="btn btn-primary btn-block mt-3"><i data-lucide="arrow-right" class="w-4 h-4"></i>.btn-block</button>
+  </section>
+
+  <!-- ═══════════════ INPUTS ═══════════════ -->
+  <section class="glass anchor mt-4" id="inputs" style="padding:26px 24px">
+    <div class="eyebrow mb-1">06 · FORMS</div>
+    <h2 class="title">Оролтын талбар</h2>
+    <p class="sub mt-2 flex items-center gap-2"><i data-lucide="focus" class="w-4 h-4" style="color:var(--cyan)"></i>Фокус → неон cyan ring + glow (доорх талбарт дар).</p>
+
+    <div class="grid sm:grid-cols-2 gap-5 mt-6">
+      <div class="field">
+        <span class="label">.input</span>
+        <input class="input" placeholder="Имэйл хаяг…"/>
+      </div>
+      <div class="field">
+        <span class="label">.input-group · lead / trail</span>
+        <div class="input-group">
+          <span class="lead"><i data-lucide="lock" class="w-4 h-4"></i></span>
+          <input class="input" id="pw" type="password" placeholder="Нууц үг…"/>
+          <span class="trail" id="eye"><i data-lucide="eye" class="w-4 h-4"></i></span>
+        </div>
+      </div>
+    </div>
+    <div class="field mt-5">
+      <span class="label">.textarea</span>
+      <textarea class="textarea" rows="3" placeholder="Тайлбар бичих…"></textarea>
+    </div>
+  </section>
+
+  <!-- ═══════════════ STATUS PILLS ═══════════════ -->
+  <section class="glass anchor mt-4" id="status" style="padding:26px 24px">
+    <div class="eyebrow mb-1">07 · STATUS</div>
+    <h2 class="title">Статус pill-ууд</h2>
+    <div class="flex flex-wrap gap-2.5 mt-6">
+      <span class="pill pill-live"><span class="dot"></span>LIVE одоо</span>
+      <span class="pill pill-lively"><span class="dot"></span>Хөгжөөнтэй</span>
+      <span class="pill pill-busy"><span class="dot"></span>Завгүй</span>
+      <span class="pill pill-cyan"><span class="dot"></span>Шинэ</span>
+      <span class="pill"><i data-lucide="map-pin" class="w-3 h-3"></i>Энгийн</span>
+    </div>
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-4">
+      <div class="tok" style="color:var(--t3)">.pill-live · lime</div>
+      <div class="tok" style="color:var(--t3)">.pill-lively · amber</div>
+      <div class="tok" style="color:var(--t3)">.pill-busy · orange</div>
+      <div class="tok" style="color:var(--t3)">.pill-cyan · cyan</div>
+    </div>
+  </section>
+
+  <!-- ═══════════════ CONTROLS ═══════════════ -->
+  <section class="glass anchor mt-4" id="controls" style="padding:26px 24px">
+    <div class="eyebrow mb-1">08 · CONTROLS</div>
+    <h2 class="title">Chip · Segment · Switch</h2>
+
+    <div class="eyebrow mt-6 mb-3">CHIPS — .chip / .chip.active</div>
+    <div class="flex flex-wrap gap-2" id="chipset">
+      <button class="chip active"><i data-lucide="flame" class="w-3.5 h-3.5"></i>Бүгд</button>
+      <button class="chip">Клуб</button>
+      <button class="chip">Бар</button>
+      <button class="chip">Концерт</button>
+      <button class="chip">Хаус</button>
+    </div>
+
+    <div class="eyebrow mt-7 mb-3">SEGMENT — .segment</div>
+    <div class="segment" id="seg">
+      <button class="active">Газрууд</button>
+      <button>Хүмүүс</button>
+      <button>Эвент</button>
+    </div>
+
+    <div class="eyebrow mt-7 mb-3">SWITCH — .switch / .switch.on</div>
+    <div class="card p-4 space-y-1" style="background:var(--void-2)">
+      <div class="row" style="padding-left:0;padding-right:0">
+        <div class="row-ic"><i data-lucide="bell" class="w-4 h-4"></i></div>
+        <div class="flex-1"><div class="h3">Мэдэгдэл</div><div class="sub">Push мэдэгдэл хүлээн авах</div></div>
+        <div class="switch on tap"></div>
+      </div>
+      <div class="divider"></div>
+      <div class="row" style="padding-left:0;padding-right:0">
+        <div class="row-ic"><i data-lucide="moon-star" class="w-4 h-4"></i></div>
+        <div class="flex-1"><div class="h3">Шөнийн горим</div><div class="sub">Автоматаар бараан</div></div>
+        <div class="switch tap"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════ AVATARS ═══════════════ -->
+  <section class="glass anchor mt-4" id="avatars" style="padding:26px 24px">
+    <div class="eyebrow mb-1">09 · IDENTITY</div>
+    <h2 class="title">Avatar story ring-ууд</h2>
+    <div class="flex items-end gap-5 mt-6">
+      <div class="text-center">
+        <div class="ring" style="width:74px;height:74px">
+          <img src="https://i.pravatar.cc/160?img=12" alt=""/>
+        </div>
+        <div class="tok mt-2" style="color:var(--t3)">.ring</div>
+      </div>
+      <div class="text-center">
+        <div class="ring live" style="width:74px;height:74px">
+          <img src="https://i.pravatar.cc/160?img=32" alt=""/>
+        </div>
+        <div class="tok mt-2" style="color:#caff6e">.ring.live</div>
+      </div>
+      <div class="text-center">
+        <div class="ring seen" style="width:74px;height:74px">
+          <img src="https://i.pravatar.cc/160?img=45" alt=""/>
+        </div>
+        <div class="tok mt-2" style="color:var(--t3)">.ring.seen</div>
+      </div>
+      <div class="text-center">
+        <img class="avatar hairline" style="width:74px;height:74px" src="https://i.pravatar.cc/160?img=8" alt=""/>
+        <div class="tok mt-2" style="color:var(--t3)">.avatar</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════ FEEDBACK ═══════════════ -->
+  <section class="glass anchor mt-4" id="feedback" style="padding:26px 24px">
+    <div class="eyebrow mb-1">10 · FEEDBACK</div>
+    <h2 class="title">Badge · Toast · Like · Skeleton</h2>
+
+    <div class="eyebrow mt-6 mb-3">BADGE &amp; LIVE DOT</div>
+    <div class="flex items-center gap-6">
+      <div class="relative inline-grid place-items-center w-12 h-12 rounded-2xl" style="background:var(--surface-2);border:1px solid var(--hair)">
+        <i data-lucide="bell" class="w-5 h-5" style="color:var(--t1)"></i>
+        <span class="badge absolute -top-1.5 -right-1.5">5</span>
+      </div>
+      <div class="flex items-center gap-2"><span class="dot-live"></span><span class="sub">.dot-live</span></div>
+      <button class="like tap inline-flex items-center gap-2" id="likeBtn">
+        <i data-lucide="heart" class="w-6 h-6"></i><span class="sub">.like (дар)</span>
+      </button>
+    </div>
+
+    <div class="eyebrow mt-7 mb-3">TOAST — .toast</div>
+    <div class="toast">
+      <div class="ic" style="background:var(--lime-soft);color:var(--lime)"><i data-lucide="check" class="w-4 h-4"></i></div>
+      <div class="flex-1"><div class="h3">Амжилттай хадгаллаа</div><div class="sub">Таны тохиргоо шинэчлэгдлээ</div></div>
+      <i data-lucide="x" class="w-4 h-4 tap" style="color:var(--t3)"></i>
+    </div>
+
+    <div class="eyebrow mt-7 mb-3">SKELETON — .skel</div>
+    <div class="card p-4 flex items-center gap-3" style="background:var(--void-2)">
+      <div class="skel" style="width:48px;height:48px;border-radius:50%"></div>
+      <div class="flex-1 space-y-2">
+        <div class="skel" style="height:12px;width:60%"></div>
+        <div class="skel" style="height:12px;width:85%"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════ NAV ═══════════════ -->
+  <section class="glass anchor mt-4" id="nav" style="padding:26px 24px">
+    <div class="eyebrow mb-1">11 · NAVIGATION</div>
+    <h2 class="title">Хөвөгч навигаци</h2>
+    <p class="sub mt-2">Жинхэнэ .nav-float дэлгэц бүрийн доор тогтсон байдаг. Доорх нь preview.</p>
+
+    <div class="relative mt-6 rounded-2xl overflow-hidden" style="height:120px;background:var(--void-2);border:1px solid var(--hair)">
+      <nav class="nav-float">
+    <a href="feed.html" class="nav-item"><i data-lucide="home" style="width:23px;height:23px;"></i><span>Feed</span></a>
+    <button class="nav-item active"><i data-lucide="compass" style="width:23px;height:23px;"></i><span>Explore</span></button>
+    <button class="nav-fab tap" aria-label="Шинэ нийтлэл"><i data-lucide="plus" style="width:26px;height:26px;"></i></button>
+    <a href="discovery.html" class="nav-item"><i data-lucide="clapperboard" style="width:23px;height:23px;"></i><span>Discovery</span></a>
+    <a href="profile.html" class="nav-item"><i data-lucide="user" style="width:23px;height:23px;"></i><span>Profile</span></a>
+  </nav>
+    </div>
+    <div class="tok mt-3" style="color:var(--t3)">.nav-float · .nav-item(.active) · .nav-fab — Feed · Explore · Discovery · Profile</div>
+  </section>
+
+  <!-- ═══════════════ ICONOGRAPHY ═══════════════ -->
+  <section class="glass anchor mt-4" id="icons" style="padding:26px 24px">
+    <div class="eyebrow mb-1">12 · ICONOGRAPHY</div>
+    <h2 class="title">Дүрс тэмдэг</h2>
+    <p class="sub mt-2">Зөвхөн <span style="color:var(--t1)">Lucide</span> ашиглана. Emoji-г дүрс тэмдэг болгож хэрхэвч ашиглахгүй.</p>
+
+    <div class="card mt-5 p-4 font-mono text-xs" style="background:var(--void-3);color:var(--t-mono)">
+      &lt;i data-lucide=&quot;heart&quot;&gt;&lt;/i&gt;
+      <div style="color:var(--t3)">// … төгсгөлд: lucide.createIcons();</div>
+    </div>
+
+    <div class="grid grid-cols-5 sm:grid-cols-8 gap-3 mt-5">
+      <div class="grid place-items-center aspect-square rounded-xl tap" style="background:var(--surface);border:1px solid var(--hair)"><i data-lucide="moon" style="color:var(--cyan)"></i></div>
+      <div class="grid place-items-center aspect-square rounded-xl tap" style="background:var(--surface);border:1px solid var(--hair)"><i data-lucide="sparkles" style="color:var(--cyan)"></i></div>
+      <div class="grid place-items-center aspect-square rounded-xl tap" style="background:var(--surface);border:1px solid var(--hair)"><i data-lucide="heart" style="color:var(--pink)"></i></div>
+      <div class="grid place-items-center aspect-square rounded-xl tap" style="background:var(--surface);border:1px solid var(--hair)"><i data-lucide="compass" style="color:var(--cyan)"></i></div>
+      <div class="grid place-items-center aspect-square rounded-xl tap" style="background:var(--surface);border:1px solid var(--hair)"><i data-lucide="map-pin" style="color:var(--lime)"></i></div>
+      <div class="grid place-items-center aspect-square rounded-xl tap" style="background:var(--surface);border:1px solid var(--hair)"><i data-lucide="music" style="color:var(--amber)"></i></div>
+      <div class="grid place-items-center aspect-square rounded-xl tap" style="background:var(--surface);border:1px solid var(--hair)"><i data-lucide="users" style="color:var(--cyan)"></i></div>
+      <div class="grid place-items-center aspect-square rounded-xl tap" style="background:var(--surface);border:1px solid var(--hair)"><i data-lucide="zap" style="color:var(--orange)"></i></div>
+      <div class="grid place-items-center aspect-square rounded-xl tap" style="background:var(--surface);border:1px solid var(--hair)"><i data-lucide="bell" style="color:var(--t1)"></i></div>
+      <div class="grid place-items-center aspect-square rounded-xl tap" style="background:var(--surface);border:1px solid var(--hair)"><i data-lucide="message-circle" style="color:var(--cyan)"></i></div>
+      <div class="grid place-items-center aspect-square rounded-xl tap" style="background:var(--surface);border:1px solid var(--hair)"><i data-lucide="calendar" style="color:var(--t1)"></i></div>
+      <div class="grid place-items-center aspect-square rounded-xl tap" style="background:var(--surface);border:1px solid var(--hair)"><i data-lucide="star" style="color:var(--amber)"></i></div>
+      <div class="grid place-items-center aspect-square rounded-xl tap" style="background:var(--surface);border:1px solid var(--hair)"><i data-lucide="search" style="color:var(--t1)"></i></div>
+      <div class="grid place-items-center aspect-square rounded-xl tap" style="background:var(--surface);border:1px solid var(--hair)"><i data-lucide="settings" style="color:var(--t2)"></i></div>
+      <div class="grid place-items-center aspect-square rounded-xl tap" style="background:var(--surface);border:1px solid var(--hair)"><i data-lucide="wine" style="color:var(--magenta)"></i></div>
+      <div class="grid place-items-center aspect-square rounded-xl tap" style="background:var(--surface);border:1px solid var(--hair)"><i data-lucide="flame" style="color:var(--orange)"></i></div>
+    </div>
+  </section>
+
+  <!-- ═══════════════ FOOTER ═══════════════ -->
+  <footer class="text-center mt-10">
+    <div class="eyebrow">NIGHT OWL · FUTURIST NIGHTSCAPE</div>
+    <p class="sub mt-2" style="color:var(--t3)">Нэг эх сурвалж · <span class="tok">nightscape.css</span></p>
+    <a href="index.html" class="navlink sub inline-flex items-center gap-1.5 mt-3"><i data-lucide="arrow-left" class="w-3.5 h-3.5"></i>index.html руу буцах</a>
+  </footer>
+
+</div>
+
+<script>
+  lucide.createIcons();
+
+  // Password eye toggle
+  (function(){
+    var eye=document.getElementById('eye'),pw=document.getElementById('pw');
+    if(eye&&pw){eye.addEventListener('click',function(){
+      var on=pw.type==='password';pw.type=on?'text':'password';
+      eye.innerHTML='<i data-lucide="'+(on?'eye-off':'eye')+'" class="w-4 h-4"></i>';lucide.createIcons();
+    });}
+  })();
+
+  // Chips — single active
+  document.querySelectorAll('#chipset .chip').forEach(function(c){
+    c.addEventListener('click',function(){
+      document.querySelectorAll('#chipset .chip').forEach(function(x){x.classList.remove('active');});
+      c.classList.add('active');
+    });
+  });
+
+  // Segment — single active
+  document.querySelectorAll('#seg button').forEach(function(b){
+    b.addEventListener('click',function(){
+      document.querySelectorAll('#seg button').forEach(function(x){x.classList.remove('active');});
+      b.classList.add('active');
+    });
+  });
+
+  // Switches
+  document.querySelectorAll('.switch').forEach(function(s){
+    s.addEventListener('click',function(){s.classList.toggle('on');});
+  });
+
+  // Like pulse
+  var like=document.getElementById('likeBtn');
+  if(like){like.addEventListener('click',function(){like.classList.toggle('is-active');});}
+</script>
+</body></html>

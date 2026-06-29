@@ -1,0 +1,117 @@
+<!DOCTYPE html><html lang="mn"><head><meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+<title>Sign In · Night Owl</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="nightscape.css"/>
+<script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body class="ns">
+<div class="aura"></div>
+<div class="grain"></div>
+
+<div class="app">
+  <main class="min-h-screen flex flex-col px-6 pt-5 pb-8">
+
+    <!-- Top bar -->
+    <div class="flex items-center justify-between">
+      <a href="welcome.html" class="tap" aria-label="Буцах" style="display:grid;place-items:center;width:40px;height:40px;border-radius:50%;background:var(--glass);backdrop-filter:blur(20px) saturate(160%);-webkit-backdrop-filter:blur(20px) saturate(160%);border:1px solid var(--hair-2);color:var(--t1);flex:none;"><i data-lucide="chevron-left" style="width:20px;height:20px;"></i></a>
+      <span class="eyebrow">NIGHT&nbsp;OWL</span>
+      <span class="w-10 h-10"></span>
+    </div>
+
+    <!-- Hero / heading -->
+    <div class="mt-12">
+      <div class="anim-float inline-grid place-items-center w-16 h-16 rounded-[22px] glass-strong glow-cyan mb-7">
+        <i data-lucide="moon-star" class="w-7 h-7 text-[var(--cyan)] anim-breathe"></i>
+      </div>
+      <h1 class="title">The night missed you <i data-lucide="moon-star" class="anim-float inline-block align-middle w-6 h-6 text-[var(--cyan)]"></i></h1>
+      <p class="sub mt-3 max-w-[300px]">Дахин нэвтрээд party-даа эргэн нэгдээрэй</p>
+    </div>
+
+    <!-- Form -->
+    <form class="mt-9 flex flex-col gap-5" onsubmit="return false">
+
+      <!-- Email -->
+      <div class="field">
+        <label class="label" for="email">И-мэйл</label>
+        <div class="input-group">
+          <span class="lead"><i data-lucide="mail" class="w-[18px] h-[18px]"></i></span>
+          <input id="email" class="input" type="email" inputmode="email" autocomplete="email"
+                 placeholder="name@email.com"/>
+        </div>
+      </div>
+
+      <!-- Password -->
+      <div class="field">
+        <label class="label" for="password">Нууц үг</label>
+        <div class="input-group">
+          <span class="lead"><i data-lucide="lock" class="w-[18px] h-[18px]"></i></span>
+          <input id="password" class="input pr-12" type="password" autocomplete="current-password"
+                 placeholder="••••••••"/>
+          <button type="button" id="eyeBtn" class="trail tap" aria-label="Нууц үг харах">
+            <i data-lucide="eye" id="eyeIcon" class="w-[18px] h-[18px]"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Forgot -->
+      <div class="-mt-1 text-right">
+        <a href="forgot.html"
+           class="text-[13px] font-semibold text-[var(--cyan)] tap inline-block">Нууц үг мартсан уу?</a>
+      </div>
+
+      <!-- Primary -->
+      <button type="submit" class="btn btn-primary btn-block mt-1">
+        Sign In
+        <i data-lucide="arrow-right" class="w-[18px] h-[18px]"></i>
+      </button>
+    </form>
+
+    <!-- OR divider -->
+    <div class="flex items-center gap-4 my-7">
+      <span class="flex-1 h-px bg-[var(--hair)]"></span>
+      <span class="eyebrow">OR</span>
+      <span class="flex-1 h-px bg-[var(--hair)]"></span>
+    </div>
+
+    <!-- Google -->
+    <button type="button" class="btn btn-outline btn-block">
+      <svg class="w-[18px] h-[18px]" viewBox="0 0 48 48" aria-hidden="true">
+        <path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3c-1.6 4.7-6.1 8-11.3 8-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34.6 4.1 29.6 2 24 2 12 2 2 12 2 24s10 22 22 22 22-10 22-22c0-1.3-.1-2.3-.4-3.5z"/>
+        <path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34.6 4.1 29.6 2 24 2 15.7 2 8.6 6.6 6.3 14.7z"/>
+        <path fill="#4CAF50" d="M24 46c5.5 0 10.4-2.1 14.1-5.5l-6.5-5.5c-2 1.5-4.7 2.5-7.6 2.5-5.2 0-9.6-3.3-11.2-7.9l-6.6 5.1C8.5 41.3 15.7 46 24 46z"/>
+        <path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.1-4.1 5.5l6.5 5.5C40.9 36.3 46 30.8 46 24c0-1.3-.1-2.3-.4-3.5z"/>
+      </svg>
+      Continue with Google
+    </button>
+
+    <!-- spacer pushes footer down on tall screens -->
+    <div class="flex-1 min-h-6"></div>
+
+    <!-- Footer -->
+    <p class="sub text-center mt-8">
+      Шинэ хэрэглэгч үү?
+      <a href="register.html" class="font-semibold text-[var(--cyan)] tap inline-block">Бүртгүүлэх</a>
+    </p>
+
+  </main>
+</div>
+
+<script>
+  lucide.createIcons();
+
+  // Password visibility toggle
+  (function () {
+    var btn = document.getElementById('eyeBtn');
+    var input = document.getElementById('password');
+    var icon = document.getElementById('eyeIcon');
+    btn.addEventListener('click', function () {
+      var show = input.type === 'password';
+      input.type = show ? 'text' : 'password';
+      icon.setAttribute('data-lucide', show ? 'eye-off' : 'eye');
+      btn.setAttribute('aria-label', show ? 'Нууц үг нуух' : 'Нууц үг харах');
+      lucide.createIcons();
+    });
+  })();
+</script>
+</body></html>

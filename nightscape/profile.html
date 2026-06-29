@@ -1,0 +1,293 @@
+<!DOCTYPE html><html lang="mn"><head><meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+<title>Профайл · Night Owl</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="nightscape.css"/>
+<script src="https://unpkg.com/lucide@latest"></script>
+<style>
+  /* Brushed-metal sheen for the premium action buttons */
+  .brushed{position:relative;overflow:hidden}
+  .brushed::before{content:'';position:absolute;inset:0;border-radius:inherit;pointer-events:none;
+    background:linear-gradient(125deg,rgba(255,255,255,.10) 0%,rgba(255,255,255,0) 28%,
+      rgba(255,255,255,0) 70%,rgba(255,255,255,.06) 100%);
+    mix-blend-mode:screen}
+  .brushed::after{content:'';position:absolute;inset:0;border-radius:inherit;pointer-events:none;opacity:.5;
+    background:repeating-linear-gradient(115deg,rgba(255,255,255,.022) 0 2px,transparent 2px 5px)}
+  /* Photo fallback gradient wrapper */
+  .ph{background:linear-gradient(135deg,#1a1030 0%,#0a0a0e 55%,#101a1e 100%)}
+  .ph-2{background:linear-gradient(135deg,#2a0f24 0%,#0a0a0e 60%,#10141e 100%)}
+  .ph-3{background:linear-gradient(135deg,#0f2026 0%,#0a0a0e 55%,#1a1030 100%)}
+  .tile{transition:transform .25s ease,box-shadow .3s ease,border-color .3s ease}
+  .tile:active{transform:scale(.965)}
+  .tile:hover{border-color:var(--hair-2);box-shadow:0 14px 36px -18px rgba(34,231,255,.4)}
+  .tile-badge{position:absolute;top:8px;right:8px;display:grid;place-items:center;
+    width:26px;height:26px;border-radius:9px;color:#fff;
+    background:rgba(5,5,5,.5);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+    border:1px solid var(--hair-2)}
+  .verify{display:grid;place-items:center;width:20px;height:20px;border-radius:50%;
+    background:var(--grad-cyan);color:var(--void);box-shadow:var(--glow-cyan);flex:none}
+  .verify i{width:13px;height:13px}
+  .stat-num{font-size:21px;font-weight:800;letter-spacing:-.02em;color:var(--t1);line-height:1}
+  .pad-bottom{padding-bottom:118px}
+  /* constellation twinkle */
+  @keyframes twinkle{0%,100%{opacity:.35}50%{opacity:1}}
+  .tw{animation:twinkle 2.6s ease-in-out infinite}
+  .tw2{animation:twinkle 3.4s ease-in-out infinite .6s}
+  .tw3{animation:twinkle 2.2s ease-in-out infinite 1.1s}
+</style>
+</head>
+<body class="ns">
+<div class="aura"></div>
+<div class="grain"></div>
+
+<div class="app pad-bottom">
+
+  <!-- ── Top bar ── -->
+  <header class="sticky top-0 z-40 px-5 pt-5 pb-3"
+          style="background:linear-gradient(180deg,rgba(5,5,5,.85),rgba(5,5,5,.4) 70%,transparent);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)">
+    <div class="flex items-center justify-between">
+      <div>
+        <div class="eyebrow">@temka</div>
+        <h1 class="title mt-1">Профайл</h1>
+      </div>
+      <div class="flex items-center gap-2.5">
+        <a href="chat.html" class="glass tap grid place-items-center relative" aria-label="Чат" style="width:42px;height:42px;border-radius:50%;">
+          <i data-lucide="message-circle" style="width:20px;height:20px;color:var(--t1);"></i>
+          <span class="absolute" style="top:9px;right:9px;width:8px;height:8px;border-radius:50%;background:var(--lime);box-shadow:0 0 8px var(--lime);"></span>
+        </a>
+        <a href="settings.html" aria-label="Тохиргоо"
+           class="tap glass-strong grid place-items-center w-11 h-11 rounded-2xl text-[var(--t1)] hairline-2">
+          <i data-lucide="settings"></i>
+        </a>
+        <button id="shareBtn" aria-label="Хуваалцах"
+           class="tap glass-strong grid place-items-center w-11 h-11 rounded-2xl text-[var(--t1)] hairline-2">
+          <i data-lucide="share-2"></i>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="px-5">
+
+    <!-- ── Profile block ── -->
+    <section class="flex flex-col items-center text-center mt-3">
+      <div class="ring anim-breathe" style="width:108px;height:108px">
+        <img src="https://i.pravatar.cc/200?img=12" alt="Тэмүүлэн Б."/>
+      </div>
+
+      <div class="flex items-center justify-center gap-2 mt-4">
+        <h2 class="h1">Тэмүүлэн Б.</h2>
+        <span class="verify" aria-label="Баталгаажсан"><i data-lucide="check"></i></span>
+      </div>
+      <div class="sub mt-0.5 font-mono text-[var(--t2)]">@temka</div>
+
+      <p class="body mt-3 px-2 text-[var(--t2)]" style="max-width:300px">
+        Шөнийн хотыг гэрэлтүүлэгч <i data-lucide="moon" class="inline-block align-[-2px] w-[15px] h-[15px] text-[var(--cyan)]"></i> · DJ &amp; event curator. Дараагийн party хаана болохыг би мэднэ.
+      </p>
+
+      <div class="flex items-center justify-center gap-1.5 mt-3 sub text-[var(--t3)]">
+        <i data-lucide="map-pin" class="w-4 h-4 text-[var(--cyan)]"></i>
+        <span>Улаанбаатар</span>
+      </div>
+    </section>
+
+    <!-- ── Stats strip ── -->
+    <section class="glass mt-5 px-2 py-4 flex items-center">
+      <button class="tap flex-1 flex flex-col items-center gap-1">
+        <span class="stat-num">128</span>
+        <span class="label">Пост</span>
+      </button>
+      <div class="w-px h-9 bg-[var(--hair)]"></div>
+      <button class="tap flex-1 flex flex-col items-center gap-1">
+        <span class="stat-num grad-text">8.4k</span>
+        <span class="label">Дагагч</span>
+      </button>
+      <div class="w-px h-9 bg-[var(--hair)]"></div>
+      <button class="tap flex-1 flex flex-col items-center gap-1">
+        <span class="stat-num">312</span>
+        <span class="label">Дагаж буй</span>
+      </button>
+    </section>
+
+    <!-- ── Action buttons row ── -->
+    <section class="mt-4 grid grid-cols-2 gap-2.5">
+      <button class="btn btn-glass btn-sm brushed">
+        <i data-lucide="pencil" class="w-4 h-4"></i> Edit Profile
+      </button>
+      <button class="btn btn-outline btn-sm brushed">
+        <i data-lucide="store" class="w-4 h-4 text-[var(--cyan)]"></i> Бизнес самбар
+      </button>
+      <button class="btn btn-outline btn-sm brushed col-span-2">
+        <i data-lucide="shield-check" class="w-4 h-4 text-[var(--lime)]"></i> Админ панел
+      </button>
+    </section>
+
+    <!-- ── Segmented control ── -->
+    <section class="mt-6 flex justify-center">
+      <div class="segment" id="seg" style="width:100%;justify-content:space-between">
+        <button class="active flex-1 flex items-center justify-center gap-1.5" data-tab="posts">
+          <i data-lucide="layout-grid" class="w-4 h-4"></i> Постууд
+        </button>
+        <button class="flex-1 flex items-center justify-center gap-1.5" data-tab="saved">
+          <i data-lucide="bookmark" class="w-4 h-4"></i> Хадгалсан
+        </button>
+        <button class="flex-1 flex items-center justify-center gap-1.5" data-tab="tagged">
+          <i data-lucide="tag" class="w-4 h-4"></i> Таглагдсан
+        </button>
+      </div>
+    </section>
+
+    <!-- ── Posts grid (Постууд / Хадгалсан) ── -->
+    <section id="panel-grid" class="mt-4 grid grid-cols-3 gap-1.5">
+      <div class="tile ph relative rounded-2xl overflow-hidden hairline aspect-square">
+        <img src="https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=800&q=80&auto=format&fit=crop" alt="" class="w-full h-full object-cover" loading="lazy"/>
+        <span class="tile-badge"><i data-lucide="layers" class="w-3.5 h-3.5"></i></span>
+      </div>
+      <div class="tile ph-2 relative rounded-2xl overflow-hidden hairline aspect-square">
+        <img src="https://images.unsplash.com/photo-1571266028243-e4733b0f0bb0?w=800&q=80&auto=format&fit=crop" alt="" class="w-full h-full object-cover" loading="lazy"/>
+      </div>
+      <div class="tile ph-3 relative rounded-2xl overflow-hidden hairline aspect-square">
+        <img src="https://images.unsplash.com/photo-1493676304819-0d7a8d026dcf?w=800&q=80&auto=format&fit=crop" alt="" class="w-full h-full object-cover" loading="lazy"/>
+        <span class="tile-badge" style="color:var(--cyan)"><i data-lucide="video" class="w-3.5 h-3.5"></i></span>
+      </div>
+      <div class="tile ph-2 relative rounded-2xl overflow-hidden hairline aspect-square">
+        <img src="https://images.unsplash.com/photo-1545128485-c400e7702796?w=800&q=80&auto=format&fit=crop" alt="" class="w-full h-full object-cover" loading="lazy"/>
+      </div>
+      <div class="tile ph-3 relative rounded-2xl overflow-hidden hairline aspect-square">
+        <img src="https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=800&q=80&auto=format&fit=crop" alt="" class="w-full h-full object-cover" loading="lazy"/>
+        <span class="tile-badge"><i data-lucide="layers" class="w-3.5 h-3.5"></i></span>
+      </div>
+      <div class="tile ph relative rounded-2xl overflow-hidden hairline aspect-square">
+        <img src="https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=800&q=80&auto=format&fit=crop" alt="" class="w-full h-full object-cover" loading="lazy"/>
+      </div>
+      <div class="tile ph-3 relative rounded-2xl overflow-hidden hairline aspect-square">
+        <img src="https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=800&q=80&auto=format&fit=crop" alt="" class="w-full h-full object-cover" loading="lazy"/>
+        <span class="tile-badge" style="color:var(--cyan)"><i data-lucide="video" class="w-3.5 h-3.5"></i></span>
+      </div>
+      <div class="tile ph-2 relative rounded-2xl overflow-hidden hairline aspect-square">
+        <img src="https://images.unsplash.com/photo-1533174072545-7a4b6ad7a6c3?w=800&q=80&auto=format&fit=crop" alt="" class="w-full h-full object-cover" loading="lazy"/>
+      </div>
+      <div class="tile ph relative rounded-2xl overflow-hidden hairline aspect-square">
+        <img src="https://images.unsplash.com/photo-1574391884720-bbc3740c59d1?w=800&q=80&auto=format&fit=crop" alt="" class="w-full h-full object-cover" loading="lazy"/>
+      </div>
+    </section>
+
+    <!-- ── Empty state (Таглагдсан) ── -->
+    <section id="panel-empty" class="hidden mt-6">
+      <div class="card card-hover px-6 py-9 flex flex-col items-center text-center">
+        <!-- Artistic constellation / glowing owl orbit -->
+        <div class="anim-float" style="filter:drop-shadow(0 0 24px rgba(34,231,255,.35))">
+          <svg width="128" height="128" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="og" x1="0" y1="0" x2="128" y2="128" gradientUnits="userSpaceOnUse">
+                <stop stop-color="#22e7ff"/><stop offset=".55" stop-color="#7c3aed"/>
+                <stop offset="1" stop-color="#e935c8"/>
+              </linearGradient>
+              <radialGradient id="glow" cx="50%" cy="50%" r="50%">
+                <stop stop-color="#22e7ff" stop-opacity=".25"/>
+                <stop offset="1" stop-color="#22e7ff" stop-opacity="0"/>
+              </radialGradient>
+            </defs>
+            <circle cx="64" cy="64" r="60" fill="url(#glow)"/>
+            <!-- orbit -->
+            <ellipse cx="64" cy="64" rx="52" ry="22" stroke="url(#og)" stroke-width="1" opacity=".4"
+              transform="rotate(-22 64 64)"/>
+            <ellipse cx="64" cy="64" rx="22" ry="52" stroke="url(#og)" stroke-width="1" opacity=".25"
+              transform="rotate(-22 64 64)"/>
+            <!-- owl outline -->
+            <path d="M64 30c-15 0-26 11-26 27 0 16 12 31 26 31s26-15 26-31c0-16-11-27-26-27Z"
+              stroke="url(#og)" stroke-width="2.4" fill="none" stroke-linejoin="round"/>
+            <!-- ear tufts -->
+            <path d="M46 36c-4-7-3-12-3-12 5 1 9 5 11 10" stroke="url(#og)" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+            <path d="M82 36c4-7 3-12 3-12-5 1-9 5-11 10" stroke="url(#og)" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+            <!-- eyes -->
+            <circle cx="54" cy="56" r="8.5" stroke="url(#og)" stroke-width="2.2" fill="none"/>
+            <circle cx="74" cy="56" r="8.5" stroke="url(#og)" stroke-width="2.2" fill="none"/>
+            <circle cx="54" cy="56" r="2.6" fill="#22e7ff"/>
+            <circle cx="74" cy="56" r="2.6" fill="#e935c8"/>
+            <!-- beak -->
+            <path d="M64 62l-4 6h8l-4-6Z" fill="url(#og)"/>
+            <!-- constellation stars -->
+            <circle class="tw"  cx="20" cy="24" r="1.8" fill="#22e7ff"/>
+            <circle class="tw2" cx="108" cy="34" r="1.6" fill="#e935c8"/>
+            <circle class="tw3" cx="104" cy="96" r="2" fill="#b4ff2e"/>
+            <circle class="tw"  cx="24" cy="100" r="1.6" fill="#7c3aed"/>
+            <circle class="tw2" cx="98" cy="18" r="1.2" fill="#ffffff"/>
+            <circle class="tw3" cx="14" cy="62" r="1.2" fill="#ffffff"/>
+          </svg>
+        </div>
+
+        <h3 class="h2 mt-4">Одоохондоо хоосон</h3>
+        <p class="sub mt-2" style="max-width:240px">Эхний шөнийн мөчөө хуваалцаарай</p>
+        <button class="btn btn-primary btn-sm mt-5 px-6" id="addPostBtn">
+          <i data-lucide="plus" class="w-4 h-4"></i> Пост нэмэх
+        </button>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<!-- ── Toast ── -->
+<div id="toast" class="fixed left-1/2 -translate-x-1/2 z-[120] opacity-0 pointer-events-none transition-all duration-300"
+     style="bottom:96px;width:calc(100% - 40px);max-width:400px">
+  <div class="toast">
+    <span class="ic" style="background:var(--cyan-soft);color:var(--cyan)"><i data-lucide="link" class="w-4 h-4"></i></span>
+    <div class="flex-1">
+      <div class="h3">Холбоос хуулагдлаа</div>
+      <div class="sub">Профайлаа найзууддаа илгээ</div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Floating nav ── -->
+<nav class="nav-float">
+    <a href="feed.html" class="nav-item"><i data-lucide="home" style="width:23px;height:23px;"></i><span>Feed</span></a>
+    <a href="explore.html" class="nav-item"><i data-lucide="compass" style="width:23px;height:23px;"></i><span>Explore</span></a>
+    <button class="nav-fab tap" aria-label="Шинэ нийтлэл"><i data-lucide="plus" style="width:26px;height:26px;"></i></button>
+    <a href="discovery.html" class="nav-item"><i data-lucide="clapperboard" style="width:23px;height:23px;"></i><span>Discovery</span></a>
+    <a href="profile.html" class="nav-item active"><i data-lucide="user" style="width:23px;height:23px;"></i><span>Profile</span></a>
+  </nav>
+
+<script>
+lucide.createIcons();
+
+/* Segmented control → panel switching */
+const seg = document.getElementById('seg');
+const panelGrid  = document.getElementById('panel-grid');
+const panelEmpty = document.getElementById('panel-empty');
+seg.querySelectorAll('button').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    seg.querySelectorAll('button').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    const tab = btn.dataset.tab;
+    if(tab==='tagged'){
+      panelGrid.classList.add('hidden');
+      panelEmpty.classList.remove('hidden');
+    }else{
+      panelEmpty.classList.add('hidden');
+      panelGrid.classList.remove('hidden');
+    }
+  });
+});
+
+/* Share → toast */
+const toast = document.getElementById('toast');
+let toastTimer;
+document.getElementById('shareBtn').addEventListener('click',()=>{
+  toast.style.opacity = '1';
+  toast.style.transform = 'translateX(-50%) translateY(-6px)';
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>{
+    toast.style.opacity = '0';
+    toast.style.transform = 'translateX(-50%) translateY(0)';
+  }, 2200);
+});
+
+/* Empty-state CTA jumps focus to nav FAB feel */
+document.getElementById('addPostBtn').addEventListener('click',e=>{
+  e.currentTarget.classList.add('anim-pop');
+  setTimeout(()=>e.currentTarget.classList.remove('anim-pop'),400);
+});
+</script>
+</body></html>

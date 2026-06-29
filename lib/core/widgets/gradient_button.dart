@@ -7,6 +7,7 @@ class GradientButton extends StatelessWidget {
   final String label;
   final VoidCallback? onPressed;
   final Widget? icon;
+  final Widget? trailing;
   final double height;
   final double borderRadius;
 
@@ -15,6 +16,7 @@ class GradientButton extends StatelessWidget {
     required this.label,
     this.onPressed,
     this.icon,
+    this.trailing,
     this.height = 52,
     this.borderRadius = 14,
   });
@@ -62,6 +64,7 @@ class GradientButton extends StatelessWidget {
             children: [
               if (icon != null) ...[icon!, const SizedBox(width: 8)],
               Text(label, style: AppTextStyles.btn),
+              if (trailing != null) ...[const SizedBox(width: 8), trailing!],
             ],
           ),
         ),

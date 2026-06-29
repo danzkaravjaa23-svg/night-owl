@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="mn">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Night Owl · Шинэ дизайн (Liquid Chrome Disco)</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap&subset=cyrillic,latin" rel="stylesheet"/>
+<style>
+  :root{
+    --bg-base:#050507; --bg-elev:#101015; --bg-surface:#1A1A21;
+    --hairline:rgba(255,255,255,.12); --hairline2:rgba(255,255,255,.20);
+    --tx1:#F5F6FA; --tx2:#B6BAC6; --tx3:#7A7E8C; --mono:#C2C6D2;
+    --silver:#D8DCE6; --silver-dk:#8A8E9C; --steel:#5A5E6C;
+    --accent:#7E84A0;
+    --chrome:linear-gradient(135deg,#fff 0%,#D8DCE6 35%,#5A5E6C 70%,#D8DCE6 100%);
+    --accent-grad:linear-gradient(135deg,#9DA3BC 0%,#5E6379 55%,#868CA6 100%);
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  body{
+    font-family:'Inter',sans-serif;background:#0b0b10;color:var(--tx1);
+    min-height:100vh;display:flex;flex-direction:column;align-items:center;
+    padding:28px 16px 60px;gap:20px;
+    background-image:radial-gradient(60% 50% at 30% 0%,rgba(126,132,160,.12),transparent);
+  }
+  .head{text-align:center}
+  .head h1{font-size:20px;font-weight:800;letter-spacing:-.4px}
+  .head h1 .chrome{
+    background:var(--chrome);-webkit-background-clip:text;background-clip:text;
+    -webkit-text-fill-color:transparent;font-style:italic;
+  }
+  .head p{font-size:12px;color:var(--tx3);margin-top:4px;
+    font-family:'JetBrains Mono';letter-spacing:1px}
+  /* segmented control */
+  .tabs{display:flex;gap:6px;padding:5px;background:var(--bg-surface);
+    border:1px solid var(--hairline);border-radius:14px}
+  .tabs button{
+    font-family:inherit;font-size:13px;font-weight:600;color:var(--tx2);
+    background:transparent;border:0;padding:8px 14px;border-radius:10px;cursor:pointer;
+    transition:.18s}
+  .tabs button.active{color:#fff;background:var(--bg-elev);
+    box-shadow:0 1px 0 rgba(255,255,255,.06) inset,0 2px 8px rgba(0,0,0,.4)}
+  /* phone */
+  .phone{
+    width:390px;max-width:94vw;height:800px;max-height:80vh;border-radius:46px;
+    background:var(--bg-base);position:relative;overflow:hidden;
+    border:1px solid var(--hairline2);
+    box-shadow:0 0 0 10px #0a0a0e,0 30px 80px -20px rgba(0,0,0,.9),
+      0 0 60px -10px rgba(126,132,160,.18);
+  }
+  .notch{position:absolute;top:12px;left:50%;transform:translateX(-50%);
+    width:120px;height:26px;background:#000;border-radius:16px;z-index:50}
+  .screen{position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;
+    display:none;flex-direction:column}
+  .screen.active{display:flex}
+  #feed>*{flex-shrink:0}
+  .screen::-webkit-scrollbar{width:0}
+  .status{display:flex;justify-content:space-between;align-items:center;
+    padding:14px 24px 4px;font-size:13px;font-weight:600;color:var(--tx1);
+    flex-shrink:0}
+  .status .right{display:flex;gap:6px;align-items:center;font-size:12px}
+
+  /* ── shared bits ── */
+  .owl-circle{display:flex;align-items:center;justify-content:center;border-radius:50%;
+    background:var(--accent-grad)}
+  .chrome-text{background:var(--chrome);-webkit-background-clip:text;background-clip:text;
+    -webkit-text-fill-color:transparent;font-weight:800;letter-spacing:-.3px}
+  .gbtn{display:flex;align-items:center;justify-content:center;height:52px;border-radius:14px;
+    background:var(--accent-grad);color:#fff;font-weight:700;font-size:15px;
+    box-shadow:0 8px 22px -6px rgba(126,132,160,.5);border:0;cursor:pointer}
+  .obtn{display:flex;align-items:center;justify-content:center;gap:10px;height:52px;
+    border-radius:14px;background:var(--bg-surface);border:1px solid var(--hairline2);
+    color:var(--tx1);font-weight:600;font-size:15px;cursor:pointer}
+
+  /* ── SPLASH ── */
+  #splash{align-items:center;justify-content:center;
+    background:radial-gradient(80% 60% at 50% 35%,rgba(126,132,160,.10),#000 70%)}
+  .sparkles{position:absolute;inset:0;pointer-events:none}
+  .spark{position:absolute;width:2px;height:2px;border-radius:50%;background:#fff;opacity:.3}
+  .medallion{width:180px;height:180px;border-radius:50%;display:flex;align-items:center;
+    justify-content:center;font-size:92px;
+    background:radial-gradient(circle at 38% 32%,#E8E8F0 0%,#9A9AA8 55%,#3A3A44 100%);
+    box-shadow:0 0 60px 8px rgba(255,255,255,.18),0 0 90px 4px rgba(126,132,160,.25);
+    animation:breathe 1.6s ease-in-out infinite}
+  @keyframes breathe{0%,100%{box-shadow:0 0 50px 6px rgba(255,255,255,.12),0 0 80px rgba(126,132,160,.2)}
+    50%{box-shadow:0 0 74px 12px rgba(255,255,255,.22),0 0 95px rgba(126,132,160,.3)}}
+  .splash-title{font-size:38px;margin-top:28px}
+  .splash-sub{font-family:'JetBrains Mono';font-size:10px;letter-spacing:2.5px;
+    color:#B8B8C0;margin-top:8px}
+  .splash-foot{position:absolute;bottom:60px;text-align:center;width:100%}
+  .loading{display:flex;align-items:center;justify-content:center;gap:10px;
+    font-size:13px;font-weight:600;color:#cfcfd8}
+  .spinner{width:14px;height:14px;border:2px solid rgba(255,255,255,.25);
+    border-top-color:#fff;border-radius:50%;animation:spin .8s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .copy{font-size:11px;color:#6E6E78;margin-top:16px;letter-spacing:.5px}
+
+  /* ── LANDING ── */
+  #landing{background:
+    radial-gradient(40% 30% at 20% 18%,rgba(255,77,141,.18),transparent),
+    radial-gradient(45% 35% at 85% 30%,rgba(123,47,247,.18),transparent),
+    radial-gradient(50% 40% at 60% 85%,rgba(126,132,160,.18),transparent),var(--bg-base)}
+  .land-top{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;
+    padding-bottom:10px}
+  .owl-mark{width:120px;height:120px;border-radius:36px;display:flex;align-items:center;
+    justify-content:center;font-size:62px;
+    background:radial-gradient(circle at 40% 32%,#E8E8F0,#9A9AA8 60%,#3A3A44);
+    box-shadow:0 0 50px rgba(126,132,160,.4),inset 0 2px 8px rgba(255,255,255,.4)}
+  .land-title{font-size:34px;font-weight:800;letter-spacing:-.7px;margin-top:24px}
+  .land-title em{font-style:italic;background:var(--chrome);-webkit-background-clip:text;
+    background-clip:text;-webkit-text-fill-color:transparent}
+  .land-sub{font-size:14px;color:var(--tx2);margin-top:12px}
+  .land-bottom{padding:0 32px 40px;display:flex;flex-direction:column;gap:12px}
+  .or{display:flex;align-items:center;gap:16px;margin:8px 0;color:var(--tx3)}
+  .or::before,.or::after{content:'';flex:1;height:1px;background:var(--hairline)}
+  .or span{font-family:'JetBrains Mono';font-size:9px;letter-spacing:1.4px;color:var(--tx3)}
+  .gicon{width:22px;height:22px;border-radius:4px;background:#fff;color:#4285F4;
+    font-weight:800;font-size:13px;display:flex;align-items:center;justify-content:center}
+
+  /* ── FEED ── */
+  .feed-top{display:flex;align-items:center;gap:10px;padding:8px 16px 12px 20px;flex-shrink:0}
+  .feed-top .logo{width:36px;height:36px;font-size:18px}
+  .feed-top .titles{display:flex;flex-direction:column;line-height:1.15}
+  .feed-top .titles .name{font-size:20px}
+  .feed-top .titles .tag{font-family:'JetBrains Mono';font-size:9px;color:var(--tx3);margin-top:1px}
+  .feed-top .acts{margin-left:auto;display:flex;gap:14px;align-items:center;color:var(--tx1)}
+  .icn{width:24px;height:24px;display:inline-flex;align-items:center;justify-content:center}
+  .bell{position:relative}
+  .badge{position:absolute;top:-3px;right:-4px;background:var(--accent);color:#fff;
+    font-size:9px;font-weight:800;padding:0 4px;border-radius:8px;border:1.5px solid var(--bg-base)}
+
+  .stories{display:flex;gap:14px;padding:6px 16px 14px;overflow-x:auto}
+  .stories::-webkit-scrollbar{height:0}
+  .story{flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:6px;width:64px}
+  .ring{width:60px;height:60px;border-radius:50%;padding:2.5px;background:var(--chrome);
+    display:flex}
+  .ring.live{background:linear-gradient(135deg,#FF416C,#FF4B2B)}
+  .ring>div{flex:1;border-radius:50%;background:var(--bg-surface);display:flex;
+    align-items:center;justify-content:center;font-size:22px;font-weight:800;
+    border:2px solid var(--bg-base);color:var(--silver)}
+  .story .nm{font-size:10px;color:var(--tx2);max-width:64px;overflow:hidden;
+    text-overflow:ellipsis;white-space:nowrap}
+  .live-tag{font-size:8px;font-weight:800;color:#fff;background:linear-gradient(135deg,#FF416C,#FF4B2B);
+    padding:1px 5px;border-radius:6px;letter-spacing:.5px}
+
+  .events-rail{display:flex;gap:10px;padding:4px 16px 14px;overflow-x:auto;
+    border-top:1px solid var(--hairline)}
+  .events-rail::-webkit-scrollbar{height:0}
+  .erow{display:flex;gap:8px;align-items:center}
+  .echip{flex-shrink:0;display:flex;gap:10px;align-items:center;background:var(--bg-elev);
+    border:1px solid var(--hairline);border-radius:14px;padding:8px 12px 8px 8px}
+  .echip .date{width:40px;height:40px;border-radius:10px;background:var(--accent-grad);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;line-height:1}
+  .echip .date b{font-size:16px;font-weight:800}
+  .echip .date span{font-size:8px;letter-spacing:1px;opacity:.85}
+  .echip .ev b{font-size:13px;font-weight:700;display:block}
+  .echip .ev span{font-size:11px;color:var(--tx3)}
+
+  .post{border-bottom:1px solid var(--hairline)}
+  .post .ph{display:flex;align-items:center;gap:10px;padding:12px 16px 10px}
+  .av{width:38px;height:38px;border-radius:50%;padding:2px;background:var(--chrome);display:flex}
+  .av>div{flex:1;border-radius:50%;background:var(--bg-surface);border:2px solid var(--bg-base);
+    display:flex;align-items:center;justify-content:center;font-weight:800;color:var(--silver);font-size:15px}
+  .post .ph .meta{display:flex;flex-direction:column;line-height:1.25}
+  .post .ph .meta .u{font-size:12px;font-weight:600;letter-spacing:.2px}
+  .post .ph .meta .v{font-size:11px;color:var(--tx2);display:flex;align-items:center;gap:2px}
+  .post .ph .t{margin-left:auto;font-size:11px;color:var(--tx3)}
+  .post .ph .more{color:var(--tx3);font-size:20px;letter-spacing:1px}
+  .media{height:360px;background:
+    repeating-linear-gradient(135deg,#1a1a21 0 14px,#15151b 14px 28px);
+    display:flex;align-items:center;justify-content:center;position:relative}
+  .media .ph-emoji{font-size:54px;opacity:.5}
+  .media .tone{position:absolute;inset:0;background:
+    radial-gradient(60% 50% at 70% 20%,rgba(126,132,160,.25),transparent),
+    radial-gradient(50% 40% at 20% 90%,rgba(255,77,141,.12),transparent)}
+  .actions{display:flex;align-items:center;gap:16px;padding:12px 16px 4px;color:var(--tx2)}
+  .actions .a{display:flex;align-items:center;gap:5px;font-size:12px;font-weight:600}
+  .actions .a.liked{color:var(--accent)}
+  .actions .sp{margin-left:auto}
+  .cap{padding:4px 16px 0;font-size:14px;line-height:1.4}
+  .cap b{font-weight:700}
+  .vc{padding:6px 16px 16px;font-size:11px;color:var(--tx3)}
+  .feed-pad{height:90px;flex-shrink:0}
+
+  /* bottom nav */
+  .nav{position:absolute;left:16px;right:16px;bottom:14px;height:64px;z-index:40;
+    background:rgba(18,18,18,.7);backdrop-filter:blur(15px);-webkit-backdrop-filter:blur(15px);
+    border:1px solid rgba(255,255,255,.10);border-radius:24px;display:flex;align-items:center;
+    box-shadow:0 8px 24px rgba(0,0,0,.45)}
+  .nav .ni{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;
+    color:#8A8A95;font-size:10px}
+  .nav .ni.on{color:var(--silver)}
+  .nav .ni.on .ic{filter:drop-shadow(0 0 10px rgba(255,255,255,.5))}
+  .nav .ic{font-size:22px;line-height:1}
+  .nav .plus{flex:1;display:flex;justify-content:center}
+  .nav .plus div{width:44px;height:44px;border-radius:14px;background:var(--accent-grad);
+    display:flex;align-items:center;justify-content:center;font-size:24px;color:#fff;
+    box-shadow:0 4px 12px rgba(126,132,160,.5)}
+  svg{display:block}
+</style>
+</head>
+<body>
+  <div class="head">
+    <h1>Night <span class="chrome">Owl</span> — шинэ дизайн</h1>
+    <p>LIQUID CHROME DISCO · FLUTTER UI</p>
+  </div>
+
+  <div class="tabs">
+    <button data-s="splash" class="active">Splash</button>
+    <button data-s="landing">Landing</button>
+    <button data-s="feed">Feed</button>
+  </div>
+
+  <div class="phone">
+    <div class="notch"></div>
+
+    <!-- SPLASH -->
+    <div class="screen active" id="splash">
+      <div class="sparkles" id="sparkles"></div>
+      <div class="medallion">🦉</div>
+      <div class="splash-title chrome-text">Night Owl</div>
+      <div class="splash-sub">UB · ШӨНИЙН НИЙГЭМ</div>
+      <div class="splash-foot">
+        <div class="loading"><div class="spinner"></div>Ачааллаж байна…</div>
+        <div class="copy">© 2025 Night Owl UB</div>
+      </div>
+    </div>
+
+    <!-- LANDING -->
+    <div class="screen" id="landing">
+      <div class="status"><span>9:41</span><span class="right">●●●● ▮</span></div>
+      <div class="land-top">
+        <div class="owl-mark">🦉</div>
+        <div class="land-title">The <em>Night</em> Begins</div>
+        <div class="land-sub">UB-гийн шөнийн амьдрал · нэг tap-аар</div>
+      </div>
+      <div class="land-bottom">
+        <button class="gbtn">Sign In</button>
+        <button class="obtn">Create Account</button>
+        <div class="or"><span>OR</span></div>
+        <button class="obtn"><span class="gicon">G</span>Continue with Google</button>
+      </div>
+    </div>
+
+    <!-- FEED -->
+    <div class="screen" id="feed">
+      <div class="status"><span>9:41</span><span class="right">●●●● ▮</span></div>
+      <div class="feed-top">
+        <div class="owl-circle logo">🦉</div>
+        <div class="titles">
+          <span class="name"><span class="chrome-text">Night Owl</span></span>
+          <span class="tag">UB · ШӨНӨ ХЭЗЭЭ Ч ЗОГСОХГҮЙ</span>
+        </div>
+        <div class="acts">
+          <span class="icn">🔍</span>
+          <span class="icn bell">🔔<span class="badge">3</span></span>
+          <span class="icn">➤</span>
+        </div>
+      </div>
+
+      <!-- live + stories -->
+      <div class="stories">
+        <div class="story"><div class="ring live"><div>Н</div></div><span class="live-tag">LIVE</span></div>
+        <div class="story"><div class="ring"><div>Б</div></div><span class="nm">bayar.dj</span></div>
+        <div class="story"><div class="ring"><div>О</div></div><span class="nm">odgerel</span></div>
+        <div class="story"><div class="ring"><div>С</div></div><span class="nm">solongo</span></div>
+        <div class="story"><div class="ring"><div>Т</div></div><span class="nm">temka</span></div>
+        <div class="story"><div class="ring"><div>Э</div></div><span class="nm">enkhjin</span></div>
+      </div>
+
+      <!-- events rail -->
+      <div class="events-rail">
+        <div class="echip">
+          <div class="date"><b>29</b><span>VI</span></div>
+          <div class="ev"><b>Vertigo дээр джаз</b><span>Vertigo Rooftop · 22:00</span></div>
+        </div>
+        <div class="echip">
+          <div class="date"><b>30</b><span>VI</span></div>
+          <div class="ev"><b>Techno Night</b><span>Oasis Club · 23:00</span></div>
+        </div>
+      </div>
+
+      <!-- post -->
+      <div class="post">
+        <div class="ph">
+          <div class="av"><div>Н</div></div>
+          <div class="meta">
+            <span class="u">nara.ulaan</span>
+            <span class="v">📍 Vertigo Rooftop</span>
+          </div>
+          <span class="t">2ц</span>
+          <span class="more">⋯</span>
+        </div>
+        <div class="media"><div class="tone"></div><span class="ph-emoji">📸</span></div>
+        <div class="actions">
+          <span class="a liked">♥ 1,284</span>
+          <span class="a">💬 42</span>
+          <span class="sp"></span>
+          <span class="a">➤</span>
+          <span class="a">🔖</span>
+        </div>
+        <div class="cap"><b>nara.ulaan</b> Өнөөдрийн шөнө Vertigo дээр гялалзаж байна ✨🌃</div>
+        <div class="vc">View comments</div>
+      </div>
+
+      <div class="post">
+        <div class="ph">
+          <div class="av"><div>Б</div></div>
+          <div class="meta">
+            <span class="u">bayar.dj</span>
+            <span class="v">📍 Oasis Club</span>
+          </div>
+          <span class="t">5ц</span>
+          <span class="more">⋯</span>
+        </div>
+        <div class="media"><div class="tone"></div><span class="ph-emoji">🎧</span></div>
+        <div class="actions">
+          <span class="a">♡ 906</span>
+          <span class="a">💬 18</span>
+          <span class="sp"></span>
+          <span class="a">➤</span>
+          <span class="a">🔖</span>
+        </div>
+        <div class="cap"><b>bayar.dj</b> Шинэ сет бэлэн. Шөнө уулзъя 🔊</div>
+        <div class="vc">View comments</div>
+      </div>
+
+      <div class="feed-pad"></div>
+    </div>
+
+    <!-- bottom nav (shared, shown on landing+feed) -->
+    <div class="nav" id="nav" style="display:none">
+      <div class="ni on"><span class="ic">🏠</span>Feed</div>
+      <div class="ni"><span class="ic">🗺️</span>Map</div>
+      <div class="plus"><div>＋</div></div>
+      <div class="ni"><span class="ic">🧭</span>Discovery</div>
+      <div class="ni"><span class="ic">👤</span>Profile</div>
+    </div>
+  </div>
+
+<script>
+  // sparkles
+  const sp=document.getElementById('sparkles');
+  for(let i=0;i<70;i++){const d=document.createElement('div');d.className='spark';
+    d.style.left=(i*137.5%100)+'%';d.style.top=(i*97.3%100)+'%';
+    if(i%5===0){d.style.width=d.style.height='3px';d.style.opacity=.55}
+    sp.appendChild(d);}
+  // tab switch
+  const nav=document.getElementById('nav');
+  document.querySelectorAll('.tabs button').forEach(b=>{
+    b.onclick=()=>{
+      document.querySelectorAll('.tabs button').forEach(x=>x.classList.remove('active'));
+      document.querySelectorAll('.screen').forEach(x=>x.classList.remove('active'));
+      b.classList.add('active');
+      document.getElementById(b.dataset.s).classList.add('active');
+      nav.style.display=(b.dataset.s==='feed')?'flex':'none';
+    };
+  });
+</script>
+</body>
+</html>

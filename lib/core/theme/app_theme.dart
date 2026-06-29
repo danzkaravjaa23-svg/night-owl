@@ -52,7 +52,7 @@ class AppTheme {
       ),
       bottomNavigationBarTheme: BottomNavigationBarThemeData(
         backgroundColor: elevated,
-        selectedItemColor: AppColors.accentStart,
+        selectedItemColor: AppColors.neonCyan,
         unselectedItemColor: textSec,
         type: BottomNavigationBarType.fixed,
         elevation: 0,
@@ -78,7 +78,7 @@ class AppTheme {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: AppColors.accentStart, width: 1.5),
+          borderSide: const BorderSide(color: AppColors.neonCyan, width: 1.5),
         ),
         hintStyle: TextStyle(color: textSec, fontSize: 14),
         labelStyle: TextStyle(color: textSec, fontSize: 14),

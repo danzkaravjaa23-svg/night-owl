@@ -146,15 +146,36 @@ class _FeedTopBar extends ConsumerWidget {
       child: Row(children: [
         Row(children: [
           Container(
-            width: 36, height: 36,
+            width: 42, height: 42,
+            padding: const EdgeInsets.all(1.6),
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              gradient: AppColors.accentGradient,
+              gradient: AppColors.chromeGradient, // neon cyan ring
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.neonCyan.withValues(alpha: 0.35),
+                  blurRadius: 14, spreadRadius: -2),
+                BoxShadow(
+                  color: AppColors.accentStart.withValues(alpha: 0.22),
+                  blurRadius: 18, spreadRadius: -5, offset: const Offset(0, 2)),
+              ],
             ),
-            child: const Center(
-                child: Text('🦉', style: TextStyle(fontSize: 18))),
+            child: ClipOval(
+              child: Image.asset(
+                'assets/images/owl_logo.png',
+                width: 42, height: 42,
+                fit: BoxFit.cover,
+                alignment: const Alignment(0, -0.35),
+                errorBuilder: (_, __, ___) => Container(
+                  color: AppColors.bgSurface,
+                  child: const Center(
+                    child: Icon(Icons.nightlight_round,
+                        color: AppColors.neonCyan, size: 18)),
+                ),
+              ),
+            ),
           ),
-          const SizedBox(width: 10),
+          const SizedBox(width: 11),
           Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             NightOwlLogoText(fontSize: 20),
             Text('UB · ШӨНӨ ХЭЗЭЭ Ч ЗОГСОХГҮЙ',
@@ -276,11 +297,26 @@ class _PostCardState extends ConsumerState<_PostCard>
     if (_hidden) return const SizedBox.shrink();
 
     return Container(
-      padding: const EdgeInsets.fromLTRB(0, 0, 0, 4),
+      margin: const EdgeInsets.fromLTRB(12, 3, 12, 13),
+      padding: const EdgeInsets.fromLTRB(0, 4, 0, 6),
       decoration: BoxDecoration(
-        border: widget.isLast
-            ? null
-            : const Border(bottom: BorderSide(color: AppColors.hairline)),
+        color: AppColors.bgSurface.withValues(alpha: 0.92),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: AppColors.hairline2, width: 1),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.55),
+            blurRadius: 28,
+            spreadRadius: -2,
+            offset: const Offset(0, 12),
+          ),
+          BoxShadow(
+            color: AppColors.accentStart.withValues(alpha: 0.06),
+            blurRadius: 24,
+            spreadRadius: -6,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         // ── Author row ──
@@ -343,8 +379,23 @@ class _PostCardState extends ConsumerState<_PostCard>
           ]),
         ),
 
+        // ── Caption (text-first layout) ──
+        if (widget.post.caption?.isNotEmpty == true)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+            child: Text(
+              widget.post.caption!,
+              style: AppTextStyles.bodyMd.copyWith(
+                  color: AppColors.textSecondary, height: 1.45),
+            ),
+          ),
+
         // ── Media with double-tap ──
-        GestureDetector(
+        Padding(
+          padding: const EdgeInsets.fromLTRB(10, 0, 10, 2),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(18),
+            child: GestureDetector(
           onDoubleTap: _doubleTapLike,
           onTap: () => context.push('/post/${widget.post.id}'),
           child: Stack(children: [
@@ -386,7 +437,7 @@ class _PostCardState extends ConsumerState<_PostCard>
                 ),
               ),
           ]),
-        ),
+        ))),
 
         // ── Actions ──
         Padding(
@@ -441,20 +492,6 @@ class _PostCardState extends ConsumerState<_PostCard>
             ),
           ]),
         ),
-
-        // ── Caption ──
-        if (widget.post.caption?.isNotEmpty == true)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
-            child: RichText(
-              text: TextSpan(style: AppTextStyles.bodyMd, children: [
-                TextSpan(
-                  text: '${author?.username ?? ''} ',
-                  style: const TextStyle(fontWeight: FontWeight.w700)),
-                TextSpan(text: widget.post.caption),
-              ]),
-            ),
-          ),
 
         // ── View comments ──
         Padding(

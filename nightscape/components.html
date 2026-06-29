@@ -1,0 +1,534 @@
+<!DOCTYPE html><html lang="mn"><head><meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+<title>Components & States · Night Owl</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="nightscape.css"/>
+<script src="https://unpkg.com/lucide@latest"></script>
+<style>
+  .sec-pad{padding:18px}
+  .kit-label{display:flex;align-items:center;gap:8px;margin-bottom:14px}
+  .kit-num{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--cyan);
+    border:1px solid rgba(34,231,255,.3);border-radius:6px;padding:2px 6px;background:var(--cyan-soft)}
+  .swatch{height:54px;border-radius:14px;border:1px solid var(--hair);position:relative;overflow:hidden}
+  .swatch span{position:absolute;left:8px;bottom:6px;font-family:'JetBrains Mono',monospace;
+    font-size:9px;color:rgba(255,255,255,.9);letter-spacing:.04em;text-shadow:0 1px 4px rgba(0,0,0,.7)}
+  /* overlay transitions */
+  .ovl{opacity:0;visibility:hidden;transition:opacity .26s ease,visibility .26s}
+  .ovl.show{opacity:1;visibility:visible}
+  .dialog-wrap{transform:scale(.9) translateY(8px);transition:transform .3s cubic-bezier(.34,1.56,.64,1)}
+  .ovl.show .dialog-wrap{transform:scale(1) translateY(0)}
+  .sheet-anim{transform:translateY(102%);transition:transform .34s cubic-bezier(.32,.72,0,1)}
+  .ovl.show .sheet-anim{transform:translateY(0)}
+  .drawer{position:fixed;top:0;bottom:0;left:0;z-index:90;width:80%;max-width:330px;
+    background:var(--glass-strong);backdrop-filter:blur(34px) saturate(180%);
+    -webkit-backdrop-filter:blur(34px) saturate(180%);
+    border-right:1px solid var(--hair-2);box-shadow:30px 0 70px rgba(0,0,0,.7);
+    transform:translateX(-104%);transition:transform .36s cubic-bezier(.32,.72,0,1);
+    padding:calc(22px + env(safe-area-inset-top)) 18px 22px}
+  .ovl.show .drawer{transform:translateX(0)}
+  .toast-host{position:fixed;left:0;right:0;top:calc(16px + env(safe-area-inset-top));z-index:120;
+    display:flex;flex-direction:column;gap:10px;align-items:center;padding:0 16px;pointer-events:none}
+  .toast-item{width:100%;max-width:408px;transform:translateY(-18px) scale(.96);opacity:0;
+    transition:transform .34s cubic-bezier(.34,1.4,.64,1),opacity .3s}
+  .toast-item.in{transform:translateY(0) scale(1);opacity:1}
+  .dd{position:absolute;z-index:70;min-width:188px;transform-origin:top right;
+    transform:scale(.92) translateY(-6px);opacity:0;visibility:hidden;
+    transition:opacity .2s,transform .22s cubic-bezier(.34,1.56,.64,1),visibility .2s}
+  .dd.show{opacity:1;visibility:visible;transform:scale(1) translateY(0)}
+  .dd-item{display:flex;align-items:center;gap:11px;padding:10px 13px;border-radius:12px;
+    font-size:13px;font-weight:600;color:var(--t2);cursor:pointer;transition:.16s}
+  .dd-item:hover{background:var(--surface);color:var(--t1)}
+  .dd-item.danger{color:#ff8197}.dd-item.danger:hover{background:rgba(255,69,102,.12)}
+</style>
+</head>
+<body class="ns">
+<div class="aura"></div>
+<div class="grain"></div>
+
+<div class="app">
+
+  <!-- ░░ HEADER ░░ -->
+  <header class="sticky top-0 z-40 px-5 pt-[calc(18px+env(safe-area-inset-top))] pb-4
+                 bg-[linear-gradient(180deg,rgba(5,5,5,.92),rgba(5,5,5,.55)_70%,transparent)]
+                 backdrop-blur-xl">
+    <div class="flex items-center justify-between">
+      <div>
+        <div class="eyebrow mb-1">GLOBAL UI KIT</div>
+        <h1 class="title grad-text">Components &amp; States</h1>
+      </div>
+      <button class="tap glass w-11 h-11 rounded-2xl grid place-items-center text-[var(--cyan)]"
+              aria-label="Component library">
+        <i data-lucide="layout-grid" class="w-5 h-5"></i>
+      </button>
+    </div>
+    <p class="sub mt-2 max-w-[300px] inline-flex items-center gap-1.5">Бүх товч, цонх, мэдэгдэл нэг л системээс гаралтай.<i data-lucide="moon" class="w-3.5 h-3.5 text-[var(--cyan)]"></i></p>
+  </header>
+
+  <main class="px-4 pb-32 space-y-4">
+
+    <!-- ░░ PALETTE ░░ -->
+    <section class="glass sec-pad">
+      <div class="kit-label"><span class="kit-num">00</span><span class="eyebrow">PALETTE LAW</span></div>
+      <div class="grid grid-cols-4 gap-2.5">
+        <div class="swatch" style="background:var(--void-3)"><span>void</span></div>
+        <div class="swatch" style="background:var(--cyan);box-shadow:var(--glow-cyan)"><span style="color:#001318">cyan</span></div>
+        <div class="swatch" style="background:var(--grad-primary);box-shadow:var(--glow-magenta)"><span>primary</span></div>
+        <div class="swatch" style="background:var(--lime);box-shadow:var(--glow-lime)"><span style="color:#0d1a00">lime</span></div>
+      </div>
+    </section>
+
+    <!-- ░░ 01 BUTTONS ░░ -->
+    <section class="glass sec-pad">
+      <div class="kit-label"><span class="kit-num">01</span><span class="eyebrow">BUTTONS</span></div>
+      <div class="space-y-2.5">
+        <button class="btn btn-primary btn-block"><i data-lucide="sparkles" class="w-4 h-4"></i>Primary action</button>
+        <div class="grid grid-cols-2 gap-2.5">
+          <button class="btn btn-glass"><i data-lucide="zap" class="w-4 h-4"></i>Glass</button>
+          <button class="btn btn-outline">Outline</button>
+        </div>
+        <div class="grid grid-cols-2 gap-2.5">
+          <button class="btn btn-ghost">Ghost</button>
+          <button class="btn btn-danger"><i data-lucide="trash-2" class="w-4 h-4"></i>Danger</button>
+        </div>
+      </div>
+      <div class="divider my-3.5"></div>
+      <div class="flex flex-wrap items-center gap-2">
+        <span class="label mr-1">Small</span>
+        <button class="btn btn-sm btn-primary">Primary</button>
+        <button class="btn btn-sm btn-glass">Glass</button>
+        <button class="btn btn-sm btn-outline">Outline</button>
+        <button class="btn btn-sm btn-ghost"><i data-lucide="more-horizontal" class="w-4 h-4"></i></button>
+      </div>
+    </section>
+
+    <!-- ░░ 02 INPUTS ░░ -->
+    <section class="glass sec-pad">
+      <div class="kit-label"><span class="kit-num">02</span><span class="eyebrow">INPUTS &amp; FIELDS</span></div>
+      <div class="space-y-3.5">
+        <div class="field">
+          <label class="label">Хэрэглэгчийн нэр</label>
+          <div class="input-group">
+            <span class="lead"><i data-lucide="at-sign" class="w-[18px] h-[18px]"></i></span>
+            <input class="input" type="text" placeholder="nightowl" value="midnight_owl"/>
+          </div>
+        </div>
+        <div class="field">
+          <label class="label flex items-center gap-1.5">Имэйл
+            <span class="pill pill-cyan h-[18px] px-2 text-[9px]"><span class="dot"></span>focus</span>
+          </label>
+          <div class="input-group">
+            <span class="lead" style="color:var(--cyan)"><i data-lucide="mail" class="w-[18px] h-[18px]"></i></span>
+            <input class="input" id="focusInput" type="email" placeholder="you@nightowl.mn" value="hello@nightowl.mn"
+              style="border-color:rgba(34,231,255,.7);background:rgba(34,231,255,.05);box-shadow:0 0 0 4px rgba(34,231,255,.14),var(--glow-cyan)"/>
+          </div>
+        </div>
+        <div class="field">
+          <label class="label">Нууц үг</label>
+          <div class="input-group">
+            <span class="lead"><i data-lucide="lock" class="w-[18px] h-[18px]"></i></span>
+            <input class="input" id="pwInput" type="password" placeholder="••••••••" value="supersecret"/>
+            <span class="trail tap" id="pwEye"><i data-lucide="eye" class="w-[18px] h-[18px]"></i></span>
+          </div>
+        </div>
+        <div class="field">
+          <label class="label">Танилцуулга</label>
+          <textarea class="textarea" rows="3" placeholder="Өөрийнхөө тухай бичээрэй…">Шөнийн амьдралд дуртай. Цахилгаан хотын гэрлийг хайрладаг.</textarea>
+        </div>
+      </div>
+    </section>
+
+    <!-- ░░ 03 STATUS PILLS ░░ -->
+    <section class="glass sec-pad">
+      <div class="kit-label"><span class="kit-num">03</span><span class="eyebrow">STATUS PILLS</span></div>
+      <div class="flex flex-wrap gap-2.5">
+        <span class="pill pill-live"><span class="dot"></span>Амьд</span>
+        <span class="pill pill-lively"><span class="dot"></span>Хөгжилтэй</span>
+        <span class="pill pill-busy"><span class="dot"></span>Завгүй</span>
+        <span class="pill pill-cyan"><span class="dot"></span>Шинэ</span>
+        <span class="pill"><i data-lucide="moon" class="w-3 h-3"></i>Идэвхгүй</span>
+      </div>
+      <div class="divider my-4"></div>
+      <div class="kit-label"><span class="eyebrow">CHIPS</span></div>
+      <div class="flex flex-wrap gap-2" id="chipRow">
+        <button class="chip active"><i data-lucide="flame" class="w-3.5 h-3.5"></i>Бүгд</button>
+        <button class="chip">Клуб</button>
+        <button class="chip">Бар</button>
+        <button class="chip">Концерт</button>
+        <button class="chip"><i data-lucide="map-pin" class="w-3.5 h-3.5"></i>Ойролцоо</button>
+      </div>
+      <div class="divider my-4"></div>
+      <div class="kit-label"><span class="eyebrow">SEGMENT</span></div>
+      <div class="segment w-full" id="segCtl" role="tablist">
+        <button class="active flex-1">Онцлох</button>
+        <button class="flex-1">Тренд</button>
+        <button class="flex-1">Шинэ</button>
+      </div>
+    </section>
+
+    <!-- ░░ 04 SWITCHES ░░ -->
+    <section class="glass sec-pad">
+      <div class="kit-label"><span class="kit-num">04</span><span class="eyebrow">SWITCHES</span></div>
+      <div class="space-y-1">
+        <div class="row !px-1">
+          <div class="row-ic"><i data-lucide="bell" class="w-[18px] h-[18px]"></i></div>
+          <div class="flex-1">
+            <div class="h3">Push мэдэгдэл</div>
+            <div class="sub">Шинэ эвент гарахад мэдэгдэнэ</div>
+          </div>
+          <div class="switch on toggle" role="switch" aria-checked="true"></div>
+        </div>
+        <div class="divider"></div>
+        <div class="row !px-1">
+          <div class="row-ic"><i data-lucide="moon-star" class="w-[18px] h-[18px]"></i></div>
+          <div class="flex-1">
+            <div class="h3">Шөнийн горим</div>
+            <div class="sub">Дэлгэцийг автоматаар бараан болгоно</div>
+          </div>
+          <div class="switch toggle" role="switch" aria-checked="false"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ░░ 05 AVATARS ░░ -->
+    <section class="glass sec-pad">
+      <div class="kit-label"><span class="kit-num">05</span><span class="eyebrow">AVATARS &amp; RINGS</span></div>
+      <div class="flex items-end justify-around">
+        <div class="flex flex-col items-center gap-2">
+          <div class="ring w-[68px] h-[68px]">
+            <img src="https://i.pravatar.cc/160?img=12" alt="story"
+              style="background:var(--grad-primary)"/>
+          </div>
+          <span class="label">Story</span>
+        </div>
+        <div class="flex flex-col items-center gap-2">
+          <div class="ring live w-[68px] h-[68px]">
+            <img src="https://i.pravatar.cc/160?img=32" alt="live"
+              style="background:var(--grad-ring)"/>
+          </div>
+          <span class="pill pill-live h-[20px] px-2 text-[9px]"><span class="dot"></span>Live</span>
+        </div>
+        <div class="flex flex-col items-center gap-2">
+          <div class="ring seen w-[68px] h-[68px]">
+            <img src="https://i.pravatar.cc/160?img=45" alt="seen"
+              style="background:var(--void-3)"/>
+          </div>
+          <span class="label">Seen</span>
+        </div>
+        <div class="flex flex-col items-center gap-2">
+          <div class="relative w-[68px] h-[68px]">
+            <img class="avatar w-full h-full border-2 border-[var(--void-3)]" src="https://i.pravatar.cc/160?img=58" alt="badge"/>
+            <span class="badge absolute -top-0.5 -right-0.5">5</span>
+            <span class="dot-live absolute bottom-1 right-1 ring-2 ring-[var(--void)]"></span>
+          </div>
+          <span class="label">Badge</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ░░ 06 OVERLAYS / TRIGGERS ░░ -->
+    <section class="glass sec-pad">
+      <div class="kit-label"><span class="kit-num">06</span><span class="eyebrow">OVERLAYS &amp; TRIGGERS</span></div>
+      <p class="sub mb-3.5">Дарж туршаарай — бүгд жинхэнэ нээгдэнэ.</p>
+      <div class="grid grid-cols-2 gap-2.5">
+        <button class="btn btn-glass btn-sm" onclick="openOvl('dialogOvl')">
+          <i data-lucide="alert-octagon" class="w-4 h-4"></i>Confirm dialog</button>
+        <button class="btn btn-glass btn-sm" onclick="openOvl('sheetOvl')">
+          <i data-lucide="panel-bottom" class="w-4 h-4"></i>Bottom sheet</button>
+        <button class="btn btn-glass btn-sm" onclick="showToast()">
+          <i data-lucide="bell-ring" class="w-4 h-4"></i>Toast</button>
+        <button class="btn btn-glass btn-sm" onclick="openOvl('drawerOvl')">
+          <i data-lucide="panel-left" class="w-4 h-4"></i>Drawer</button>
+        <div class="relative col-span-2">
+          <button class="btn btn-outline btn-sm btn-block" id="ddBtn" onclick="toggleDd(event)">
+            <i data-lucide="sliders-horizontal" class="w-4 h-4"></i>Dropdown menu
+            <i data-lucide="chevron-down" class="w-4 h-4 ml-auto"></i>
+          </button>
+          <!-- Dropdown -->
+          <div class="dd glass-strong p-1.5 right-0 mt-2" id="ddMenu" style="border:1px solid var(--hair-2)">
+            <div class="dd-item" onclick="pickDd('Профайл засах')"><i data-lucide="user-pen" class="w-[17px] h-[17px]"></i>Профайл засах</div>
+            <div class="dd-item" onclick="pickDd('Хуваалцах')"><i data-lucide="share-2" class="w-[17px] h-[17px]"></i>Хуваалцах</div>
+            <div class="dd-item" onclick="pickDd('Хадгалах')"><i data-lucide="bookmark" class="w-[17px] h-[17px]"></i>Хадгалах</div>
+            <div class="divider my-1"></div>
+            <div class="dd-item danger" onclick="pickDd('Устгах')"><i data-lucide="trash-2" class="w-[17px] h-[17px]"></i>Устгах</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ░░ 07 LOADING SKELETON ░░ -->
+    <section class="glass sec-pad">
+      <div class="kit-label"><span class="kit-num">07</span><span class="eyebrow">LOADING · SKELETON</span></div>
+      <div class="card p-3.5">
+        <div class="flex items-center gap-3 mb-3">
+          <div class="skel w-11 h-11 !rounded-full"></div>
+          <div class="flex-1 space-y-2">
+            <div class="skel h-3 w-1/2"></div>
+            <div class="skel h-2.5 w-1/3"></div>
+          </div>
+          <div class="skel w-7 h-7 !rounded-lg"></div>
+        </div>
+        <div class="skel w-full h-40 !rounded-2xl mb-3"></div>
+        <div class="space-y-2">
+          <div class="skel h-3 w-full"></div>
+          <div class="skel h-3 w-4/5"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ░░ 08 EMPTY STATE ░░ -->
+    <section class="glass sec-pad">
+      <div class="kit-label"><span class="kit-num">08</span><span class="eyebrow">EMPTY STATE</span></div>
+      <div class="flex flex-col items-center text-center py-7 px-4">
+        <div class="relative mb-4 anim-float">
+          <div class="w-20 h-20 rounded-[26px] grid place-items-center glass-strong glow-cyan
+                      border border-[var(--hair-2)]">
+            <i data-lucide="telescope" class="w-9 h-9 text-[var(--cyan)] anim-breathe"></i>
+          </div>
+          <span class="absolute -top-1.5 -right-1.5 text-[var(--magenta)]"><i data-lucide="sparkle" class="w-5 h-5"></i></span>
+        </div>
+        <h3 class="h2 mb-1.5">Одоохондоо хоосон байна</h3>
+        <p class="sub max-w-[250px] mb-5 inline-flex flex-wrap items-center justify-center gap-1.5">Эргэн тойронд эвент алга. Шинэ үдшийг хамгийн түрүүнд эхлүүлээрэй.<i data-lucide="sparkle" class="w-3.5 h-3.5 text-[var(--magenta)]"></i></p>
+        <button class="btn btn-primary btn-sm"><i data-lucide="plus" class="w-4 h-4"></i>Эвент үүсгэх</button>
+      </div>
+    </section>
+
+    <!-- ░░ 09 BADGES & DOTS ░░ -->
+    <section class="glass sec-pad">
+      <div class="kit-label"><span class="kit-num">09</span><span class="eyebrow">BADGES &amp; DOTS</span></div>
+      <div class="flex flex-wrap items-center gap-5">
+        <div class="relative tap">
+          <div class="glass w-12 h-12 rounded-2xl grid place-items-center"><i data-lucide="bell" class="w-5 h-5"></i></div>
+          <span class="badge absolute -top-1 -right-1">12</span>
+        </div>
+        <div class="relative tap">
+          <div class="glass w-12 h-12 rounded-2xl grid place-items-center"><i data-lucide="message-circle" class="w-5 h-5"></i></div>
+          <span class="badge absolute -top-1 -right-1" style="background:var(--cyan);color:#001318">3</span>
+        </div>
+        <div class="flex items-center gap-2.5">
+          <span class="dot-live"></span><span class="sub">Шууд дамжуулж байна</span>
+        </div>
+        <div class="like tap ml-auto" id="likeDemo" onclick="this.classList.toggle('is-active')">
+          <i data-lucide="heart" class="w-7 h-7"></i>
+        </div>
+      </div>
+    </section>
+
+    <footer class="text-center pt-2 pb-4">
+      <p class="eyebrow">NIGHT OWL · FUTURIST NIGHTSCAPE</p>
+    </footer>
+  </main>
+</div>
+
+<!-- ═══════════════ OVERLAYS ═══════════════ -->
+
+<!-- Confirm dialog -->
+<div class="ovl" id="dialogOvl">
+  <div class="scrim" onclick="closeOvl('dialogOvl')"></div>
+  <div class="fixed inset-0 z-[90] grid place-items-center p-6 pointer-events-none">
+    <div class="dialog dialog-wrap w-full pointer-events-auto">
+      <div class="w-12 h-12 rounded-2xl grid place-items-center mb-4"
+           style="background:rgba(255,69,102,.12);border:1px solid rgba(255,69,102,.3)">
+        <i data-lucide="trash-2" class="w-5 h-5" style="color:#ff8197"></i>
+      </div>
+      <h3 class="h1 mb-1.5">Постыг устгах уу?</h3>
+      <p class="sub mb-5">Энэ үйлдлийг буцаах боломжгүй. Таны пост бүрмөсөн устах болно.</p>
+      <div class="flex gap-2.5">
+        <button class="btn btn-glass flex-1" onclick="closeOvl('dialogOvl')">Болих</button>
+        <button class="btn btn-danger flex-1" onclick="closeOvl('dialogOvl');showToast('deleted')">
+          <i data-lucide="trash-2" class="w-4 h-4"></i>Устгах</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Bottom sheet -->
+<div class="ovl" id="sheetOvl">
+  <div class="scrim" onclick="closeOvl('sheetOvl')"></div>
+  <div class="sheet sheet-anim">
+    <div class="sheet-handle"></div>
+    <div class="flex items-center justify-between mb-1 px-1">
+      <h3 class="h1">Хуваалцах</h3>
+      <button class="tap text-[var(--t3)]" onclick="closeOvl('sheetOvl')"><i data-lucide="x" class="w-5 h-5"></i></button>
+    </div>
+    <p class="sub px-1 mb-4">Энэ үдшийг найзуудтайгаа хуваалцаарай</p>
+    <div class="grid grid-cols-4 gap-3 mb-5">
+      <button class="tap flex flex-col items-center gap-2" onclick="closeOvl('sheetOvl');showToast('shared')">
+        <span class="w-14 h-14 rounded-2xl grid place-items-center glass-strong border border-[var(--hair-2)]"
+              style="color:var(--cyan)"><i data-lucide="link" class="w-5 h-5"></i></span>
+        <span class="label">Линк</span>
+      </button>
+      <button class="tap flex flex-col items-center gap-2" onclick="closeOvl('sheetOvl');showToast('shared')">
+        <span class="w-14 h-14 rounded-2xl grid place-items-center glass-strong border border-[var(--hair-2)]"
+              style="color:var(--magenta)"><i data-lucide="message-circle" class="w-5 h-5"></i></span>
+        <span class="label">Чат</span>
+      </button>
+      <button class="tap flex flex-col items-center gap-2" onclick="closeOvl('sheetOvl');showToast('shared')">
+        <span class="w-14 h-14 rounded-2xl grid place-items-center glass-strong border border-[var(--hair-2)]"
+              style="color:var(--lime)"><i data-lucide="qr-code" class="w-5 h-5"></i></span>
+        <span class="label">QR код</span>
+      </button>
+      <button class="tap flex flex-col items-center gap-2" onclick="closeOvl('sheetOvl');showToast('shared')">
+        <span class="w-14 h-14 rounded-2xl grid place-items-center glass-strong border border-[var(--hair-2)]"
+              style="color:var(--amber)"><i data-lucide="instagram" class="w-5 h-5"></i></span>
+        <span class="label">Story</span>
+      </button>
+    </div>
+    <div class="card p-1.5 mb-3">
+      <div class="row" onclick="closeOvl('sheetOvl');showToast('copied')">
+        <div class="row-ic"><i data-lucide="copy" class="w-[18px] h-[18px]"></i></div>
+        <div class="flex-1"><div class="h3">Холбоосыг хуулах</div><div class="sub font-mono">nightowl.mn/e/4f9a2</div></div>
+        <i data-lucide="chevron-right" class="w-5 h-5 text-[var(--t3)]"></i>
+      </div>
+      <div class="divider"></div>
+      <div class="row" onclick="closeOvl('sheetOvl')">
+        <div class="row-ic" style="color:#ff8197;background:rgba(255,69,102,.1);border-color:rgba(255,69,102,.25)">
+          <i data-lucide="flag" class="w-[18px] h-[18px]"></i></div>
+        <div class="flex-1"><div class="h3" style="color:#ff8197">Гомдол гаргах</div><div class="sub">Зохисгүй контент</div></div>
+        <i data-lucide="chevron-right" class="w-5 h-5 text-[var(--t3)]"></i>
+      </div>
+    </div>
+    <button class="btn btn-glass btn-block" onclick="closeOvl('sheetOvl')">Болих</button>
+  </div>
+</div>
+
+<!-- Drawer -->
+<div class="ovl" id="drawerOvl">
+  <div class="scrim" onclick="closeOvl('drawerOvl')"></div>
+  <aside class="drawer">
+    <div class="flex items-center gap-3 mb-6">
+      <div class="ring w-[52px] h-[52px]"><img src="https://i.pravatar.cc/160?img=15" alt="me" style="background:var(--grad-ring)"/></div>
+      <div class="flex-1 min-w-0">
+        <div class="h2 truncate">Тэмүүлэн</div>
+        <div class="sub font-mono">@midnight_owl</div>
+      </div>
+      <button class="tap text-[var(--t3)]" onclick="closeOvl('drawerOvl')"><i data-lucide="x" class="w-5 h-5"></i></button>
+    </div>
+    <nav class="space-y-1">
+      <div class="row !py-3" onclick="closeOvl('drawerOvl')">
+        <div class="row-ic"><i data-lucide="compass" class="w-[18px] h-[18px]"></i></div>
+        <span class="h3 flex-1">Нээх</span>
+      </div>
+      <div class="row !py-3" onclick="closeOvl('drawerOvl')">
+        <div class="row-ic"><i data-lucide="calendar-heart" class="w-[18px] h-[18px]"></i></div>
+        <span class="h3 flex-1">Миний эвентүүд</span>
+        <span class="badge" style="background:var(--cyan);color:#001318">2</span>
+      </div>
+      <div class="row !py-3" onclick="closeOvl('drawerOvl')">
+        <div class="row-ic"><i data-lucide="bookmark" class="w-[18px] h-[18px]"></i></div>
+        <span class="h3 flex-1">Хадгалсан</span>
+      </div>
+      <div class="row !py-3" onclick="closeOvl('drawerOvl')">
+        <div class="row-ic"><i data-lucide="users" class="w-[18px] h-[18px]"></i></div>
+        <span class="h3 flex-1">Найзууд</span>
+        <span class="pill pill-live h-[20px] px-2 text-[9px]"><span class="dot"></span>8</span>
+      </div>
+      <div class="divider my-2"></div>
+      <div class="row !py-3" onclick="closeOvl('drawerOvl')">
+        <div class="row-ic"><i data-lucide="settings" class="w-[18px] h-[18px]"></i></div>
+        <span class="h3 flex-1">Тохиргоо</span>
+      </div>
+    </nav>
+    <div class="absolute left-4 right-4 bottom-6">
+      <button class="btn btn-outline btn-block" onclick="closeOvl('drawerOvl')">
+        <i data-lucide="log-out" class="w-4 h-4"></i>Гарах</button>
+    </div>
+  </aside>
+</div>
+
+<!-- Toast host -->
+<div class="toast-host" id="toastHost"></div>
+
+<script>
+  lucide.createIcons();
+
+  /* ── Overlay open/close ── */
+  function openOvl(id){
+    const el=document.getElementById(id);
+    el.classList.add('show');
+    document.body.style.overflow='hidden';
+  }
+  function closeOvl(id){
+    const el=document.getElementById(id);
+    el.classList.remove('show');
+    document.body.style.overflow='';
+  }
+  // close any overlay on Escape
+  document.addEventListener('keydown',e=>{
+    if(e.key==='Escape'){document.querySelectorAll('.ovl.show').forEach(o=>closeOvl(o.id));closeDd();}
+  });
+
+  /* ── Toast ── */
+  const toastConf={
+    default:{ic:'check-circle',msg:'Амжилттай хадгаллаа',c:'var(--lime)',bg:'rgba(180,255,46,.14)'},
+    deleted:{ic:'trash-2',msg:'Пост устгагдлаа',c:'var(--cyan)',bg:'var(--cyan-soft)'},
+    shared:{ic:'send',msg:'Амжилттай хуваалцлаа',c:'var(--lime)',bg:'rgba(180,255,46,.14)'},
+    copied:{ic:'copy',msg:'Холбоос хуулагдлаа',c:'var(--cyan)',bg:'var(--cyan-soft)'}
+  };
+  function showToast(type='default'){
+    const t=toastConf[type]||toastConf.default;
+    const host=document.getElementById('toastHost');
+    const el=document.createElement('div');
+    el.className='toast toast-item';
+    el.innerHTML=`<div class="ic" style="background:${t.bg};color:${t.c}">
+        <i data-lucide="${t.ic}" class="w-[18px] h-[18px]"></i></div>
+      <div class="flex-1 min-w-0"><div class="h3">${t.msg}</div></div>
+      <i data-lucide="x" class="w-4 h-4 text-[var(--t3)] tap" style="cursor:pointer"></i>`;
+    host.appendChild(el);
+    lucide.createIcons({nameAttr:'data-lucide'});
+    el.querySelector('[data-lucide="x"]')?.addEventListener('click',()=>dismiss(el));
+    requestAnimationFrame(()=>requestAnimationFrame(()=>el.classList.add('in')));
+    const tm=setTimeout(()=>dismiss(el),2500);
+    function dismiss(node){clearTimeout(tm);node.classList.remove('in');setTimeout(()=>node.remove(),360);}
+  }
+
+  /* ── Dropdown ── */
+  function toggleDd(e){
+    e.stopPropagation();
+    document.getElementById('ddMenu').classList.toggle('show');
+  }
+  function closeDd(){document.getElementById('ddMenu').classList.remove('show');}
+  function pickDd(label){
+    closeDd();
+    if(label==='Устгах'){openOvl('dialogOvl');return;}
+    showToast('default');
+  }
+  document.addEventListener('click',e=>{
+    if(!e.target.closest('#ddMenu') && !e.target.closest('#ddBtn')) closeDd();
+  });
+
+  /* ── Switches ── */
+  document.querySelectorAll('.switch.toggle').forEach(sw=>{
+    sw.addEventListener('click',()=>{
+      sw.classList.toggle('on');
+      sw.setAttribute('aria-checked',sw.classList.contains('on'));
+    });
+  });
+
+  /* ── Chips (single-select within row) ── */
+  const chipRow=document.getElementById('chipRow');
+  chipRow.querySelectorAll('.chip').forEach(c=>{
+    c.addEventListener('click',()=>{
+      chipRow.querySelectorAll('.chip').forEach(x=>x.classList.remove('active'));
+      c.classList.add('active');
+    });
+  });
+
+  /* ── Segment control ── */
+  const seg=document.getElementById('segCtl');
+  seg.querySelectorAll('button').forEach(b=>{
+    b.addEventListener('click',()=>{
+      seg.querySelectorAll('button').forEach(x=>x.classList.remove('active'));
+      b.classList.add('active');
+    });
+  });
+
+  /* ── Password eye ── */
+  const pwInput=document.getElementById('pwInput'),pwEye=document.getElementById('pwEye');
+  pwEye.addEventListener('click',()=>{
+    const show=pwInput.type==='password';
+    pwInput.type=show?'text':'password';
+    pwEye.innerHTML=`<i data-lucide="${show?'eye-off':'eye'}" class="w-[18px] h-[18px]"></i>`;
+    lucide.createIcons();
+  });
+</script>
+</body></html>

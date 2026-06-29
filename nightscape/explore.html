@@ -1,0 +1,271 @@
+<!DOCTYPE html><html lang="mn"><head><meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+<title>Explore · Night Owl</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="nightscape.css"/>
+<script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body class="ns">
+<div class="aura"></div>
+<div class="grain"></div>
+
+<div class="app">
+
+  <!-- ───────── Header ───────── -->
+  <header class="px-5 pt-7 pb-3">
+    <div class="flex items-start justify-between">
+      <div>
+        <p class="eyebrow mb-2">UB · ШӨНИЙН ГАЗРУУД</p>
+        <h1 class="title">Explore</h1>
+      </div>
+      <div class="flex items-center gap-2.5">
+        <button class="tap glass-strong w-11 h-11 rounded-2xl grid place-items-center text-[var(--t1)]" aria-label="map">
+          <i data-lucide="map" class="w-[19px] h-[19px]"></i>
+        </button>
+        <a href="chat.html" class="glass tap grid place-items-center relative" aria-label="Чат" style="width:42px;height:42px;border-radius:50%;">
+          <i data-lucide="message-circle" style="width:20px;height:20px;color:var(--t1);"></i>
+          <span class="absolute" style="top:9px;right:9px;width:8px;height:8px;border-radius:50%;background:var(--lime);box-shadow:0 0 8px var(--lime);"></span>
+        </a>
+      </div>
+    </div>
+
+    <!-- Search -->
+    <div class="input-group mt-5">
+      <span class="lead"><i data-lucide="search" class="w-[18px] h-[18px]"></i></span>
+      <input class="input" type="text" placeholder="Газар, бар, клуб хайх…" />
+    </div>
+  </header>
+
+  <!-- ───────── Category chips ───────── -->
+  <div class="no-scroll overflow-x-auto px-5 pb-1">
+    <div class="flex gap-2.5 w-max pr-3">
+      <button class="chip active">Бүгд</button>
+      <button class="chip">Bar</button>
+      <button class="chip">Club</button>
+      <button class="chip">Lounge</button>
+      <button class="chip">Rooftop</button>
+      <button class="chip">Jazz</button>
+      <button class="chip">Live</button>
+    </div>
+  </div>
+
+  <!-- ───────── Scrollable content ───────── -->
+  <main class="px-5 pb-36 pt-4 space-y-6">
+
+    <!-- Featured large venue -->
+    <section>
+      <div class="flex items-center justify-between mb-3 px-0.5">
+        <h2 class="h2">Онцлох газар</h2>
+        <span class="eyebrow">FEATURED</span>
+      </div>
+
+      <article class="card card-hover overflow-hidden tap relative">
+        <!-- image + gradient fallback -->
+        <div class="relative h-60" style="background:linear-gradient(135deg,#7c3aed 0%,#e935c8 55%,#ff2d8e 100%)">
+          <img src="https://images.unsplash.com/photo-1566417713940-fe7c737a9ef2?w=800&q=80&auto=format&fit=crop"
+               alt="Zenith Terrace"
+               class="absolute inset-0 w-full h-full object-cover"
+               loading="lazy"
+               onerror="this.style.display='none'"/>
+          <!-- top scrim + pills -->
+          <div class="absolute inset-0" style="background:linear-gradient(180deg,rgba(5,5,5,.25) 0%,transparent 32%,transparent 46%,rgba(5,5,5,.55) 74%,rgba(5,5,5,.92) 100%)"></div>
+
+          <div class="absolute top-3.5 left-3.5 flex items-center gap-2">
+            <span class="pill pill-lively"><span class="dot"></span>Lively</span>
+          </div>
+          <button class="like tap absolute top-3.5 right-3.5 glass w-9 h-9 rounded-full grid place-items-center" aria-label="save">
+            <i data-lucide="heart" class="w-[17px] h-[17px]"></i>
+          </button>
+
+          <!-- bottom overlay info -->
+          <div class="absolute left-4 right-4 bottom-4">
+            <div class="flex items-center gap-1.5 mb-1.5">
+              <i data-lucide="badge-check" class="w-[15px] h-[15px] text-[var(--cyan)]"></i>
+              <span class="eyebrow !text-[var(--cyan)] !tracking-[.18em]">ROOFTOP BAR</span>
+            </div>
+            <h3 class="title !text-[24px] leading-none mb-2.5">Zenith Terrace</h3>
+            <div class="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+              <span class="inline-flex items-center gap-1 text-[13px] font-semibold text-[var(--t1)]">
+                <i data-lucide="star" class="w-[14px] h-[14px] text-[var(--amber)]" fill="currentColor"></i>4.9
+              </span>
+              <span class="inline-flex items-center gap-1 sub !text-[13px]">
+                <i data-lucide="map-pin" class="w-[13px] h-[13px] text-[var(--cyan)]"></i>1.2km
+              </span>
+              <span class="inline-flex items-center gap-1.5 sub !text-[13px]">
+                <span class="dot-live"></span>Нээлттэй · 03:00 хүртэл
+              </span>
+            </div>
+          </div>
+        </div>
+      </article>
+    </section>
+
+    <!-- Venue grid -->
+    <section>
+      <div class="flex items-center justify-between mb-3 px-0.5">
+        <h2 class="h2">Ойролцоох газрууд</h2>
+        <button class="eyebrow flex items-center gap-1 tap !text-[var(--cyan)]">
+          БҮГД<i data-lucide="chevron-right" class="w-3 h-3"></i>
+        </button>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3.5">
+
+        <!-- Card: Zenith Terrace -->
+        <article class="card card-hover overflow-hidden tap">
+          <div class="relative h-32" style="background:linear-gradient(135deg,#7c3aed,#e935c8)">
+            <img src="https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=800&q=80&auto=format&fit=crop" alt="Zenith Terrace" class="absolute inset-0 w-full h-full object-cover" loading="lazy" onerror="this.style.display='none'"/>
+            <div class="absolute inset-0" style="background:linear-gradient(180deg,rgba(5,5,5,.05),rgba(5,5,5,.55))"></div>
+            <span class="pill pill-lively absolute top-2.5 left-2.5 scale-90 origin-top-left"><span class="dot"></span>Lively</span>
+            <button class="like tap absolute top-2 right-2 w-8 h-8 grid place-items-center" aria-label="save">
+              <i data-lucide="heart" class="w-[16px] h-[16px] text-white/90 drop-shadow"></i>
+            </button>
+          </div>
+          <div class="p-3">
+            <h3 class="h3 mb-1.5 truncate">Zenith Terrace</h3>
+            <div class="flex items-center justify-between">
+              <span class="inline-flex items-center gap-1 sub !text-[12px]"><i data-lucide="map-pin" class="w-[12px] h-[12px] text-[var(--cyan)]"></i>1.2km</span>
+              <span class="inline-flex items-center gap-1 text-[12px] font-semibold text-[var(--t1)]"><i data-lucide="star" class="w-[12px] h-[12px] text-[var(--amber)]" fill="currentColor"></i>4.9</span>
+            </div>
+          </div>
+        </article>
+
+        <!-- Card: Neon Garden -->
+        <article class="card card-hover overflow-hidden tap">
+          <div class="relative h-32" style="background:linear-gradient(135deg,#92e000,#22e7ff)">
+            <img src="https://images.unsplash.com/photo-1545128485-c400e7702796?w=800&q=80&auto=format&fit=crop" alt="Neon Garden" class="absolute inset-0 w-full h-full object-cover" loading="lazy" onerror="this.style.display='none'"/>
+            <div class="absolute inset-0" style="background:linear-gradient(180deg,rgba(5,5,5,.05),rgba(5,5,5,.55))"></div>
+            <span class="pill pill-live absolute top-2.5 left-2.5 scale-90 origin-top-left"><span class="dot"></span>Chill</span>
+            <button class="like tap absolute top-2 right-2 w-8 h-8 grid place-items-center" aria-label="save">
+              <i data-lucide="heart" class="w-[16px] h-[16px] text-white/90 drop-shadow"></i>
+            </button>
+          </div>
+          <div class="p-3">
+            <h3 class="h3 mb-1.5 truncate">Neon Garden</h3>
+            <div class="flex items-center justify-between">
+              <span class="inline-flex items-center gap-1 sub !text-[12px]"><i data-lucide="map-pin" class="w-[12px] h-[12px] text-[var(--cyan)]"></i>2.4km</span>
+              <span class="inline-flex items-center gap-1 text-[12px] font-semibold text-[var(--t1)]"><i data-lucide="star" class="w-[12px] h-[12px] text-[var(--amber)]" fill="currentColor"></i>4.7</span>
+            </div>
+          </div>
+        </article>
+
+        <!-- Card: Vertigo Rooftop -->
+        <article class="card card-hover overflow-hidden tap">
+          <div class="relative h-32" style="background:linear-gradient(135deg,#ff6a2b,#e935c8)">
+            <img src="https://images.unsplash.com/photo-1551024601-bec78aea704b?w=800&q=80&auto=format&fit=crop" alt="Vertigo Rooftop" class="absolute inset-0 w-full h-full object-cover" loading="lazy" onerror="this.style.display='none'"/>
+            <div class="absolute inset-0" style="background:linear-gradient(180deg,rgba(5,5,5,.05),rgba(5,5,5,.55))"></div>
+            <span class="pill pill-busy absolute top-2.5 left-2.5 scale-90 origin-top-left"><span class="dot"></span>Busy</span>
+            <button class="like tap absolute top-2 right-2 w-8 h-8 grid place-items-center" aria-label="save">
+              <i data-lucide="heart" class="w-[16px] h-[16px] text-white/90 drop-shadow"></i>
+            </button>
+          </div>
+          <div class="p-3">
+            <h3 class="h3 mb-1.5 truncate">Vertigo Rooftop</h3>
+            <div class="flex items-center justify-between">
+              <span class="inline-flex items-center gap-1 sub !text-[12px]"><i data-lucide="map-pin" class="w-[12px] h-[12px] text-[var(--cyan)]"></i>0.8km</span>
+              <span class="inline-flex items-center gap-1 text-[12px] font-semibold text-[var(--t1)]"><i data-lucide="star" class="w-[12px] h-[12px] text-[var(--amber)]" fill="currentColor"></i>4.6</span>
+            </div>
+          </div>
+        </article>
+
+        <!-- Card: Pulse Club -->
+        <article class="card card-hover overflow-hidden tap">
+          <div class="relative h-32" style="background:linear-gradient(135deg,#7c3aed,#ff2d8e)">
+            <img src="https://images.unsplash.com/photo-1571266028243-e4733b0f0bb0?w=800&q=80&auto=format&fit=crop" alt="Pulse Club" class="absolute inset-0 w-full h-full object-cover" loading="lazy" onerror="this.style.display='none'"/>
+            <div class="absolute inset-0" style="background:linear-gradient(180deg,rgba(5,5,5,.05),rgba(5,5,5,.55))"></div>
+            <span class="pill pill-busy absolute top-2.5 left-2.5 scale-90 origin-top-left"><span class="dot"></span>Busy</span>
+            <button class="like tap absolute top-2 right-2 w-8 h-8 grid place-items-center" aria-label="save">
+              <i data-lucide="heart" class="w-[16px] h-[16px] text-white/90 drop-shadow"></i>
+            </button>
+          </div>
+          <div class="p-3">
+            <h3 class="h3 mb-1.5 truncate">Pulse Club</h3>
+            <div class="flex items-center justify-between">
+              <span class="inline-flex items-center gap-1 sub !text-[12px]"><i data-lucide="map-pin" class="w-[12px] h-[12px] text-[var(--cyan)]"></i>3.1km</span>
+              <span class="inline-flex items-center gap-1 text-[12px] font-semibold text-[var(--t1)]"><i data-lucide="star" class="w-[12px] h-[12px] text-[var(--amber)]" fill="currentColor"></i>4.8</span>
+            </div>
+          </div>
+        </article>
+
+        <!-- Card: Blue Note Jazz -->
+        <article class="card card-hover overflow-hidden tap">
+          <div class="relative h-32" style="background:linear-gradient(135deg,#15c2da,#7c3aed)">
+            <img src="https://images.unsplash.com/photo-1415201364774-f6f0bb35f28f?w=800&q=80&auto=format&fit=crop" alt="Blue Note Jazz" class="absolute inset-0 w-full h-full object-cover" loading="lazy" onerror="this.style.display='none'"/>
+            <div class="absolute inset-0" style="background:linear-gradient(180deg,rgba(5,5,5,.05),rgba(5,5,5,.55))"></div>
+            <span class="pill pill-live absolute top-2.5 left-2.5 scale-90 origin-top-left"><span class="dot"></span>Chill</span>
+            <button class="like tap absolute top-2 right-2 w-8 h-8 grid place-items-center" aria-label="save">
+              <i data-lucide="heart" class="w-[16px] h-[16px] text-white/90 drop-shadow"></i>
+            </button>
+          </div>
+          <div class="p-3">
+            <h3 class="h3 mb-1.5 truncate">Blue Note Jazz</h3>
+            <div class="flex items-center justify-between">
+              <span class="inline-flex items-center gap-1 sub !text-[12px]"><i data-lucide="map-pin" class="w-[12px] h-[12px] text-[var(--cyan)]"></i>1.7km</span>
+              <span class="inline-flex items-center gap-1 text-[12px] font-semibold text-[var(--t1)]"><i data-lucide="star" class="w-[12px] h-[12px] text-[var(--amber)]" fill="currentColor"></i>4.9</span>
+            </div>
+          </div>
+        </article>
+
+        <!-- Card: Aurora Lounge -->
+        <article class="card card-hover overflow-hidden tap">
+          <div class="relative h-32" style="background:linear-gradient(135deg,#e935c8,#22e7ff)">
+            <img src="https://images.unsplash.com/photo-1470337458703-46ad1756a187?w=800&q=80&auto=format&fit=crop" alt="Aurora Lounge" class="absolute inset-0 w-full h-full object-cover" loading="lazy" onerror="this.style.display='none'"/>
+            <div class="absolute inset-0" style="background:linear-gradient(180deg,rgba(5,5,5,.05),rgba(5,5,5,.55))"></div>
+            <span class="pill pill-lively absolute top-2.5 left-2.5 scale-90 origin-top-left"><span class="dot"></span>Lively</span>
+            <button class="like tap absolute top-2 right-2 w-8 h-8 grid place-items-center" aria-label="save">
+              <i data-lucide="heart" class="w-[16px] h-[16px] text-white/90 drop-shadow"></i>
+            </button>
+          </div>
+          <div class="p-3">
+            <h3 class="h3 mb-1.5 truncate">Aurora Lounge</h3>
+            <div class="flex items-center justify-between">
+              <span class="inline-flex items-center gap-1 sub !text-[12px]"><i data-lucide="map-pin" class="w-[12px] h-[12px] text-[var(--cyan)]"></i>2.0km</span>
+              <span class="inline-flex items-center gap-1 text-[12px] font-semibold text-[var(--t1)]"><i data-lucide="star" class="w-[12px] h-[12px] text-[var(--amber)]" fill="currentColor"></i>4.7</span>
+            </div>
+          </div>
+        </article>
+
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ───────── Floating nav ───────── -->
+<nav class="nav-float">
+    <a href="feed.html" class="nav-item"><i data-lucide="home" style="width:23px;height:23px;"></i><span>Feed</span></a>
+    <a href="explore.html" class="nav-item active"><i data-lucide="compass" style="width:23px;height:23px;"></i><span>Explore</span></a>
+    <button class="nav-fab tap" aria-label="Шинэ нийтлэл"><i data-lucide="plus" style="width:26px;height:26px;"></i></button>
+    <a href="discovery.html" class="nav-item"><i data-lucide="clapperboard" style="width:23px;height:23px;"></i><span>Discovery</span></a>
+    <a href="profile.html" class="nav-item"><i data-lucide="user" style="width:23px;height:23px;"></i><span>Profile</span></a>
+  </nav>
+
+</div>
+
+<script>
+  lucide.createIcons();
+
+  /* Category chips — single active selection */
+  document.querySelectorAll('.chip').forEach(chip=>{
+    chip.addEventListener('click',()=>{
+      document.querySelectorAll('.chip').forEach(c=>c.classList.remove('active'));
+      chip.classList.add('active');
+    });
+  });
+
+  /* Like / save toggle with pulse */
+  document.querySelectorAll('.like').forEach(btn=>{
+    btn.addEventListener('click',e=>{
+      e.stopPropagation();
+      btn.classList.toggle('is-active');
+    });
+  });
+
+  /* Bottom nav active state */
+  document.querySelectorAll('.nav-item').forEach(item=>{
+    item.addEventListener('click',()=>{
+      document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+      item.classList.add('active');
+    });
+  });
+</script>
+</body></html>

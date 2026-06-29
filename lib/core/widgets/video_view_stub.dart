@@ -7,6 +7,8 @@ class VideoView extends StatelessWidget {
   final double? height;
   final bool autoplay;
   final bool showPosterIcon;
+  final bool active;
+  final ValueNotifier<double>? progress;
   const VideoView({
     super.key,
     required this.url,
@@ -14,6 +16,8 @@ class VideoView extends StatelessWidget {
     this.height,
     this.autoplay = false,
     this.showPosterIcon = true,
+    this.active = true,
+    this.progress,
   });
 
   @override

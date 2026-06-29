@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_colors.dart';
@@ -152,159 +153,188 @@ class _DmThreadScreenState extends State<DmThreadScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.bgBase,
-      appBar: AppBar(
-        backgroundColor: AppColors.bgBase,
-        elevation: 0,
-        leading: IconButton(
-          onPressed: () => context.pop(),
-          icon: const Icon(Icons.arrow_back_ios_new, size: 20)),
-        title: GestureDetector(
-          onTap: () => context.push('/creator/${widget.threadId}'),
-          child: Row(children: [
-            AppAvatar(imageUrl: avatarUrl, initial: initial, size: 36),
-            const SizedBox(width: 10),
-            Text(username, style: AppTextStyles.labelLg),
-          ])),
-        titleSpacing: 0,
-        bottom: const PreferredSize(
-          preferredSize: Size.fromHeight(1),
-          child: Divider(height: 1, color: AppColors.hairline)),
+      extendBodyBehindAppBar: true,
+      appBar: _GlassAppBar(
+        username: username,
+        avatarUrl: avatarUrl,
+        initial: initial,
+        onBack: () => context.pop(),
+        onTapPeer: () => context.push('/creator/${widget.threadId}'),
       ),
-      body: Column(children: [
-        Expanded(child: _loading
-          ? const Center(child: CircularProgressIndicator(
-              color: AppColors.accentStart, strokeWidth: 2))
-          : _msgs.isEmpty
-              ? Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-                  AppAvatar(imageUrl: avatarUrl, initial: initial, size: 64),
-                  const SizedBox(height: 16),
-                  Text(username, style: AppTextStyles.h2),
-                  const SizedBox(height: 8),
-                  Text('Start a conversation!',
-                    style: AppTextStyles.bodyMd.copyWith(
-                      color: AppColors.textSecondary)),
-                ]))
-              : ListView.builder(
-                  controller: _scroll,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16, vertical: 12),
-                  itemCount: _msgs.length,
-                  itemBuilder: (_, i) {
-                    final m    = _msgs[i];
-                    final isMe = m['sender_id'] == _myId;
-                    final text = m['body'] as String? ?? '';
-                    final time = m['created_at'] as String?;
-                    // Date separator
-                    final showDate = i == 0 ||
-                        !_sameDay(time, _msgs[i-1]['created_at'] as String?);
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        if (showDate)
-                          Center(child: Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                            child: Text(_dateLabel(time),
-                              style: AppTextStyles.bodyXs.copyWith(
-                                color: AppColors.textTertiary)))),
-                        _Bubble(text: text, isMe: isMe, time: _timeStr(time),
-                          storyMediaUrl: m['story_media_url'] as String?,
-                          noteText: m['note_text'] as String?),
-                        // "Үзсэн" — зөвхөн өөрийн сүүлийн мессеж уншигдсан үед
-                        if (isMe && i == lastMineIdx && (m['is_read'] == true))
-                          Padding(
-                            padding: const EdgeInsets.only(right: 2, bottom: 6),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.end,
-                              children: [
-                                const Icon(Icons.done_all_rounded,
-                                  size: 13, color: AppColors.accentStart),
-                                const SizedBox(width: 3),
-                                Text('Үзсэн', style: AppTextStyles.bodyXs.copyWith(
-                                  color: AppColors.textTertiary)),
-                              ])),
-                      ]);
-                  })),
-
-        // Input + emoji panel
-        SafeArea(top: false, child: Column(mainAxisSize: MainAxisSize.min, children: [
-          // Note-д хариулж байгаа бол ишлэл харуулна
-          if (_pendingNote != null)
-            Container(
-              padding: const EdgeInsets.fromLTRB(14, 8, 10, 8),
-              color: AppColors.bgElevated,
-              child: Row(children: [
-                Container(width: 3, height: 32,
-                  decoration: BoxDecoration(color: AppColors.accentStart,
-                    borderRadius: BorderRadius.circular(2))),
-                const SizedBox(width: 10),
-                Expanded(child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text('$username-ийн note-д хариулж байна',
-                      style: AppTextStyles.bodyXs.copyWith(
-                        color: AppColors.accentStart, fontWeight: FontWeight.w600)),
-                    Text(_pendingNote!, maxLines: 1, overflow: TextOverflow.ellipsis,
-                      style: AppTextStyles.bodyXs.copyWith(
+      body: Stack(children: [
+        // ── Aurora glow backdrop ──
+        const Positioned.fill(child: _AuroraBackdrop()),
+        Column(children: [
+          Expanded(child: _loading
+            ? const Center(child: CircularProgressIndicator(
+                color: AppColors.accentStart, strokeWidth: 2))
+            : _msgs.isEmpty
+                ? Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
+                    AppAvatar(imageUrl: avatarUrl, initial: initial,
+                      size: 80, showRing: true, showOnlineDot: true),
+                    const SizedBox(height: 16),
+                    Text(username, style: AppTextStyles.h2),
+                    const SizedBox(height: 8),
+                    Text('Start a conversation!',
+                      style: AppTextStyles.bodyMd.copyWith(
                         color: AppColors.textSecondary)),
-                  ])),
-                GestureDetector(
-                  onTap: () => setState(() => _pendingNote = null),
-                  child: const Icon(Icons.close, size: 18,
-                    color: AppColors.textTertiary)),
-              ]),
+                  ]))
+                : ListView.builder(
+                    controller: _scroll,
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+                    itemCount: _msgs.length,
+                    itemBuilder: (_, i) {
+                      final m    = _msgs[i];
+                      final isMe = m['sender_id'] == _myId;
+                      final text = m['body'] as String? ?? '';
+                      final time = m['created_at'] as String?;
+                      // Date separator
+                      final showDate = i == 0 ||
+                          !_sameDay(time, _msgs[i-1]['created_at'] as String?);
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          if (showDate)
+                            Center(child: Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              child: _DateChip(label: _dateLabel(time)))),
+                          _Bubble(text: text, isMe: isMe, time: _timeStr(time),
+                            storyMediaUrl: m['story_media_url'] as String?,
+                            noteText: m['note_text'] as String?),
+                          // "Үзсэн" — зөвхөн өөрийн сүүлийн мессеж уншигдсан үед
+                          if (isMe && i == lastMineIdx && (m['is_read'] == true))
+                            Padding(
+                              padding: const EdgeInsets.only(right: 4, bottom: 8),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.end,
+                                children: [
+                                  const Icon(Icons.done_all_rounded,
+                                    size: 14, color: AppColors.neonCyan),
+                                  const SizedBox(width: 4),
+                                  Text('Үзсэн', style: AppTextStyles.bodyXs.copyWith(
+                                    color: AppColors.neonCyan,
+                                    fontWeight: FontWeight.w600)),
+                                ])),
+                        ]);
+                    })),
+
+          // Input + emoji panel
+          SafeArea(top: false, child: Column(mainAxisSize: MainAxisSize.min, children: [
+            // Note-д хариулж байгаа бол ишлэл харуулна
+            if (_pendingNote != null)
+              Container(
+                margin: const EdgeInsets.fromLTRB(12, 0, 12, 6),
+                padding: const EdgeInsets.fromLTRB(12, 8, 8, 8),
+                decoration: BoxDecoration(
+                  color: AppColors.bgElevated.withValues(alpha: 0.85),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: AppColors.hairline)),
+                child: Row(children: [
+                  Container(width: 3, height: 32,
+                    decoration: BoxDecoration(color: AppColors.neonCyan,
+                      borderRadius: BorderRadius.circular(2))),
+                  const SizedBox(width: 10),
+                  Expanded(child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Text('$username-ийн note-д хариулж байна',
+                        style: AppTextStyles.bodyXs.copyWith(
+                          color: AppColors.neonCyan, fontWeight: FontWeight.w600)),
+                      Text(_pendingNote!, maxLines: 1, overflow: TextOverflow.ellipsis,
+                        style: AppTextStyles.bodyXs.copyWith(
+                          color: AppColors.textSecondary)),
+                    ])),
+                  GestureDetector(
+                    onTap: () => setState(() => _pendingNote = null),
+                    child: const Icon(Icons.close, size: 18,
+                      color: AppColors.textTertiary)),
+                ]),
+              ),
+            // ── Sticky glass input bar ──
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 4, 12, 8),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(26),
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+                  child: Container(
+                    padding: const EdgeInsets.fromLTRB(4, 6, 6, 6),
+                    decoration: BoxDecoration(
+                      color: AppColors.bgElevated.withValues(alpha: 0.72),
+                      borderRadius: BorderRadius.circular(26),
+                      border: Border.all(color: AppColors.hairline2)),
+                    child: Row(children: [
+                      // '+' attach (visual) doubles as emoji toggle affordance
+                      IconButton(
+                        onPressed: () => setState(() => _showEmoji = !_showEmoji),
+                        icon: Icon(
+                          _showEmoji
+                              ? Icons.keyboard_outlined
+                              : Icons.add_circle_outline_rounded,
+                          color: _showEmoji
+                              ? AppColors.neonCyan
+                              : AppColors.neonCyan)),
+                      Expanded(child: TextField(
+                        controller: _ctrl,
+                        style: AppTextStyles.bodyMd.copyWith(
+                          color: AppColors.textPrimary),
+                        textInputAction: TextInputAction.send,
+                        cursorColor: AppColors.neonCyan,
+                        onTap: () { if (_showEmoji) setState(() => _showEmoji = false); },
+                        onSubmitted: (_) => _send(),
+                        decoration: InputDecoration(
+                          hintText: 'Мессеж бичих…',
+                          hintStyle: AppTextStyles.bodyMd.copyWith(
+                            color: AppColors.textTertiary),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 14, vertical: 11),
+                          isDense: true,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(22),
+                            borderSide: BorderSide.none),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(22),
+                            borderSide: const BorderSide(color: AppColors.hairline)),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(22),
+                            borderSide: const BorderSide(
+                              color: AppColors.neonCyan, width: 1.5)),
+                          fillColor: AppColors.bgSurface.withValues(alpha: 0.7),
+                          filled: true))),
+                      const SizedBox(width: 6),
+                      // emoji / mic affordance (visual → opens emoji panel)
+                      IconButton(
+                        onPressed: () => setState(() => _showEmoji = !_showEmoji),
+                        icon: const Icon(Icons.emoji_emotions_outlined,
+                          size: 22, color: AppColors.textSecondary)),
+                      const SizedBox(width: 2),
+                      // SEND — gradient circle wired to existing handler
+                      GestureDetector(
+                        onTap: _send,
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 150),
+                          width: 46, height: 46,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            gradient: AppColors.accentGradient,
+                            boxShadow: [
+                              BoxShadow(
+                                color: AppColors.accentEnd.withValues(alpha: 0.45),
+                                blurRadius: 18, offset: const Offset(0, 8)),
+                            ]),
+                          child: _sending
+                            ? const Padding(padding: EdgeInsets.all(13),
+                                child: CircularProgressIndicator(
+                                  color: Colors.white, strokeWidth: 2))
+                            : const Icon(Icons.send_rounded,
+                                color: Colors.white, size: 20))),
+                    ]),
+                  ),
+                ),
+              ),
             ),
-          Container(
-            padding: const EdgeInsets.fromLTRB(4, 8, 12, 8),
-            decoration: const BoxDecoration(
-              color: AppColors.bgElevated,
-              border: Border(top: BorderSide(color: AppColors.hairline))),
-            child: Row(children: [
-              IconButton(
-                onPressed: () => setState(() => _showEmoji = !_showEmoji),
-                icon: Icon(
-                  _showEmoji ? Icons.keyboard_outlined : Icons.emoji_emotions_outlined,
-                  color: _showEmoji ? AppColors.accentStart : AppColors.textSecondary)),
-              Expanded(child: TextField(
-                controller: _ctrl,
-                style: AppTextStyles.bodyMd.copyWith(color: AppColors.textPrimary),
-                textInputAction: TextInputAction.send,
-                onTap: () { if (_showEmoji) setState(() => _showEmoji = false); },
-                onSubmitted: (_) => _send(),
-                decoration: InputDecoration(
-                  hintText: 'Message...',
-                  hintStyle: AppTextStyles.bodyMd.copyWith(
-                    color: AppColors.textTertiary),
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 16, vertical: 10),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(22),
-                    borderSide: const BorderSide(color: AppColors.hairline)),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(22),
-                    borderSide: const BorderSide(color: AppColors.hairline)),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(22),
-                    borderSide: const BorderSide(
-                      color: AppColors.accentStart, width: 1.5)),
-                  fillColor: AppColors.bgSurface,
-                  filled: true))),
-              const SizedBox(width: 8),
-              GestureDetector(
-                onTap: _send,
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 150),
-                  width: 42, height: 42,
-                  decoration: const BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: AppColors.accentGradient),
-                  child: _sending
-                    ? const Padding(padding: EdgeInsets.all(12),
-                        child: CircularProgressIndicator(
-                          color: Colors.white, strokeWidth: 2))
-                    : const Icon(Icons.send_rounded,
-                        color: Colors.white, size: 18))),
-            ])),
-          if (_showEmoji) _buildEmojiPanel(),
-        ])),
+            if (_showEmoji) _buildEmojiPanel(),
+          ])),
+        ]),
       ]),
     );
   }
@@ -319,9 +349,9 @@ class _DmThreadScreenState extends State<DmThreadScreen> {
     if (iso == null) return '';
     final d = DateTime.parse(iso);
     final now = DateTime.now();
-    if (_sameDay(iso, now.toIso8601String())) return 'Today';
+    if (_sameDay(iso, now.toIso8601String())) return 'Өнөөдөр';
     if (_sameDay(iso, now.subtract(const Duration(days:1)).toIso8601String()))
-      return 'Yesterday';
+      return 'Өчигдөр';
     return '${d.month}/${d.day}';
   }
 
@@ -339,7 +369,12 @@ class _DmThreadScreenState extends State<DmThreadScreen> {
     final items     = isSticker ? _kStickers : _kEmojis;
     return Container(
       height: 240,
-      color: AppColors.bgElevated,
+      margin: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+      decoration: BoxDecoration(
+        color: AppColors.bgElevated.withValues(alpha: 0.92),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.hairline)),
+      clipBehavior: Clip.antiAlias,
       child: Column(children: [
         Row(children: [
           _emojiTabBtn('emoji',   'Emoji'),
@@ -388,11 +423,170 @@ class _DmThreadScreenState extends State<DmThreadScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 11),
         decoration: BoxDecoration(border: Border(bottom: BorderSide(
-          color: active ? AppColors.accentStart : Colors.transparent, width: 2))),
+          color: active ? AppColors.neonCyan : Colors.transparent, width: 2))),
         child: Center(child: Text(label, style: AppTextStyles.bodyMd.copyWith(
           color: active ? AppColors.textPrimary : AppColors.textSecondary,
           fontWeight: active ? FontWeight.w700 : FontWeight.w500))),
       )));
+  }
+}
+
+// ── Glass app bar (chevron back · neon-ring avatar w/ live dot · name + 'онлайн' · phone/video/more) ──
+class _GlassAppBar extends StatelessWidget implements PreferredSizeWidget {
+  final String username;
+  final String? avatarUrl;
+  final String initial;
+  final VoidCallback onBack;
+  final VoidCallback onTapPeer;
+  const _GlassAppBar({
+    required this.username,
+    required this.avatarUrl,
+    required this.initial,
+    required this.onBack,
+    required this.onTapPeer,
+  });
+
+  @override
+  Size get preferredSize => const Size.fromHeight(64);
+
+  @override
+  Widget build(BuildContext context) {
+    final topPad = MediaQuery.of(context).padding.top;
+    return ClipRRect(
+      borderRadius: const BorderRadius.vertical(bottom: Radius.circular(22)),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 22, sigmaY: 22),
+        child: Container(
+          padding: EdgeInsets.fromLTRB(12, topPad + 6, 10, 8),
+          decoration: BoxDecoration(
+            color: AppColors.bgElevated.withValues(alpha: 0.7),
+            border: const Border(
+              bottom: BorderSide(color: AppColors.hairline2)),
+          ),
+          child: Row(children: [
+            // round glass back button
+            _GlassCircleButton(
+              icon: Icons.chevron_left_rounded,
+              iconSize: 24,
+              onTap: onBack,
+            ),
+            const SizedBox(width: 10),
+            // avatar in neon ring + lime online dot
+            GestureDetector(
+              onTap: onTapPeer,
+              child: AppAvatar(
+                imageUrl: avatarUrl, initial: initial,
+                size: 42, showRing: true, showOnlineDot: true),
+            ),
+            const SizedBox(width: 10),
+            // name + online sub
+            Expanded(child: GestureDetector(
+              onTap: onTapPeer,
+              behavior: HitTestBehavior.opaque,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(username,
+                    maxLines: 1, overflow: TextOverflow.ellipsis,
+                    style: AppTextStyles.h2),
+                  const SizedBox(height: 2),
+                  Row(children: [
+                    Container(width: 6, height: 6,
+                      decoration: const BoxDecoration(
+                        color: AppColors.lime, shape: BoxShape.circle)),
+                    const SizedBox(width: 6),
+                    Text('онлайн', style: AppTextStyles.bodyXs.copyWith(
+                      color: AppColors.lime, fontWeight: FontWeight.w600)),
+                  ]),
+                ]),
+            )),
+            // right glass round buttons (visual)
+            const _GlassCircleButton(icon: Icons.call, iconSize: 18),
+            const SizedBox(width: 8),
+            const _GlassCircleButton(icon: Icons.videocam_outlined, iconSize: 20),
+            const SizedBox(width: 8),
+            const _GlassCircleButton(icon: Icons.more_vert, iconSize: 20),
+          ]),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Reusable glass round icon button ──
+class _GlassCircleButton extends StatelessWidget {
+  final IconData icon;
+  final double iconSize;
+  final VoidCallback? onTap;
+  const _GlassCircleButton({
+    required this.icon, this.iconSize = 20, this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        width: 40, height: 40,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: AppColors.bgSurface.withValues(alpha: 0.6),
+          border: Border.all(color: AppColors.hairline2)),
+        child: Icon(icon, size: iconSize, color: AppColors.textPrimary),
+      ),
+    );
+  }
+}
+
+// ── Aurora glow backdrop (radial cyan/magenta wash on void) ──
+class _AuroraBackdrop extends StatelessWidget {
+  const _AuroraBackdrop();
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: const BoxDecoration(color: AppColors.bgBase),
+      child: Stack(children: [
+        Positioned(
+          top: -40, right: -30,
+          child: _glow(220, AppColors.accentPurple.withValues(alpha: 0.18))),
+        Positioned(
+          bottom: -60, left: -40,
+          child: _glow(240, AppColors.neonCyan.withValues(alpha: 0.10))),
+      ]),
+    );
+  }
+
+  Widget _glow(double size, Color c) => Container(
+    width: size, height: size,
+    decoration: BoxDecoration(
+      shape: BoxShape.circle,
+      gradient: RadialGradient(colors: [c, Colors.transparent]),
+    ),
+  );
+}
+
+// ── Centered glass date-divider chip ──
+class _DateChip extends StatelessWidget {
+  final String label;
+  const _DateChip({required this.label});
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(999),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+          decoration: BoxDecoration(
+            color: AppColors.bgElevated.withValues(alpha: 0.65),
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(color: AppColors.hairline)),
+          child: Text(label, style: AppTextStyles.labelSm.copyWith(
+            color: AppColors.textSecondary)),
+        ),
+      ),
+    );
   }
 }
 
@@ -425,6 +619,28 @@ class _Bubble extends StatelessWidget {
   const _Bubble({required this.text, required this.isMe, required this.time,
     this.storyMediaUrl, this.noteText});
 
+  // Тэдний (партнёрын) шилэн bubble — translucent glass
+  BoxDecoration get _themGlass => BoxDecoration(
+    color: AppColors.bgElevated.withValues(alpha: 0.85),
+    borderRadius: const BorderRadius.only(
+      topLeft: Radius.circular(22), topRight: Radius.circular(22),
+      bottomLeft: Radius.circular(7), bottomRight: Radius.circular(22)),
+    border: Border.all(color: AppColors.hairline),
+  );
+
+  // Миний bubble — magenta→purple gradient + neon glow
+  BoxDecoration get _meGrad => BoxDecoration(
+    gradient: AppColors.accentGradient,
+    borderRadius: const BorderRadius.only(
+      topLeft: Radius.circular(22), topRight: Radius.circular(22),
+      bottomLeft: Radius.circular(22), bottomRight: Radius.circular(7)),
+    boxShadow: [
+      BoxShadow(
+        color: AppColors.accentEnd.withValues(alpha: 0.35),
+        blurRadius: 22, offset: const Offset(0, 10)),
+    ],
+  );
+
   @override
   Widget build(BuildContext context) {
     // 📝 Note-д хариулсан → note ишлэл + хариу bubble
@@ -432,7 +648,7 @@ class _Bubble extends StatelessWidget {
       return Align(
         alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
         child: Padding(
-          padding: const EdgeInsets.only(bottom: 6, top: 2),
+          padding: const EdgeInsets.only(bottom: 8, top: 2),
           child: Column(
             crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
             children: [
@@ -446,10 +662,10 @@ class _Bubble extends StatelessWidget {
                   maxWidth: MediaQuery.of(context).size.width * 0.72),
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 decoration: BoxDecoration(
-                  color: AppColors.bgSurface,
+                  color: AppColors.bgSurface.withValues(alpha: 0.8),
                   borderRadius: BorderRadius.circular(14),
-                  border: Border(left: BorderSide(
-                    color: AppColors.accentStart, width: 3))),
+                  border: const Border(left: BorderSide(
+                    color: AppColors.neonCyan, width: 3))),
                 child: Text(noteText!, maxLines: 3, overflow: TextOverflow.ellipsis,
                   style: AppTextStyles.bodyXs.copyWith(
                     color: AppColors.textSecondary)),
@@ -459,14 +675,11 @@ class _Bubble extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                 constraints: BoxConstraints(
                   maxWidth: MediaQuery.of(context).size.width * 0.72),
-                decoration: BoxDecoration(
-                  gradient: isMe ? AppColors.accentGradient : null,
-                  color: isMe ? null : AppColors.bgSurface,
-                  borderRadius: BorderRadius.circular(16)),
+                decoration: isMe ? _meGrad : _themGlass,
                 child: Text(text, style: AppTextStyles.bodyMd.copyWith(
                   color: isMe ? Colors.white : AppColors.textPrimary)),
               ),
-              const SizedBox(height: 2),
+              const SizedBox(height: 3),
               Text(time, style: const TextStyle(
                 fontSize: 10, color: AppColors.textTertiary)),
             ])));
@@ -476,13 +689,13 @@ class _Bubble extends StatelessWidget {
       return Align(
         alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
         child: Padding(
-          padding: const EdgeInsets.only(bottom: 6, top: 2),
+          padding: const EdgeInsets.only(bottom: 8, top: 2),
           child: Column(
             crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
             children: [
               Row(mainAxisSize: MainAxisSize.min, children: [
                 ClipRRect(
-                  borderRadius: BorderRadius.circular(6),
+                  borderRadius: BorderRadius.circular(8),
                   child: SizedBox(width: 30, height: 42,
                     child: Image.network(storyMediaUrl!, fit: BoxFit.cover,
                       errorBuilder: (_, __, ___) => Container(
@@ -500,17 +713,15 @@ class _Bubble extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                 constraints: BoxConstraints(
                   maxWidth: MediaQuery.of(context).size.width * 0.72),
-                decoration: BoxDecoration(
-                  gradient: isMe ? AppColors.accentGradient : null,
-                  color: isMe ? null : AppColors.bgSurface,
-                  borderRadius: BorderRadius.circular(16),
+                decoration: (isMe ? _meGrad : _themGlass).copyWith(
                   border: Border(left: BorderSide(
-                    color: isMe ? Colors.white54 : AppColors.accentStart, width: 3))),
+                    color: isMe ? Colors.white54 : AppColors.neonCyan, width: 3))),
                 child: Text(text, style: AppTextStyles.bodyMd.copyWith(
                   color: isMe ? Colors.white : AppColors.textPrimary)),
               ),
-              const SizedBox(height: 2),
-              Text(time, style: TextStyle(fontSize: 10, color: AppColors.textTertiary)),
+              const SizedBox(height: 3),
+              Text(time, style: const TextStyle(
+                fontSize: 10, color: AppColors.textTertiary)),
             ])));
     }
     // 🦉 Owl sticker → онцгой gradient pill
@@ -518,7 +729,7 @@ class _Bubble extends StatelessWidget {
       return Align(
         alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
         child: Padding(
-          padding: const EdgeInsets.only(bottom: 6, top: 2),
+          padding: const EdgeInsets.only(bottom: 8, top: 2),
           child: Column(
             crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
             children: [
@@ -526,12 +737,18 @@ class _Bubble extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 decoration: BoxDecoration(
                   gradient: AppColors.accentGradient,
-                  borderRadius: BorderRadius.circular(20)),
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.accentEnd.withValues(alpha: 0.4),
+                      blurRadius: 20, offset: const Offset(0, 8)),
+                  ]),
                 child: Text(text, style: const TextStyle(
                   color: Colors.white, fontSize: 20, fontWeight: FontWeight.w800)),
               ),
-              const SizedBox(height: 2),
-              Text(time, style: TextStyle(fontSize: 10, color: AppColors.textTertiary)),
+              const SizedBox(height: 3),
+              Text(time, style: const TextStyle(
+                fontSize: 10, color: AppColors.textTertiary)),
             ])));
     }
     // Sticker / emoji-only → дэвсгэргүй, том хэмжээгээр
@@ -539,39 +756,38 @@ class _Bubble extends StatelessWidget {
       return Align(
         alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
         child: Padding(
-          padding: const EdgeInsets.only(bottom: 6, top: 2),
+          padding: const EdgeInsets.only(bottom: 8, top: 2),
           child: Column(
             crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
             children: [
               Text(text, style: const TextStyle(fontSize: 46)),
               const SizedBox(height: 2),
-              Text(time, style: TextStyle(
+              Text(time, style: const TextStyle(
                 fontSize: 10, color: AppColors.textTertiary)),
             ])));
     }
+    // Энгийн текст bubble
     return Align(
       alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 6),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        constraints: BoxConstraints(
-          maxWidth: MediaQuery.of(context).size.width * 0.72),
-        decoration: BoxDecoration(
-        gradient: isMe ? AppColors.accentGradient : null,
-        color: isMe ? null : AppColors.bgSurface,
-        borderRadius: BorderRadius.only(
-          topLeft: const Radius.circular(18),
-          topRight: const Radius.circular(18),
-          bottomLeft: Radius.circular(isMe ? 18 : 4),
-          bottomRight: Radius.circular(isMe ? 4 : 18))),
-      child: Column(
-        crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
-        children: [
-          Text(text, style: AppTextStyles.bodyMd.copyWith(
-            color: isMe ? Colors.white : AppColors.textPrimary)),
-          const SizedBox(height: 3),
-          Text(time, style: TextStyle(
-            fontSize: 10, color: isMe ? Colors.white60 : AppColors.textTertiary)),
-        ])));
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: 8),
+        child: Column(
+          crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              constraints: BoxConstraints(
+                maxWidth: MediaQuery.of(context).size.width * 0.78),
+              decoration: isMe ? _meGrad : _themGlass,
+              child: Text(text, style: AppTextStyles.bodyMd.copyWith(
+                color: isMe ? Colors.white : AppColors.textPrimary)),
+            ),
+            const SizedBox(height: 3),
+            Padding(
+              padding: EdgeInsets.only(left: isMe ? 0 : 6, right: isMe ? 6 : 0),
+              child: Text(time, style: const TextStyle(
+                fontSize: 10, color: AppColors.textTertiary)),
+            ),
+          ])));
   }
 }

@@ -18,6 +18,7 @@ import '../../features/feed/screens/post_detail_screen.dart';
 import '../../features/feed/screens/creator_screen.dart';
 import '../../features/feed/screens/qpay_screen.dart';
 import '../../features/map/screens/map_screen.dart';
+import '../../features/map/screens/explore_screen.dart';
 import '../../features/post/screens/create_post_screen.dart';
 import '../../features/notifications/screens/notifications_screen.dart';
 import '../../features/dm/screens/dm_list_screen.dart';
@@ -58,6 +59,7 @@ abstract class AppRoutes {
   static const creator         = '/creator/:id';
   static const qpay            = '/qpay/:id';
   static const map             = '/map';
+  static const explore         = '/explore';
   static const createPost      = '/post/create';
   static const notifications   = '/notifications';
   static const dmList          = '/dm';
@@ -145,6 +147,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         routes: [
           GoRoute(path: AppRoutes.feed,          builder: (_, __) => const FeedScreen()),
           GoRoute(path: AppRoutes.map,           builder: (_, __) => const MapScreen()),
+          GoRoute(path: AppRoutes.explore,       builder: (_, __) => const ExploreScreen()),
           GoRoute(path: AppRoutes.notifications, builder: (_, __) => const NotificationsScreen()),
           GoRoute(path: AppRoutes.reels,         builder: (_, __) => const ReelsScreen()),
           GoRoute(path: AppRoutes.profile,       builder: (_, __) => const ProfileScreen()),

@@ -80,112 +80,160 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             SliverAppBar(
               pinned: true,
               backgroundColor: AppColors.bgBase,
+              titleSpacing: 20,
+              toolbarHeight: 64,
               actions: [
-                IconButton(
-                  onPressed: () => context.push(AppRoutes.saved),
-                  icon: const Icon(Icons.bookmark_border, color: AppColors.textPrimary)),
-                IconButton(
-                  onPressed: () => context.push(AppRoutes.settings),
-                  icon: const Icon(Icons.menu, color: AppColors.textPrimary)),
+                // 💬 Чат (DM)
+                _GlassRoundBtn(
+                  icon: Icons.chat_bubble_outline,
+                  onTap: () => context.push(AppRoutes.dmList),
+                ),
+                const SizedBox(width: 8),
+                // 🔖 Хадгалсан
+                _GlassRoundBtn(
+                  icon: Icons.bookmark_border,
+                  onTap: () => context.push(AppRoutes.saved),
+                ),
+                const SizedBox(width: 8),
+                // 🔗 Хуваалцах (clipboard)
+                _GlassRoundBtn(
+                  icon: Icons.ios_share,
+                  onTap: () => _shareProfile(context, profile),
+                ),
+                const SizedBox(width: 8),
+                // ⚙️ Тохиргоо
+                _GlassRoundBtn(
+                  icon: Icons.menu,
+                  onTap: () => context.push(AppRoutes.settings),
+                ),
+                const SizedBox(width: 20),
               ],
-              title: Text('@${profile.username ?? 'profile'}',
-                  style: AppTextStyles.h2),
+              title: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text('@${profile.username ?? 'profile'}',
+                      style: AppTextStyles.labelSm.copyWith(
+                          color: AppColors.neonCyan, letterSpacing: 1.6)),
+                  const SizedBox(height: 2),
+                  Text('Профайл', style: AppTextStyles.h1),
+                ],
+              ),
             ),
 
             SliverToBoxAdapter(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 4, 20, 0),
+                padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
                 child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                  // ── Avatar + stats ──
-                  Row(children: [
-                    _ProfileStoryAvatar(
-                      avatarUrl: profile.avatarUrl,
-                      initial: profile.initial,
-                      ring: myRing,
-                    ),
-                    const SizedBox(width: 20),
-                    Expanded(
-                      // posts_count нь trigger-ээр хадгалагддаг — бүх мөр татах
-                      // шаардлагагүй (500к scale-д хямд)
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                        children: [
-                          _Stat(
-                              count: _fmt(profile.postsCount),
-                              label: 'Posts'),
-                          _Stat(
-                              count: _fmt(profile.followersCount),
-                              label: 'Followers'),
-                          _Stat(
-                              count: _fmt(profile.followingCount),
-                              label: 'Following'),
-                        ],
-                      ),
-                    ),
-                  ]),
-                  const SizedBox(height: 14),
+                  // ── Avatar (centered, neon ring) ──
+                  _ProfileStoryAvatar(
+                    avatarUrl: profile.avatarUrl,
+                    initial: profile.initial,
+                    ring: myRing,
+                  ),
+                  const SizedBox(height: 16),
 
-                  // ── Name + bio ──
+                  // ── Name (centered) ──
                   if (profile.name?.isNotEmpty == true)
-                    Text(profile.name!, style: AppTextStyles.labelLg),
+                    Text(profile.name!,
+                        textAlign: TextAlign.center,
+                        style: AppTextStyles.displaySm.copyWith(fontSize: 22)),
+
+                  // ── Username eyebrow under name ──
+                  const SizedBox(height: 2),
+                  Text('@${profile.username ?? 'profile'}',
+                      textAlign: TextAlign.center,
+                      style: AppTextStyles.mono
+                          .copyWith(color: AppColors.textSecondary)),
+
+                  // ── Bio (centered) ──
                   if (profile.bio?.isNotEmpty == true) ...[
-                    const SizedBox(height: 4),
-                    Text(profile.bio!,
-                        style: AppTextStyles.bodyMd.copyWith(
-                            color: AppColors.textSecondary, height: 1.4)),
+                    const SizedBox(height: 12),
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 300),
+                      child: Text(profile.bio!,
+                          textAlign: TextAlign.center,
+                          style: AppTextStyles.bodyMd.copyWith(
+                              color: AppColors.textSecondary, height: 1.45)),
+                    ),
                   ],
 
-                  // ── Interests ──
+                  // ── Interests (cyan chips, centered) ──
                   if (profile.interests.isNotEmpty) ...[
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 12),
                     Wrap(
+                      alignment: WrapAlignment.center,
                       spacing: 6,
                       runSpacing: 6,
                       children: profile.interests
                           .map((tag) => Container(
                                 padding: const EdgeInsets.symmetric(
-                                    horizontal: 10, vertical: 4),
+                                    horizontal: 11, vertical: 5),
                                 decoration: BoxDecoration(
                                   color:
-                                      AppColors.accentStart.withValues(alpha: 0.1),
+                                      AppColors.neonCyan.withValues(alpha: 0.10),
                                   borderRadius: BorderRadius.circular(20),
                                   border: Border.all(
-                                      color: AppColors.accentStart
-                                          .withValues(alpha: 0.3)),
+                                      color: AppColors.neonCyan
+                                          .withValues(alpha: 0.35)),
                                 ),
                                 child: Text(tag,
                                     style: AppTextStyles.bodyXs.copyWith(
-                                        color: AppColors.accentStart)),
+                                        color: AppColors.neonCyan,
+                                        fontWeight: FontWeight.w600)),
                               ))
                           .toList(),
                     ),
                   ],
+                  const SizedBox(height: 18),
+
+                  // ── Stats (one glass block, 3 columns) ──
+                  Container(
+                    decoration: BoxDecoration(
+                      color: AppColors.bgElevated.withValues(alpha: 0.6),
+                      borderRadius: BorderRadius.circular(18),
+                      border: Border.all(color: AppColors.hairline),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    child: Row(children: [
+                      Expanded(
+                          child: _Stat(
+                              count: _fmt(profile.postsCount),
+                              label: 'Пост')),
+                      Container(
+                          width: 1, height: 34, color: AppColors.hairline),
+                      Expanded(
+                          child: _Stat(
+                              count: _fmt(profile.followersCount),
+                              label: 'Дагагч',
+                              gradient: true)),
+                      Container(
+                          width: 1, height: 34, color: AppColors.hairline),
+                      Expanded(
+                          child: _Stat(
+                              count: _fmt(profile.followingCount),
+                              label: 'Дагаж буй')),
+                    ]),
+                  ),
                   const SizedBox(height: 16),
 
-                  // ── Buttons ──
+                  // ── Action buttons row ──
                   Row(children: [
                     Expanded(
                       child: GradientButton(
                         label: 'Edit Profile',
-                        height: 38,
+                        height: 44,
+                        icon: const Icon(Icons.edit_outlined,
+                            color: Colors.white, size: 16),
                         onPressed: () => context.push(AppRoutes.setup),
                       ),
                     ),
                     const SizedBox(width: 8),
                     _IconBtn(
-                      icon: Icons.share_outlined,
-                      onTap: () async {
-                        HapticFeedback.lightImpact();
-                        final link =
-                            'https://nightowl.ub/u/${profile.username ?? profile.id}';
-                        await Clipboard.setData(ClipboardData(text: link));
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                              content: Text('Профайл холбоос хуулагдлаа 🔗 $link')));
-                        }
-                      },
+                      icon: Icons.ios_share,
+                      onTap: () => _shareProfile(context, profile),
                     ),
                     const SizedBox(width: 8),
                     _IconBtn(
@@ -199,20 +247,27 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     onTap: () => context.push(AppRoutes.business),
                     child: Container(
                       width: double.infinity,
-                      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
+                      padding: const EdgeInsets.symmetric(
+                          vertical: 13, horizontal: 14),
                       decoration: BoxDecoration(
-                        color: AppColors.bgElevated,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: AppColors.accentStart.withValues(alpha: 0.5))),
+                        color: AppColors.bgElevated.withValues(alpha: 0.6),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(
+                            color: AppColors.neonCyan.withValues(alpha: 0.45)),
+                      ),
                       child: Row(children: [
                         const Icon(Icons.storefront_outlined,
-                          color: AppColors.accentStart, size: 20),
+                            color: AppColors.neonCyan, size: 20),
                         const SizedBox(width: 10),
-                        Expanded(child: Text('Бизнес самбар',
-                          style: AppTextStyles.labelMd.copyWith(color: AppColors.textPrimary))),
+                        Expanded(
+                            child: Text('Бизнес самбар',
+                                style: AppTextStyles.labelMd
+                                    .copyWith(color: AppColors.textPrimary))),
                         Text('Газраа удирдах · Event · Live',
-                          style: AppTextStyles.bodyXs.copyWith(color: AppColors.textSecondary)),
-                        const Icon(Icons.chevron_right, color: AppColors.textTertiary, size: 18),
+                            style: AppTextStyles.bodyXs
+                                .copyWith(color: AppColors.textSecondary)),
+                        const Icon(Icons.chevron_right,
+                            color: AppColors.textTertiary, size: 18),
                       ]),
                     ),
                   ),
@@ -223,50 +278,82 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       onTap: () => context.push(AppRoutes.adminPanel),
                       child: Container(
                         width: double.infinity,
-                        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
+                        padding: const EdgeInsets.symmetric(
+                            vertical: 13, horizontal: 14),
                         decoration: BoxDecoration(
-                          color: AppColors.bgElevated,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: AppColors.error.withValues(alpha: 0.5))),
+                          color: AppColors.bgElevated.withValues(alpha: 0.6),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                              color: AppColors.error.withValues(alpha: 0.5)),
+                        ),
                         child: Row(children: [
                           const Icon(Icons.shield_outlined,
-                            color: AppColors.error, size: 20),
+                              color: AppColors.error, size: 20),
                           const SizedBox(width: 10),
-                          Expanded(child: Text('Админ панел',
-                            style: AppTextStyles.labelMd.copyWith(color: AppColors.textPrimary))),
-                          const Icon(Icons.chevron_right, color: AppColors.textTertiary, size: 18),
+                          Expanded(
+                              child: Text('Админ панел',
+                                  style: AppTextStyles.labelMd
+                                      .copyWith(color: AppColors.textPrimary))),
+                          const Icon(Icons.chevron_right,
+                              color: AppColors.textTertiary, size: 18),
                         ]),
                       ),
                     ),
                   ],
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 18),
+
+                  // ── Segmented control (Постууд / Reels) ──
+                  Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      color: AppColors.bgElevated.withValues(alpha: 0.7),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: AppColors.hairline),
+                    ),
+                    child: Row(children: [
+                      _ProfileTab(
+                          icon: Icons.grid_on,
+                          label: 'Постууд',
+                          selected: _tab == 0,
+                          onTap: () => setState(() => _tab = 0)),
+                      _ProfileTab(
+                          icon: Icons.slow_motion_video,
+                          label: 'Reels',
+                          selected: _tab == 1,
+                          onTap: () => setState(() => _tab = 1)),
+                    ]),
+                  ),
+                  const SizedBox(height: 14),
                 ]),
               ),
             ),
 
-            // ── Tab bar (Posts / Reels) ──
-            SliverToBoxAdapter(
-              child: Row(children: [
-                _ProfileTab(
-                  icon: Icons.grid_on,
-                  selected: _tab == 0,
-                  onTap: () => setState(() => _tab = 0)),
-                _ProfileTab(
-                  icon: Icons.slow_motion_video,
-                  selected: _tab == 1,
-                  onTap: () => setState(() => _tab = 1)),
-              ]),
-            ),
-
             // ── Grid (tab-аас хамаарна) ──
-            _PostsGrid(
-                key: ValueKey(_refreshTick),
-                userId: profile.id, reelsOnly: _tab == 1),
+            SliverPadding(
+              padding: const EdgeInsets.symmetric(horizontal: 14),
+              sliver: _PostsGrid(
+                  key: ValueKey(_refreshTick),
+                  userId: profile.id,
+                  reelsOnly: _tab == 1),
+            ),
+            const SliverToBoxAdapter(child: SizedBox(height: 24)),
           ]),
           );
         },
       ),
     );
+  }
+
+  // Профайл холбоосыг clipboard-д хуулах (одоо байгаа handler)
+  Future<void> _shareProfile(BuildContext context, dynamic profile) async {
+    HapticFeedback.lightImpact();
+    final link =
+        'https://nightowl.ub/u/${profile.username ?? profile.id}';
+    await Clipboard.setData(ClipboardData(text: link));
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Профайл холбоос хуулагдлаа 🔗 $link')));
+    }
   }
 
   String _fmt(int n) {
@@ -276,6 +363,28 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   }
 }
 
+/// Glass round button (top bar)
+class _GlassRoundBtn extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback onTap;
+  const _GlassRoundBtn({required this.icon, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) => GestureDetector(
+        onTap: onTap,
+        child: Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: AppColors.bgSurface.withValues(alpha: 0.7),
+            border: Border.all(color: AppColors.hairline2),
+          ),
+          child: Icon(icon, color: AppColors.textPrimary, size: 19),
+        ),
+      );
+}
+
 class _IconBtn extends StatelessWidget {
   final IconData icon;
   final VoidCallback onTap;
@@ -283,48 +392,72 @@ class _IconBtn extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => GestureDetector(
-    onTap: onTap,
-    child: Container(
-      height: 38,
-      width: 38,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: AppColors.hairline2),
-        color: AppColors.bgSurface,
-      ),
-      child: Icon(icon, color: AppColors.textPrimary, size: 18),
-    ),
-  );
+        onTap: onTap,
+        child: Container(
+          height: 44,
+          width: 44,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: AppColors.hairline2),
+            color: AppColors.bgSurface,
+          ),
+          child: Icon(icon, color: AppColors.textPrimary, size: 19),
+        ),
+      );
 }
 
-// ─── Профайлын tab ───
+// ─── Профайлын tab (segmented pill) ───
 class _ProfileTab extends StatelessWidget {
   final IconData icon;
+  final String label;
   final bool selected;
   final VoidCallback onTap;
-  const _ProfileTab({required this.icon, required this.selected, required this.onTap});
+  const _ProfileTab(
+      {required this.icon,
+      required this.label,
+      required this.selected,
+      required this.onTap});
 
   @override
   Widget build(BuildContext context) => Expanded(
-    child: GestureDetector(
-      onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 12),
-        decoration: BoxDecoration(
-          border: Border(
-            top: const BorderSide(color: AppColors.hairline),
-            bottom: BorderSide(
-              color: selected ? AppColors.textPrimary : Colors.transparent,
-              width: 1.5),
+        child: GestureDetector(
+          onTap: onTap,
+          behavior: HitTestBehavior.opaque,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
+            padding: const EdgeInsets.symmetric(vertical: 10),
+            decoration: BoxDecoration(
+              gradient: selected ? AppColors.accentGradient : null,
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: selected
+                  ? [
+                      BoxShadow(
+                        color: AppColors.accentStart.withValues(alpha: 0.4),
+                        blurRadius: 16,
+                        spreadRadius: -2,
+                      ),
+                    ]
+                  : null,
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(icon,
+                    color: selected
+                        ? Colors.white
+                        : AppColors.textTertiary,
+                    size: 18),
+                const SizedBox(width: 6),
+                Text(label,
+                    style: AppTextStyles.labelMd.copyWith(
+                        color: selected
+                            ? Colors.white
+                            : AppColors.textTertiary)),
+              ],
+            ),
           ),
         ),
-        child: Icon(icon,
-            color: selected ? AppColors.textPrimary : AppColors.textTertiary,
-            size: 24),
-      ),
-    ),
-  );
+      );
 }
 
 // ─── Posts grid (cursor pagination / infinite scroll) ───
@@ -425,21 +558,54 @@ class _PostsGridState extends State<_PostsGrid> {
         ? _posts.where((p) => _isVid(p['media_url'] as String?)).toList()
         : _posts;
 
-    // Хоосон (бүгд ачаалагдсан)
+    // Хоосон (бүгд ачаалагдсан) — artistic neon empty state
     if (shown.isEmpty && !_hasMore && !_loading) {
       return SliverToBoxAdapter(
         child: Center(child: Padding(
-          padding: const EdgeInsets.all(40),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 48),
           child: Column(mainAxisSize: MainAxisSize.min, children: [
-            Text(widget.reelsOnly ? '🎬' : '📸', style: const TextStyle(fontSize: 48)),
-            const SizedBox(height: 12),
-            Text(widget.reelsOnly ? 'No reels yet' : 'No posts yet',
-                style: AppTextStyles.h2),
+            // Neon icon in glass circle
+            Container(
+              width: 96,
+              height: 96,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: AppColors.bgElevated.withValues(alpha: 0.7),
+                border: Border.all(
+                    color: AppColors.neonCyan.withValues(alpha: 0.4),
+                    width: 1.5),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.neonCyan.withValues(alpha: 0.25),
+                    blurRadius: 30,
+                    spreadRadius: -4,
+                  ),
+                ],
+              ),
+              child: ShaderMask(
+                shaderCallback: (r) => AppColors.accentGradient.createShader(r),
+                child: Icon(
+                    widget.reelsOnly
+                        ? Icons.slow_motion_video
+                        : Icons.auto_awesome,
+                    color: Colors.white,
+                    size: 40),
+              ),
+            ),
+            const SizedBox(height: 18),
+            Text('Одоохондоо хоосон',
+                textAlign: TextAlign.center, style: AppTextStyles.h2),
             const SizedBox(height: 8),
-            Text(widget.reelsOnly
-                    ? 'Share a video to see it here'
-                    : 'Share your first night out!',
-                style: AppTextStyles.bodyMd.copyWith(color: AppColors.textSecondary)),
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 240),
+              child: Text(
+                  widget.reelsOnly
+                      ? 'Эхний бичлэгээ хуваалцаарай'
+                      : 'Эхний шөнийн мөчөө хуваалцаарай',
+                  textAlign: TextAlign.center,
+                  style: AppTextStyles.bodySm
+                      .copyWith(color: AppColors.textSecondary)),
+            ),
           ]),
         )),
       );
@@ -448,7 +614,7 @@ class _PostsGridState extends State<_PostsGrid> {
     return SliverMainAxisGroup(slivers: [
       SliverGrid(
         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 3, crossAxisSpacing: 1.5, mainAxisSpacing: 1.5),
+          crossAxisCount: 3, crossAxisSpacing: 4, mainAxisSpacing: 4),
         delegate: SliverChildBuilderDelegate(
           (ctx, i) => _tile(shown[i]),
           childCount: shown.length,
@@ -486,63 +652,83 @@ class _PostsGridState extends State<_PostsGrid> {
         }
       },
       onLongPress: () => _confirmDeleteTile(post['id'] as String),
-      child: Stack(fit: StackFit.expand, children: [
-        if (mediaUrl != null && !isVideo)
-          CachedNetworkImage(
-            imageUrl: mediaUrl,
-            fit: BoxFit.cover,
-            placeholder: (_, __) => Container(color: AppColors.bgSurface),
-            errorWidget: (_, __, ___) => Container(
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(14),
+        child: Stack(fit: StackFit.expand, children: [
+          if (mediaUrl != null && !isVideo)
+            CachedNetworkImage(
+              imageUrl: mediaUrl,
+              fit: BoxFit.cover,
+              placeholder: (_, __) => Container(color: AppColors.bgSurface),
+              errorWidget: (_, __, ___) => Container(
+                color: AppColors.bgSurface,
+                child: const Icon(Icons.image_not_supported_outlined,
+                    color: AppColors.textTertiary)),
+            )
+          else if (isVideo)
+            // Видеоны эхний кадрыг cover болгож харуулна (icon-гүй — grid өөрөө
+            // videocam badge нэмдэг; posterOnly нь pointerEvents=none тул дарагдана).
+            NetworkVideo(url: mediaUrl!, posterOnly: true, showPosterIcon: false)
+          else
+            Container(
               color: AppColors.bgSurface,
-              child: const Icon(Icons.image_not_supported_outlined,
-                  color: AppColors.textTertiary)),
-          )
-        else if (isVideo)
-          // Видеоны эхний кадрыг cover болгож харуулна (icon-гүй — grid өөрөө
-          // videocam badge нэмдэг; posterOnly нь pointerEvents=none тул дарагдана).
-          NetworkVideo(url: mediaUrl!, posterOnly: true, showPosterIcon: false)
-        else
-          Container(
-            color: AppColors.bgSurface,
-            child: const Icon(Icons.image_outlined, color: AppColors.textTertiary)),
+              child: const Icon(Icons.image_outlined, color: AppColors.textTertiary)),
 
-        if (isVideo)
-          const Positioned(
-            top: 6, right: 6,
-            child: Icon(Icons.videocam_rounded,
-                color: Colors.white, size: 16,
-                shadows: [Shadow(blurRadius: 4, color: Colors.black54)]),
-          ),
+          if (isVideo)
+            Positioned(
+              top: 6, right: 6,
+              child: Container(
+                width: 24,
+                height: 24,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(8),
+                  color: AppColors.bgBase.withValues(alpha: 0.5),
+                  border: Border.all(color: AppColors.hairline2),
+                ),
+                child: const Icon(Icons.videocam_rounded,
+                    color: AppColors.neonCyan, size: 14),
+              ),
+            ),
 
-        if (likes > 0)
-          Positioned(
-            bottom: 6, left: 6,
-            child: Row(children: [
-              const Icon(Icons.favorite, color: Colors.white, size: 12),
-              const SizedBox(width: 3),
-              Text('$likes', style: const TextStyle(
-                  color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600,
-                  shadows: [Shadow(blurRadius: 4, color: Colors.black54)])),
-            ]),
-          ),
-      ]),
+          if (likes > 0)
+            Positioned(
+              bottom: 6, left: 6,
+              child: Row(children: [
+                const Icon(Icons.favorite, color: Colors.white, size: 12),
+                const SizedBox(width: 3),
+                Text('$likes', style: const TextStyle(
+                    color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600,
+                    shadows: [Shadow(blurRadius: 4, color: Colors.black54)])),
+              ]),
+            ),
+        ]),
+      ),
     );
   }
 }
 
 class _Stat extends StatelessWidget {
   final String count, label;
-  const _Stat({required this.count, required this.label});
+  final bool gradient;
+  const _Stat({required this.count, required this.label, this.gradient = false});
 
   @override
-  Widget build(BuildContext context) => Column(children: [
-    Text(count,
-        style: AppTextStyles.h2.copyWith(fontSize: 18)),
-    const SizedBox(height: 2),
-    Text(label,
-        style: AppTextStyles.bodyXs
-            .copyWith(color: AppColors.textSecondary)),
-  ]);
+  Widget build(BuildContext context) {
+    final numStyle = AppTextStyles.displaySm.copyWith(fontSize: 20, height: 1);
+    final numWidget = gradient
+        ? ShaderMask(
+            shaderCallback: (r) => AppColors.accentGradient.createShader(r),
+            child: Text(count, style: numStyle.copyWith(color: Colors.white)),
+          )
+        : Text(count, style: numStyle);
+    return Column(mainAxisSize: MainAxisSize.min, children: [
+      numWidget,
+      const SizedBox(height: 5),
+      Text(label,
+          style: AppTextStyles.labelSm
+              .copyWith(color: AppColors.textTertiary, letterSpacing: 0.6)),
+    ]);
+  }
 }
 
 /// Профайлын avatar — идэвхтэй story байвал өнгөт ринг + дарж үзэх,
@@ -570,34 +756,53 @@ class _ProfileStoryAvatar extends StatelessWidget {
                   FadeTransition(opacity: a, child: c)))
           : () => context.push('/story/create'),
         child: Container(
-          width: 88, height: 88,
-          padding: const EdgeInsets.all(3),
+          width: 112, height: 112,
+          padding: const EdgeInsets.all(3.5),
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            gradient: hasStory ? AppColors.accentGradient : null,
-            color: hasStory ? null : Colors.transparent,
-            border: hasStory ? null
-                : Border.all(color: AppColors.hairline, width: 2)),
+            // Neon cyan→magenta ring + cyan glow
+            gradient: AppColors.accentGradient,
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.neonCyan.withValues(alpha: 0.45),
+                blurRadius: 26,
+                spreadRadius: -2,
+              ),
+              BoxShadow(
+                color: AppColors.magenta.withValues(alpha: 0.30),
+                blurRadius: 30,
+                spreadRadius: -4,
+              ),
+            ],
+          ),
           child: Container(
-            padding: const EdgeInsets.all(2),
+            padding: const EdgeInsets.all(3),
             decoration: const BoxDecoration(
               shape: BoxShape.circle, color: AppColors.bgBase),
-            child: AppAvatar(imageUrl: avatarUrl, initial: initial, size: 74),
+            child: AppAvatar(imageUrl: avatarUrl, initial: initial, size: 92),
           ),
         ),
       ),
       // "+" товч → шинэ story
       Positioned(
-        right: 0, bottom: 0,
+        right: 2, bottom: 2,
         child: GestureDetector(
           onTap: () => context.push('/story/create'),
           child: Container(
-            width: 26, height: 26,
+            width: 30, height: 30,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               gradient: AppColors.accentGradient,
-              border: Border.all(color: AppColors.bgBase, width: 2.5)),
-            child: const Icon(Icons.add, color: Colors.white, size: 15)),
+              border: Border.all(color: AppColors.bgBase, width: 3),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.accentStart.withValues(alpha: 0.5),
+                  blurRadius: 12,
+                  spreadRadius: -1,
+                ),
+              ],
+            ),
+            child: const Icon(Icons.add, color: Colors.white, size: 16)),
         ),
       ),
     ]);

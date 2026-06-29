@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="mn">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+<title>Night Owl · Feed</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="nightscape.css"/>
+<script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body class="ns">
+<div class="aura"></div>
+<div class="grain"></div>
+
+<div class="app">
+
+  <!-- ══════════ STICKY HEADER ══════════ -->
+  <header class="glass sticky top-0 z-50"
+          style="border-radius:0;border-left:0;border-right:0;border-top:0;border-bottom:1px solid var(--hair);">
+    <div class="flex items-center justify-between px-5 pt-4 pb-3"
+         style="padding-top:calc(env(safe-area-inset-top) + 14px);">
+
+      <!-- Brand -->
+      <div class="flex items-center gap-3">
+        <div class="grid place-items-center anim-breathe"
+             style="width:42px;height:42px;border-radius:14px;background:var(--grad-primary);
+                    box-shadow:0 8px 22px -6px rgba(233,53,200,.6),inset 0 1px 0 rgba(255,255,255,.25);">
+          <i data-lucide="moon-star" style="width:21px;height:21px;color:#fff;"></i>
+        </div>
+        <div class="flex flex-col leading-none">
+          <span class="h1 grad-text">Night Owl</span>
+          <span class="eyebrow mt-1">UB · ШӨНӨ ХЭЗЭЭ Ч ЗОГСОХГҮЙ</span>
+        </div>
+      </div>
+
+      <!-- Actions -->
+      <div class="flex items-center gap-2.5">
+        <button class="glass tap grid place-items-center"
+                style="width:42px;height:42px;border-radius:50%;">
+          <i data-lucide="search" style="width:20px;height:20px;color:var(--t1);"></i>
+        </button>
+        <button class="glass tap grid place-items-center relative"
+                style="width:42px;height:42px;border-radius:50%;">
+          <i data-lucide="bell" style="width:20px;height:20px;color:var(--t1);"></i>
+          <span class="badge dot-live absolute"
+                style="top:8px;right:8px;width:9px;height:9px;min-width:0;padding:0;background:var(--pink);box-shadow:0 0 8px var(--pink);"></span>
+        </button>
+        <a href="chat.html" class="glass tap grid place-items-center relative" aria-label="Чат" style="width:42px;height:42px;border-radius:50%;">
+          <i data-lucide="message-circle" style="width:20px;height:20px;color:var(--t1);"></i>
+          <span class="absolute" style="top:9px;right:9px;width:8px;height:8px;border-radius:50%;background:var(--lime);box-shadow:0 0 8px var(--lime);"></span>
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- ══════════ STORIES ══════════ -->
+  <section class="pt-5">
+    <div class="no-scroll flex gap-4 overflow-x-auto px-5 pb-1">
+
+      <!-- Your story -->
+      <button class="tap flex flex-col items-center gap-2 flex-none" style="width:70px;">
+        <div class="relative" style="width:66px;height:66px;">
+          <div class="ring" style="width:66px;height:66px;background:conic-gradient(from 150deg,var(--hair-2),var(--cyan-soft),var(--hair-2));">
+            <div class="av grid place-items-center" style="background:var(--void-3);">
+              <i data-lucide="plus" style="width:24px;height:24px;color:var(--t2);"></i>
+            </div>
+          </div>
+          <span class="grid place-items-center absolute"
+                style="bottom:-2px;right:-2px;width:24px;height:24px;border-radius:50%;
+                       background:var(--grad-primary);border:3px solid var(--void);
+                       box-shadow:0 4px 12px -2px rgba(233,53,200,.6);">
+            <i data-lucide="plus" style="width:13px;height:13px;color:#fff;"></i>
+          </span>
+        </div>
+        <span class="sub truncate w-full text-center" style="font-size:11px;color:var(--t2);">Таны түүх</span>
+      </button>
+
+      <!-- LIVE friend -->
+      <button class="tap flex flex-col items-center gap-2 flex-none" style="width:70px;">
+        <div class="relative" style="width:66px;height:66px;">
+          <div class="ring live" style="width:66px;height:66px;">
+            <img class="av" src="https://i.pravatar.cc/160?img=47" alt=""/>
+          </div>
+          <span class="pill pill-live absolute left-1/2 -translate-x-1/2"
+                style="bottom:-9px;height:18px;padding:0 7px;font-size:9px;letter-spacing:.08em;">LIVE</span>
+        </div>
+        <span class="sub truncate w-full text-center mt-1" style="font-size:11px;color:var(--t1);">амараа</span>
+      </button>
+
+      <!-- Friends -->
+      <button class="tap flex flex-col items-center gap-2 flex-none" style="width:70px;">
+        <div class="ring" style="width:66px;height:66px;">
+          <img class="av" src="https://i.pravatar.cc/160?img=32" alt=""/>
+        </div>
+        <span class="sub truncate w-full text-center" style="font-size:11px;color:var(--t1);">_хулан_</span>
+      </button>
+
+      <button class="tap flex flex-col items-center gap-2 flex-none" style="width:70px;">
+        <div class="ring seen" style="width:66px;height:66px;opacity:.7;">
+          <img class="av" src="https://i.pravatar.cc/160?img=12" alt=""/>
+        </div>
+        <span class="sub truncate w-full text-center" style="font-size:11px;color:var(--t3);">төгсөө</span>
+      </button>
+
+      <button class="tap flex flex-col items-center gap-2 flex-none" style="width:70px;">
+        <div class="ring" style="width:66px;height:66px;">
+          <img class="av" src="https://i.pravatar.cc/160?img=45" alt=""/>
+        </div>
+        <span class="sub truncate w-full text-center" style="font-size:11px;color:var(--t1);">ariunaa_b</span>
+      </button>
+
+      <button class="tap flex flex-col items-center gap-2 flex-none" style="width:70px;">
+        <div class="ring seen" style="width:66px;height:66px;opacity:.7;">
+          <img class="av" src="https://i.pravatar.cc/160?img=15" alt=""/>
+        </div>
+        <span class="sub truncate w-full text-center" style="font-size:11px;color:var(--t3);">batka</span>
+      </button>
+
+      <button class="tap flex flex-col items-center gap-2 flex-none" style="width:70px;">
+        <div class="ring" style="width:66px;height:66px;">
+          <img class="av" src="https://i.pravatar.cc/160?img=24" alt=""/>
+        </div>
+        <span class="sub truncate w-full text-center" style="font-size:11px;color:var(--t1);">solongo</span>
+      </button>
+
+      <span class="flex-none" style="width:4px;"></span>
+    </div>
+  </section>
+
+  <!-- ══════════ FEED ══════════ -->
+  <main class="px-4 pt-6 space-y-5" style="padding-bottom:130px;">
+
+    <!-- ───── POST 1 ───── -->
+    <article class="card card-hover overflow-hidden" style="border-radius:var(--r-xl);">
+      <div class="p-4">
+        <!-- header -->
+        <div class="flex items-center gap-3">
+          <div class="ring flex-none" style="width:44px;height:44px;">
+            <img class="av" src="https://i.pravatar.cc/160?img=47" alt=""/>
+          </div>
+          <div class="flex-1 min-w-0">
+            <p class="h3 truncate" style="color:var(--t1);">Амараа Б.</p>
+            <p class="sub truncate" style="font-size:12px;color:var(--t3);">@amaraa_b · 24 мин</p>
+          </div>
+          <button class="tap grid place-items-center flex-none" style="width:34px;height:34px;color:var(--t2);">
+            <i data-lucide="more-horizontal" style="width:20px;height:20px;"></i>
+          </button>
+        </div>
+
+        <!-- caption ABOVE image -->
+        <p class="body mt-3.5 mb-3.5">Шинэ rooftop bar нээгдлээ — UB-гийн хамгийн өндөр гэрлийн тал 🌃 Шөнө дөл болж байж жинхэнэ амьдрал эхэлдэг ✨</p>
+
+        <!-- media -->
+        <div class="overflow-hidden" style="border-radius:var(--r);background:var(--grad-primary);">
+          <div class="aspect-square w-full"
+               style="background:linear-gradient(135deg,rgba(124,58,237,.5),rgba(233,53,200,.4),rgba(34,231,255,.3));">
+            <img class="w-full h-full object-cover" loading="lazy"
+                 src="https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=800&q=80&auto=format&fit=crop"
+                 alt="Rooftop nightlife"/>
+          </div>
+        </div>
+      </div>
+
+      <!-- actions -->
+      <div class="px-4 pb-4">
+        <div class="flex items-center gap-5">
+          <button class="like tap flex items-center gap-2" style="color:var(--t1);">
+            <i data-lucide="heart" style="width:23px;height:23px;"></i>
+            <span class="label" style="font-size:13px;color:var(--t1);" data-count>1,284</span>
+          </button>
+          <button class="tap flex items-center gap-2" style="color:var(--t1);">
+            <i data-lucide="message-circle" style="width:22px;height:22px;"></i>
+            <span class="label" style="font-size:13px;color:var(--t1);">96</span>
+          </button>
+          <button class="tap flex items-center gap-2" style="color:var(--t1);">
+            <i data-lucide="share-2" style="width:21px;height:21px;"></i>
+          </button>
+          <span class="flex-1"></span>
+          <button class="tap grid place-items-center" style="color:var(--t1);">
+            <i data-lucide="bookmark" style="width:22px;height:22px;"></i>
+          </button>
+        </div>
+        <button class="sub mt-3 block" style="font-size:13px;color:var(--t3);">96 сэтгэгдлийг үзэх</button>
+      </div>
+    </article>
+
+    <!-- ───── POST 2 ───── -->
+    <article class="card card-hover overflow-hidden" style="border-radius:var(--r-xl);">
+      <div class="p-4">
+        <div class="flex items-center gap-3">
+          <div class="ring flex-none" style="width:44px;height:44px;">
+            <img class="av" src="https://i.pravatar.cc/160?img=32" alt=""/>
+          </div>
+          <div class="flex-1 min-w-0">
+            <p class="h3 truncate" style="color:var(--t1);">Хулан</p>
+            <p class="sub truncate" style="font-size:12px;color:var(--t3);">@_хулан_ · 1 цаг</p>
+          </div>
+          <button class="tap grid place-items-center flex-none" style="width:34px;height:34px;color:var(--t2);">
+            <i data-lucide="more-horizontal" style="width:20px;height:20px;"></i>
+          </button>
+        </div>
+
+        <p class="body mt-3.5 mb-3.5">Өнөөдрийн set list бэлэн 🎧 Шөнийн 12 цагт танхимд уулзъя — neon-той шөнө биднийг хүлээж байна 💜</p>
+
+        <div class="overflow-hidden" style="border-radius:var(--r);background:var(--grad-primary);">
+          <div class="aspect-square w-full"
+               style="background:linear-gradient(135deg,rgba(233,53,200,.45),rgba(124,58,237,.4),rgba(255,45,142,.35));">
+            <img class="w-full h-full object-cover" loading="lazy"
+                 src="https://images.unsplash.com/photo-1571266028243-e4733b0f3f63?w=800&q=80&auto=format&fit=crop"
+                 alt="DJ neon club"/>
+          </div>
+        </div>
+      </div>
+
+      <div class="px-4 pb-4">
+        <div class="flex items-center gap-5">
+          <button class="like tap flex items-center gap-2" style="color:var(--t1);">
+            <i data-lucide="heart" style="width:23px;height:23px;"></i>
+            <span class="label" style="font-size:13px;color:var(--t1);" data-count>2,907</span>
+          </button>
+          <button class="tap flex items-center gap-2" style="color:var(--t1);">
+            <i data-lucide="message-circle" style="width:22px;height:22px;"></i>
+            <span class="label" style="font-size:13px;color:var(--t1);">213</span>
+          </button>
+          <button class="tap flex items-center gap-2" style="color:var(--t1);">
+            <i data-lucide="share-2" style="width:21px;height:21px;"></i>
+          </button>
+          <span class="flex-1"></span>
+          <button class="tap grid place-items-center" style="color:var(--t1);">
+            <i data-lucide="bookmark" style="width:22px;height:22px;"></i>
+          </button>
+        </div>
+        <button class="sub mt-3 block" style="font-size:13px;color:var(--t3);">213 сэтгэгдлийг үзэх</button>
+      </div>
+    </article>
+
+    <!-- ───── POST 3 ───── -->
+    <article class="card card-hover overflow-hidden" style="border-radius:var(--r-xl);">
+      <div class="p-4">
+        <div class="flex items-center gap-3">
+          <div class="ring flex-none" style="width:44px;height:44px;">
+            <img class="av" src="https://i.pravatar.cc/160?img=24" alt=""/>
+          </div>
+          <div class="flex-1 min-w-0">
+            <p class="h3 truncate" style="color:var(--t1);">Солонго</p>
+            <p class="sub truncate" style="font-size:12px;color:var(--t3);">@solongo · 3 цаг</p>
+          </div>
+          <button class="tap grid place-items-center flex-none" style="width:34px;height:34px;color:var(--t2);">
+            <i data-lucide="more-horizontal" style="width:20px;height:20px;"></i>
+          </button>
+        </div>
+
+        <p class="body mt-3.5 mb-3.5">Cocktail bar-ын шинэ цэс гайхалтай боллоо 🍸 Хотын гэрэл доорх хамгийн дулаахан булан — найзуудаа дуудаарай 🌙</p>
+
+        <div class="overflow-hidden" style="border-radius:var(--r);background:var(--grad-primary);">
+          <div class="aspect-square w-full"
+               style="background:linear-gradient(135deg,rgba(34,231,255,.4),rgba(124,58,237,.4),rgba(255,106,43,.3));">
+            <img class="w-full h-full object-cover" loading="lazy"
+                 src="https://images.unsplash.com/photo-1470337458703-46ad1756a187?w=800&q=80&auto=format&fit=crop"
+                 alt="Cocktail bar neon"/>
+          </div>
+        </div>
+      </div>
+
+      <div class="px-4 pb-4">
+        <div class="flex items-center gap-5">
+          <button class="like tap flex items-center gap-2" style="color:var(--t1);">
+            <i data-lucide="heart" style="width:23px;height:23px;"></i>
+            <span class="label" style="font-size:13px;color:var(--t1);" data-count>742</span>
+          </button>
+          <button class="tap flex items-center gap-2" style="color:var(--t1);">
+            <i data-lucide="message-circle" style="width:22px;height:22px;"></i>
+            <span class="label" style="font-size:13px;color:var(--t1);">48</span>
+          </button>
+          <button class="tap flex items-center gap-2" style="color:var(--t1);">
+            <i data-lucide="share-2" style="width:21px;height:21px;"></i>
+          </button>
+          <span class="flex-1"></span>
+          <button class="tap grid place-items-center" style="color:var(--t1);">
+            <i data-lucide="bookmark" style="width:22px;height:22px;"></i>
+          </button>
+        </div>
+        <button class="sub mt-3 block" style="font-size:13px;color:var(--t3);">48 сэтгэгдлийг үзэх</button>
+      </div>
+    </article>
+
+  </main>
+
+  <!-- ══════════ FLOATING BOTTOM NAV ══════════ -->
+  <nav class="nav-float">
+    <a href="feed.html" class="nav-item active"><i data-lucide="home" style="width:23px;height:23px;"></i><span>Feed</span></a>
+    <a href="explore.html" class="nav-item"><i data-lucide="compass" style="width:23px;height:23px;"></i><span>Explore</span></a>
+    <button class="nav-fab tap" aria-label="Шинэ нийтлэл"><i data-lucide="plus" style="width:26px;height:26px;"></i></button>
+    <a href="discovery.html" class="nav-item"><i data-lucide="clapperboard" style="width:23px;height:23px;"></i><span>Discovery</span></a>
+    <a href="profile.html" class="nav-item"><i data-lucide="user" style="width:23px;height:23px;"></i><span>Profile</span></a>
+  </nav>
+
+</div>
+
+<script>
+  lucide.createIcons();
+
+  // ── Like toggle with count update ──
+  function fmt(n){ return n.toLocaleString('en-US'); }
+  document.querySelectorAll('.like').forEach(function(btn){
+    var countEl = btn.querySelector('[data-count]');
+    var base = parseInt((countEl.textContent || '0').replace(/[^0-9]/g,''), 10) || 0;
+    btn.addEventListener('click', function(){
+      var active = btn.classList.toggle('is-active');
+      var val = active ? base + 1 : base;
+      countEl.textContent = fmt(val);
+    });
+  });
+</script>
+</body>
+</html>

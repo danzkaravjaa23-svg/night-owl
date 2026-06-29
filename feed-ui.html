@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="mn" class="dark">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+<title>Night Owl · Feed</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config = {
+  theme: {
+    extend: {
+      fontFamily: { sans: ['Inter','system-ui','sans-serif'], mono:['JetBrains Mono','monospace'] },
+      colors: {
+        base:'#050507', elev:'#0e0e13', surface:'#16161d',
+        silver:'#D8DCE6', steel:'#5A5E6C', accent:'#7E84A0',
+      },
+      keyframes: {
+        floaty:{ '0%,100%':{transform:'translateY(0)'},'50%':{transform:'translateY(-6px)'} },
+        shimmer:{ '0%':{backgroundPosition:'-200% 0'},'100%':{backgroundPosition:'200% 0'} },
+        pop:{ '0%':{transform:'scale(.8)',opacity:0},'60%':{transform:'scale(1.15)'},'100%':{transform:'scale(1)',opacity:1} },
+      },
+      animation:{ floaty:'floaty 6s ease-in-out infinite', pop:'pop .35s cubic-bezier(.34,1.56,.64,1)' },
+    }
+  }
+}
+</script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap&subset=cyrillic,latin" rel="stylesheet"/>
+<script src="https://unpkg.com/lucide@latest"></script>
+<style>
+  *{-webkit-tap-highlight-color:transparent}
+  body{background:#050507}
+  ::-webkit-scrollbar{width:0;height:0}
+  .chrome-text{background:linear-gradient(120deg,#fff 0%,#D8DCE6 30%,#7E84A0 60%,#fff 100%);
+    -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+  .chrome-ring{background:conic-gradient(from 140deg,#fff,#D8DCE6,#5A5E6C,#A8AEC4,#fff)}
+  .live-ring{background:linear-gradient(135deg,#FF416C,#FF4B2B)}
+  .glass{background:rgba(22,22,29,.55);backdrop-filter:blur(20px) saturate(160%);
+    -webkit-backdrop-filter:blur(20px) saturate(160%)}
+  .glass-nav{background:rgba(14,14,19,.62);backdrop-filter:blur(28px) saturate(180%);
+    -webkit-backdrop-filter:blur(28px) saturate(180%)}
+  .hairline{border-color:rgba(255,255,255,.08)}
+  .mesh::before{content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;
+    background:
+      radial-gradient(38% 26% at 18% 8%,rgba(126,132,160,.22),transparent 70%),
+      radial-gradient(34% 24% at 88% 18%,rgba(123,47,247,.16),transparent 70%),
+      radial-gradient(46% 30% at 60% 96%,rgba(255,77,141,.12),transparent 70%);}
+  .noise{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.025'/%3E%3C/svg%3E")}
+  .tap{transition:transform .12s ease,opacity .12s ease}
+  .tap:active{transform:scale(.92);opacity:.85}
+  .card-hover{transition:border-color .3s,transform .3s,box-shadow .3s}
+  .card-hover:hover{border-color:rgba(255,255,255,.16);box-shadow:0 12px 40px -12px rgba(126,132,160,.25)}
+  [data-liked="true"] .heart{fill:#FF4D70;stroke:#FF4D70}
+  [data-saved="true"] .bm{fill:#D8DCE6;stroke:#D8DCE6}
+</style>
+</head>
+<body class="font-sans text-slate-100 mesh noise">
+<div class="mx-auto max-w-[440px] min-h-screen relative">
+
+  <!-- ===== Top bar ===== -->
+  <header class="sticky top-0 z-30 glass border-b hairline">
+    <div class="flex items-center gap-3 px-5 pt-4 pb-3">
+      <div class="relative h-10 w-10 shrink-0 rounded-2xl grid place-items-center
+                  bg-gradient-to-br from-[#9DA3BC] via-[#5E6379] to-[#868CA6]
+                  shadow-[0_6px_20px_-4px_rgba(126,132,160,.6)]">
+        <i data-lucide="moon-star" class="h-5 w-5 text-white"></i>
+      </div>
+      <div class="leading-tight">
+        <h1 class="text-[20px] font-extrabold tracking-tight chrome-text">Night Owl</h1>
+        <p class="font-mono text-[9px] tracking-[.18em] text-slate-500">UB · ШӨНӨ ХЭЗЭЭ Ч ЗОГСОХГҮЙ</p>
+      </div>
+      <div class="ml-auto flex items-center gap-1.5">
+        <button class="tap grid h-10 w-10 place-items-center rounded-full hover:bg-white/5">
+          <i data-lucide="search" class="h-[22px] w-[22px] text-slate-200"></i></button>
+        <button class="tap relative grid h-10 w-10 place-items-center rounded-full hover:bg-white/5">
+          <i data-lucide="bell" class="h-[22px] w-[22px] text-slate-200"></i>
+          <span class="absolute top-2 right-2 h-2 w-2 rounded-full bg-[#FF4D70] ring-2 ring-base"></span></button>
+        <button class="tap grid h-10 w-10 place-items-center rounded-full hover:bg-white/5">
+          <i data-lucide="send" class="h-[20px] w-[20px] text-slate-200"></i></button>
+      </div>
+    </div>
+
+    <!-- ===== Stories ===== -->
+    <div id="stories" class="flex gap-4 overflow-x-auto px-5 pb-4"></div>
+  </header>
+
+  <!-- ===== Feed ===== -->
+  <main id="feed" class="px-4 pt-4 pb-32 space-y-4"></main>
+
+  <!-- ===== Floating bottom nav ===== -->
+  <nav class="fixed bottom-5 left-1/2 -translate-x-1/2 z-40 w-[calc(100%-2rem)] max-w-[408px]">
+    <div class="glass-nav flex items-center justify-around rounded-[26px] border hairline
+                px-3 py-2.5 shadow-[0_18px_50px_-12px_rgba(0,0,0,.8)]">
+      <button class="nav-item tap flex flex-col items-center gap-1 px-2 text-silver" data-on>
+        <i data-lucide="home" class="h-[22px] w-[22px]"></i>
+        <span class="text-[10px] font-semibold">Feed</span></button>
+      <button class="nav-item tap flex flex-col items-center gap-1 px-2 text-slate-500">
+        <i data-lucide="map" class="h-[22px] w-[22px]"></i>
+        <span class="text-[10px] font-medium">Map</span></button>
+      <button class="tap -mt-7 grid h-14 w-14 place-items-center rounded-2xl
+                     bg-gradient-to-br from-[#9DA3BC] via-[#5E6379] to-[#868CA6]
+                     ring-[5px] ring-base shadow-[0_10px_28px_-6px_rgba(126,132,160,.7)]">
+        <i data-lucide="plus" class="h-7 w-7 text-white"></i></button>
+      <button class="nav-item tap flex flex-col items-center gap-1 px-2 text-slate-500">
+        <i data-lucide="compass" class="h-[22px] w-[22px]"></i>
+        <span class="text-[10px] font-medium">Discover</span></button>
+      <button class="nav-item tap flex flex-col items-center gap-1 px-2 text-slate-500">
+        <i data-lucide="user" class="h-[22px] w-[22px]"></i>
+        <span class="text-[10px] font-medium">Profile</span></button>
+    </div>
+  </nav>
+
+</div>
+
+<script>
+// ---- data ----
+const stories = [
+  {n:'Таны story', me:true, seen:false},
+  {n:'nara.ulaan', live:true},
+  {n:'bayar.dj'}, {n:'odgerel'}, {n:'solongo'},
+  {n:'temka', seen:true}, {n:'enkhjin'}, {n:'munkhuu', seen:true},
+];
+const posts = [
+  { user:'nara.ulaan', venue:'Vertigo Rooftop', time:'2ц', likes:'1,284', comments:'42',
+    cap:'Өнөөдрийн шөнө Vertigo дээр гялалзаж байна — хотын гэрэл доороо 🌃',
+    grad:'from-[#2a2440] via-[#1a1a21] to-[#3a2a44]', tag:'Rooftop · Live', liked:true },
+  { user:'bayar.dj', venue:'Oasis Club', time:'5ц', likes:'906', comments:'18',
+    cap:'Шинэ сет бэлэн. Bass-аа тааруул, шөнө уулзъя 🔊',
+    grad:'from-[#1c2a3a] via-[#161620] to-[#24384a]', tag:'DJ set' },
+  { user:'solongo', venue:'Blue Note Jazz', time:'8ц', likes:'2,150', comments:'77',
+    cap:'Амьд жаз + улаан дарс. Энэ шөнийг ингэж л өнгөрөөнө 🍷🎷',
+    grad:'from-[#3a1c2a] via-[#1a1620] to-[#2a1c3a]', tag:'Jazz · Wine' },
+];
+
+// ---- stories render ----
+const elS = document.getElementById('stories');
+elS.innerHTML = stories.map(s=>{
+  const ring = s.me ? 'bg-white/15'
+    : s.live ? 'live-ring'
+    : s.seen ? 'bg-white/10' : 'chrome-ring';
+  const inner = s.n.replace('Таны story','+').trim();
+  const letter = s.me ? '+' : s.n[0].toUpperCase();
+  return `
+  <button class="tap flex w-[68px] shrink-0 flex-col items-center gap-1.5">
+    <span class="relative grid h-[64px] w-[64px] place-items-center rounded-full ${ring} p-[2.5px]">
+      <span class="grid h-full w-full place-items-center rounded-full bg-surface ring-2 ring-base
+                   text-lg font-extrabold text-silver">${letter}</span>
+      ${s.live?`<span class="absolute -bottom-1 left-1/2 -translate-x-1/2 rounded-md live-ring px-1.5 py-[1px]
+                  text-[8px] font-extrabold tracking-wide text-white">LIVE</span>`:''}
+      ${s.me?`<span class="absolute -bottom-0.5 -right-0.5 grid h-5 w-5 place-items-center rounded-full
+                  bg-gradient-to-br from-[#9DA3BC] to-[#5E6379] ring-2 ring-base">
+                  <i data-lucide="plus" class="h-3 w-3 text-white"></i></span>`:''}
+    </span>
+    <span class="max-w-[64px] truncate text-[10px] ${s.seen?'text-slate-500':'text-slate-300'}">${s.n}</span>
+  </button>`;
+}).join('');
+
+// ---- feed render ----
+const elF = document.getElementById('feed');
+elF.innerHTML = posts.map((p,i)=>`
+  <article data-liked="${p.liked?'true':'false'}" data-saved="false"
+    class="card-hover overflow-hidden rounded-3xl border hairline glass">
+    <!-- head -->
+    <div class="flex items-center gap-3 px-4 pt-3.5 pb-3">
+      <span class="grid h-10 w-10 place-items-center rounded-full chrome-ring p-[2px]">
+        <span class="grid h-full w-full place-items-center rounded-full bg-surface text-sm font-extrabold text-silver">${p.user[0].toUpperCase()}</span>
+      </span>
+      <div class="leading-tight">
+        <p class="text-[13px] font-semibold">${p.user}</p>
+        <p class="flex items-center gap-1 text-[11px] text-slate-400">
+          <i data-lucide="map-pin" class="h-3 w-3 text-accent"></i>${p.venue}</p>
+      </div>
+      <span class="ml-auto text-[11px] text-slate-500">${p.time}</span>
+      <button class="tap grid h-8 w-8 place-items-center rounded-full hover:bg-white/5">
+        <i data-lucide="more-horizontal" class="h-[18px] w-[18px] text-slate-400"></i></button>
+    </div>
+    <!-- media -->
+    <div class="relative mx-3 mb-1 h-[360px] overflow-hidden rounded-2xl bg-gradient-to-br ${p.grad}">
+      <div class="absolute inset-0" style="background-image:url(&quot;data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40'%3E%3Cpath d='M0 40L40 0' stroke='white' stroke-opacity='.04' stroke-width='1'/%3E%3C/svg%3E&quot;)"></div>
+      <div class="absolute inset-0 bg-gradient-to-t from-black/55 via-transparent to-black/10"></div>
+      <span class="absolute left-3 top-3 rounded-full glass border hairline px-3 py-1 text-[10px] font-semibold tracking-wide text-slate-200">${p.tag}</span>
+      <div class="absolute bottom-3 left-3 right-3 flex items-end justify-between">
+        <span class="font-mono text-[10px] tracking-[.2em] text-white/60">NIGHT_OWL · ${String(i+1).padStart(2,'0')}</span>
+        <span class="flex h-9 w-9 items-center justify-center rounded-full glass border hairline">
+          <i data-lucide="play" class="h-4 w-4 text-white"></i></span>
+      </div>
+    </div>
+    <!-- actions -->
+    <div class="flex items-center gap-1 px-3 pt-2.5 pb-1">
+      <button onclick="toggleLike(this)" class="like tap flex items-center gap-1.5 rounded-full px-2.5 py-1.5 hover:bg-white/5">
+        <i data-lucide="heart" class="heart h-[22px] w-[22px] text-slate-300"></i>
+        <span class="text-[13px] font-semibold text-slate-300">${p.likes}</span></button>
+      <button class="tap flex items-center gap-1.5 rounded-full px-2.5 py-1.5 hover:bg-white/5">
+        <i data-lucide="message-circle" class="h-[21px] w-[21px] text-slate-300"></i>
+        <span class="text-[13px] font-semibold text-slate-300">${p.comments}</span></button>
+      <button class="tap flex items-center gap-1.5 rounded-full px-2.5 py-1.5 hover:bg-white/5">
+        <i data-lucide="send" class="h-[20px] w-[20px] text-slate-300"></i></button>
+      <button onclick="toggleSave(this)" class="save tap ml-auto grid h-9 w-9 place-items-center rounded-full hover:bg-white/5">
+        <i data-lucide="bookmark" class="bm h-[21px] w-[21px] text-slate-300"></i></button>
+    </div>
+    <!-- caption -->
+    <p class="px-4 pb-2 text-[13.5px] leading-relaxed text-slate-200">
+      <span class="font-bold">${p.user}</span> ${p.cap}</p>
+    <p class="px-4 pb-4 text-[11px] text-slate-500">${p.comments} сэтгэгдлийг бүгдийг харах</p>
+  </article>
+`).join('');
+
+// ---- interactions ----
+function toggleLike(btn){
+  const card = btn.closest('article');
+  const on = card.dataset.liked==='true';
+  card.dataset.liked = on?'false':'true';
+  const h = btn.querySelector('.heart');
+  if(!on){ h.classList.remove('text-slate-300'); h.classList.add('animate-pop'); setTimeout(()=>h.classList.remove('animate-pop'),350); }
+  else h.classList.add('text-slate-300');
+}
+function toggleSave(btn){
+  const card = btn.closest('article');
+  card.dataset.saved = card.dataset.saved==='true'?'false':'true';
+}
+// nav active state
+document.querySelectorAll('.nav-item').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('.nav-item').forEach(x=>{x.classList.remove('text-silver');x.classList.add('text-slate-500');});
+  b.classList.remove('text-slate-500'); b.classList.add('text-silver');
+}));
+lucide.createIcons();
+</script>
+</body>
+</html>

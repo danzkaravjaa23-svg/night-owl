@@ -1,0 +1,339 @@
+<!DOCTYPE html><html lang="mn"><head><meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+<title>Сараа · Чат — Night Owl</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="nightscape.css"/>
+<script src="https://unpkg.com/lucide@latest"></script>
+<style>
+  /* ── Chat-specific micro-styling, all on top of the design system ── */
+  .thread{
+    -ms-overflow-style:none; scrollbar-width:none;
+    background:
+      radial-gradient(60% 40% at 80% 0%,rgba(124,58,237,.07),transparent 60%),
+      radial-gradient(50% 30% at 0% 100%,rgba(34,231,255,.05),transparent 60%);
+  }
+  .thread::-webkit-scrollbar{display:none}
+
+  /* bubbles */
+  .bubble-them{
+    background:var(--glass); backdrop-filter:blur(18px) saturate(155%);
+    -webkit-backdrop-filter:blur(18px) saturate(155%);
+    border:1px solid var(--hair);
+    border-radius:22px 22px 22px 7px;
+  }
+  .bubble-me{
+    background:var(--grad-primary); color:#fff;
+    border-radius:22px 22px 7px 22px;
+    box-shadow:0 10px 30px -12px rgba(233,53,200,.55),inset 0 1px 0 rgba(255,255,255,.22);
+  }
+  .bubble-img{
+    border-radius:20px; overflow:hidden; border:1px solid var(--hair);
+    background:var(--grad-primary);
+  }
+  .stamp{font-size:10px;font-weight:500;letter-spacing:.02em}
+
+  /* date divider */
+  .date-chip{
+    background:var(--glass-strong); border:1px solid var(--hair);
+    backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px);
+  }
+
+  /* typing dots */
+  .typing span{
+    width:7px;height:7px;border-radius:50%;background:var(--t2);display:inline-block;
+    animation:typedot 1.3s infinite ease-in-out;
+  }
+  .typing span:nth-child(2){animation-delay:.18s}
+  .typing span:nth-child(3){animation-delay:.36s}
+  @keyframes typedot{
+    0%,60%,100%{transform:translateY(0);opacity:.35}
+    30%{transform:translateY(-5px);opacity:1}
+  }
+
+  /* online dot overlap on the header ring */
+  .ring-live-dot{
+    position:absolute;right:-1px;bottom:-1px;width:12px;height:12px;border-radius:50%;
+    background:var(--lime);box-shadow:0 0 8px var(--lime);
+    border:2.5px solid var(--void);animation:pulse 1.8s ease-in-out infinite;
+  }
+
+  .icon-btn{
+    display:grid;place-items:center;width:42px;height:42px;border-radius:14px;
+    color:var(--t1);
+  }
+  .seen-check i{width:15px;height:15px}
+</style>
+</head>
+<body class="ns">
+<div class="aura"></div><div class="grain"></div>
+
+<div class="app flex flex-col h-screen">
+
+  <!-- ════════ STICKY HEADER ════════ -->
+  <header class="glass sticky top-0 z-30 flex items-center gap-3 px-4 py-3"
+          style="border-radius:0 0 var(--r-lg) var(--r-lg);border-top:0;border-left:0;border-right:0;">
+    <a href="feed.html" class="tap" aria-label="Буцах" style="display:grid;place-items:center;width:40px;height:40px;border-radius:50%;background:var(--glass);backdrop-filter:blur(20px) saturate(160%);-webkit-backdrop-filter:blur(20px) saturate(160%);border:1px solid var(--hair-2);color:var(--t1);flex:none;"><i data-lucide="chevron-left" style="width:20px;height:20px;"></i></a>
+
+    <!-- avatar + live dot -->
+    <div class="relative tap" style="width:42px;height:42px">
+      <div class="ring live w-full h-full">
+        <img src="https://i.pravatar.cc/160?img=47" alt="Сараа"/>
+      </div>
+      <span class="ring-live-dot"></span>
+    </div>
+
+    <!-- name + status -->
+    <div class="flex-1 min-w-0 leading-tight">
+      <div class="h2 truncate">Сараа</div>
+      <div class="flex items-center gap-1.5 mt-0.5">
+        <span class="dot-live" style="width:6px;height:6px"></span>
+        <span class="sub" style="color:var(--lime);font-weight:600;font-size:12px">онлайн</span>
+      </div>
+    </div>
+
+    <!-- right glass round buttons -->
+    <div class="flex items-center gap-2">
+      <button class="btn-glass tap grid place-items-center" style="width:40px;height:40px;border-radius:50%;padding:0" aria-label="Дуудлага">
+        <i data-lucide="phone" style="width:18px;height:18px"></i>
+      </button>
+      <button class="btn-glass tap grid place-items-center" style="width:40px;height:40px;border-radius:50%;padding:0" aria-label="Видео">
+        <i data-lucide="video" style="width:18px;height:18px"></i>
+      </button>
+      <button id="infoBtn" class="btn-glass tap grid place-items-center" style="width:40px;height:40px;border-radius:50%;padding:0" aria-label="Дэлгэрэнгүй">
+        <i data-lucide="more-vertical" style="width:18px;height:18px"></i>
+      </button>
+    </div>
+  </header>
+
+  <!-- ════════ MESSAGES (scroll) ════════ -->
+  <main class="thread flex-1 overflow-y-auto px-4 pt-4 pb-3 flex flex-col gap-3">
+
+    <!-- date divider -->
+    <div class="flex justify-center my-1">
+      <span class="date-chip eyebrow" style="padding:6px 14px;border-radius:var(--r-pill);color:var(--t2)">Өнөөдөр</span>
+    </div>
+
+    <!-- THEM -->
+    <div class="flex flex-col items-start gap-1 max-w-[78%]">
+      <div class="bubble-them px-4 py-2.5">
+        <p class="body">Хөөе! Өнөөдөр шөнө хаашаа явах вэ? 🌙</p>
+      </div>
+      <span class="stamp pl-2" style="color:var(--t3)">22:14</span>
+    </div>
+
+    <!-- ME -->
+    <div class="flex flex-col items-end gap-1 self-end max-w-[78%]">
+      <div class="bubble-me px-4 py-2.5">
+        <p class="body" style="color:#fff">Sky Bar луу бодож байсан, дээр нь live DJ байгаа гэсэн ✨</p>
+      </div>
+      <span class="stamp pr-2" style="color:var(--t3)">22:15</span>
+    </div>
+
+    <!-- THEM -->
+    <div class="flex flex-col items-start gap-1 max-w-[78%]">
+      <div class="bubble-them px-4 py-2.5">
+        <p class="body">Өө гоё санаа! Тэнд урьд нь очиж байсан, view нь үнэхээр гайхалтай шүү</p>
+      </div>
+      <span class="stamp pl-2" style="color:var(--t3)">22:16</span>
+    </div>
+
+    <!-- THEM · IMAGE -->
+    <div class="flex flex-col items-start gap-1 max-w-[78%]">
+      <div class="bubble-img" style="width:230px">
+        <img src="https://images.unsplash.com/photo-1566737236500-c8ac43014a67?w=800&q=80&auto=format&fit=crop"
+             alt="Sky Bar шөнийн үзэмж" class="w-full object-cover" style="height:170px;display:block"/>
+      </div>
+      <span class="stamp pl-2" style="color:var(--t3)">22:16</span>
+    </div>
+
+    <!-- ME -->
+    <div class="flex flex-col items-end gap-1 self-end max-w-[78%]">
+      <div class="bubble-me px-4 py-2.5">
+        <p class="body" style="color:#fff">Яг тэр газар! 😍 Тэгвэл 23:00-д уулзах уу?</p>
+      </div>
+      <span class="stamp pr-2" style="color:var(--t3)">22:17</span>
+    </div>
+
+    <!-- ME · last sent with SEEN check -->
+    <div class="flex flex-col items-end gap-1 self-end max-w-[78%]">
+      <div class="bubble-me px-4 py-2.5">
+        <p class="body" style="color:#fff">Би таксидаа сууж байна, удахгүй очно 🚕</p>
+      </div>
+      <div class="flex items-center gap-1.5 pr-2">
+        <span class="stamp" style="color:var(--t3)">22:18</span>
+        <span class="seen-check flex items-center" style="color:var(--cyan);filter:drop-shadow(0 0 5px rgba(34,231,255,.7))">
+          <i data-lucide="check-check"></i>
+        </span>
+        <span class="stamp" style="color:var(--cyan)">Үзсэн</span>
+      </div>
+    </div>
+
+    <!-- THEM · TYPING -->
+    <div class="flex flex-col items-start gap-1 max-w-[78%]">
+      <div class="bubble-them px-4 py-3.5 flex items-center">
+        <span class="typing flex items-center gap-1.5" aria-label="бичиж байна">
+          <span></span><span></span><span></span>
+        </span>
+      </div>
+    </div>
+
+    <div class="h-1"></div>
+  </main>
+
+  <!-- ════════ STICKY INPUT BAR ════════ -->
+  <footer class="px-3 pt-2"
+          style="padding-bottom:calc(12px + env(safe-area-inset-bottom));background:linear-gradient(180deg,transparent,var(--void) 40%)">
+    <div class="glass-strong flex items-center gap-2 pl-2 pr-2 py-2" style="border-radius:var(--r-xl)">
+
+      <!-- attach -->
+      <button class="tap icon-btn" style="color:var(--cyan);width:40px;height:40px" aria-label="Хавсаргах">
+        <i data-lucide="plus" style="width:22px;height:22px"></i>
+      </button>
+
+      <!-- text field -->
+      <div class="input-group flex-1">
+        <input id="msgInput" class="input"
+               style="height:44px;border-radius:var(--r-pill);padding:0 44px 0 16px;background:var(--surface)"
+               placeholder="Мессеж бичих…"/>
+        <span class="trail" aria-label="Эможи">
+          <i data-lucide="smile" style="width:20px;height:20px"></i>
+        </span>
+      </div>
+
+      <!-- mic (shown when empty) -->
+      <button id="micBtn" class="tap icon-btn" style="color:var(--t2);width:40px;height:40px" aria-label="Дуу хоолой">
+        <i data-lucide="mic" style="width:21px;height:21px"></i>
+      </button>
+
+      <!-- send (gradient circle) -->
+      <button id="sendBtn" class="btn-primary tap grid place-items-center"
+              style="width:46px;height:46px;border-radius:50%;padding:0;flex:none" aria-label="Илгээх">
+        <i data-lucide="send" style="width:20px;height:20px"></i>
+      </button>
+    </div>
+  </footer>
+
+</div>
+
+<!-- ════════ INFO SHEET (more button) ════════ -->
+<div id="scrim" class="scrim hidden"></div>
+<div id="infoSheet" class="sheet hidden">
+  <div class="sheet-handle"></div>
+  <div class="flex flex-col items-center gap-2 pb-4">
+    <div class="relative" style="width:72px;height:72px">
+      <div class="ring live w-full h-full">
+        <img src="https://i.pravatar.cc/160?img=47" alt="Сараа"/>
+      </div>
+      <span class="ring-live-dot" style="width:16px;height:16px;right:2px;bottom:2px"></span>
+    </div>
+    <div class="h1 mt-1">Сараа</div>
+    <span class="pill pill-live"><span class="dot"></span>Онлайн байна</span>
+  </div>
+
+  <div class="flex gap-3 pb-4">
+    <button class="btn btn-glass btn-block flex-col" style="height:64px;gap:5px;border-radius:var(--r)">
+      <i data-lucide="phone" style="width:20px;height:20px;color:var(--cyan)"></i>
+      <span style="font-size:11px;font-weight:600">Дуудлага</span>
+    </button>
+    <button class="btn btn-glass btn-block flex-col" style="height:64px;gap:5px;border-radius:var(--r)">
+      <i data-lucide="video" style="width:20px;height:20px;color:var(--cyan)"></i>
+      <span style="font-size:11px;font-weight:600">Видео</span>
+    </button>
+    <button class="btn btn-glass btn-block flex-col" style="height:64px;gap:5px;border-radius:var(--r)">
+      <i data-lucide="user" style="width:20px;height:20px;color:var(--cyan)"></i>
+      <span style="font-size:11px;font-weight:600">Профайл</span>
+    </button>
+  </div>
+
+  <div class="card overflow-hidden mb-3">
+    <button class="row w-full text-left">
+      <span class="row-ic"><i data-lucide="bell-off" style="width:18px;height:18px"></i></span>
+      <span class="flex-1 h3">Мэдэгдэл хаах</span>
+      <span class="switch" data-switch></span>
+    </button>
+    <hr class="divider mx-4"/>
+    <button class="row w-full text-left">
+      <span class="row-ic"><i data-lucide="image" style="width:18px;height:18px"></i></span>
+      <span class="flex-1 h3">Медиа, файл</span>
+      <i data-lucide="chevron-right" style="width:18px;height:18px;color:var(--t3)"></i>
+    </button>
+    <hr class="divider mx-4"/>
+    <button class="row w-full text-left">
+      <span class="row-ic" style="color:var(--red)"><i data-lucide="ban" style="width:18px;height:18px"></i></span>
+      <span class="flex-1 h3" style="color:#ff8197">Хориглох</span>
+    </button>
+  </div>
+
+  <button class="btn btn-ghost btn-block" id="sheetClose">Болих</button>
+</div>
+
+<script>
+lucide.createIcons();
+
+/* ── helpers ── */
+const $ = (s)=>document.querySelector(s);
+
+/* ── info sheet open/close ── */
+const scrim   = $('#scrim');
+const sheet   = $('#infoSheet');
+function openSheet(){ scrim.classList.remove('hidden'); sheet.classList.remove('hidden'); }
+function closeSheet(){ scrim.classList.add('hidden'); sheet.classList.add('hidden'); }
+$('#infoBtn').addEventListener('click', openSheet);
+$('#sheetClose').addEventListener('click', closeSheet);
+scrim.addEventListener('click', closeSheet);
+
+/* ── switches in the sheet ── */
+document.querySelectorAll('[data-switch]').forEach(sw=>{
+  sw.addEventListener('click', ()=> sw.classList.toggle('on'));
+});
+
+/* ── input: toggle mic <-> send based on content ── */
+const input  = $('#msgInput');
+const micBtn = $('#micBtn');
+const sendBtn= $('#sendBtn');
+function syncBar(){
+  const has = input.value.trim().length > 0;
+  micBtn.style.display  = has ? 'none' : 'grid';
+  sendBtn.style.display = has ? 'grid' : 'grid'; /* send always visible, mic hides */
+}
+input.addEventListener('input', syncBar);
+syncBar();
+
+/* ── send a message (appends my bubble + scrolls) ── */
+const thread = $('.thread');
+function sendMessage(){
+  const txt = input.value.trim();
+  if(!txt) return;
+  const now = new Date();
+  const hh = String(now.getHours()).padStart(2,'0');
+  const mm = String(now.getMinutes()).padStart(2,'0');
+
+  const wrap = document.createElement('div');
+  wrap.className = 'flex flex-col items-end gap-1 self-end max-w-[78%] anim-pop';
+  wrap.innerHTML = `
+    <div class="bubble-me px-4 py-2.5">
+      <p class="body" style="color:#fff"></p>
+    </div>
+    <div class="flex items-center gap-1.5 pr-2">
+      <span class="stamp" style="color:var(--t3)">${hh}:${mm}</span>
+      <span class="seen-check flex items-center" style="color:var(--t3)">
+        <i data-lucide="check"></i>
+      </span>
+    </div>`;
+  wrap.querySelector('p').textContent = txt;
+
+  /* insert before trailing spacer (last child of thread) */
+  thread.insertBefore(wrap, thread.lastElementChild);
+  input.value = '';
+  syncBar();
+  lucide.createIcons();
+  thread.scrollTop = thread.scrollHeight;
+}
+sendBtn.addEventListener('click', sendMessage);
+input.addEventListener('keydown', (e)=>{ if(e.key==='Enter') sendMessage(); });
+
+/* ── autoscroll to bottom on load ── */
+window.addEventListener('load', ()=>{ thread.scrollTop = thread.scrollHeight; });
+thread.scrollTop = thread.scrollHeight;
+</script>
+</body></html>

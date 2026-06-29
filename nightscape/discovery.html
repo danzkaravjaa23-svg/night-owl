@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="mn">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+<title>Night Owl · Discovery</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="nightscape.css"/>
+<script src="https://unpkg.com/lucide@latest"></script>
+<style>
+  /* ── Reels viewport: full-height scroll-snap column ── */
+  .reels{
+    position:absolute;inset:0;height:100vh;width:100%;
+    overflow-y:auto;overflow-x:hidden;
+    scroll-snap-type:y mandatory;-webkit-overflow-scrolling:touch;
+    background:var(--void);
+  }
+  .reels::-webkit-scrollbar{width:0;height:0}
+  .reel{
+    position:relative;height:100vh;width:100%;
+    scroll-snap-align:start;scroll-snap-stop:always;
+    overflow:hidden;
+  }
+  .reel__bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+  .reel__fallback{position:absolute;inset:0}
+  /* scrims top + bottom for legibility */
+  .reel__scrim{position:absolute;inset:0;pointer-events:none;
+    background:
+      linear-gradient(180deg,rgba(5,5,5,.72) 0%,rgba(5,5,5,0) 26%),
+      linear-gradient(0deg,rgba(5,5,5,.86) 0%,rgba(5,5,5,.30) 32%,rgba(5,5,5,0) 56%);}
+
+  /* ── Top overlay ── */
+  .reel-top{position:absolute;left:0;right:0;top:0;z-index:20;
+    padding-top:calc(env(safe-area-inset-top) + 14px);
+    display:flex;align-items:center;justify-content:center;gap:10px;padding-inline:18px;padding-bottom:8px;}
+  .seg-glass{background:rgba(15,15,21,.42);border-color:rgba(255,255,255,.14);
+    backdrop-filter:blur(14px) saturate(160%);-webkit-backdrop-filter:blur(14px) saturate(160%);}
+  .seg-glass button{color:rgba(244,246,250,.7)}
+  .seg-glass button.active{background:rgba(13,13,19,.6);color:var(--t1);
+    box-shadow:0 2px 10px rgba(0,0,0,.5),inset 0 0 0 1px rgba(34,231,255,.32)}
+  .top-icon{position:absolute;right:18px;top:calc(env(safe-area-inset-top) + 12px);}
+
+  /* ── Right action rail ── */
+  .rail{position:absolute;right:12px;bottom:160px;z-index:20;
+    display:flex;flex-direction:column;align-items:center;gap:22px}
+  .rail-btn{display:flex;flex-direction:column;align-items:center;gap:5px;
+    background:none;border:0;cursor:pointer;color:#fff}
+  .rail-btn i{filter:drop-shadow(0 2px 6px rgba(0,0,0,.75)) drop-shadow(0 0 10px rgba(34,231,255,.35))}
+  .rail-btn span{font-size:11px;font-weight:700;color:#fff;
+    text-shadow:0 1px 4px rgba(0,0,0,.8)}
+  .rail .like.is-active i{filter:drop-shadow(0 0 12px rgba(255,45,142,.85))}
+  .follow-badge{position:absolute;left:50%;transform:translateX(-50%);bottom:-9px;
+    width:22px;height:22px;border-radius:50%;display:grid;place-items:center;
+    background:var(--grad-primary);border:2.5px solid var(--void);
+    box-shadow:0 4px 12px -2px rgba(233,53,200,.7)}
+  /* spinning music disc */
+  .disc{width:48px;height:48px;border-radius:50%;display:grid;place-items:center;
+    background:linear-gradient(135deg,#1a1a22,#0a0a0e);
+    border:1px solid rgba(255,255,255,.14);overflow:hidden;
+    box-shadow:0 6px 18px rgba(0,0,0,.6),0 0 16px rgba(34,231,255,.2);
+    animation:spin 7s linear infinite}
+  .disc img{width:100%;height:100%;object-fit:cover;opacity:.9}
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+  /* ── Bottom-left overlay ── */
+  .reel-info{position:absolute;left:0;right:84px;bottom:96px;z-index:20;padding-inline:18px}
+  .reel-info .uname{font-size:16px;font-weight:800;color:#fff;letter-spacing:-.01em;
+    text-shadow:0 1px 6px rgba(0,0,0,.8)}
+  .reel-info .cap{font-size:13.5px;line-height:1.5;color:rgba(244,246,250,.94);
+    text-shadow:0 1px 5px rgba(0,0,0,.8);max-width:30ch}
+  .follow-cyan{height:30px;padding:0 16px;border-radius:var(--r-pill);
+    font-size:12.5px;font-weight:800;color:var(--void);background:var(--grad-cyan);
+    border:0;cursor:pointer;box-shadow:var(--glow-cyan);letter-spacing:-.01em;
+    transition:transform .13s,box-shadow .25s}
+  .follow-cyan:active{transform:scale(.94)}
+  .follow-cyan.done{background:rgba(15,15,21,.5);color:var(--t1);
+    box-shadow:none;border:1px solid var(--hair-2);backdrop-filter:blur(10px)}
+
+  /* music ticker */
+  .ticker{overflow:hidden;max-width:210px;mask-image:linear-gradient(90deg,#000 84%,transparent)}
+  .ticker__inner{display:inline-block;white-space:nowrap;
+    animation:marquee 11s linear infinite;font-size:12px;font-weight:600;
+    color:rgba(244,246,250,.92);text-shadow:0 1px 4px rgba(0,0,0,.8)}
+  @keyframes marquee{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
+
+  /* progress bar at the very bottom of each reel */
+  .reel-progress{position:absolute;left:0;right:0;bottom:84px;z-index:20;height:2.5px;
+    background:rgba(255,255,255,.16)}
+  .reel-progress__fill{height:100%;background:var(--grad-cyan);box-shadow:0 0 10px var(--cyan);
+    width:0;animation:fillbar 16s linear infinite}
+  @keyframes fillbar{from{width:0}to{width:100%}}
+
+  /* play/pause affordance */
+  .play-aff{position:absolute;inset:0;z-index:10;display:grid;place-items:center}
+  .play-aff__btn{width:74px;height:74px;border-radius:50%;display:grid;place-items:center;
+    background:rgba(13,13,19,.42);backdrop-filter:blur(10px);
+    border:1px solid rgba(255,255,255,.2);opacity:0;transform:scale(.8);
+    transition:opacity .22s,transform .22s;pointer-events:none}
+  .reel.paused .play-aff__btn{opacity:1;transform:scale(1)}
+  .reel.paused .disc{animation-play-state:paused}
+  .reel.paused .reel-progress__fill{animation-play-state:paused}
+  .reel.paused .ticker__inner{animation-play-state:paused}
+
+  @media (prefers-reduced-motion:reduce){
+    .disc,.reel-progress__fill,.ticker__inner{animation:none}
+  }
+</style>
+</head>
+<body class="ns">
+<div class="aura"></div>
+<div class="grain"></div>
+
+<div class="app">
+
+  <!-- ══════════ REELS VIEWPORT ══════════ -->
+  <div class="reels no-scroll" id="reels">
+
+    <!-- ───────── REEL 1 ───────── -->
+    <section class="reel" data-reel>
+      <!-- gradient fallback under the photo -->
+      <div class="reel__fallback" style="background:linear-gradient(150deg,rgba(124,58,237,.55),rgba(233,53,200,.4),rgba(34,231,255,.3));"></div>
+      <img class="reel__bg" loading="eager" alt="Rooftop club night"
+           src="https://images.unsplash.com/photo-1566737236500-c8ac43014a67?w=800&q=80&auto=format&fit=crop"/>
+      <div class="reel__scrim"></div>
+
+      <!-- play / pause affordance -->
+      <div class="play-aff" data-toggle>
+        <div class="play-aff__btn"><i data-lucide="play" style="width:30px;height:30px;color:#fff;margin-left:3px;"></i></div>
+      </div>
+
+      <!-- TOP overlay -->
+      <div class="reel-top">
+        <div class="segment seg-glass" data-segment>
+          <button>Following</button>
+          <button class="active">For You</button>
+        </div>
+        <button class="glass tap grid place-items-center top-icon" style="width:40px;height:40px;border-radius:50%;background:rgba(15,15,21,.42);border-color:rgba(255,255,255,.14);">
+          <i data-lucide="search" style="width:19px;height:19px;color:#fff;"></i>
+        </button>
+      </div>
+
+      <!-- RIGHT action rail -->
+      <div class="rail">
+        <div class="relative" style="margin-bottom:6px;">
+          <div class="ring" style="width:48px;height:48px;">
+            <img class="av" src="https://i.pravatar.cc/160?img=47" alt=""/>
+          </div>
+          <span class="follow-badge"><i data-lucide="plus" style="width:12px;height:12px;color:#fff;"></i></span>
+        </div>
+
+        <button class="rail-btn like tap" data-like>
+          <i data-lucide="heart" style="width:31px;height:31px;"></i>
+          <span data-count>18.4k</span>
+        </button>
+        <button class="rail-btn tap">
+          <i data-lucide="message-circle" style="width:30px;height:30px;"></i>
+          <span>1,204</span>
+        </button>
+        <button class="rail-btn tap">
+          <i data-lucide="share-2" style="width:29px;height:29px;"></i>
+          <span>Хуваалцах</span>
+        </button>
+        <button class="rail-btn save tap" data-save>
+          <i data-lucide="bookmark" style="width:28px;height:28px;"></i>
+          <span>2,031</span>
+        </button>
+        <button class="rail-btn tap">
+          <i data-lucide="more-horizontal" style="width:28px;height:28px;"></i>
+        </button>
+
+        <div class="disc">
+          <img src="https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=200&q=80&auto=format&fit=crop" alt=""/>
+        </div>
+      </div>
+
+      <!-- BOTTOM-LEFT overlay -->
+      <div class="reel-info">
+        <div class="flex items-center gap-3">
+          <span class="uname">@vertigo_ub</span>
+          <button class="follow-cyan" data-follow>Дагах</button>
+        </div>
+        <p class="cap mt-2.5">Шөнийн 1 цаг · дээвэр дээрх хотын гэрэл шатаж байна 🌃 Энэ амьдрал зөвхөн шөнө л эхэлдэг ✨</p>
+        <div class="flex items-center gap-2 mt-3">
+          <span class="pill pill-cyan"><i data-lucide="map-pin" style="width:13px;height:13px;"></i> Vertigo Rooftop</span>
+          <span class="pill pill-live"><span class="dot"></span> LIVE</span>
+        </div>
+        <div class="flex items-center gap-2 mt-3">
+          <i data-lucide="music" style="width:15px;height:15px;color:#fff;filter:drop-shadow(0 1px 4px rgba(0,0,0,.8));"></i>
+          <div class="ticker">
+            <span class="ticker__inner">Disclosure — Latch (Midnight Edit) &nbsp;·&nbsp; Disclosure — Latch (Midnight Edit) &nbsp;·&nbsp;</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- progress bar -->
+      <div class="reel-progress"><div class="reel-progress__fill"></div></div>
+    </section>
+
+    <!-- ───────── REEL 2 ───────── -->
+    <section class="reel" data-reel>
+      <div class="reel__fallback" style="background:linear-gradient(150deg,rgba(233,53,200,.5),rgba(124,58,237,.4),rgba(255,45,142,.35));"></div>
+      <img class="reel__bg" loading="lazy" alt="DJ neon concert"
+           src="https://images.unsplash.com/photo-1571266028243-e4733b0f3f63?w=800&q=80&auto=format&fit=crop"/>
+      <div class="reel__scrim"></div>
+
+      <div class="play-aff" data-toggle>
+        <div class="play-aff__btn"><i data-lucide="play" style="width:30px;height:30px;color:#fff;margin-left:3px;"></i></div>
+      </div>
+
+      <div class="reel-top">
+        <div class="segment seg-glass" data-segment>
+          <button>Following</button>
+          <button class="active">For You</button>
+        </div>
+        <button class="glass tap grid place-items-center top-icon" style="width:40px;height:40px;border-radius:50%;background:rgba(15,15,21,.42);border-color:rgba(255,255,255,.14);">
+          <i data-lucide="search" style="width:19px;height:19px;color:#fff;"></i>
+        </button>
+      </div>
+
+      <div class="rail">
+        <div class="relative" style="margin-bottom:6px;">
+          <div class="ring" style="width:48px;height:48px;">
+            <img class="av" src="https://i.pravatar.cc/160?img=32" alt=""/>
+          </div>
+          <span class="follow-badge"><i data-lucide="plus" style="width:12px;height:12px;color:#fff;"></i></span>
+        </div>
+
+        <button class="rail-btn like tap is-active" data-like>
+          <i data-lucide="heart" style="width:31px;height:31px;fill:var(--pink);stroke:var(--pink);"></i>
+          <span data-count>42.1k</span>
+        </button>
+        <button class="rail-btn tap">
+          <i data-lucide="message-circle" style="width:30px;height:30px;"></i>
+          <span>3,876</span>
+        </button>
+        <button class="rail-btn tap">
+          <i data-lucide="share-2" style="width:29px;height:29px;"></i>
+          <span>Хуваалцах</span>
+        </button>
+        <button class="rail-btn save tap" data-save>
+          <i data-lucide="bookmark" style="width:28px;height:28px;"></i>
+          <span>5,420</span>
+        </button>
+        <button class="rail-btn tap">
+          <i data-lucide="more-horizontal" style="width:28px;height:28px;"></i>
+        </button>
+
+        <div class="disc">
+          <img src="https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=200&q=80&auto=format&fit=crop" alt=""/>
+        </div>
+      </div>
+
+      <div class="reel-info">
+        <div class="flex items-center gap-3">
+          <span class="uname">@neon_haus</span>
+          <button class="follow-cyan" data-follow>Дагах</button>
+        </div>
+        <p class="cap mt-2.5">Шөнийн 12 цагийн set эхэллээ 🎧 Neon-той танхим, басс цохилох зүрх — бид дунд нь биш, дотор нь 💜</p>
+        <div class="flex items-center gap-2 mt-3">
+          <span class="pill pill-cyan"><i data-lucide="map-pin" style="width:13px;height:13px;"></i> Oasis Club</span>
+        </div>
+        <div class="flex items-center gap-2 mt-3">
+          <i data-lucide="music" style="width:15px;height:15px;color:#fff;filter:drop-shadow(0 1px 4px rgba(0,0,0,.8));"></i>
+          <div class="ticker">
+            <span class="ticker__inner">ARTBAT — Horizon &nbsp;·&nbsp; Afterlife Mix &nbsp;·&nbsp; ARTBAT — Horizon &nbsp;·&nbsp; Afterlife Mix &nbsp;·&nbsp;</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="reel-progress"><div class="reel-progress__fill"></div></div>
+    </section>
+
+    <!-- ───────── REEL 3 ───────── -->
+    <section class="reel" data-reel>
+      <div class="reel__fallback" style="background:linear-gradient(150deg,rgba(34,231,255,.45),rgba(124,58,237,.4),rgba(255,106,43,.3));"></div>
+      <img class="reel__bg" loading="lazy" alt="Cocktail bar neon"
+           src="https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=800&q=80&auto=format&fit=crop"/>
+      <div class="reel__scrim"></div>
+
+      <div class="play-aff" data-toggle>
+        <div class="play-aff__btn"><i data-lucide="play" style="width:30px;height:30px;color:#fff;margin-left:3px;"></i></div>
+      </div>
+
+      <div class="reel-top">
+        <div class="segment seg-glass" data-segment>
+          <button>Following</button>
+          <button class="active">For You</button>
+        </div>
+        <button class="glass tap grid place-items-center top-icon" style="width:40px;height:40px;border-radius:50%;background:rgba(15,15,21,.42);border-color:rgba(255,255,255,.14);">
+          <i data-lucide="search" style="width:19px;height:19px;color:#fff;"></i>
+        </button>
+      </div>
+
+      <div class="rail">
+        <div class="relative" style="margin-bottom:6px;">
+          <div class="ring" style="width:48px;height:48px;">
+            <img class="av" src="https://i.pravatar.cc/160?img=24" alt=""/>
+          </div>
+          <span class="follow-badge"><i data-lucide="plus" style="width:12px;height:12px;color:#fff;"></i></span>
+        </div>
+
+        <button class="rail-btn like tap" data-like>
+          <i data-lucide="heart" style="width:31px;height:31px;"></i>
+          <span data-count>9,742</span>
+        </button>
+        <button class="rail-btn tap">
+          <i data-lucide="message-circle" style="width:30px;height:30px;"></i>
+          <span>612</span>
+        </button>
+        <button class="rail-btn tap">
+          <i data-lucide="share-2" style="width:29px;height:29px;"></i>
+          <span>Хуваалцах</span>
+        </button>
+        <button class="rail-btn save tap" data-save>
+          <i data-lucide="bookmark" style="width:28px;height:28px;"></i>
+          <span>1,188</span>
+        </button>
+        <button class="rail-btn tap">
+          <i data-lucide="more-horizontal" style="width:28px;height:28px;"></i>
+        </button>
+
+        <div class="disc">
+          <img src="https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=200&q=80&auto=format&fit=crop" alt=""/>
+        </div>
+      </div>
+
+      <div class="reel-info">
+        <div class="flex items-center gap-3">
+          <span class="uname">@solongo</span>
+          <button class="follow-cyan done" data-follow>Дагасан</button>
+        </div>
+        <p class="cap mt-2.5">Хотын гэрэл доорх хамгийн дулаахан булан 🍸 Шинэ cocktail цэс — найзуудаа дууд, шөнө богино шүү 🌙</p>
+        <div class="flex items-center gap-2 mt-3">
+          <span class="pill pill-cyan"><i data-lucide="map-pin" style="width:13px;height:13px;"></i> Luna Lounge</span>
+        </div>
+        <div class="flex items-center gap-2 mt-3">
+          <i data-lucide="music" style="width:15px;height:15px;color:#fff;filter:drop-shadow(0 1px 4px rgba(0,0,0,.8));"></i>
+          <div class="ticker">
+            <span class="ticker__inner">Lane 8 — Brightest Lights &nbsp;·&nbsp; Sunset Set &nbsp;·&nbsp; Lane 8 — Brightest Lights &nbsp;·&nbsp; Sunset Set &nbsp;·&nbsp;</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="reel-progress"><div class="reel-progress__fill"></div></div>
+    </section>
+
+  </div>
+
+  <!-- ══════════ FLOATING BOTTOM NAV ══════════ -->
+  <nav class="nav-float">
+    <a href="feed.html" class="nav-item"><i data-lucide="home" style="width:23px;height:23px;"></i><span>Feed</span></a>
+    <a href="explore.html" class="nav-item"><i data-lucide="compass" style="width:23px;height:23px;"></i><span>Explore</span></a>
+    <button class="nav-fab tap" aria-label="Шинэ нийтлэл"><i data-lucide="plus" style="width:26px;height:26px;"></i></button>
+    <button class="nav-item active"><i data-lucide="clapperboard" style="width:23px;height:23px;"></i><span>Discovery</span></button>
+    <a href="profile.html" class="nav-item"><i data-lucide="user" style="width:23px;height:23px;"></i><span>Profile</span></a>
+  </nav>
+
+</div>
+
+<script>
+  lucide.createIcons();
+
+  // ── helpers ──
+  function parseCount(t){
+    t = (t || '').trim().toLowerCase().replace(/,/g,'');
+    if (t.endsWith('k')) return Math.round(parseFloat(t) * 1000);
+    if (t.endsWith('m')) return Math.round(parseFloat(t) * 1000000);
+    var n = parseInt(t, 10); return isNaN(n) ? 0 : n;
+  }
+  function fmtCount(n){
+    if (n >= 1000000) return (n/1000000).toFixed(1).replace(/\.0$/,'') + 'm';
+    if (n >= 1000) return (n/1000).toFixed(1).replace(/\.0$/,'') + 'k';
+    return n.toLocaleString('en-US');
+  }
+
+  // ── Like toggle (magenta pulse via .is-active) ──
+  document.querySelectorAll('.rail-btn.like[data-like]').forEach(function(btn){
+    var countEl = btn.querySelector('[data-count]');
+    var base = parseCount(countEl.textContent);
+    if (btn.classList.contains('is-active')) base = base - 1; // already liked at load
+    btn.addEventListener('click', function(){
+      var active = btn.classList.toggle('is-active');
+      var icon = btn.querySelector('i');
+      if (active){ icon.style.fill = 'var(--pink)'; icon.style.stroke = 'var(--pink)'; }
+      else { icon.style.fill = 'none'; icon.style.stroke = 'currentColor'; }
+      countEl.textContent = fmtCount(active ? base + 1 : base);
+    });
+  });
+
+  // ── Save toggle (cyan) ──
+  document.querySelectorAll('.rail-btn.save[data-save]').forEach(function(btn){
+    var countEl = btn.querySelector('[data-count]');
+    var base = parseCount(countEl.textContent);
+    btn.addEventListener('click', function(){
+      var active = btn.classList.toggle('is-saved');
+      var icon = btn.querySelector('i');
+      if (active){ icon.style.fill = 'var(--cyan)'; icon.style.stroke = 'var(--cyan)';
+        icon.style.filter = 'drop-shadow(0 0 10px rgba(34,231,255,.8))'; }
+      else { icon.style.fill = 'none'; icon.style.stroke = 'currentColor'; icon.style.filter = ''; }
+      countEl.textContent = fmtCount(active ? base + 1 : base);
+    });
+  });
+
+  // ── Follow button (rail badge + bottom pill) ──
+  document.querySelectorAll('[data-follow]').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var done = btn.classList.toggle('done');
+      btn.textContent = done ? 'Дагасан' : 'Дагах';
+    });
+  });
+
+  // ── Top segmented control (Following / For You) ──
+  document.querySelectorAll('[data-segment]').forEach(function(seg){
+    seg.querySelectorAll('button').forEach(function(b){
+      b.addEventListener('click', function(){
+        seg.querySelectorAll('button').forEach(function(x){ x.classList.remove('active'); });
+        b.classList.add('active');
+      });
+    });
+  });
+
+  // ── Play / pause affordance per reel ──
+  document.querySelectorAll('[data-toggle]').forEach(function(aff){
+    aff.addEventListener('click', function(){
+      var reel = aff.closest('[data-reel]');
+      var paused = reel.classList.toggle('paused');
+      var icon = aff.querySelector('i');
+      icon.setAttribute('data-lucide', paused ? 'play' : 'pause');
+      icon.style.marginLeft = paused ? '3px' : '0';
+      lucide.createIcons();
+    });
+  });
+
+  // ── Restart progress bar on the reel that snaps into view ──
+  var reels = document.getElementById('reels');
+  var io = new IntersectionObserver(function(entries){
+    entries.forEach(function(e){
+      if (e.isIntersecting && e.intersectionRatio > 0.65){
+        var fill = e.target.querySelector('.reel-progress__fill');
+        if (fill){ fill.style.animation = 'none'; void fill.offsetWidth; fill.style.animation = ''; }
+      }
+    });
+  }, { root: reels, threshold: [0, 0.65, 1] });
+  document.querySelectorAll('[data-reel]').forEach(function(r){ io.observe(r); });
+</script>
+</body>
+</html>

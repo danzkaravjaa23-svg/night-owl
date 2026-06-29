@@ -1,0 +1,158 @@
+<!DOCTYPE html><html lang="mn"><head><meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+<title>Night Owl · Эхлэл</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="nightscape.css"/>
+<script src="https://unpkg.com/lucide@latest"></script>
+<style>
+  /* ── Floating particle dots ── */
+  .particle{position:fixed;z-index:-1;border-radius:50%;pointer-events:none;
+    background:var(--cyan);box-shadow:0 0 10px var(--cyan);opacity:.0;
+    animation:rise linear infinite}
+  @keyframes rise{
+    0%{transform:translateY(20px) scale(.6);opacity:0}
+    14%{opacity:.55}
+    85%{opacity:.4}
+    100%{transform:translateY(-120px) scale(1);opacity:0}}
+
+  /* ── Logo entrance ── */
+  @keyframes logoIn{0%{opacity:0;transform:translateY(18px) scale(.86)}100%{opacity:1;transform:none}}
+  @keyframes copyIn{0%{opacity:0;transform:translateY(14px)}100%{opacity:1;transform:none}}
+  .reveal{opacity:0;animation:copyIn .7s cubic-bezier(.22,1,.36,1) forwards}
+  .logo-wrap{opacity:0;animation:logoIn .9s cubic-bezier(.22,1,.36,1) forwards}
+
+  /* ── Owl SVG inner animations (independent of breathe glow) ── */
+  @keyframes scan{0%{stroke-dashoffset:0}100%{stroke-dashoffset:-120}}
+  @keyframes irisPulse{0%,100%{opacity:.9}50%{opacity:.45}}
+  .owl-scan{stroke-dasharray:5 9;animation:scan 4s linear infinite}
+  .owl-iris{animation:irisPulse 3.4s ease-in-out infinite;transform-origin:center}
+  .owl-iris-2{animation:irisPulse 3.4s ease-in-out infinite;animation-delay:-1.7s;transform-origin:center}
+
+  /* ── Google "G" mark ── */
+  .gmark{width:20px;height:20px;border-radius:6px;background:#fff;display:grid;place-items:center;
+    flex:none;box-shadow:0 2px 8px rgba(0,0,0,.4)}
+
+  .delay-1{animation-delay:.18s}.delay-2{animation-delay:.30s}.delay-3{animation-delay:.46s}
+  .delay-4{animation-delay:.58s}.delay-5{animation-delay:.68s}.delay-6{animation-delay:.78s}
+</style>
+</head>
+<body class="ns">
+<div class="aura"></div>
+<div class="grain"></div>
+
+<!-- ambient floating particles -->
+<div class="particle" style="left:14%;bottom:24%;width:4px;height:4px;animation-duration:9s;animation-delay:0s"></div>
+<div class="particle" style="left:82%;bottom:30%;width:3px;height:3px;animation-duration:11s;animation-delay:1.4s;background:var(--magenta);box-shadow:0 0 10px var(--magenta)"></div>
+<div class="particle" style="left:30%;bottom:55%;width:2px;height:2px;animation-duration:13s;animation-delay:3s"></div>
+<div class="particle" style="left:68%;bottom:62%;width:4px;height:4px;animation-duration:10s;animation-delay:2.2s;background:var(--lime);box-shadow:0 0 10px var(--lime)"></div>
+<div class="particle" style="left:48%;bottom:18%;width:2px;height:2px;animation-duration:12s;animation-delay:4.5s"></div>
+<div class="particle" style="left:90%;bottom:48%;width:3px;height:3px;animation-duration:14s;animation-delay:1s;background:var(--magenta);box-shadow:0 0 10px var(--magenta)"></div>
+
+<div class="app">
+  <div class="relative flex flex-col min-h-screen px-6 pt-[max(28px,env(safe-area-inset-top))] pb-[max(26px,env(safe-area-inset-bottom))]">
+
+    <!-- top eyebrow -->
+    <div class="reveal delay-1 flex justify-center pt-3">
+      <span class="pill pill-cyan"><span class="dot"></span>UB · LIVE NIGHTLIFE</span>
+    </div>
+
+    <!-- HERO: logo + headline, vertically centered -->
+    <div class="flex-1 flex flex-col items-center justify-center text-center">
+
+      <!-- Cybernetic Owl Logo -->
+      <div class="logo-wrap relative anim-float" style="animation-delay:.1s">
+        <div class="anim-breathe">
+<svg width="152" height="152" viewBox="0 0 152 152" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="Night Owl logo" style="overflow:visible;">
+  <defs>
+    <linearGradient id="noCyan" x1="0" y1="0" x2="152" y2="152" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#cbf8ff"/><stop offset=".55" stop-color="#22e7ff"/><stop offset="1" stop-color="#3aa0ff"/>
+    </linearGradient>
+    <linearGradient id="noMag" x1="20" y1="120" x2="132" y2="30" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#7c3aed"/><stop offset=".5" stop-color="#e935c8"/><stop offset="1" stop-color="#ff2d8e"/>
+    </linearGradient>
+    <radialGradient id="noEye" cx="50%" cy="42%" r="62%">
+      <stop offset="0" stop-color="#ffffff"/><stop offset=".35" stop-color="#a6efff"/>
+      <stop offset=".7" stop-color="#22e7ff"/><stop offset="1" stop-color="#06343d"/>
+    </radialGradient>
+    <filter id="noGlow" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur stdDeviation="2.3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="noGlowSoft" x="-90%" y="-90%" width="280%" height="280%">
+      <feGaussianBlur stdDeviation="5.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <g filter="url(#noGlow)">
+    <g stroke="url(#noMag)" stroke-width="1.7" stroke-linecap="round">
+      <path d="M44 30 L34 12 M34 12 L24 14"/><path d="M108 30 L118 12 M118 12 L128 14"/>
+    </g>
+    <circle cx="24" cy="14" r="2.9" fill="#ff2d8e"/><circle cx="128" cy="14" r="2.9" fill="#ff2d8e"/>
+    <path d="M76 24 L118 38 L122 60 Q123 70 116 76 L76 96 L36 76 Q29 70 30 60 L34 38 Z"
+          fill="rgba(34,231,255,.05)" stroke="url(#noCyan)" stroke-width="2.7" stroke-linejoin="round"/>
+    <path d="M76 30 L76 86 M44 42 L70 70 M108 42 L82 70" stroke="url(#noCyan)" stroke-width="1.2" stroke-linecap="round" opacity=".4"/>
+    <g filter="url(#noGlowSoft)">
+      <polygon points="56,46 68,46 74,57 68,68 56,68 50,57" fill="rgba(34,231,255,.08)" stroke="url(#noCyan)" stroke-width="2.5" stroke-linejoin="round"/>
+      <polygon points="84,46 96,46 102,57 96,68 84,68 78,57" fill="rgba(34,231,255,.08)" stroke="url(#noCyan)" stroke-width="2.5" stroke-linejoin="round"/>
+      <circle cx="62" cy="57" r="6.8" fill="url(#noEye)"/><circle cx="90" cy="57" r="6.8" fill="url(#noEye)"/>
+    </g>
+    <circle cx="62" cy="57" r="9.6" fill="none" stroke="#22e7ff" stroke-width="1" opacity=".5"/>
+    <circle cx="90" cy="57" r="9.6" fill="none" stroke="#22e7ff" stroke-width="1" opacity=".5"/>
+    <path d="M76 70 L83 83 L76 90 L69 83 Z" fill="url(#noMag)"/>
+    <path d="M44 78 L30 96 Q26 112 40 122 L60 110 M60 110 L76 118 L92 110 M92 110 L112 122 Q126 112 122 96 L108 78"
+          fill="none" stroke="url(#noCyan)" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+    <path d="M64 104 L76 110 L88 104 M66 96 L76 101 L86 96" stroke="url(#noMag)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" opacity=".9"/>
+    <path d="M76 118 L76 132" stroke="url(#noCyan)" stroke-width="1.7" stroke-linecap="round" opacity=".6"/>
+    <circle cx="76" cy="134" r="3" fill="#22e7ff"/>
+  </g>
+</svg>
+        </div>
+      </div>
+
+      <!-- Headline -->
+      <h1 class="display reveal delay-3 mt-9">
+        The <span class="grad-text italic">Night</span><br/>Begins
+      </h1>
+
+      <!-- Subtitle -->
+      <p class="sub reveal delay-4 mt-4 max-w-[280px]">
+        UB-гийн шөнийн амьдрал · нэг tap-аар
+      </p>
+    </div>
+
+    <!-- BUTTONS pinned toward bottom -->
+    <div class="flex flex-col gap-3 mt-8">
+      <a href="signin.html" class="btn btn-glass btn-block glow-cyan reveal delay-4">
+        <i data-lucide="log-in" class="w-[18px] h-[18px]"></i>
+        Sign In
+      </a>
+
+      <a href="register.html" class="btn btn-outline btn-block reveal delay-5">
+        Create Account
+      </a>
+
+      <a href="#" class="btn btn-outline btn-block reveal delay-6">
+        <span class="gmark">
+          <svg width="13" height="13" viewBox="0 0 48 48" aria-hidden="true">
+            <path fill="#4285F4" d="M45.12 24.5c0-1.56-.14-3.06-.4-4.5H24v8.51h11.84c-.51 2.75-2.06 5.08-4.39 6.64v5.52h7.11c4.16-3.83 6.56-9.47 6.56-16.17z"/>
+            <path fill="#34A853" d="M24 46c5.94 0 10.92-1.97 14.56-5.33l-7.11-5.52c-1.97 1.32-4.49 2.1-7.45 2.1-5.73 0-10.58-3.87-12.31-9.07H4.34v5.7C7.96 41.07 15.4 46 24 46z"/>
+            <path fill="#FBBC05" d="M11.69 28.18C11.25 26.86 11 25.45 11 24s.25-2.86.69-4.18v-5.7H4.34A21.99 21.99 0 0 0 2 24c0 3.55.85 6.91 2.34 9.88l7.35-5.7z"/>
+            <path fill="#EA4335" d="M24 10.75c3.23 0 6.13 1.11 8.41 3.29l6.31-6.31C34.91 4.18 29.93 2 24 2 15.4 2 7.96 6.93 4.34 14.12l7.35 5.7c1.73-5.2 6.58-9.07 12.31-9.07z"/>
+          </svg>
+        </span>
+        Continue with Google
+      </a>
+
+      <!-- legal -->
+      <p class="reveal delay-6 text-center text-[var(--t3)] text-[11px] leading-relaxed mt-3 px-3">
+        Үргэлжлүүлснээр та манай
+        <span class="text-[var(--t2)]">Үйлчилгээний нөхцөл</span> ба
+        <span class="text-[var(--t2)]">Нууцлалын бодлого</span>-г зөвшөөрнө.
+      </p>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  lucide.createIcons();
+</script>
+</body></html>

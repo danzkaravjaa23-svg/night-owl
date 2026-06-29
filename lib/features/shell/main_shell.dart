@@ -55,9 +55,9 @@ class _BottomNav extends ConsumerWidget {
                 label: 'Feed', isActive: currentIndex == 0,
                 onTap: () => context.go(AppRoutes.feed)),
               _NavItem(
-                icon: Icons.map_outlined, activeIcon: Icons.map,
-                label: 'Map', isActive: currentIndex == 1,
-                onTap: () => context.go(AppRoutes.map)),
+                icon: Icons.explore_outlined, activeIcon: Icons.explore,
+                label: 'Explore', isActive: currentIndex == 1,
+                onTap: () => context.go(AppRoutes.explore)),
               _CreateButton(onTap: () => _showCreateSheet(context)),
               _NavItem(
                 icon: Icons.explore_outlined, activeIcon: Icons.explore,
@@ -154,6 +154,7 @@ class _BottomNav extends ConsumerWidget {
 
   int _indexFromLocation(String location) {
     if (location.startsWith('/feed'))          return 0;
+    if (location.startsWith('/explore'))       return 1;
     if (location.startsWith('/map'))           return 1;
     if (location.startsWith('/reels'))         return 3;
     if (location.startsWith('/profile'))       return 4;
