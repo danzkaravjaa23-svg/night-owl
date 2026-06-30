@@ -1,0 +1,19 @@
+<svg viewBox="0 0 240 240" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="cy" x1="40" y1="40" x2="200" y2="210" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#BDF6FF"/><stop offset=".55" stop-color="#22E7FF"/><stop offset="1" stop-color="#3AA0FF"/>
+    </linearGradient>
+  </defs>
+  <circle cx="120" cy="120" r="92" stroke="#22E7FF" stroke-opacity=".12" stroke-width="2"/>
+  <!-- calm bell -->
+  <path d="M120 70 a36 36 0 0 1 36 36 c0 24 8 32 13 40 L71 146 c5 -8 13 -16 13 -40 a36 36 0 0 1 36 -36 Z"
+        stroke="url(#cy)" stroke-width="3.2" stroke-linejoin="round"/>
+  <path d="M107 146 a13 13 0 0 0 26 0" stroke="url(#cy)" stroke-width="3" stroke-linecap="round"/>
+  <circle cx="120" cy="64" r="5" fill="url(#cy)"/>
+  <!-- moon (quiet hours) -->
+  <path d="M170 86 a13 13 0 1 0 6 18 a16 16 0 0 1 -6 -18 Z" stroke="#B4FF2E" stroke-width="2.6" stroke-linejoin="round"/>
+  <!-- zzz -->
+  <path d="M150 64 h12 l-12 12 h12" stroke="#22E7FF" stroke-opacity=".7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="64" cy="120" r="3" fill="#22E7FF"/>
+  <circle cx="176" cy="150" r="3" fill="#22E7FF" fill-opacity=".7"/>
+</svg>

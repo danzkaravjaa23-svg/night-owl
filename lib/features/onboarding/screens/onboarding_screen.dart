@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/theme/app_colors.dart';
@@ -62,17 +63,17 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   Widget build(BuildContext context) {
     final s = AppStrings.of(_locale);
     final slides = [
-      // nightlife / bar → local_bar (magenta glow)
+      // nightlife / bar → neon cocktail illustration (magenta glow)
       _SlideData(
-        icon: Icons.local_bar_rounded,
+        illustration: 'assets/images/illustrations/onb_nightlife.svg',
         title: s.onb1Title, sub: s.onb1Sub, color: AppColors.accentStart),
-      // live / broadcast → sensors (cyan glow)
+      // live / broadcast → neon turntable illustration (cyan glow)
       _SlideData(
-        icon: Icons.sensors_rounded,
+        illustration: 'assets/images/illustrations/onb_live.svg',
         title: s.onb2Title, sub: s.onb2Sub, color: AppColors.neonCyan),
-      // map / discover → map (pink/magenta glow)
+      // map / discover → neon map illustration (pink/magenta glow)
       _SlideData(
-        icon: Icons.map_rounded,
+        illustration: 'assets/images/illustrations/onb_map.svg',
         title: s.onb3Title, sub: s.onb3Sub, color: AppColors.accentEnd),
     ];
     final data = slides[widget.slide - 1];
@@ -108,7 +109,8 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           _GlassIconMedallion(
-                            icon: data.icon, glow: data.color, size: 168),
+                            illustration: data.illustration,
+                            glow: data.color, size: 168),
                           const SizedBox(height: 32),
                           Text(data.title,
                             style: AppTextStyles.displayMd,
@@ -174,10 +176,10 @@ class _OnboardingScreenState extends State<OnboardingScreen>
 }
 
 class _SlideData {
-  final IconData icon;
+  final String illustration;
   final String title, sub;
   final Color color;
-  const _SlideData({required this.icon, required this.title, required this.sub, required this.color});
+  const _SlideData({required this.illustration, required this.title, required this.sub, required this.color});
 }
 
 // ───────────────────────── onboarding UI bits ─────────────────────────
@@ -225,12 +227,12 @@ class _OnboardAura extends StatelessWidget {
 /// Frosted шилэн том медальон + Material icon + амьсгалдаг неон гэрэлтэлт.
 /// Emoji-г орлуулсан premium вариант — өнгөт icon, glow boxShadow.
 class _GlassIconMedallion extends StatefulWidget {
-  final IconData icon;
+  final String illustration;
   final Color glow;
   final double size;
   final bool pulse;
   const _GlassIconMedallion({
-    required this.icon, required this.glow,
+    required this.illustration, required this.glow,
     this.size = 168, this.pulse = true,
   });
   @override
@@ -300,23 +302,9 @@ class _GlassIconMedallionState extends State<_GlassIconMedallion>
                   widget.glow.withValues(alpha: 0.5),
                   Colors.transparent,
                 ]))),
-            // Material icon (неон gradient + glow сүүдэртэй)
-            ShaderMask(
-              shaderCallback: (rect) => LinearGradient(
-                begin: Alignment.topLeft, end: Alignment.bottomRight,
-                colors: [
-                  Colors.white,
-                  widget.glow,
-                ],
-              ).createShader(rect),
-              blendMode: BlendMode.srcIn,
-              child: Icon(widget.icon, size: sz * 0.40, color: Colors.white,
-                shadows: [
-                  Shadow(color: widget.glow.withValues(alpha: 0.85), blurRadius: 26),
-                  const Shadow(color: Colors.black54, blurRadius: 8,
-                    offset: Offset(0, 4)),
-                ]),
-            ),
+            // Neon illustration (SVG) — өөрийн неон өнгөтэй, glow-г медальон өгнө
+            SvgPicture.asset(widget.illustration,
+              width: sz * 0.56, height: sz * 0.56),
             // Дээд талын specular highlight (шилэн гялбаа)
             Positioned(
               top: sz * 0.16, left: sz * 0.26,

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/widgets/app_avatar.dart';
+import '../../../core/widgets/empty_state.dart';
 import '../../../core/services/supabase_service.dart';
 import '../../../core/router/app_router.dart' show AppRoutes;
 import '../../profile/widgets/block_report_sheet.dart';
@@ -182,14 +183,12 @@ class _CreatorScreenState extends State<CreatorScreen> {
 
               // ── Posts grid ──
               _posts.isEmpty
-                  ? SliverFillRemaining(
-                      child: Center(child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Text('📸', style: TextStyle(fontSize: 48)),
-                          const SizedBox(height: 12),
-                          Text('No posts yet', style: AppTextStyles.h2),
-                        ])))
+                  ? const SliverFillRemaining(
+                      hasScrollBody: false,
+                      child: EmptyState(
+                        illustration: 'assets/images/illustrations/empty_profile.svg',
+                        title: 'No posts yet',
+                      ))
                   : SliverPadding(
                       padding: const EdgeInsets.all(2),
                       sliver: SliverGrid(

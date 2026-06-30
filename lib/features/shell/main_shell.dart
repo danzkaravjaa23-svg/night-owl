@@ -182,60 +182,108 @@ class _NavItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const mutedGray = Color(0xFF8A8A95); // идэвхгүй — намуухан саарал
-    final color = isActive ? AppColors.silver : mutedGray;
+    final color = isActive ? _navActiveRed : mutedGray;
     final iconData = isActive ? activeIcon : icon;
-    // Идэвхтэй icon — pink→orange неон gradient + гэрэлтэх glow
+    // Идэвхтэй icon — улаан + гэрэлтэх улаан glow
     Widget iconWidget = isActive
-        ? ShaderMask(
-            shaderCallback: (bounds) =>
-                AppColors.chromeGradient.createShader(bounds),
-            blendMode: BlendMode.srcIn,
-            child: Icon(iconData, color: Colors.white, size: 26, shadows: [
-              Shadow(color: Colors.white.withValues(alpha: 0.55),
-                  blurRadius: 14),
-              Shadow(color: AppColors.silver.withValues(alpha: 0.4),
-                  blurRadius: 22),
-            ]))
+        ? Icon(iconData, color: _navActiveRed, size: 26, shadows: [
+            Shadow(color: _navActiveRed.withValues(alpha: 0.95), blurRadius: 16),
+            Shadow(color: _navActiveRed.withValues(alpha: 0.5), blurRadius: 28),
+          ])
         : Icon(iconData, color: mutedGray, size: 24);
     return Expanded(
       child: GestureDetector(
         onTap: onTap,
         behavior: HitTestBehavior.opaque,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+        child: Stack(
+          alignment: Alignment.center,
           children: [
-            Stack(clipBehavior: Clip.none, children: [
-              iconWidget,
-              if (badge > 0)
-                Positioned(
-                  top: -4, right: -8,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                    decoration: BoxDecoration(
-                      color: AppColors.accentStart,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: AppColors.bgElevated, width: 1.5),
-                    ),
-                    child: Text(
-                      badge > 99 ? '99+' : '$badge',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 9,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
+            // ── Дээрээс тусах улаан гэрлийн туяа (зөвхөн идэвхтэй) ──
+            if (isActive)
+              Positioned(
+                top: 0, left: 0, right: 0,
+                child: IgnorePointer(
+                  child: CustomPaint(
+                    size: const Size(double.infinity, 42),
+                    painter: const _BeamPainter(_navActiveRed),
                   ),
                 ),
-            ]),
-            const SizedBox(height: 3),
-            Text(label, style: TextStyle(
-              fontSize: 10, color: color,
-              fontWeight: isActive ? FontWeight.w600 : FontWeight.w400)),
+              ),
+            Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Stack(clipBehavior: Clip.none, children: [
+                  iconWidget,
+                  if (badge > 0)
+                    Positioned(
+                      top: -4, right: -8,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                        decoration: BoxDecoration(
+                          color: AppColors.accentStart,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: AppColors.bgElevated, width: 1.5),
+                        ),
+                        child: Text(
+                          badge > 99 ? '99+' : '$badge',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 9,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ),
+                    ),
+                ]),
+                const SizedBox(height: 3),
+                Text(label, style: TextStyle(
+                  fontSize: 10, color: color,
+                  fontWeight: isActive ? FontWeight.w700 : FontWeight.w400)),
+              ],
+            ),
           ],
         ),
       ),
     );
   }
+}
+
+// Идэвхтэй tab-ийн улаан өнгө
+const Color _navActiveRed = Color(0xFFFF2E4D);
+
+/// Дээд ирмэгээс доош тусах улаан гэрлийн туяа (spotlight cone) + гэрлийн эх.
+class _BeamPainter extends CustomPainter {
+  final Color color;
+  const _BeamPainter(this.color);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final w = size.width, h = size.height, cx = w / 2;
+    const topHalf = 10.0, botHalf = 27.0;
+    // Конус (трапец) — дээр нарийн, доош өргөн
+    final path = Path()
+      ..moveTo(cx - topHalf, 0)
+      ..lineTo(cx + topHalf, 0)
+      ..lineTo(cx + botHalf, h)
+      ..lineTo(cx - botHalf, h)
+      ..close();
+    final shader = LinearGradient(
+      begin: Alignment.topCenter, end: Alignment.bottomCenter,
+      colors: [color.withValues(alpha: 0.55), color.withValues(alpha: 0.0)],
+    ).createShader(Rect.fromLTWH(0, 0, w, h));
+    canvas.drawPath(path, Paint()..shader = shader);
+    // Гэрлийн эх — дээд ирмэг дээрх тод улаан зураас + glow
+    final notch = RRect.fromRectAndRadius(
+      Rect.fromCenter(center: Offset(cx, 2.5), width: topHalf * 2.4, height: 3.5),
+      const Radius.circular(2));
+    canvas.drawRRect(notch, Paint()
+      ..color = color
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4));
+    canvas.drawRRect(notch, Paint()..color = color);
+  }
+
+  @override
+  bool shouldRepaint(covariant _BeamPainter old) => old.color != color;
 }
 
 class _CreateButton extends StatelessWidget {

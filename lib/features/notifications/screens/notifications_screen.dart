@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/widgets/app_avatar.dart';
+import '../../../core/widgets/empty_state.dart';
 import '../../../core/services/supabase_service.dart';
 import '../providers/notification_provider.dart' show markAllNotifsRead;
 
@@ -243,21 +244,9 @@ class _NotifTile extends StatelessWidget {
 
 class _EmptyState extends StatelessWidget {
   @override
-  Widget build(BuildContext context) => Center(
-    child: Column(mainAxisSize: MainAxisSize.min, children: [
-      Container(width: 80, height: 80,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: AppColors.bgSurface,
-          border: Border.all(color: AppColors.hairline)),
-        child: const Center(
-          child: Text('🔔', style: TextStyle(fontSize: 36)))),
-      const SizedBox(height: 20),
-      Text('No activity yet', style: AppTextStyles.h2),
-      const SizedBox(height: 8),
-      Text('Likes, comments and follows\nwill appear here.',
-        style: AppTextStyles.bodyMd.copyWith(
-          color: AppColors.textSecondary, height: 1.5),
-        textAlign: TextAlign.center),
-    ]));
+  Widget build(BuildContext context) => const EmptyState(
+    illustration: 'assets/images/illustrations/empty_notif.svg',
+    title: 'No activity yet',
+    subtitle: 'Likes, comments and follows will appear here.',
+  );
 }

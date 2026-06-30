@@ -1,0 +1,28 @@
+<svg viewBox="0 0 240 240" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="cy" x1="40" y1="40" x2="200" y2="210" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#BDF6FF"/><stop offset=".55" stop-color="#22E7FF"/><stop offset="1" stop-color="#3AA0FF"/>
+    </linearGradient>
+    <linearGradient id="mg" x1="80" y1="60" x2="160" y2="160" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#7C3AED"/><stop offset=".5" stop-color="#C026D3"/><stop offset="1" stop-color="#FF2D8E"/>
+    </linearGradient>
+  </defs>
+  <circle cx="120" cy="120" r="104" stroke="#22E7FF" stroke-opacity=".14" stroke-width="2"/>
+  <circle cx="120" cy="120" r="104" stroke="url(#cy)" stroke-width="2.5" stroke-linecap="round"
+          stroke-dasharray="2 26" stroke-opacity=".6"/>
+  <!-- folded map -->
+  <path d="M64 80 L100 68 L140 80 L176 68 L176 160 L140 172 L100 160 L64 172 Z"
+        stroke="url(#cy)" stroke-width="3.2" stroke-linejoin="round"/>
+  <path d="M100 68 L100 160 M140 80 L140 172" stroke="#22E7FF" stroke-opacity=".4" stroke-width="2"/>
+  <!-- route -->
+  <path d="M82 146 Q104 120 120 128 T158 92" stroke="url(#mg)" stroke-width="3"
+        stroke-linecap="round" stroke-dasharray="1 9"/>
+  <!-- pin -->
+  <path d="M150 78 a16 16 0 1 0 -0.1 0 Z M150 78 L150 100" stroke="url(#mg)" stroke-width="3.4" stroke-linejoin="round" stroke-linecap="round"/>
+  <circle cx="150" cy="63" r="6" fill="url(#mg)"/>
+  <!-- node dots -->
+  <circle cx="82" cy="146" r="4.5" fill="#22E7FF"/>
+  <circle cx="120" cy="128" r="3" fill="#B4FF2E"/>
+  <circle cx="120" cy="58" r="4.5" fill="#22E7FF"/>
+  <path d="M62 150 l0 10 M57 155 l10 0" stroke="#B4FF2E" stroke-width="2" stroke-linecap="round"/>
+</svg>

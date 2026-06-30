@@ -1,0 +1,28 @@
+<svg viewBox="0 0 240 240" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="cy" x1="40" y1="40" x2="200" y2="210" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#BDF6FF"/><stop offset=".55" stop-color="#22E7FF"/><stop offset="1" stop-color="#3AA0FF"/>
+    </linearGradient>
+    <linearGradient id="mg" x1="80" y1="70" x2="160" y2="160" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#7C3AED"/><stop offset=".5" stop-color="#C026D3"/><stop offset="1" stop-color="#FF2D8E"/>
+    </linearGradient>
+  </defs>
+  <circle cx="120" cy="120" r="104" stroke="#22E7FF" stroke-opacity=".14" stroke-width="2"/>
+  <circle cx="120" cy="120" r="104" stroke="url(#cy)" stroke-width="2.5" stroke-linecap="round"
+          stroke-dasharray="2 26" stroke-opacity=".6"/>
+  <!-- turntable platter -->
+  <circle cx="108" cy="120" r="46" stroke="url(#cy)" stroke-width="3.2"/>
+  <circle cx="108" cy="120" r="28" stroke="#22E7FF" stroke-opacity=".4" stroke-width="2"/>
+  <circle cx="108" cy="120" r="12" stroke="url(#mg)" stroke-width="3"/>
+  <circle cx="108" cy="120" r="3.4" fill="#FF2D8E"/>
+  <!-- tonearm -->
+  <path d="M150 78 L124 110" stroke="url(#cy)" stroke-width="3" stroke-linecap="round"/>
+  <circle cx="152" cy="76" r="4.5" fill="#22E7FF"/>
+  <!-- sound waves -->
+  <path d="M168 104 a22 22 0 0 1 0 32" stroke="url(#mg)" stroke-width="3" stroke-linecap="round"/>
+  <path d="M180 92 a40 40 0 0 1 0 56" stroke="#C026D3" stroke-opacity=".7" stroke-width="2.6" stroke-linecap="round"/>
+  <path d="M192 80 a58 58 0 0 1 0 80" stroke="#7C3AED" stroke-opacity=".5" stroke-width="2.2" stroke-linecap="round"/>
+  <!-- live dot -->
+  <circle cx="120" cy="58" r="4.5" fill="#B4FF2E"/>
+  <path d="M60 150 l0 10 M55 155 l10 0" stroke="#22E7FF" stroke-width="2" stroke-linecap="round"/>
+</svg>

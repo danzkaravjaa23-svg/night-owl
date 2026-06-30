@@ -1,0 +1,21 @@
+<svg viewBox="0 0 240 240" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="cy" x1="40" y1="40" x2="200" y2="210" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#BDF6FF"/><stop offset=".55" stop-color="#22E7FF"/><stop offset="1" stop-color="#3AA0FF"/>
+    </linearGradient>
+    <linearGradient id="mg" x1="84" y1="84" x2="156" y2="156" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#7C3AED"/><stop offset=".5" stop-color="#C026D3"/><stop offset="1" stop-color="#FF2D8E"/>
+    </linearGradient>
+  </defs>
+  <circle cx="120" cy="120" r="92" stroke="#22E7FF" stroke-opacity=".12" stroke-width="2"/>
+  <!-- orbit -->
+  <circle cx="120" cy="120" r="62" stroke="url(#cy)" stroke-width="2.2" stroke-dasharray="2 12" stroke-opacity=".6"/>
+  <!-- play / reel core -->
+  <circle cx="120" cy="120" r="38" stroke="url(#cy)" stroke-width="3.2"/>
+  <path d="M110 104 L142 120 L110 136 Z" fill="url(#mg)"/>
+  <!-- orbiting nodes -->
+  <circle cx="120" cy="58" r="5" fill="#22E7FF"/>
+  <circle cx="182" cy="120" r="4" fill="#B4FF2E"/>
+  <circle cx="120" cy="182" r="3.4" fill="#FF2D8E"/>
+  <circle cx="58" cy="120" r="3.4" fill="#22E7FF" fill-opacity=".7"/>
+</svg>

@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/widgets/app_avatar.dart';
+import '../../../core/widgets/empty_state.dart';
 import '../../../core/services/supabase_service.dart';
 import '../widgets/notes_row.dart';
 
@@ -312,14 +313,9 @@ class _OptTile extends StatelessWidget {
 
 class _EmptyState extends StatelessWidget {
   @override
-  Widget build(BuildContext context) => Center(
-    child: Column(mainAxisSize: MainAxisSize.min, children: [
-      const Text('💬', style: TextStyle(fontSize: 48)),
-      const SizedBox(height: 16),
-      Text('No messages yet', style: AppTextStyles.h2),
-      const SizedBox(height: 8),
-      Text('Хүмүүсийн profile-д орж мессеж илгээ.',
-        style: AppTextStyles.bodyMd.copyWith(color: AppColors.textSecondary),
-        textAlign: TextAlign.center),
-    ]));
+  Widget build(BuildContext context) => const EmptyState(
+    illustration: 'assets/images/illustrations/empty_dm.svg',
+    title: 'No messages yet',
+    subtitle: 'Хүмүүсийн profile-д орж мессеж илгээ.',
+  );
 }

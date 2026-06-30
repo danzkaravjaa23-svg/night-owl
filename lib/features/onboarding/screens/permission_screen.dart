@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/theme/app_colors.dart';
@@ -56,7 +57,9 @@ class _PermissionScreenState extends State<PermissionScreen> {
   Widget build(BuildContext context) {
     final s = _s;
     final isLoc = widget.kind == PermissionKind.location;
-    final icon  = isLoc ? Icons.location_on_rounded : Icons.notifications_rounded;
+    final illustration = isLoc
+        ? 'assets/images/illustrations/perm_location.svg'
+        : 'assets/images/illustrations/perm_notify.svg';
     final title = isLoc ? s.permLocTitle : s.permNotifTitle;
     final body  = isLoc ? s.permLocBody  : s.permNotifBody;
     // Per-kind accent: location → pink/red, notification → amber/magenta.
@@ -74,7 +77,7 @@ class _PermissionScreenState extends State<PermissionScreen> {
               child: Column(
                 children: [
                   const Spacer(),
-                  _PermGlyph(icon: icon, glow: color),
+                  _PermGlyph(illustration: illustration, glow: color),
                   const SizedBox(height: 34),
                   Text(title,
                     style: AppTextStyles.displaySm,
@@ -114,9 +117,9 @@ class _PermissionScreenState extends State<PermissionScreen> {
 
 /// Glassy circle with a colored neon glow holding a Material icon.
 class _PermGlyph extends StatelessWidget {
-  final IconData icon;
+  final String illustration;
   final Color glow;
-  const _PermGlyph({required this.icon, required this.glow});
+  const _PermGlyph({required this.illustration, required this.glow});
 
   @override
   Widget build(BuildContext context) => Container(
@@ -139,7 +142,10 @@ class _PermGlyph extends StatelessWidget {
             shape: BoxShape.circle,
             border: Border.all(color: glow.withValues(alpha: 0.30)),
           ),
-          child: Icon(icon, color: glow, size: 46),
+          child: Padding(
+            padding: const EdgeInsets.all(22),
+            child: SvgPicture.asset(illustration),
+          ),
         ),
       ),
     ),

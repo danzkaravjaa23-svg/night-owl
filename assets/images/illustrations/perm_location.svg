@@ -1,0 +1,26 @@
+<svg viewBox="0 0 240 240" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="cy" x1="40" y1="40" x2="200" y2="210" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#BDF6FF"/><stop offset=".55" stop-color="#22E7FF"/><stop offset="1" stop-color="#3AA0FF"/>
+    </linearGradient>
+    <linearGradient id="mg" x1="84" y1="56" x2="156" y2="150" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#7C3AED"/><stop offset=".5" stop-color="#C026D3"/><stop offset="1" stop-color="#FF2D8E"/>
+    </linearGradient>
+  </defs>
+  <!-- radar rings -->
+  <ellipse cx="120" cy="186" rx="70" ry="20" stroke="#22E7FF" stroke-opacity=".18" stroke-width="2"/>
+  <ellipse cx="120" cy="186" rx="44" ry="12" stroke="#22E7FF" stroke-opacity=".3" stroke-width="2"/>
+  <circle cx="120" cy="120" r="104" stroke="url(#cy)" stroke-width="2.5" stroke-linecap="round"
+          stroke-dasharray="2 26" stroke-opacity=".5"/>
+  <!-- pin -->
+  <path d="M120 168 C120 168 78 124 78 92 a42 42 0 1 1 84 0 C162 124 120 168 120 168 Z"
+        stroke="url(#mg)" stroke-width="3.6" stroke-linejoin="round"/>
+  <circle cx="120" cy="92" r="17" stroke="url(#cy)" stroke-width="3"/>
+  <circle cx="120" cy="92" r="5" fill="#22E7FF"/>
+  <!-- sweep -->
+  <path d="M120 92 L150 70" stroke="#B4FF2E" stroke-width="2.6" stroke-linecap="round"/>
+  <!-- accents -->
+  <circle cx="58" cy="92" r="3" fill="#22E7FF"/>
+  <circle cx="182" cy="104" r="3.4" fill="#FF2D8E"/>
+  <path d="M176 64 l0 12 M170 70 l12 0" stroke="#B4FF2E" stroke-width="2.2" stroke-linecap="round"/>
+</svg>

@@ -8,6 +8,7 @@ import 'package:video_player/video_player.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/widgets/app_avatar.dart';
+import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/gradient_text.dart';
 import '../../../core/widgets/network_video.dart';
 import '../../../core/router/app_router.dart';
@@ -753,25 +754,14 @@ class _EmptyFeed extends StatelessWidget {
   const _EmptyFeed({required this.onPost});
 
   @override
-  Widget build(BuildContext context) => Center(
-    child: Padding(
-      padding: const EdgeInsets.all(40),
-      child: Column(mainAxisSize: MainAxisSize.min, children: [
-        const Text('✨', style: TextStyle(fontSize: 56)),
-        const SizedBox(height: 20),
-        Text('Feed is empty', style: AppTextStyles.h1),
-        const SizedBox(height: 8),
-        Text('Be the first to share your night.',
-            style: AppTextStyles.bodyMd
-                .copyWith(color: AppColors.textSecondary, height: 1.5),
-            textAlign: TextAlign.center),
-        const SizedBox(height: 32),
-        ElevatedButton.icon(
-          onPressed: onPost,
-          icon: const Icon(Icons.add, size: 18),
-          label: const Text('Upload Photo'),
-        ),
-      ]),
+  Widget build(BuildContext context) => EmptyState(
+    illustration: 'assets/images/illustrations/empty_feed.svg',
+    title: 'Feed is empty',
+    subtitle: 'Be the first to share your night.',
+    action: ElevatedButton.icon(
+      onPressed: onPost,
+      icon: const Icon(Icons.add, size: 18),
+      label: const Text('Upload Photo'),
     ),
   );
 }

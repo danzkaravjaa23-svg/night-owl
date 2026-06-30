@@ -6,6 +6,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/widgets/app_avatar.dart';
+import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/gradient_button.dart';
 import '../../../core/widgets/network_video.dart';
 import '../../../models/story.dart';
@@ -561,53 +562,15 @@ class _PostsGridState extends State<_PostsGrid> {
     // Хоосон (бүгд ачаалагдсан) — artistic neon empty state
     if (shown.isEmpty && !_hasMore && !_loading) {
       return SliverToBoxAdapter(
-        child: Center(child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 48),
-          child: Column(mainAxisSize: MainAxisSize.min, children: [
-            // Neon icon in glass circle
-            Container(
-              width: 96,
-              height: 96,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: AppColors.bgElevated.withValues(alpha: 0.7),
-                border: Border.all(
-                    color: AppColors.neonCyan.withValues(alpha: 0.4),
-                    width: 1.5),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.neonCyan.withValues(alpha: 0.25),
-                    blurRadius: 30,
-                    spreadRadius: -4,
-                  ),
-                ],
-              ),
-              child: ShaderMask(
-                shaderCallback: (r) => AppColors.accentGradient.createShader(r),
-                child: Icon(
-                    widget.reelsOnly
-                        ? Icons.slow_motion_video
-                        : Icons.auto_awesome,
-                    color: Colors.white,
-                    size: 40),
-              ),
-            ),
-            const SizedBox(height: 18),
-            Text('Одоохондоо хоосон',
-                textAlign: TextAlign.center, style: AppTextStyles.h2),
-            const SizedBox(height: 8),
-            ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 240),
-              child: Text(
-                  widget.reelsOnly
-                      ? 'Эхний бичлэгээ хуваалцаарай'
-                      : 'Эхний шөнийн мөчөө хуваалцаарай',
-                  textAlign: TextAlign.center,
-                  style: AppTextStyles.bodySm
-                      .copyWith(color: AppColors.textSecondary)),
-            ),
-          ]),
-        )),
+        child: EmptyState(
+          illustration: widget.reelsOnly
+              ? 'assets/images/illustrations/empty_creator.svg'
+              : 'assets/images/illustrations/empty_profile.svg',
+          title: 'Одоохондоо хоосон',
+          subtitle: widget.reelsOnly
+              ? 'Эхний бичлэгээ хуваалцаарай'
+              : 'Эхний шөнийн мөчөө хуваалцаарай',
+        ),
       );
     }
 

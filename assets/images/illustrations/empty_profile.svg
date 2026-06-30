@@ -1,0 +1,23 @@
+<svg viewBox="0 0 240 240" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="cy" x1="40" y1="40" x2="200" y2="210" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#BDF6FF"/><stop offset=".55" stop-color="#22E7FF"/><stop offset="1" stop-color="#3AA0FF"/>
+    </linearGradient>
+    <linearGradient id="mg" x1="80" y1="70" x2="160" y2="170" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#7C3AED"/><stop offset=".5" stop-color="#C026D3"/><stop offset="1" stop-color="#FF2D8E"/>
+    </linearGradient>
+  </defs>
+  <circle cx="120" cy="120" r="92" stroke="#22E7FF" stroke-opacity=".12" stroke-width="2"/>
+  <!-- photo grid frame (empty) -->
+  <rect x="74" y="74" width="92" height="92" rx="16" stroke="url(#cy)" stroke-width="3.2"/>
+  <path d="M74 122 L166 122 M120 74 L120 166" stroke="#22E7FF" stroke-opacity=".3" stroke-width="2"/>
+  <!-- corner star -->
+  <circle cx="97" cy="98" r="4" fill="#22E7FF"/>
+  <circle cx="143" cy="144" r="3.4" fill="#B4FF2E"/>
+  <!-- plus medallion -->
+  <circle cx="150" cy="92" r="15" fill="#050505" stroke="url(#mg)" stroke-width="3"/>
+  <path d="M150 85 l0 14 M143 92 l14 0" stroke="url(#mg)" stroke-width="3" stroke-linecap="round"/>
+  <!-- sparkles -->
+  <path d="M188 140 l0 10 M183 145 l10 0" stroke="#FF2D8E" stroke-width="2.2" stroke-linecap="round"/>
+  <path d="M52 150 l0 8 M48 154 l8 0" stroke="#22E7FF" stroke-width="2" stroke-linecap="round"/>
+</svg>
