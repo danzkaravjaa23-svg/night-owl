@@ -1,0 +1,25 @@
+# Netlify автомат deploy — git push хийхэд өөрөө build хийж нийтэлнэ.
+# Netlify дээр Flutter суулгаагүй тул SDK-г татаж аваад build хийнэ.
+
+[build]
+  publish = "build/web"
+  command = """
+    if [ ! -x flutter/bin/flutter ]; then \
+      git clone https://github.com/flutter/flutter.git --depth 1 -b stable flutter; \
+    fi && \
+    export PATH="$PWD/flutter/bin:$PATH" && \
+    flutter --version && \
+    flutter config --enable-web && \
+    flutter pub get && \
+    flutter build web --release
+  """
+
+[build.environment]
+  # Flutter SDK-г эхний удаа татахад хугацаа шаардана
+  FLUTTER_ROOT = "flutter"
+
+# SPA — go_router-ийн бүх зам index.html руу (шууд /profile гэх мэт хаяг руу орж болно)
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
