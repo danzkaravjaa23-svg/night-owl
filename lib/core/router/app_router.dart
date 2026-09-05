@@ -164,19 +164,33 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     initialLocation: AppRoutes.splash,
     debugLogDiagnostics: false,
 
-    // ─── Auth redirect ───
+    // ─── Auth redirect — бусад social апп шиг ───
+    //  • нэвтрээгүй + хамгаалагдсан зам → authLanding
+    //  • нэвтэрсэн + setup дуусгаагүй (шинэ Google хэрэглэгч) → setup
+    //  • нэвтэрсэн + бүрэн → auth/splash дэлгэц дээр саатуулахгүй, feed рүү
     redirect: (context, state) {
-      final user = Supabase.instance.client.auth.currentUser;
-      final isLoggedIn = user != null;
-      final loc = state.uri.toString();
+      final loggedIn = Supabase.instance.client.auth.currentUser != null;
+      final loc = state.uri.path; // ?code=... гэх мэт query-г үл тоомсорло
+      const authPages = {
+        AppRoutes.splash, AppRoutes.authLanding, AppRoutes.login,
+        AppRoutes.register, AppRoutes.forgotPassword,
+      };
 
-      if (!isLoggedIn && !AppRoutes.isPublic(loc)) {
-        return AppRoutes.authLanding;
+      if (!loggedIn) {
+        return AppRoutes.isPublic(loc) ? null : AppRoutes.authLanding;
+      }
+      // Нэвтэрсэн — профайлаа дуусгаагүй бол заавал setup
+      if (authGate.needsSetup) {
+        return loc == AppRoutes.setup ? null : AppRoutes.setup;
+      }
+      // Бүрэн — нэвтрэлт/splash/setup дээр байвал апп руу
+      if (authPages.contains(loc) || loc == AppRoutes.setup) {
+        return AppRoutes.feed;
       }
       return null;
     },
 
-    refreshListenable: _SupabaseAuthListenable(),
+    refreshListenable: authGate,
 
     routes: [
       // ── Onboarding ──
@@ -302,10 +316,50 @@ final appRouterProvider = Provider<GoRouter>((ref) {
 });
 
 /// Supabase auth state → GoRouter refresh
-class _SupabaseAuthListenable extends ChangeNotifier {
-  _SupabaseAuthListenable() {
-    Supabase.instance.client.auth.onAuthStateChange.listen((_) {
-      notifyListeners();
+/// Нэвтрэлтийн төлөв + "профайл дуусгасан эсэх"-ийг router-т дамжуулна.
+/// Global singleton — signIn болмогц GoRouter redirect дахин ажиллаж,
+/// шинэ хэрэглэгчийг setup руу, бүртгэлтэйг feed рүү автоматаар аваачна.
+final authGate = AuthGate();
+
+class AuthGate extends ChangeNotifier {
+  bool _needsSetup = false;
+  bool get needsSetup => _needsSetup;
+
+  AuthGate() {
+    Supabase.instance.client.auth.onAuthStateChange.listen((s) {
+      switch (s.event) {
+        case AuthChangeEvent.signedOut:
+          _needsSetup = false;
+          notifyListeners();
+          break;
+        case AuthChangeEvent.signedIn:
+        case AuthChangeEvent.initialSession:
+        case AuthChangeEvent.userUpdated:
+          refresh(); // профайл дуусгасан эсэхийг DB-ээс шалгаад мэдэгдэнэ
+          break;
+        default:
+          notifyListeners();
+      }
     });
+  }
+
+  /// profiles.updated_at NULL бол setup хийгээгүй ШИНЭ хэрэглэгч.
+  /// (handle_new_user trigger зөвхөн created_at тавьдаг; setup._save
+  ///  updated_at-ыг бичдэг тул энэ нь "дуусгасан эсэх"-ийн найдвартай дохио.)
+  Future<void> refresh() async {
+    final user = Supabase.instance.client.auth.currentUser;
+    if (user == null) { _needsSetup = false; notifyListeners(); return; }
+    try {
+      final row = await Supabase.instance.client
+          .from('profiles')
+          .select('username, updated_at')
+          .eq('id', user.id)
+          .maybeSingle();
+      final username = (row?['username'] as String?)?.trim() ?? '';
+      _needsSetup = row == null || row['updated_at'] == null || username.isEmpty;
+    } catch (_) {
+      _needsSetup = false; // DB уншиж чадсангүй — feed рүү (setup-д гацаахгүй)
+    }
+    notifyListeners();
   }
 }

@@ -42,9 +42,27 @@ class _SplashScreenState extends State<SplashScreen>
     // Нууц үг сэргээх и-мэйлийн холбоосоор ирвэл supabase_flutter
     // token-ыг сольж passwordRecovery event гаргана — түүнийг барина
     _authSub = Supabase.instance.client.auth.onAuthStateChange.listen((s) {
-      if (s.event == AuthChangeEvent.passwordRecovery) _recovery = true;
+      if (s.event == AuthChangeEvent.passwordRecovery) { _recovery = true; }
     });
-    Future.delayed(const Duration(milliseconds: 1800), _navigate);
+    // Google/OAuth-оос буцаж ирсэн бол (URL-д code/token) — шууд authLanding руу
+    // үсрэхгүй хүлээнэ. Session тогтмогц router-ийн AuthGate feed/setup рүү аваачна.
+    final hasOAuth = _hasAuthCallback();
+    Future.delayed(Duration(milliseconds: hasOAuth ? 4000 : 1800), () {
+      if (!mounted) return;
+      // OAuth callback амжилттай бол redirect аль хэдийн зөөсөн — давхар үсрэхгүй
+      if (hasOAuth &&
+          Supabase.instance.client.auth.currentSession != null) {
+        return;
+      }
+      _navigate();
+    });
+  }
+
+  // URL-д OAuth callback параметр (Google-ээс буцсан) байгаа эсэх
+  bool _hasAuthCallback() {
+    final u = Uri.base.toString();
+    return u.contains('code=') || u.contains('access_token') ||
+        u.contains('error=') || u.contains('error_description');
   }
 
   Future<void> _navigate() async {

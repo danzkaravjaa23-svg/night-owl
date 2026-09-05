@@ -52,7 +52,9 @@ class _SetupScreenState extends State<SetupScreen> {
       if (data != null) {
         final username = data['username'] as String? ?? '';
         setState(() {
-          _isEditMode = username.isNotEmpty;
+          // updated_at NULL = профайлаа хараахан дуусгаагүй ШИНЭ хэрэглэгч →
+          // "үүсгэх" горим (буцах товчгүй). Дуусгасан бол засах горим.
+          _isEditMode = data['updated_at'] != null;
           _usernameCtrl.text = username;
           _bioCtrl.text      = data['bio'] as String? ?? '';
           _avatarUrl         = data['avatar_url'] as String?;
@@ -161,6 +163,8 @@ class _SetupScreenState extends State<SetupScreen> {
 
       await Supabase.instance.client.from('profiles').upsert(updates);
 
+      // Профайл дууссан гэдгийг router-т мэдэгдэнэ (setup-д гацахгүй)
+      await authGate.refresh();
       if (!mounted) return;
       context.go(AppRoutes.feed);
     } on PostgrestException catch (e) {
