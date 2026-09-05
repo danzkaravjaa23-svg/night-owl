@@ -5,6 +5,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/widgets/gradient_button.dart';
 import '../../../core/router/app_router.dart';
+import '../../../core/services/supabase_service.dart' show passwordJustReset;
 import '../widgets/auth_ui.dart';
 
 /// Нууц үг сэргээх холбоосоор ирсэн хэрэглэгчид шинэ нууц үг тавих дэлгэц.
@@ -44,12 +45,15 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
     try {
       await Supabase.instance.client.auth.updateUser(
         UserAttributes(password: _pwCtrl.text));
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('Нууц үг амжилттай шинэчлэгдлээ')));
-      // Recovery горимыг унтрааж (router дахин /auth/reset руу буцаахгүй) feed рүү
+      // Аюулгүй байдал: сэргээх session-ыг хаагаад шинэ нууц үгээрээ
+      // дахин нэвтрүүлнэ (бусад апп шиг). signOut → AuthGate.recovery унтарна.
+      try {
+        await Supabase.instance.client.auth.signOut();
+      } catch (_) {}
+      passwordJustReset = true;
       authGate.finishRecovery();
-      context.go(AppRoutes.feed);
+      if (!mounted) return;
+      context.go(AppRoutes.login);
     } on AuthException catch (e) {
       if (!mounted) return;
       final m = e.message.toLowerCase();

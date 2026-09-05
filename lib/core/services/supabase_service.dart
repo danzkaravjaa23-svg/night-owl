@@ -10,6 +10,9 @@ String? lastAuthCallbackError;
 /// баталгаажсан бол true — router шинэ нууц үгийн дэлгэц рүү аваачна.
 bool pendingPasswordRecovery = false;
 
+/// Нууц үг сая амжилттай солигдсон — нэвтрэх дэлгэц дээр мэдэгдэл харуулна.
+bool passwordJustReset = false;
+
 /// Supabase client singleton
 class SupabaseService {
   SupabaseService._();

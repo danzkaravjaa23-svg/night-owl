@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/services/supabase_service.dart' show passwordJustReset;
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/theme/app_colors.dart';
@@ -16,6 +17,23 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // Нууц үг сая солигдсон бол — шинэ нууц үгээрээ нэвтрэхийг сануулна
+    if (passwordJustReset) {
+      passwordJustReset = false;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Нууц үг амжилттай шинэчлэгдлээ. Шинэ нууц үгээрээ нэвтэрнэ үү.'),
+          backgroundColor: Color(0xFF1E8E5A),
+          duration: Duration(seconds: 6),
+        ));
+      });
+    }
+  }
+
   final _emailCtrl = TextEditingController();
   final _pwCtrl    = TextEditingController();
   final _formKey   = GlobalKey<FormState>();
