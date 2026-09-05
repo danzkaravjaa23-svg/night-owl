@@ -14,10 +14,6 @@
     flutter build web --release
   """
 
-[build.environment]
-  # Flutter SDK-г эхний удаа татахад хугацаа шаардана
-  FLUTTER_ROOT = "flutter"
-
 # SPA — go_router-ийн бүх зам index.html руу (шууд /profile гэх мэт хаяг руу орж болно)
 [[redirects]]
   from = "/*"
