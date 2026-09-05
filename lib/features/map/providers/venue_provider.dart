@@ -1,7 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/services/supabase_service.dart';
 import '../../../models/venue.dart';
-import '../../../models/event.dart';
 
 // ─── All venues — нэг удаагийн fetch (realtime биш) ───
 // Venue ховор өөрчлөгддөг тул table-wide realtime sub шаардлагагүй.
@@ -30,83 +29,70 @@ final isVenueOwnerProvider = FutureProvider<bool>((ref) async {
   }
 });
 
-// ─── Single venue detail ───
-final venueDetailProvider =
-    FutureProvider.family<Venue?, String>((ref, venueId) async {
-  final data = await SupabaseService.client
-      .from('venues')
-      .select()
-      .eq('id', venueId)
-      .maybeSingle();
-  return data != null ? Venue.fromJson(data) : null;
-});
-
-// ─── Today's events for a venue ───
-final venueEventsProvider =
-    FutureProvider.family<List<VenueEvent>, String>((ref, venueId) async {
-  final today = DateTime.now();
-  final start = DateTime(today.year, today.month, today.day);
-  final end   = start.add(const Duration(days: 1));
-
-  final data = await SupabaseService.client
-      .from('events')
-      .select()
-      .eq('venue_id', venueId)
-      .gte('starts_at', start.toIso8601String())
-      .lt('starts_at', end.toIso8601String())
-      .order('starts_at');
-
-  return (data as List)
-      .map((j) => VenueEvent.fromJson(j as Map<String, dynamic>))
-      .toList();
-});
-
 // ─── Check-in ───
+// State = одоо check-in хийсэн venue id (null = хаана ч биш).
 class CheckInNotifier extends StateNotifier<String?> {
   CheckInNotifier() : super(null);
+  bool _loaded = false;
 
-  /// Returns checked-in venue id, or null
-  Future<void> checkIn(String venueId) async {
+  /// Идэвхтэй check-in-ээ DB-ээс сэргээнэ (session-д нэг л удаа хангалттай)
+  Future<void> loadCurrent() async {
+    if (_loaded) return;
+    _loaded = true;
     final user = SupabaseService.currentUser;
     if (user == null) return;
-
-    await SupabaseService.client.from('checkins').upsert({
-      'user_id':    user.id,
-      'venue_id':   venueId,
-      'created_at': DateTime.now().toIso8601String(),
-      'expires_at': DateTime.now()
-          .add(const Duration(hours: 4))
-          .toIso8601String(),
-    }, onConflict: 'user_id, venue_id');
-
-    state = venueId;
+    try {
+      final r = await SupabaseService.client
+          .from('checkins')
+          .select('venue_id')
+          .eq('user_id', user.id)
+          .gt('expires_at', DateTime.now().toUtc().toIso8601String())
+          .order('created_at', ascending: false)
+          .limit(1)
+          .maybeSingle();
+      if (mounted) state = r?['venue_id'] as String?;
+    } catch (_) {
+      // чимээгүй — дараагийн check-in үед төлөв зөв болно
+    }
   }
 
-  Future<void> checkOut() async {
+  /// null = амжилт, бусад нь хэрэглэгчид харуулах алдааны мессеж
+  Future<String?> checkIn(String venueId) async {
     final user = SupabaseService.currentUser;
-    if (user == null) return;
-    await SupabaseService.client
-        .from('checkins')
-        .delete()
-        .eq('user_id', user.id);
-    state = null;
+    if (user == null) return 'Нэвтэрнэ үү';
+    try {
+      await SupabaseService.client.from('checkins').upsert({
+        'user_id':    user.id,
+        'venue_id':   venueId,
+        'created_at': DateTime.now().toUtc().toIso8601String(),
+        'expires_at': DateTime.now().toUtc()
+            .add(const Duration(hours: 4))
+            .toIso8601String(),
+      }, onConflict: 'user_id, venue_id');
+      if (mounted) state = venueId;
+      return null;
+    } catch (_) {
+      return 'Бүртгэж чадсангүй. Дахин оролдоно уу';
+    }
+  }
+
+  /// Тухайн venue-гээс гарах (зөвхөн энэ venue-ийн мөрийг устгана)
+  Future<String?> checkOut(String venueId) async {
+    final user = SupabaseService.currentUser;
+    if (user == null) return 'Нэвтэрнэ үү';
+    try {
+      await SupabaseService.client
+          .from('checkins')
+          .delete()
+          .match({'user_id': user.id, 'venue_id': venueId});
+      if (mounted && state == venueId) state = null;
+      return null;
+    } catch (_) {
+      return 'Гаргаж чадсангүй. Дахин оролдоно уу';
+    }
   }
 }
 
 final checkInProvider =
     StateNotifierProvider<CheckInNotifier, String?>(
         (_) => CheckInNotifier());
-
-// ─── Search venues ───
-final venueSearchProvider =
-    FutureProvider.family<List<Venue>, String>((ref, query) async {
-  if (query.isEmpty) return [];
-  final data = await SupabaseService.client
-      .from('venues')
-      .select()
-      .ilike('name', '%$query%')
-      .limit(20);
-  return (data as List)
-      .map((j) => Venue.fromJson(j as Map<String, dynamic>))
-      .toList();
-});

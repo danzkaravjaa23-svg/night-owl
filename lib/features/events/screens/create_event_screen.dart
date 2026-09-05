@@ -1,9 +1,11 @@
+import 'dart:async';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../core/router/app_router.dart';
 import '../../../core/services/supabase_service.dart';
 import '../../../core/utils/image_uploader.dart';
 import '../providers/event_provider.dart';
@@ -84,11 +86,16 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
       });
       if (!mounted) return;
       ref.invalidate(upcomingEventsProvider);
-      context.pop();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Эвент нийтлэгдлээ 🎉')));
+      _close();
     } catch (e) {
       if (mounted) setState(() { _busy = false; _error = e.toString(); });
     }
   }
+
+  // /event/create руу шууд орж ирсэн (deep-link/refresh) үед pop унадаг
+  void _close() => context.canPop() ? context.pop() : context.go(AppRoutes.feed);
 
   @override
   void dispose() {
@@ -105,13 +112,13 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
       backgroundColor: AppColors.bgBase,
       appBar: AppBar(
         backgroundColor: AppColors.bgBase, elevation: 0,
-        leading: IconButton(onPressed: () => context.pop(),
+        leading: IconButton(onPressed: _close,
           icon: const Icon(Icons.close, color: AppColors.textPrimary)),
         title: Text('Эвент нэмэх', style: AppTextStyles.h2),
       ),
       body: ListView(padding: const EdgeInsets.all(20), children: [
         // Cover
-        GestureDetector(
+        _Tap(
           onTap: _pickCover,
           child: Container(
             height: 150,
@@ -143,7 +150,7 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
           Text(_error!, style: AppTextStyles.bodyXs.copyWith(color: AppColors.error)),
         ],
         const SizedBox(height: 20),
-        GestureDetector(
+        _Tap(
           onTap: _busy ? null : _save,
           child: Container(
             height: 52,
@@ -171,7 +178,7 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none)));
 
-  Widget _tile(IconData i, String label, VoidCallback onTap) => GestureDetector(
+  Widget _tile(IconData i, String label, VoidCallback onTap) => _Tap(
     onTap: onTap,
     child: Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
@@ -187,6 +194,36 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
       ])));
 }
 
+// ─── Дарлт мэдрэмж — scale + hover курсор (веб) ───
+class _Tap extends StatefulWidget {
+  final Widget child;
+  final VoidCallback? onTap;
+  const _Tap({required this.child, this.onTap});
+  @override
+  State<_Tap> createState() => _TapState();
+}
+
+class _TapState extends State<_Tap> {
+  bool _down = false;
+  @override
+  Widget build(BuildContext context) => MouseRegion(
+    cursor: widget.onTap == null
+        ? MouseCursor.defer : SystemMouseCursors.click,
+    child: GestureDetector(
+      onTap: widget.onTap,
+      onTapDown: (_) => setState(() => _down = true),
+      onTapUp: (_) => setState(() => _down = false),
+      onTapCancel: () => setState(() => _down = false),
+      child: AnimatedScale(
+        scale: _down ? 0.96 : 1.0,
+        duration: const Duration(milliseconds: 120),
+        curve: Curves.easeOut,
+        child: widget.child,
+      ),
+    ),
+  );
+}
+
 class _VenuePick extends StatefulWidget {
   const _VenuePick();
   @override
@@ -196,20 +233,43 @@ class _VenuePick extends StatefulWidget {
 class _VenuePickState extends State<_VenuePick> {
   List<Map<String, dynamic>> _r = [];
   bool _loading = false;
+  bool _failed = false; // алдааг хоосон жагсаалтаас ялгана
+  Timer? _debounce;
+  int _ticket = 0;      // хожуу ирсэн хуучин хариу шинийг дарж бичихгүй
+  String _lastQ = '';
+
   @override
-  void initState() { super.initState(); _search(''); }
-  Future<void> _search(String q) async {
-    setState(() => _loading = true);
+  void initState() { super.initState(); _run(''); }
+
+  @override
+  void dispose() { _debounce?.cancel(); super.dispose(); }
+
+  // Товчлуур бүрт биш — 300ms завсарлагатай хайна
+  void _search(String q) {
+    _lastQ = q;
+    _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 300), () => _run(q));
+  }
+
+  Future<void> _run(String q) async {
+    final my = ++_ticket;
+    setState(() { _loading = true; _failed = false; });
     try {
       final me = SupabaseService.currentUser?.id ?? '';
       // Зөвхөн ӨӨРИЙН эзэмшдэг venue (event зөвхөн эзэн нэмнэ)
       var query = SupabaseService.client.from('venues')
           .select('id, name, district').eq('owner_id', me);
       if (q.isNotEmpty) query = query.ilike('name', '%$q%');
-      _r = ((await query.limit(30)) as List).cast<Map<String, dynamic>>();
-    } catch (_) { _r = []; }
+      final rows = ((await query.limit(30)) as List).cast<Map<String, dynamic>>();
+      if (my != _ticket) return; // хуучирсан хариу — хаяна
+      _r = rows;
+    } catch (_) {
+      if (my != _ticket) return;
+      _failed = true;
+    }
     if (mounted) setState(() => _loading = false);
   }
+
   @override
   Widget build(BuildContext context) => Padding(
     padding: EdgeInsets.only(
@@ -228,16 +288,28 @@ class _VenuePickState extends State<_VenuePick> {
       SizedBox(height: 320, child: _loading
         ? const Center(child: CircularProgressIndicator(
             color: AppColors.accentStart, strokeWidth: 2))
-        : _r.isEmpty
-          ? Center(child: Padding(padding: const EdgeInsets.all(20),
-              child: Text('Танд эзэмшдэг газар алга.\nЭхлээд "Газраа удирдах"-аас venue үүсгэнэ үү.',
-                textAlign: TextAlign.center,
-                style: AppTextStyles.bodyMd.copyWith(color: AppColors.textSecondary))))
-          : ListView.builder(itemCount: _r.length, itemBuilder: (_, i) => ListTile(
-            leading: const Icon(Icons.location_on, color: AppColors.accentStart),
-            title: Text(_r[i]['name'] as String? ?? '',
-              style: AppTextStyles.bodyMd.copyWith(color: AppColors.textPrimary)),
-            onTap: () => Navigator.pop(context, _r[i])))),
+        : _failed
+          ? Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
+              const Icon(Icons.wifi_off_outlined,
+                color: AppColors.textTertiary, size: 36),
+              const SizedBox(height: 10),
+              Text('Алдаа гарлаа — дахин оролдоно уу',
+                style: AppTextStyles.bodyMd.copyWith(color: AppColors.textSecondary)),
+              const SizedBox(height: 12),
+              ElevatedButton(onPressed: () => _run(_lastQ),
+                child: const Text('Дахин оролдох')),
+            ]))
+          : _r.isEmpty
+            ? Center(child: Padding(padding: const EdgeInsets.all(20),
+                child: Text('Танд эзэмшдэг газар алга.\nЭхлээд "Газраа удирдах"-аас venue үүсгэнэ үү.',
+                  textAlign: TextAlign.center,
+                  style: AppTextStyles.bodyMd.copyWith(color: AppColors.textSecondary))))
+            : ListView.builder(itemCount: _r.length, itemBuilder: (_, i) => ListTile(
+              leading: const Icon(Icons.location_on, color: AppColors.accentStart),
+              mouseCursor: SystemMouseCursors.click,
+              title: Text(_r[i]['name'] as String? ?? '',
+                style: AppTextStyles.bodyMd.copyWith(color: AppColors.textPrimary)),
+              onTap: () => Navigator.pop(context, _r[i])))),
       const SizedBox(height: 12),
     ]));
 }

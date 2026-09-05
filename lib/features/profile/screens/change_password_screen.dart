@@ -15,29 +15,66 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
   final _newCtrl     = TextEditingController();
   final _confirmCtrl = TextEditingController();
   bool _loading = false;
+  String? _error; // талбарын доор харуулах Монгол алдаа
 
   @override
   void dispose() { _newCtrl.dispose(); _confirmCtrl.dispose(); super.dispose(); }
 
+  void _snack(String msg, {bool err = false}) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(msg),
+      backgroundColor: err ? AppColors.error : null,
+      behavior: SnackBarBehavior.floating));
+  }
+
   Future<void> _update() async {
-    if (_newCtrl.text != _confirmCtrl.text) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Passwords do not match')));
+    final pass = _newCtrl.text;
+    final confirm = _confirmCtrl.text;
+
+    // ── Клиент талын шалгалт (сервер рүү илгээхээс өмнө) ──
+    if (pass.isEmpty) {
+      setState(() => _error = 'Шинэ нууц үгээ оруулна уу');
       return;
     }
-    setState(() => _loading = true);
+    if (pass.length < 6) {
+      setState(() => _error = 'Нууц үг дор хаяж 6 тэмдэгт байх ёстой');
+      return;
+    }
+    if (pass != confirm) {
+      setState(() => _error = 'Нууц үг таарахгүй байна');
+      return;
+    }
+
+    setState(() { _loading = true; _error = null; });
     try {
       await Supabase.instance.client.auth.updateUser(
-        UserAttributes(password: _newCtrl.text));
-      if (mounted) { context.pop();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Password updated!'))); }
+        UserAttributes(password: pass));
+      if (mounted) {
+        context.pop();
+        _snack('Нууц үг шинэчлэгдлээ ✓');
+      }
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e')));
+      if (mounted) {
+        setState(() => _error = _friendlyError(e));
+      }
     } finally {
       if (mounted) setState(() => _loading = false);
     }
+  }
+
+  // Supabase-ийн англи алдааг ойлгомжтой Монгол текст рүү хөрвүүлнэ
+  String _friendlyError(Object e) {
+    final s = e.toString().toLowerCase();
+    if (s.contains('at least') || s.contains('6 characters')) {
+      return 'Нууц үг дор хаяж 6 тэмдэгт байх ёстой';
+    }
+    if (s.contains('same') || s.contains('different from')) {
+      return 'Шинэ нууц үг хуучнаас өөр байх ёстой';
+    }
+    if (s.contains('network') || s.contains('socket') || s.contains('timeout')) {
+      return 'Сүлжээний алдаа. Дахин оролдоно уу';
+    }
+    return 'Нууц үг шинэчилж чадсангүй';
   }
 
   @override
@@ -47,27 +84,46 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
       backgroundColor: AppColors.bgBase,
       leading: IconButton(onPressed: () => context.pop(),
         icon: const Icon(Icons.arrow_back_ios_new, size: 20)),
-      title: Text('Change Password', style: AppTextStyles.h2),
+      title: Text('Нууц үг солих', style: AppTextStyles.h2),
     ),
     body: Padding(
       padding: const EdgeInsets.all(32),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text('New Password', style: AppTextStyles.labelMd.copyWith(
+        Text('Шинэ нууц үг', style: AppTextStyles.labelMd.copyWith(
           color: AppColors.textSecondary)),
         const SizedBox(height: 8),
         TextField(controller: _newCtrl, obscureText: true,
+          onChanged: (_) { if (_error != null) setState(() => _error = null); },
           style: const TextStyle(color: AppColors.textPrimary),
           decoration: const InputDecoration(hintText: '••••••••')),
         const SizedBox(height: 20),
-        Text('Confirm Password', style: AppTextStyles.labelMd.copyWith(
+        Text('Нууц үг баталгаажуулах', style: AppTextStyles.labelMd.copyWith(
           color: AppColors.textSecondary)),
         const SizedBox(height: 8),
         TextField(controller: _confirmCtrl, obscureText: true,
+          onChanged: (_) { if (_error != null) setState(() => _error = null); },
           style: const TextStyle(color: AppColors.textPrimary),
           decoration: const InputDecoration(hintText: '••••••••')),
+        // ── Алдааны мессеж (талбарын доор) ──
+        AnimatedSize(
+          duration: const Duration(milliseconds: 180),
+          curve: Curves.easeOut,
+          child: _error == null
+            ? const SizedBox(width: double.infinity)
+            : Padding(
+                padding: const EdgeInsets.only(top: 12),
+                child: Row(children: [
+                  const Icon(Icons.error_outline,
+                    color: AppColors.error, size: 16),
+                  const SizedBox(width: 6),
+                  Expanded(child: Text(_error!,
+                    style: AppTextStyles.bodyXs.copyWith(color: AppColors.error))),
+                ]),
+              ),
+        ),
         const SizedBox(height: 40),
         GradientButton(
-          label: _loading ? 'Updating...' : 'Update Password',
+          label: _loading ? 'Шинэчилж байна...' : 'Нууц үг шинэчлэх',
           onPressed: _loading ? null : _update),
       ]),
     ),

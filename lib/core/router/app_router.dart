@@ -23,7 +23,9 @@ import '../../features/post/screens/create_post_screen.dart';
 import '../../features/notifications/screens/notifications_screen.dart';
 import '../../features/dm/screens/dm_list_screen.dart';
 import '../../features/dm/screens/dm_thread_screen.dart';
+import '../../features/dm/screens/group_thread_screen.dart';
 import '../../features/profile/screens/profile_screen.dart';
+import '../../features/profile/screens/follow_list_screen.dart';
 import '../../features/profile/screens/settings_screen.dart';
 import '../../features/profile/screens/change_password_screen.dart';
 import '../../features/profile/screens/business_screen.dart';
@@ -64,7 +66,9 @@ abstract class AppRoutes {
   static const notifications   = '/notifications';
   static const dmList          = '/dm';
   static const dmThread        = '/dm/:id';
+  static const groupThread     = '/group/:id';
   static const profile         = '/profile';
+  static const follows         = '/follows/:id';
   static const settings        = '/settings';
   static const changePassword  = '/settings/password';
   static const business        = '/business';
@@ -97,6 +101,63 @@ abstract class AppRoutes {
 final _rootKey  = GlobalKey<NavigatorState>(debugLabel: 'root');
 final _shellKey = GlobalKey<NavigatorState>(debugLabel: 'shell');
 
+// ─── Гөлгөр шилжилтүүд ───
+
+/// Таб хоорондын шилжилт — зөөлөн fade + бага зэрэг томрох (Material fade-through)
+CustomTransitionPage<void> _fadePage(GoRouterState state, Widget child) =>
+    CustomTransitionPage(
+      key: state.pageKey,
+      child: child,
+      transitionDuration: const Duration(milliseconds: 220),
+      reverseTransitionDuration: const Duration(milliseconds: 180),
+      transitionsBuilder: (_, anim, __, child) => FadeTransition(
+        opacity: CurvedAnimation(parent: anim, curve: Curves.easeOutCubic),
+        child: ScaleTransition(
+          scale: Tween<double>(begin: 0.985, end: 1).animate(
+              CurvedAnimation(parent: anim, curve: Curves.easeOutCubic)),
+          child: child,
+        ),
+      ),
+    );
+
+/// Дэлгэрэнгүй дэлгэц — баруунаас гулсаж орох (iOS-маяг) + fade
+CustomTransitionPage<void> _slidePage(GoRouterState state, Widget child) =>
+    CustomTransitionPage(
+      key: state.pageKey,
+      child: child,
+      transitionDuration: const Duration(milliseconds: 300),
+      reverseTransitionDuration: const Duration(milliseconds: 260),
+      transitionsBuilder: (_, anim, secondary, child) {
+        final curved = CurvedAnimation(
+            parent: anim, curve: Curves.easeOutCubic,
+            reverseCurve: Curves.easeInCubic);
+        return SlideTransition(
+          position: Tween<Offset>(begin: const Offset(0.06, 0), end: Offset.zero)
+              .animate(curved),
+          child: FadeTransition(opacity: curved, child: child),
+        );
+      },
+    );
+
+/// Үүсгэх дэлгэц — доороос гулсаж гарч ирнэ (sheet-маяг)
+CustomTransitionPage<void> _sheetPage(GoRouterState state, Widget child) =>
+    CustomTransitionPage(
+      key: state.pageKey,
+      child: child,
+      transitionDuration: const Duration(milliseconds: 320),
+      reverseTransitionDuration: const Duration(milliseconds: 260),
+      transitionsBuilder: (_, anim, __, child) {
+        final curved = CurvedAnimation(
+            parent: anim, curve: Curves.easeOutCubic,
+            reverseCurve: Curves.easeInCubic);
+        return SlideTransition(
+          position: Tween<Offset>(begin: const Offset(0, 0.08), end: Offset.zero)
+              .animate(curved),
+          child: FadeTransition(opacity: curved, child: child),
+        );
+      },
+    );
+
 final appRouterProvider = Provider<GoRouter>((ref) {
   return GoRouter(
     navigatorKey: _rootKey,
@@ -120,12 +181,13 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     routes: [
       // ── Onboarding ──
       GoRoute(path: AppRoutes.splash,       builder: (_, __) => const SplashScreen()),
-      GoRoute(path: AppRoutes.langSelect,   builder: (_, __) => const LangSelectScreen()),
+      GoRoute(path: AppRoutes.langSelect,
+        pageBuilder: (_, s) => _fadePage(s, const LangSelectScreen())),
       GoRoute(
         path: AppRoutes.onboarding,
-        builder: (_, state) {
+        pageBuilder: (_, state) {
           final slide = int.tryParse(state.uri.queryParameters['slide'] ?? '1') ?? 1;
-          return OnboardingScreen(slide: slide);
+          return _fadePage(state, OnboardingScreen(slide: slide));
         },
       ),
       GoRoute(path: AppRoutes.permLocation,
@@ -134,65 +196,103 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (_, __) => const PermissionScreen(kind: PermissionKind.notification)),
 
       // ── Auth ──
-      GoRoute(path: AppRoutes.authLanding,   builder: (_, __) => const AuthLandingScreen()),
-      GoRoute(path: AppRoutes.login,         builder: (_, __) => const LoginScreen()),
-      GoRoute(path: AppRoutes.register,      builder: (_, __) => const RegisterScreen()),
-      GoRoute(path: AppRoutes.setup,         builder: (_, __) => const SetupScreen()),
-      GoRoute(path: AppRoutes.forgotPassword,builder: (_, __) => const ForgotPasswordScreen()),
+      GoRoute(path: AppRoutes.authLanding,
+        pageBuilder: (_, s) => _fadePage(s, const AuthLandingScreen())),
+      GoRoute(path: AppRoutes.login,
+        pageBuilder: (_, s) => _slidePage(s, const LoginScreen())),
+      GoRoute(path: AppRoutes.register,
+        pageBuilder: (_, s) => _slidePage(s, const RegisterScreen())),
+      GoRoute(path: AppRoutes.setup,
+        pageBuilder: (_, s) => _slidePage(s, const SetupScreen())),
+      GoRoute(path: AppRoutes.forgotPassword,
+        pageBuilder: (_, s) => _slidePage(s, const ForgotPasswordScreen())),
 
       // ── Main shell (bottom nav) ──
       ShellRoute(
         navigatorKey: _shellKey,
         builder: (ctx, state, child) => MainShell(child: child),
         routes: [
-          GoRoute(path: AppRoutes.feed,          builder: (_, __) => const FeedScreen()),
-          GoRoute(path: AppRoutes.map,           builder: (_, __) => const MapScreen()),
-          GoRoute(path: AppRoutes.explore,       builder: (_, __) => const ExploreScreen()),
-          GoRoute(path: AppRoutes.notifications, builder: (_, __) => const NotificationsScreen()),
-          GoRoute(path: AppRoutes.reels,         builder: (_, __) => const ReelsScreen()),
-          GoRoute(path: AppRoutes.profile,       builder: (_, __) => const ProfileScreen()),
+          GoRoute(path: AppRoutes.feed,
+            pageBuilder: (_, s) => _fadePage(s, const FeedScreen())),
+          GoRoute(path: AppRoutes.explore,
+            pageBuilder: (_, s) => _fadePage(s, const ExploreScreen())),
+          GoRoute(path: AppRoutes.notifications,
+            pageBuilder: (_, s) => _fadePage(s, const NotificationsScreen())),
+          GoRoute(path: AppRoutes.reels,
+            pageBuilder: (_, s) => _fadePage(s, const ReelsScreen())),
+          GoRoute(path: AppRoutes.profile,
+            pageBuilder: (_, s) => _fadePage(s, const ProfileScreen())),
         ],
       ),
 
       // ── Full-screen overlays ──
-      GoRoute(path: AppRoutes.createPost,   builder: (_, __) => const CreatePostScreen()),
+      GoRoute(path: AppRoutes.map,
+        // iframe (Leaflet) нь route transition-ий transform-ыг дагадаггүй тул
+        // шилжилтгүй нээнэ — эс бөгөөс зураг байрлалаасаа гулсаж хар харагдана
+        pageBuilder: (_, s) => NoTransitionPage(
+            key: s.pageKey, child: const MapScreen())),
+      GoRoute(path: AppRoutes.createPost,
+        pageBuilder: (_, s) => _sheetPage(s, const CreatePostScreen())),
       GoRoute(path: AppRoutes.postDetail,
-        builder: (_, s) => PostDetailScreen(postId: s.pathParameters['id'] ?? '')),
+        pageBuilder: (_, s) => _slidePage(s,
+          PostDetailScreen(postId: s.pathParameters['id'] ?? ''))),
       GoRoute(path: AppRoutes.creator,
-        builder: (_, s) => CreatorScreen(creatorId: s.pathParameters['id'] ?? '')),
+        pageBuilder: (_, s) => _slidePage(s,
+          CreatorScreen(creatorId: s.pathParameters['id'] ?? ''))),
       GoRoute(path: AppRoutes.qpay,
-        builder: (_, s) => QPayScreen(contentId: s.pathParameters['id'] ?? '')),
-      GoRoute(path: AppRoutes.dmList,       builder: (_, __) => const DmListScreen()),
+        pageBuilder: (_, s) => _sheetPage(s,
+          QPayScreen(contentId: s.pathParameters['id'] ?? ''))),
+      GoRoute(path: AppRoutes.dmList,
+        pageBuilder: (_, s) => _slidePage(s, const DmListScreen())),
       GoRoute(path: AppRoutes.dmThread,
-        builder: (_, s) => DmThreadScreen(
+        pageBuilder: (_, s) => _slidePage(s, DmThreadScreen(
           threadId: s.pathParameters['id'] ?? '',
-          replyNote: s.uri.queryParameters['note'])),
-      GoRoute(path: AppRoutes.settings,     builder: (_, __) => const SettingsScreen()),
-      GoRoute(path: AppRoutes.changePassword,builder: (_, __) => const ChangePasswordScreen()),
-      GoRoute(path: AppRoutes.business,     builder: (_, __) => const BusinessScreen()),
+          replyNote: s.uri.queryParameters['note']))),
+      GoRoute(path: AppRoutes.groupThread,
+        pageBuilder: (_, s) => _slidePage(s, GroupThreadScreen(
+          groupId: s.pathParameters['id'] ?? '',
+          groupName: s.uri.queryParameters['name']))),
+      GoRoute(path: AppRoutes.follows,
+        pageBuilder: (_, s) => _slidePage(s, FollowListScreen(
+          userId: s.pathParameters['id'] ?? '',
+          showFollowers: s.uri.queryParameters['tab'] != 'following'))),
+      GoRoute(path: AppRoutes.settings,
+        pageBuilder: (_, s) => _slidePage(s, const SettingsScreen())),
+      GoRoute(path: AppRoutes.changePassword,
+        pageBuilder: (_, s) => _slidePage(s, const ChangePasswordScreen())),
+      GoRoute(path: AppRoutes.business,
+        pageBuilder: (_, s) => _slidePage(s, const BusinessScreen())),
       GoRoute(path: AppRoutes.affiliateUnlock,
-        builder: (_, __) => const AffiliateScreen(unlockMode: true)),
+        pageBuilder: (_, s) => _slidePage(s, const AffiliateScreen(unlockMode: true))),
       GoRoute(path: AppRoutes.affiliate,
-        builder: (_, __) => const AffiliateScreen(unlockMode: false)),
+        pageBuilder: (_, s) => _slidePage(s, const AffiliateScreen(unlockMode: false))),
       GoRoute(path: AppRoutes.goLive,
-        builder: (_, __) => const GoLiveScreen()),
+        pageBuilder: (_, s) => _sheetPage(s, const GoLiveScreen())),
       GoRoute(path: AppRoutes.liveView,
-        builder: (_, s) => LiveViewerScreen(liveId: s.pathParameters['id'] ?? '')),
+        // HTML5 video platform view — transition-гүй нээнэ
+        pageBuilder: (_, s) => NoTransitionPage(key: s.pageKey,
+          child: LiveViewerScreen(liveId: s.pathParameters['id'] ?? ''))),
       GoRoute(path: AppRoutes.createStory,
-        builder: (_, __) => const CreateStoryScreen()),
+        pageBuilder: (_, s) => _sheetPage(s, const CreateStoryScreen())),
       GoRoute(path: AppRoutes.createReel,
-        builder: (_, __) => const CreateReelScreen()),
+        pageBuilder: (_, s) => _sheetPage(s, const CreateReelScreen())),
       GoRoute(path: AppRoutes.createEvent,
-        builder: (_, __) => const CreateEventScreen()),
+        pageBuilder: (_, s) => _sheetPage(s, const CreateEventScreen())),
       GoRoute(path: AppRoutes.venueEdit,
-        builder: (_, __) => const VenueEditScreen()),
+        pageBuilder: (_, s) => _slidePage(s, const VenueEditScreen())),
       GoRoute(path: AppRoutes.venueReviews,
-        builder: (_, s) => VenueDetailScreen(venueId: s.pathParameters['id'] ?? '')),
-      GoRoute(path: AppRoutes.search, builder: (_, __) => const SearchScreen()),
-      GoRoute(path: AppRoutes.saved,  builder: (_, __) => const SavedPostsScreen()),
-      GoRoute(path: AppRoutes.adminPanel,   builder: (_, __) => const AdminPanelScreen()),
-      GoRoute(path: AppRoutes.adminReports, builder: (_, __) => const AdminReportsScreen()),
-      GoRoute(path: AppRoutes.adminUsers,   builder: (_, __) => const AdminUsersScreen()),
+        pageBuilder: (_, s) => _slidePage(s,
+          VenueDetailScreen(venueId: s.pathParameters['id'] ?? ''))),
+      GoRoute(path: AppRoutes.search,
+        pageBuilder: (_, s) => _fadePage(s, const SearchScreen())),
+      GoRoute(path: AppRoutes.saved,
+        pageBuilder: (_, s) => _slidePage(s, const SavedPostsScreen())),
+      GoRoute(path: AppRoutes.adminPanel,
+        pageBuilder: (_, s) => _slidePage(s, const AdminPanelScreen())),
+      GoRoute(path: AppRoutes.adminReports,
+        pageBuilder: (_, s) => _slidePage(s, const AdminReportsScreen())),
+      GoRoute(path: AppRoutes.adminUsers,
+        pageBuilder: (_, s) => _slidePage(s, const AdminUsersScreen())),
     ],
 
     errorBuilder: (_, state) => Scaffold(

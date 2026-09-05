@@ -7,6 +7,7 @@ import '../../../core/theme/app_text_styles.dart';
 import '../../../core/services/supabase_service.dart';
 import '../../../core/utils/image_uploader.dart';
 import '../providers/feed_provider.dart';
+import '../widgets/story_video.dart';
 import '../../map/providers/venue_provider.dart' show isVenueOwnerProvider;
 
 class CreateReelScreen extends ConsumerStatefulWidget {
@@ -18,6 +19,7 @@ class CreateReelScreen extends ConsumerStatefulWidget {
 class _CreateReelScreenState extends ConsumerState<CreateReelScreen> {
   Uint8List? _bytes;
   String _ext = 'mp4';
+  String? _previewUrl;   // blob URL — сонгосон видеог урьдчилан харах
   final _captionCtrl = TextEditingController();
   bool _busy = false;
   String? _error;
@@ -29,9 +31,21 @@ class _CreateReelScreenState extends ConsumerState<CreateReelScreen> {
     _      => 'video/mp4',
   };
 
+  // Preview blob URL-ыг цэвэрлэнэ
+  void _clearPreview() {
+    if (_previewUrl != null) { revokeBlobUrl(_previewUrl!); _previewUrl = null; }
+  }
+
   Future<void> _pick() async {
     final v = await ImageUploader.pickVideo();
-    if (v != null && mounted) setState(() { _bytes = v.bytes; _ext = v.ext; });
+    if (v != null && mounted) {
+      setState(() {
+        _clearPreview();
+        _bytes = v.bytes; _ext = v.ext;
+        // Веб дээр сонгосон клипээ шууд харна (буруу файл сонгосныг илрүүлнэ)
+        _previewUrl = createBlobUrl(v.bytes, _contentType(v.ext));
+      });
+    }
   }
 
   Future<void> _share() async {
@@ -47,6 +61,8 @@ class _CreateReelScreenState extends ConsumerState<CreateReelScreen> {
         path: '${user.id}/$ts.$_ext',
         contentType: _contentType(_ext),
       );
+      // Том видео upload удаан — энэ хооронд дэлгэц хаагдвал setState хийхгүй
+      if (!mounted) return;
       if (url == null) {
         setState(() { _busy = false; _error = 'Видео upload амжилтгүй (хэмжээ 50MB-аас бага байх ёстой)'; });
         return;
@@ -60,13 +76,19 @@ class _CreateReelScreenState extends ConsumerState<CreateReelScreen> {
       if (!mounted) return;
       ref.read(feedProvider.notifier).loadFeed(refresh: true);
       context.go('/reels');
-    } catch (e) {
-      if (mounted) setState(() { _busy = false; _error = e.toString(); });
+    } catch (_) {
+      // Supabase/Postgres-ийн англи алдааг харуулахгүй — Монгол мессеж
+      if (mounted) {
+        setState(() {
+          _busy = false;
+          _error = 'Алдаа гарлаа. Дахин оролдоно уу.';
+        });
+      }
     }
   }
 
   @override
-  void dispose() { _captionCtrl.dispose(); super.dispose(); }
+  void dispose() { _clearPreview(); _captionCtrl.dispose(); super.dispose(); }
 
   @override
   Widget build(BuildContext context) {
@@ -79,7 +101,11 @@ class _CreateReelScreenState extends ConsumerState<CreateReelScreen> {
           icon: const Icon(Icons.close, color: Colors.white)),
         title: Text('Шинэ Discovery', style: AppTextStyles.labelLg.copyWith(color: Colors.white)),
       ),
-      body: isOwner == false
+      body: isOwner == null
+          // Эрх шалгаж дуустал л loader — эзэн биш хэрэглэгчид create UI гарахгүй
+          ? const Center(child: CircularProgressIndicator(
+              color: Colors.white, strokeWidth: 2))
+          : isOwner == false
           ? Center(child: Padding(
               padding: const EdgeInsets.all(32),
               child: Column(mainAxisSize: MainAxisSize.min, children: [
@@ -94,7 +120,7 @@ class _CreateReelScreenState extends ConsumerState<CreateReelScreen> {
               ])))
           : Column(children: [
         Expanded(child: Center(child: _bytes == null
-          ? GestureDetector(
+          ? _Pressable(
               onTap: _pick,
               child: Column(mainAxisSize: MainAxisSize.min, children: [
                 const Icon(Icons.slow_motion_video_outlined,
@@ -107,16 +133,34 @@ class _CreateReelScreenState extends ConsumerState<CreateReelScreen> {
                   decoration: BoxDecoration(
                     gradient: AppColors.accentGradient,
                     borderRadius: BorderRadius.circular(14)),
-                  child: Text('Gallery-с сонгох',
+                  child: Text('Зургийн сангаас сонгох',
                     style: AppTextStyles.btn.copyWith(color: Colors.white))),
               ]))
-          : Column(mainAxisSize: MainAxisSize.min, children: [
-              const Icon(Icons.movie_creation_rounded, color: Colors.white70, size: 64),
-              const SizedBox(height: 12),
-              Text('Видео бэлэн', style: AppTextStyles.bodyMd.copyWith(color: Colors.white70)),
-              const SizedBox(height: 8),
-              TextButton(onPressed: _pick,
-                child: const Text('Өөр видео сонгох')),
+          // Сонгосон клипээ шууд харна — muted/loop preview
+          : Stack(alignment: Alignment.bottomCenter, children: [
+              _previewUrl != null
+                ? Positioned.fill(child: StoryVideoView(
+                    url: _previewUrl!, loop: true))
+                : Column(mainAxisSize: MainAxisSize.min, children: [
+                    const Icon(Icons.movie_creation_rounded,
+                        color: Colors.white70, size: 64),
+                    const SizedBox(height: 12),
+                    Text('Видео бэлэн',
+                        style: AppTextStyles.bodyMd.copyWith(color: Colors.white70)),
+                  ]),
+              Padding(
+                padding: const EdgeInsets.only(bottom: 16),
+                child: _Pressable(
+                  onTap: _pick,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: Colors.black54,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: Colors.white24)),
+                    child: Text('Өөр видео сонгох',
+                      style: AppTextStyles.bodySm.copyWith(color: Colors.white)))),
+              ),
             ]))),
         if (_bytes != null)
           Container(
@@ -138,24 +182,60 @@ class _CreateReelScreenState extends ConsumerState<CreateReelScreen> {
                 Text(_error!, style: AppTextStyles.bodyXs.copyWith(color: AppColors.error)),
               ],
               const SizedBox(height: 10),
-              GestureDetector(
+              _Pressable(
                 onTap: _busy ? null : _share,
-                child: Container(
-                  height: 50, width: double.infinity,
-                  decoration: BoxDecoration(
-                    gradient: AppColors.accentGradient,
-                    borderRadius: BorderRadius.circular(16)),
-                  alignment: Alignment.center,
-                  child: _busy
-                    ? const SizedBox(width: 22, height: 22, child:
-                        CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                    : Text('Reel хуваалцах',
-                        style: AppTextStyles.btn.copyWith(color: Colors.white))),
+                child: AnimatedOpacity(
+                  opacity: _busy ? 0.75 : 1,
+                  duration: const Duration(milliseconds: 150),
+                  child: Container(
+                    height: 50, width: double.infinity,
+                    decoration: BoxDecoration(
+                      gradient: AppColors.accentGradient,
+                      borderRadius: BorderRadius.circular(16)),
+                    alignment: Alignment.center,
+                    child: _busy
+                      ? const SizedBox(width: 22, height: 22, child:
+                          CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                      : Text('Reel хуваалцах',
+                          style: AppTextStyles.btn.copyWith(color: Colors.white)))),
               ),
               const SizedBox(height: 8),
             ]),
           ),
       ]),
+    );
+  }
+}
+
+// Дарахад жижигрэх + hover курсор — веб мэдрэмж
+class _Pressable extends StatefulWidget {
+  final Widget child;
+  final VoidCallback? onTap;
+  const _Pressable({required this.child, this.onTap});
+  @override
+  State<_Pressable> createState() => _PressableState();
+}
+
+class _PressableState extends State<_Pressable> {
+  bool _down = false;
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      cursor: widget.onTap == null
+          ? SystemMouseCursors.basic : SystemMouseCursors.click,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTapDown: widget.onTap == null
+            ? null : (_) => setState(() => _down = true),
+        onTapCancel: () => setState(() => _down = false),
+        onTapUp: (_) => setState(() => _down = false),
+        onTap: widget.onTap,
+        child: AnimatedScale(
+          scale: _down ? 0.96 : 1.0,
+          duration: const Duration(milliseconds: 120),
+          curve: Curves.easeOut,
+          child: widget.child),
+      ),
     );
   }
 }

@@ -1,15 +1,16 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/utils/web_audio.dart';
 import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_text_styles.dart';
 import '../../../core/widgets/app_avatar.dart';
-import '../../../core/widgets/network_video.dart';
+import '../../../core/widgets/network_video.dart' show isVideoUrl;
 import '../../../core/services/supabase_service.dart';
 import '../../../models/story.dart';
 import '../providers/stories_provider.dart';
+import '../widgets/story_video.dart';
 
 class StoryViewerScreen extends StatefulWidget {
   final List<StoryRing> rings;
@@ -30,7 +31,6 @@ class _StoryViewerScreenState extends State<StoryViewerScreen>
   late int _ringIndex;
   int _storyIndex = 0;
   late AnimationController _progressCtrl;
-  late PageController _pageCtrl;
   final _replyCtrl = TextEditingController();
   final _replyFocus = FocusNode();
   final WebAudio _musicPlayer = WebAudio();
@@ -38,13 +38,27 @@ class _StoryViewerScreenState extends State<StoryViewerScreen>
   // story_id → лайк дарсан эсэх (одоогийн харагдаж буй story-ийн төлөв)
   final Map<String, bool> _likedMap = {};
 
+  // Видео удирдлага
+  final ValueNotifier<bool> _videoPaused = ValueNotifier<bool>(false);
+  // Browser дуутай autoplay-г блоклодог тул muted эхэлж, эхний gesture дээр нээнэ
+  final ValueNotifier<bool> _videoMuted = ValueNotifier<bool>(true);
+  bool _userMuted = false;   // хэрэглэгч speaker-ээр өөрөө хаасан
+  bool _soundUnlocked = false;
+
+  // Doube-tap лайкийн том зүрх
+  bool _bigHeart = false;
+  Timer? _bigHeartTimer;
+
+  // Доош чирж хаах
+  double _dragY = 0;
+  bool _dragging = false;
+
   String get _myId => SupabaseService.currentUser?.id ?? '';
 
   @override
   void initState() {
     super.initState();
     _ringIndex = widget.initialRingIndex;
-    _pageCtrl  = PageController(initialPage: _ringIndex);
     _progressCtrl = AnimationController(vsync: this);
     // Зөвхөн жинхэнэ дуустал л дараагийн story руу шилжинэ.
     // (stop() дуудахад .then() callback давхар ажиллаж story-г хурдасгадаг
@@ -53,7 +67,7 @@ class _StoryViewerScreenState extends State<StoryViewerScreen>
       if (s == AnimationStatus.completed && mounted) _nextStory();
     });
     _replyFocus.addListener(() {
-      if (_replyFocus.hasFocus) { _progressCtrl.stop(); _musicPlayer.pause(); }
+      if (_replyFocus.hasFocus) _pause();
     });
     _startProgress();
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersive);
@@ -62,13 +76,21 @@ class _StoryViewerScreenState extends State<StoryViewerScreen>
   @override
   void dispose() {
     _progressCtrl.dispose();
-    _pageCtrl.dispose();
     _replyCtrl.dispose();
     _replyFocus.dispose();
     _musicPlayer.dispose();
+    _videoPaused.dispose();
+    _videoMuted.dispose();
+    _bigHeartTimer?.cancel();
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     super.dispose();
   }
+
+  StoryRing get _currentRing => widget.rings[_ringIndex];
+  Story     get _currentStory => _currentRing.stories[_storyIndex];
+  int       get _totalStories => _currentRing.stories.length;
+  bool      get _isVideoStory =>
+      _currentStory.mediaType == 'video' || isVideoUrl(_currentStory.mediaUrl);
 
   // Идэвхтэй story-ийн хөгжмийг тааруулж тоглуулна
   void _syncMusic() {
@@ -84,6 +106,33 @@ class _StoryViewerScreenState extends State<StoryViewerScreen>
     }
     _playingMusicUrl = url;
     _musicPlayer.play(url, loop: true);
+  }
+
+  // ── Түр зогсоох / үргэлжлүүлэх (progress + хөгжим + видео хамт) ──
+  void _pause() {
+    _progressCtrl.stop();
+    _musicPlayer.pause();
+    _videoPaused.value = true;
+  }
+
+  void _resume() {
+    _musicPlayer.resume();
+    _videoPaused.value = false;
+    _progressCtrl.forward();
+  }
+
+  // Эхний хэрэглэгчийн gesture дээр дууг нээнэ (autoplay unlock)
+  void _unlockSound() {
+    if (_soundUnlocked) return;
+    _soundUnlocked = true;
+    if (!_userMuted) _videoMuted.value = false;
+  }
+
+  void _toggleMute() {
+    _soundUnlocked = true;
+    final nowMuted = !_videoMuted.value;
+    _videoMuted.value = nowMuted;
+    _userMuted = nowMuted;
   }
 
   Future<void> _sendReply(String body) async {
@@ -112,38 +161,67 @@ class _StoryViewerScreenState extends State<StoryViewerScreen>
       }
     }
     // үргэлжлүүлэх (дуустал нь status listener шилжүүлнэ)
-    _progressCtrl.forward();
+    if (mounted) _resume();
   }
-
-  StoryRing get _currentRing => widget.rings[_ringIndex];
-  Story     get _currentStory => _currentRing.stories[_storyIndex];
-  int       get _totalStories => _currentRing.stories.length;
 
   void _startProgress() {
     _progressCtrl.reset();
-    // Бага/буруу утганаас хамгаалж доод хязгаар тавина (story хэт хурдан
-    // солигдохгүй байх) — зураг ~5с, видео арай урт байж болно.
-    final secs = _currentStory.duration.clamp(5, 30).toInt();
-    _progressCtrl.duration = Duration(seconds: secs);
+    _videoPaused.value = false;
+    // Бага/буруу утганаас хамгаалж хязгаар тавина — зураг ~5с,
+    // видеог хадгалсан бодит уртаар (metadata ирэхэд дахин нарийвчилна).
+    final secs = _isVideoStory
+        ? _currentStory.duration.clamp(3, 90)
+        : _currentStory.duration.clamp(5, 30);
+    _progressCtrl.duration = Duration(seconds: secs.toInt());
     _progressCtrl.forward();
     _syncMusic();
     StoryService.markViewed(_currentStory.id);
     _loadLiked(_currentStory.id);
   }
 
-  // Лайкийн төлөвийг ачаална
+  // Видеоны metadata-аас бодит урт ирэхэд progress-ийг тааруулна
+  void _onVideoDuration(double secs) {
+    if (!mounted) return;
+    final d = Duration(milliseconds: (secs.clamp(1, 120) * 1000).round());
+    if (_progressCtrl.duration == d) return;
+    final wasAnimating = _progressCtrl.isAnimating;
+    final v = _progressCtrl.value;
+    _progressCtrl.stop();
+    _progressCtrl.duration = d;
+    if (wasAnimating) _progressCtrl.forward(from: v);
+  }
+
+  // Видео дуусмагц дараагийн story руу (progress-оос түрүүлж дуусвал)
+  void _onVideoEnded() {
+    if (!mounted) return;
+    _progressCtrl.value = 1.0; // status listener _nextStory дуудна
+  }
+
+  // Лайкийн төлөвийг ачаална — хэрэглэгч түрүүлж дарсан бол дарж бичихгүй
   Future<void> _loadLiked(String storyId) async {
     if (_likedMap.containsKey(storyId)) return;
     final liked = await StoryService.isLiked(storyId);
-    if (mounted) setState(() => _likedMap[storyId] = liked);
+    if (mounted) setState(() => _likedMap.putIfAbsent(storyId, () => liked));
   }
 
-  // Зүрх дарж лайк toggle хийнэ (DM илгээхгүй)
-  void _toggleLike() {
+  // Зүрх дарж лайк toggle хийнэ (DM илгээхгүй); алдаа гарвал буцаана
+  Future<void> _toggleLike() async {
     final id = _currentStory.id;
     final now = !(_likedMap[id] ?? false);
     setState(() => _likedMap[id] = now);
-    StoryService.toggleLike(id, now);
+    final ok = await StoryService.toggleLike(id, now);
+    if (!ok && mounted) setState(() => _likedMap[id] = !now);
+  }
+
+  // Double-tap → лайк + том зүрхний анимац
+  void _doubleTapLike() {
+    _unlockSound();
+    if (!(_likedMap[_currentStory.id] ?? false)) _toggleLike();
+    _bigHeartTimer?.cancel();
+    setState(() => _bigHeart = true);
+    _bigHeartTimer = Timer(const Duration(milliseconds: 650), () {
+      if (mounted) setState(() => _bigHeart = false);
+    });
   }
 
   void _nextStory() {
@@ -164,7 +242,10 @@ class _StoryViewerScreenState extends State<StoryViewerScreen>
         _ringIndex--;
         _storyIndex = widget.rings[_ringIndex].stories.length - 1;
       });
-      if (_pageCtrl.hasClients) _pageCtrl.jumpToPage(_ringIndex);
+      _startProgress();
+    } else {
+      // Хамгийн эхний story — Instagram шиг одоогийнхоо эхнээс дахин тоглуулна
+      // (өмнө нь controller зогссон хэвээр үлдэж хөлддөг байсан)
       _startProgress();
     }
   }
@@ -172,11 +253,6 @@ class _StoryViewerScreenState extends State<StoryViewerScreen>
   void _nextRing() {
     if (_ringIndex < widget.rings.length - 1) {
       setState(() { _ringIndex++; _storyIndex = 0; });
-      if (_pageCtrl.hasClients) {
-        _pageCtrl.animateToPage(_ringIndex,
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeInOut);
-      }
       _startProgress();
     } else {
       context.pop();
@@ -187,11 +263,19 @@ class _StoryViewerScreenState extends State<StoryViewerScreen>
   Widget build(BuildContext context) {
     final story  = _currentStory;
     final author = _currentRing.author;
+    final isVideo = _isVideoStory;
 
     return Scaffold(
-      backgroundColor: Colors.black,
-      body: GestureDetector(
+      backgroundColor: Colors.transparent,
+      body: AnimatedContainer(
+        duration: _dragging
+            ? Duration.zero : const Duration(milliseconds: 160),
+        curve: Curves.easeOut,
+        transform: Matrix4.translationValues(0, _dragY, 0),
+        color: Colors.black,
+        child: GestureDetector(
         onTapUp: (d) {
+          _unlockSound();
           final x = d.globalPosition.dx;
           final w = MediaQuery.of(context).size.width;
           if (x < w * 0.35) {
@@ -203,36 +287,49 @@ class _StoryViewerScreenState extends State<StoryViewerScreen>
           } else {
             // Center tap: pause/resume
             if (_progressCtrl.isAnimating) {
-              _progressCtrl.stop();
-              _musicPlayer.pause();
+              _pause();
             } else {
-              _musicPlayer.resume();
-              _progressCtrl.forward();
+              _resume();
             }
           }
         },
-        onLongPressStart: (_) { _progressCtrl.stop(); _musicPlayer.pause(); },
-        onLongPressEnd:   (_) {
-          _musicPlayer.resume();
-          _progressCtrl.forward();
+        onDoubleTap: _doubleTapLike,
+        onLongPressStart: (_) { _unlockSound(); _pause(); },
+        onLongPressEnd:   (_) => _resume(),
+        // Доош чирж хаах
+        onVerticalDragStart: (_) {
+          _dragging = true;
+          _progressCtrl.stop();
+          _musicPlayer.pause();
+          _videoPaused.value = true;
+        },
+        onVerticalDragUpdate: (d) => setState(() =>
+            _dragY = (_dragY + d.delta.dy).clamp(0.0, 600.0)),
+        onVerticalDragEnd: (_) {
+          if (_dragY > 120) {
+            context.pop();
+          } else {
+            setState(() { _dragY = 0; _dragging = false; });
+            _resume();
+          }
         },
         child: Stack(fit: StackFit.expand, children: [
           // ── Media (зураг эсвэл видео) ──
-          if (isVideoUrl(story.mediaUrl))
-            NetworkVideo(
+          if (isVideo)
+            StoryVideoView(
+              key: ValueKey('story-${story.id}'),
               url: story.mediaUrl,
-              autoplay: true,
-              height: MediaQuery.of(context).size.height)
+              height: MediaQuery.of(context).size.height,
+              loop: false,
+              paused: _videoPaused,
+              muted: _videoMuted,
+              onDuration: _onVideoDuration,
+              onEnded: _onVideoEnded)
           else
             CachedNetworkImage(
               imageUrl: story.mediaUrl,
               fit: BoxFit.cover,
-              placeholder: (_, __) => Container(
-                color: Colors.black,
-                child: const Center(
-                  child: CircularProgressIndicator(
-                      color: Colors.white, strokeWidth: 2)),
-              ),
+              placeholder: (_, __) => const _ShimmerBox(),
               errorWidget: (_, __, ___) => Container(
                 color: const Color(0xFF1a0a2e),
                 child: const Center(child: Text('📸',
@@ -240,13 +337,14 @@ class _StoryViewerScreenState extends State<StoryViewerScreen>
               ),
             ),
 
-          // ── Gradient overlay ──
+          // ── Скрим давхарга — олон зогсоолтой зөөлөн шилжилт (дээд + доод) ──
           Container(
             decoration: const BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topCenter,
                 end: Alignment.center,
-                colors: [Colors.black54, Colors.transparent],
+                colors: [Color(0x99000000), Color(0x33000000), Colors.transparent],
+                stops: [0.0, 0.5, 1.0],
               ),
             ),
           ),
@@ -255,7 +353,8 @@ class _StoryViewerScreenState extends State<StoryViewerScreen>
               gradient: LinearGradient(
                 begin: Alignment.bottomCenter,
                 end: Alignment.center,
-                colors: [Colors.black45, Colors.transparent],
+                colors: [Color(0x8C000000), Color(0x2E000000), Colors.transparent],
+                stops: [0.0, 0.55, 1.0],
               ),
             ),
           ),
@@ -264,11 +363,12 @@ class _StoryViewerScreenState extends State<StoryViewerScreen>
           Positioned(
             top: MediaQuery.of(context).padding.top + 10,
             left: 12, right: 12,
+            // Нимгэн progress — идэвхтэй хэсэг үзүүр рүүгээ тодорч glow-той
             child: Row(
               children: List.generate(_totalStories, (i) => Expanded(
                 child: Container(
                   margin: const EdgeInsets.symmetric(horizontal: 2),
-                  height: 2.5,
+                  height: 2,
                   decoration: BoxDecoration(
                     color: Colors.white24,
                     borderRadius: BorderRadius.circular(2),
@@ -286,8 +386,14 @@ class _StoryViewerScreenState extends State<StoryViewerScreen>
                                 widthFactor: _progressCtrl.value,
                                 child: Container(
                                   decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    borderRadius: BorderRadius.circular(2))),
+                                    gradient: const LinearGradient(
+                                      colors: [Colors.white70, Colors.white]),
+                                    borderRadius: BorderRadius.circular(2),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.white.withValues(alpha: 0.55),
+                                        blurRadius: 6),
+                                    ])),
                               ))
                           : const SizedBox.shrink(),
                 ),
@@ -298,12 +404,12 @@ class _StoryViewerScreenState extends State<StoryViewerScreen>
           // ── Author header ──
           Positioned(
             top: MediaQuery.of(context).padding.top + 22,
-            left: 12, right: 12,
+            left: 12, right: 4,
             child: Row(children: [
               AppAvatar(
                 imageUrl: author.avatarUrl,
                 initial:  author.initial,
-                size: 38, showRing: true,
+                size: 36, showRing: true,
               ),
               const SizedBox(width: 10),
               Expanded(child: Column(
@@ -314,15 +420,32 @@ class _StoryViewerScreenState extends State<StoryViewerScreen>
                           color: Colors.white,
                           fontWeight: FontWeight.w700,
                           fontSize: 14)),
+                  const SizedBox(height: 1),
+                  // Micro цагийн шошго
                   Text(_timeAgo(story.createdAt),
                       style: const TextStyle(
-                          color: Colors.white70, fontSize: 11)),
+                          color: Colors.white60, fontSize: 10,
+                          fontWeight: FontWeight.w500, letterSpacing: 0.3)),
                 ],
               )),
-              GestureDetector(
+              // Дуу асаах/хаах (зөвхөн видео story)
+              if (isVideo)
+                _Pressable(
+                  onTap: _toggleMute,
+                  child: Padding(
+                    padding: const EdgeInsets.all(8),
+                    child: ValueListenableBuilder<bool>(
+                      valueListenable: _videoMuted,
+                      builder: (_, m, __) => Icon(
+                        m ? Icons.volume_off_rounded : Icons.volume_up_rounded,
+                        color: Colors.white, size: 22)),
+                  )),
+              // Хаах 32 — 40px+ хүрэлтийн талбай
+              _Pressable(
                 onTap: () => context.pop(),
-                child: const Icon(Icons.close,
-                    color: Colors.white, size: 24),
+                child: const Padding(
+                  padding: EdgeInsets.all(8),
+                  child: Icon(Icons.close, color: Colors.white, size: 32)),
               ),
             ]),
           ),
@@ -333,15 +456,23 @@ class _StoryViewerScreenState extends State<StoryViewerScreen>
               top: MediaQuery.of(context).padding.top + 66,
               left: 12,
               child: Container(
-                padding: const EdgeInsets.fromLTRB(8, 5, 12, 5),
+                padding: const EdgeInsets.fromLTRB(5, 5, 14, 5),
                 decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.45),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: Colors.white24)),
+                  color: AppColors.bgElevated.withValues(alpha: 0.72),
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(color: AppColors.hairline2),
+                  boxShadow: AppColors.shadowCard),
                 child: Row(mainAxisSize: MainAxisSize.min, children: [
-                  const Icon(Icons.music_note_rounded,
-                    color: Colors.white, size: 14),
-                  const SizedBox(width: 5),
+                  // Градиент нот диск — аудио мөрийн дохио
+                  Container(
+                    width: 22, height: 22,
+                    decoration: const BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: AppColors.accentGradient),
+                    alignment: Alignment.center,
+                    child: const Icon(Icons.music_note_rounded,
+                      color: Colors.white, size: 13)),
+                  const SizedBox(width: 7),
                   ConstrainedBox(
                     constraints: BoxConstraints(
                       maxWidth: MediaQuery.of(context).size.width * 0.6),
@@ -354,6 +485,19 @@ class _StoryViewerScreenState extends State<StoryViewerScreen>
                 ]),
               ),
             ),
+
+          // ── Double-tap том зүрх ──
+          IgnorePointer(child: Center(child: AnimatedScale(
+            scale: _bigHeart ? 1.0 : 0.4,
+            duration: const Duration(milliseconds: 220),
+            curve: Curves.easeOutBack,
+            child: AnimatedOpacity(
+              opacity: _bigHeart ? 1 : 0,
+              duration: const Duration(milliseconds: 180),
+              child: const Icon(Icons.favorite,
+                color: Color(0xFFFF3B5C), size: 96,
+                shadows: [Shadow(color: Colors.black45, blurRadius: 18)]),
+            )))),
 
           // ── Доод хэсэг: venue/mention + caption + reply ──
           Positioned(
@@ -386,61 +530,130 @@ class _StoryViewerScreenState extends State<StoryViewerScreen>
                           color: Colors.white, fontSize: 15,
                           fontWeight: FontWeight.w500, height: 1.4,
                           shadows: [Shadow(blurRadius: 8, color: Colors.black54)]))),
-                  // ── Reply (зөвхөн бусдын story дээр) ──
+                  // ── Түргэн реакц — Instagram маягийн emoji мөр
+                  //    (reply талбар фокустай үед л гарч ирнэ; _sendReply-г
+                  //     хэвээр ашиглана → DM болж илгээгдэнэ) ──
+                  if (_currentRing.userId != _myId)
+                    AnimatedBuilder(
+                      animation: _replyFocus,
+                      builder: (_, __) => AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 180),
+                        transitionBuilder: (child, anim) => FadeTransition(
+                          opacity: anim,
+                          child: SizeTransition(
+                            sizeFactor: anim,
+                            alignment: Alignment.topCenter, child: child)),
+                        child: _replyFocus.hasFocus
+                            ? Padding(
+                                key: const ValueKey('quick-reactions'),
+                                padding: const EdgeInsets.only(bottom: 14),
+                                child: Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceEvenly,
+                                  children: [
+                                    for (final e in const [
+                                      '🔥', '😂', '😍', '👏', '🎉', '💜'])
+                                      _Pressable(
+                                        onTap: () => _sendReply(e),
+                                        child: Text(e, style: const TextStyle(
+                                            fontSize: 30))),
+                                  ]))
+                            : const SizedBox.shrink(
+                                key: ValueKey('no-reactions')),
+                      )),
+                  // ── Reply — шилэн pill бар (зөвхөн бусдын story дээр) ──
                   if (_currentRing.userId != _myId)
                     Row(children: [
-                      Expanded(child: TextField(
-                        controller: _replyCtrl,
-                        focusNode: _replyFocus,
-                        style: const TextStyle(color: Colors.white),
-                        textInputAction: TextInputAction.send,
-                        onSubmitted: _sendReply,
-                        decoration: InputDecoration(
-                          hintText: 'Мессеж илгээх...',
-                          hintStyle: const TextStyle(color: Colors.white70),
-                          filled: true, fillColor: Colors.white.withValues(alpha: 0.12),
-                          isDense: true,
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 18, vertical: 13),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(26),
-                            borderSide: const BorderSide(color: Colors.white30)),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(26),
-                            borderSide: const BorderSide(color: Colors.white30)),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(26),
-                            borderSide: const BorderSide(color: Colors.white)),
+                      // Шилэн pill талбар — фокуслоход хүрээ гэрэлтэнэ
+                      Expanded(child: AnimatedBuilder(
+                        animation: _replyFocus,
+                        builder: (_, __) => AnimatedContainer(
+                          duration: const Duration(milliseconds: 180),
+                          decoration: BoxDecoration(
+                            color: AppColors.bgElevated.withValues(alpha: 0.72),
+                            borderRadius: BorderRadius.circular(999),
+                            border: Border.all(
+                              color: _replyFocus.hasFocus
+                                  ? Colors.white70 : AppColors.hairline2),
+                            boxShadow: AppColors.shadowCard),
+                          child: TextField(
+                            controller: _replyCtrl,
+                            focusNode: _replyFocus,
+                            style: const TextStyle(color: Colors.white),
+                            textInputAction: TextInputAction.send,
+                            onSubmitted: _sendReply,
+                            decoration: InputDecoration(
+                              hintText: 'Мессеж илгээх...',
+                              hintStyle: TextStyle(
+                                color: Colors.white.withValues(alpha: 0.55)),
+                              filled: false, isDense: true,
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 18, vertical: 13),
+                              border: InputBorder.none,
+                              enabledBorder: InputBorder.none,
+                              focusedBorder: InputBorder.none,
+                            )),
                         ))),
-                      const SizedBox(width: 12),
-                      GestureDetector(
+                      const SizedBox(width: 8),
+                      // Зүрх — шилэн дугуй товч, дарахад pop анимац
+                      _Pressable(
                         onTap: _toggleLike,
-                        child: Icon(
-                          (_likedMap[story.id] ?? false)
-                              ? Icons.favorite : Icons.favorite_border,
-                          color: (_likedMap[story.id] ?? false)
-                              ? const Color(0xFFFF3B5C) : Colors.white,
-                          size: 28)),
-                      const SizedBox(width: 14),
-                      GestureDetector(
+                        child: Container(
+                          width: 44, height: 44,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: AppColors.bgElevated.withValues(alpha: 0.72),
+                            border: Border.all(color: AppColors.hairline2)),
+                          alignment: Alignment.center,
+                          child: TweenAnimationBuilder<double>(
+                            key: ValueKey(
+                                '${story.id}-${_likedMap[story.id] ?? false}'),
+                            tween: Tween(begin: 0.7, end: 1.0),
+                            duration: const Duration(milliseconds: 250),
+                            curve: Curves.easeOutBack,
+                            builder: (_, s, child) =>
+                                Transform.scale(scale: s, child: child),
+                            child: Icon(
+                              (_likedMap[story.id] ?? false)
+                                  ? Icons.favorite : Icons.favorite_border,
+                              color: (_likedMap[story.id] ?? false)
+                                  ? const Color(0xFFFF3B5C) : Colors.white,
+                              size: 24)),
+                        )),
+                      const SizedBox(width: 8),
+                      // Илгээх — градиент дугуй CTA + glow
+                      _Pressable(
                         onTap: () => _sendReply(_replyCtrl.text),
-                        child: const Icon(Icons.send_rounded,
-                            color: Colors.white, size: 26)),
+                        child: Container(
+                          width: 44, height: 44,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            gradient: AppColors.accentGradient,
+                            boxShadow:
+                                AppColors.glowShadow(AppColors.accentStart)),
+                          alignment: Alignment.center,
+                          child: const Icon(Icons.send_rounded,
+                              color: Colors.white, size: 20))),
                     ]),
                 ])),
             )),
         ]),
+        ),
       ),
     );
   }
 
+  // Venue/mention pill — шилэн glass хэв (bgElevated + hairline)
   Widget _storyPill(IconData icon, String text) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
     decoration: BoxDecoration(
-      color: Colors.black54, borderRadius: BorderRadius.circular(20)),
+      color: AppColors.bgElevated.withValues(alpha: 0.72),
+      borderRadius: BorderRadius.circular(999),
+      border: Border.all(color: AppColors.hairline2),
+      boxShadow: AppColors.shadowCard),
     child: Row(mainAxisSize: MainAxisSize.min, children: [
-      Icon(icon, color: Colors.white, size: 13),
-      const SizedBox(width: 4),
+      Icon(icon, color: AppColors.neonCyan, size: 13),
+      const SizedBox(width: 5),
       Text(text, style: const TextStyle(
         color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600)),
     ]));
@@ -452,139 +665,68 @@ class _StoryViewerScreenState extends State<StoryViewerScreen>
   }
 }
 
-// ─── Stories bar widget (used in FeedScreen) ─────────────────────────────────
-class StoriesBar extends StatelessWidget {
-  final List<StoryRing> rings;
-  const StoriesBar({super.key, required this.rings});
+// Дарахад жижигрэх + hover курсор — веб мэдрэмж
+class _Pressable extends StatefulWidget {
+  final Widget child;
+  final VoidCallback? onTap;
+  const _Pressable({required this.child, this.onTap});
+  @override
+  State<_Pressable> createState() => _PressableState();
+}
 
+class _PressableState extends State<_Pressable> {
+  bool _down = false;
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: 96,
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
-        itemCount: rings.length + 1,
-        itemBuilder: (ctx, i) {
-          if (i == 0) {
-            return _AddStoryItem(onTap: () => context.push('/story/create'));
-          }
-          final idx = i - 1;
-          return _StoryRingItem(
-            ring: rings[idx],
-            onTap: () => Navigator.of(context).push(
-              PageRouteBuilder(
-                opaque: false,
-                pageBuilder: (_, __, ___) => StoryViewerScreen(
-                  rings: rings,
-                  initialRingIndex: idx,
-                ),
-                transitionsBuilder: (_, anim, __, child) =>
-                    FadeTransition(opacity: anim, child: child),
-              ),
-            ),
-          );
-        },
+    return MouseRegion(
+      cursor: widget.onTap == null
+          ? SystemMouseCursors.basic : SystemMouseCursors.click,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTapDown: widget.onTap == null
+            ? null : (_) => setState(() => _down = true),
+        onTapCancel: () => setState(() => _down = false),
+        onTapUp: (_) => setState(() => _down = false),
+        onTap: widget.onTap,
+        child: AnimatedScale(
+          scale: _down ? 0.92 : 1.0,
+          duration: const Duration(milliseconds: 120),
+          curve: Curves.easeOut,
+          child: widget.child),
       ),
     );
   }
 }
 
-/// "+ Your story" — story нэмэх товч
-class _AddStoryItem extends StatelessWidget {
-  final VoidCallback onTap;
-  const _AddStoryItem({required this.onTap});
-
+// Зураг ачаалах үеийн бүдэг skeleton (spinner-ийн оронд)
+class _ShimmerBox extends StatefulWidget {
+  const _ShimmerBox();
   @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 6),
-        child: Column(children: [
-          Stack(children: [
-            Container(
-              width: 60, height: 60,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: AppColors.bgSurface,
-                border: Border.all(color: AppColors.hairline)),
-              child: const Icon(Icons.add_a_photo_outlined,
-                  color: AppColors.textSecondary, size: 24)),
-            Positioned(right: 0, bottom: 0, child: Container(
-              width: 20, height: 20,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: AppColors.accentGradient,
-                border: Border.all(color: AppColors.bgBase, width: 2)),
-              child: const Icon(Icons.add, color: Colors.white, size: 12))),
-          ]),
-          const SizedBox(height: 5),
-          SizedBox(width: 64, child: Text('Таны story',
-            maxLines: 1, overflow: TextOverflow.ellipsis,
-            textAlign: TextAlign.center,
-            style: AppTextStyles.bodyXs.copyWith(color: AppColors.textSecondary))),
-        ]),
-      ),
-    );
-  }
+  State<_ShimmerBox> createState() => _ShimmerBoxState();
 }
 
-class _StoryRingItem extends StatelessWidget {
-  final StoryRing ring;
-  final VoidCallback onTap;
-  const _StoryRingItem({required this.ring, required this.onTap});
+class _ShimmerBoxState extends State<_ShimmerBox>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _c = AnimationController(
+      vsync: this, duration: const Duration(milliseconds: 900))
+    ..repeat(reverse: true);
 
   @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 6),
-        child: Column(children: [
-          // Avatar with gradient ring
-          Container(
-            width: 60, height: 60,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: ring.hasUnseenStories
-                  ? AppColors.accentGradient
-                  : const LinearGradient(
-                      colors: [Color(0xFF444444), Color(0xFF444444)]),
-              boxShadow: ring.hasUnseenStories
-                  ? [BoxShadow(
-                      color: AppColors.accentStart.withValues(alpha: 0.35),
-                      blurRadius: 10, spreadRadius: 1)]
-                  : null,
-            ),
-            padding: const EdgeInsets.all(2.5),
-            child: Container(
-              decoration: const BoxDecoration(
-                shape: BoxShape.circle,
-                color: AppColors.bgBase,
-              ),
-              padding: const EdgeInsets.all(2),
-              child: AppAvatar(
-                imageUrl: ring.author.avatarUrl,
-                initial:  ring.author.initial,
-                size: 48,
-              ),
-            ),
-          ),
-          const SizedBox(height: 5),
-          SizedBox(
-            width: 64,
-            child: Text(
-              ring.author.username ?? '—',
-              style: AppTextStyles.bodyXs.copyWith(
-                  color: AppColors.textSecondary),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              textAlign: TextAlign.center,
-            ),
-          ),
-        ]),
-      ),
-    );
-  }
+  void dispose() { _c.dispose(); super.dispose(); }
+
+  @override
+  Widget build(BuildContext context) => AnimatedBuilder(
+        animation: _c,
+        builder: (_, __) => Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft, end: Alignment.bottomRight,
+              colors: [
+                const Color(0xFF14101f),
+                Color.lerp(const Color(0xFF1e1630), const Color(0xFF2a1f42),
+                    _c.value)!,
+                const Color(0xFF14101f),
+              ])),
+        ),
+      );
 }

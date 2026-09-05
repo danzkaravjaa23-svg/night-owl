@@ -20,6 +20,11 @@ final isFollowingProvider =
 // ─── Follow state notifier (optimistic) ──────────────────────────────────────
 class FollowNotifier extends StateNotifier<AsyncValue<bool>> {
   final String targetUserId;
+
+  /// toggle() бүтэлгүйтэж rollback хийсэн бол UI-д toast харуулах callback.
+  /// (Провайдер өөрөө snackbar харуулж чадахгүй тул дээд давхарга бүртгэнэ.)
+  void Function()? onFailure;
+
   FollowNotifier(this.targetUserId) : super(const AsyncValue.loading()) {
     _init();
   }
@@ -43,9 +48,10 @@ class FollowNotifier extends StateNotifier<AsyncValue<bool>> {
     }
   }
 
-  Future<void> toggle() async {
+  /// Дагах/болих. Амжилттай бол true, бүтэлгүйтэж rollback хийвэл false буцаана.
+  Future<bool> toggle() async {
     final me = SupabaseService.currentUser?.id;
-    if (me == null) return;
+    if (me == null) return false;
     final current = state.value ?? false;
 
     // Optimistic
@@ -64,9 +70,12 @@ class FollowNotifier extends StateNotifier<AsyncValue<bool>> {
             .eq('follower_id', me)
             .eq('following_id', targetUserId);
       }
+      return true;
     } catch (_) {
-      // Rollback
+      // Rollback + UI-д мэдэгдэх
       state = AsyncValue.data(current);
+      onFailure?.call();
+      return false;
     }
   }
 }
@@ -100,27 +109,65 @@ final followCountsProvider =
 
 // ─── Follow service ───────────────────────────────────────────────────────────
 class FollowService {
+  /// Нэст хийсэн `profiles` мөрийг цэвэр map болгож задлана
+  static List<Map<String, dynamic>> _flatten(List data) {
+    final out = <Map<String, dynamic>>[];
+    for (final row in data) {
+      final p = row['profiles'];
+      if (p is Map) out.add(Map<String, dynamic>.from(p));
+    }
+    return out;
+  }
+
   /// Followers list (who follows targetUserId)
   static Future<List<Map<String, dynamic>>> getFollowers(
-      String userId, {int limit = 30}) async {
+      String userId, {int limit = 100}) async {
     final data = await SupabaseService.client
         .from('follows')
-        .select('follower_id, profiles!follower_id (id, username, avatar_url, is_verified)')
+        .select('follower_id, created_at, profiles!follower_id (id, username, avatar_url, is_verified, full_name)')
         .eq('following_id', userId)
         .order('created_at', ascending: false)
         .limit(limit);
-    return (data as List).cast<Map<String, dynamic>>();
+    return _flatten(data as List);
   }
 
   /// Following list (who targetUserId follows)
   static Future<List<Map<String, dynamic>>> getFollowing(
-      String userId, {int limit = 30}) async {
+      String userId, {int limit = 100}) async {
     final data = await SupabaseService.client
         .from('follows')
-        .select('following_id, profiles!following_id (id, username, avatar_url, is_verified)')
+        .select('following_id, created_at, profiles!following_id (id, username, avatar_url, is_verified, full_name)')
         .eq('follower_id', userId)
         .order('created_at', ascending: false)
         .limit(limit);
-    return (data as List).cast<Map<String, dynamic>>();
+    return _flatten(data as List);
+  }
+
+  /// Миний дагаж буй хүмүүсийн id-ууд (жагсаалтад товч зурахад)
+  static Future<Set<String>> myFollowingIds() async {
+    final me = SupabaseService.currentUser?.id;
+    if (me == null) return {};
+    final data = await SupabaseService.client
+        .from('follows')
+        .select('following_id')
+        .eq('follower_id', me);
+    return {for (final r in (data as List)) r['following_id'] as String};
+  }
+
+  static Future<void> follow(String userId) async {
+    final me = SupabaseService.currentUser?.id;
+    if (me == null || me == userId) return;
+    await SupabaseService.client.from('follows').insert({
+      'follower_id': me, 'following_id': userId,
+    });
+  }
+
+  static Future<void> unfollow(String userId) async {
+    final me = SupabaseService.currentUser?.id;
+    if (me == null) return;
+    await SupabaseService.client.from('follows')
+        .delete()
+        .eq('follower_id', me)
+        .eq('following_id', userId);
   }
 }

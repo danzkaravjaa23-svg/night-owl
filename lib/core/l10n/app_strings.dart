@@ -11,7 +11,7 @@ class AppStrings {
       locale == 'mn' ? mn : en;
 
   // ─── Navigation ───
-  String get navFeed         => _t('Feed', 'Тэжээл');
+  String get navFeed         => _t('Feed', 'Фийд');
   String get navMap          => _t('Map', 'Газрын зураг');
   String get navCreate       => _t('Create', 'Үүсгэх');
   String get navNotifications => _t('Notifications', 'Мэдэгдэл');
@@ -25,7 +25,7 @@ class AppStrings {
   String get stateError    => _t('Something went wrong', 'Алдаа гарлаа');
   String get stateErrorBody => _t('Please try again', 'Дахин оролдоно уу');
   String get stateRetry    => _t('Retry', 'Дахин оролдох');
-  String get stateLoading  => _t('Loading...', 'Ачаалж байна...');
+  String get stateLoading  => _t('Loading...', 'Ачааллаж байна...');
   String get noConnection  => _t('Connection Failed', 'Холболт амжилтгүй');
   String get checkInternet => _t('Please check your internet connection', 'Интернэт холболтоо шалгана уу');
 
@@ -33,12 +33,12 @@ class AppStrings {
   String get onb1Title => _t('Discover the Night Life', 'Шөнийн амьдралыг нээ');
   String get onb1Sub   => _t("UB's hottest bars, lounges and clubs, all in one place.", 'УБ-ын хамгийн халуухан бар, lounge, клубуудыг нэг дор.');
   String get onb2Title => _t('Watch Live Streams', 'Шууд дамжуулалт үз');
-  String get onb2Sub   => _t('Never miss exclusive content from your favorite creators.', 'Дуртай creator-ийнхээ exclusive контентыг алгасахгүй.');
+  String get onb2Sub   => _t('Never miss exclusive content from your favorite creators.', 'Дуртай creator-ийнхээ онцгой контентыг бүү алгасаарай.');
   String get onb3Title => _t('Explore on the Map', 'Газрын зураг дээр нээ');
   String get onb3Sub   => _t('Find nearby places and friends, check ratings, and get directions.', 'Өөрт ойрхон газар болон найзуудаа олж, үнэлгээг харж, чиглэлээ ав.');
 
   // ─── Permissions ───
-  String get permLocTitle   => _t('Share Location?', 'Байршил хуваалцана уу?');
+  String get permLocTitle   => _t('Share Location?', 'Байршлаа хуваалцах уу?');
   String get permLocBody    => _t('We use your location to show nearby bars and lounges on the map. You can change this anytime.', 'Ойрхон бар, lounge-уудыг газрын зураг дээр харуулахын тулд бид таны байршлыг ашиглана. Хэзээ ч өөрчилж болно.');
   String get permNotifTitle => _t('Allow Notifications?', 'Мэдэгдэл хүлээж авах уу?');
   String get permNotifBody  => _t('Get notified about new content, likes, followers, and events. You can set quiet hours.', 'Шинэ контент, лайк, дагагч, эвентийн мэдээллийг танд хүргэе. Чимээгүй цаг тохируулж болно.');
@@ -59,14 +59,14 @@ class AppStrings {
   String get authPrivacy    => _t('Privacy Policy', 'Нууцлалын бодлого');
 
   // ─── Login ───
-  String get loginWelcome   => _t('Welcome back to the night', 'Шөнийн ертөнцөдөө буцаж тавтай морил');
+  String get loginWelcome   => _t('Welcome back to the night', 'Шөнийн ертөнцдөө тавтай морил');
   String get loginLoading   => _t('Signing in...', 'Нэвтэрч байна...');
   String get loginForgot    => _t('Forgot password?', 'Нууц үг мартсан?');
   String get loginError     => _t('Incorrect email or password', 'И-мэйл эсвэл нууц үг буруу байна');
   String get loginNoAccount => _t("Don't have an account?", 'Бүртгэл байхгүй юу?');
 
   // ─── Register ───
-  String get regSub         => _t('Create an account and join the club', 'Шинэ хаяг үүсгээд клубт ор');
+  String get regSub         => _t('Create an account and join the club', 'Шинэ бүртгэл үүсгээд клубт нэгдээрэй');
   String get regName        => _t('Name', 'Нэр');
   String get regTosAgree    => _t('I have read and agree to the', '-г уншиж зөвшөөрсөн');
   String get regAnd         => _t('and', 'ба');
@@ -81,8 +81,8 @@ class AppStrings {
   String get setupInterests => _t('Interests', 'Сонирхол');
 
   // ─── Feed ───
-  String get feedEmpty      => _t('Feed is Empty', 'Тэжээл хоосон байна');
-  String get feedEmptyDesc  => _t('Follow someone or upload your first photo to fill your feed.', 'Хэн нэгнийг дага эсвэл эхний зургаа оруулаад тэжээлээ дүүргэж эхэл.');
+  String get feedEmpty      => _t('Feed is Empty', 'Фийд хоосон байна');
+  String get feedEmptyDesc  => _t('Follow someone or upload your first photo to fill your feed.', 'Хэн нэгнийг дага эсвэл эхний зургаа оруулаад фийдээ дүүргэж эхэл.');
   String get feedFeatured   => _t('FEATURED · TONIGHT', 'ОНЦЛОХ · ӨНӨӨ ШӨНӨ');
 
   // ─── Labels ───
@@ -90,7 +90,7 @@ class AppStrings {
   String get lblFollowing   => _t('Following', 'Дагаж байна');
   String get lblPosts       => _t('Posts', 'Пост');
   String get lblFollowers   => _t('Followers', 'Дагагч');
-  String get lblComments    => _t('COMMENTS', 'КОММЕНТ');
+  String get lblComments    => _t('COMMENTS', 'СЭТГЭГДЭЛ');
   String get lblReply       => _t('Reply', 'Хариулах');
   String get lblNearby      => _t('NEARBY', 'ОЙРХОН ГАЗАР');
   String get lblNearbyPeople => _t('NEARBY PEOPLE', 'ОЙРХОН ХҮМҮҮС');
@@ -99,7 +99,7 @@ class AppStrings {
   String get lblPhone       => _t('Phone', 'Утас');
   String get lblHours       => _t('Hours', 'Цаг');
   String get lblTodaysEvent => _t("TODAY'S EVENT", 'ӨНӨӨДРИЙН ЭВЕНТ');
-  String get lblGoing       => _t('going', 'ирэх');
+  String get lblGoing       => _t('going', 'очно');
   String get lblInterested  => _t('interested', 'сонирхсон');
   String get lblChat        => _t('Chat', 'Чат');
   String get lblActive      => _t('ACTIVE', 'ИДЭВХТЭЙ');
@@ -110,7 +110,7 @@ class AppStrings {
   String get lblGallery     => _t('GALLERY', 'ГАЛЕРЕЙ');
   String get lblCaption     => _t('CAPTION', 'ТАЙЛБАР');
   String get lblAddLocation => _t('Add Location', 'Байршил нэмэх');
-  String get lblTagPeople   => _t('Tag People', 'Хүмүүс таглах');
+  String get lblTagPeople   => _t('Tag People', 'Хүмүүс тэмдэглэх');
   String get lblBusiness    => _t('Business', 'Бизнес');
   String get lblDark        => _t('Dark', 'Шөнө');
   String get lblLight       => _t('Light', 'Өдөр');
@@ -133,7 +133,7 @@ class AppStrings {
   String get btnSignOut     => _t('Sign Out', 'Гарах');
 
   // ─── Placeholders ───
-  String get phWriteComment => _t('Write a comment...', 'Коммент бичих...');
+  String get phWriteComment => _t('Write a comment...', 'Сэтгэгдэл бичих...');
   String get phSearchPlaces => _t('Search bars, lounges', 'Bar, lounge хайх');
   String get phSearchPeople => _t('Search people', 'Хүн хайх');
   String get phWriteMessage => _t('Write a message...', 'Мессеж бичих...');
@@ -144,11 +144,11 @@ class AppStrings {
   String get qpayWaiting   => _t('Waiting for payment confirmation...', 'Төлбөр баталгаажихыг хүлээж байна...');
   String get qpaySuccess   => _t('Content Unlocked', 'Контент нээгдлээ');
   String get qpayFailed    => _t('Payment Failed', 'Төлбөр амжилтгүй');
-  String get qpaySelectBank => _t('OR SELECT YOUR BANK', 'ЭСВЭЛ ДАНСАА СОНГО');
+  String get qpaySelectBank => _t('OR SELECT YOUR BANK', 'ЭСВЭЛ БАНКАА СОНГО');
 
   // ─── Notifications ───
   String get notifEmptyTitle => _t('No Notifications', 'Мэдэгдэл алга');
-  String get notifEmptyBody  => _t('New likes, followers, and comments will appear here.', 'Шинэ лайк, дагагч, коммент энд харагдана.');
+  String get notifEmptyBody  => _t('New likes, followers, and comments will appear here.', 'Шинэ лайк, дагагч, сэтгэгдэл энд харагдана.');
 
   // ─── DM ───
   String get dmEmptyTitle       => _t('No Chats', 'Чат алга');
@@ -158,10 +158,10 @@ class AppStrings {
 
   // ─── Profile ───
   String get profileEmptyTitle => _t('Upload Your First Photo 🦉', 'Эхний зургаа оруулаарай 🦉');
-  String get profileEmptyBody  => _t('Share your favorite nights and fill your feed.', 'Дуртай газраа, дуртай шөнөө хуваалцаад тэжээлээ эхлүүлээрэй.');
+  String get profileEmptyBody  => _t('Share your favorite nights and fill your feed.', 'Дуртай газраа, дуртай шөнөө хуваалцаад фийдээ дүүргээрэй.');
 
   // ─── Settings ───
-  String get sectAccount        => _t('Account', 'Акаунт');
+  String get sectAccount        => _t('Account', 'Бүртгэл');
   String get sectNotifications  => _t('Notifications', 'Мэдэгдэл');
   String get sectPrivacy        => _t('Privacy', 'Нууцлал');
   String get sectPayments       => _t('Payments', 'Төлбөр');
@@ -170,7 +170,7 @@ class AppStrings {
   String get setChangePassword  => _t('Change Password', 'Нууц үг солих');
   String get setLanguage        => _t('Language', 'Хэл');
   String get setAppearance      => _t('Appearance', 'Харагдац');
-  String get setPrivateAccount  => _t('Private Account', 'Private account');
+  String get setPrivateAccount  => _t('Private Account', 'Хаалттай бүртгэл');
   String get setActivityStatus  => _t('Show Activity Status', 'Идэвх харагдах эсэх');
   String get setHelp            => _t('Help', 'Тусламж');
   String get setSignOut         => _t('Sign Out', 'Гарах');
@@ -179,7 +179,7 @@ class AppStrings {
   String get bizAddress => _t('Address & Location', 'Хаяг ба байршил');
   String get bizHours   => _t('Working Hours', 'Ажиллах цаг');
   String get bizGallery => _t('Photo Gallery', 'Зургийн галерей');
-  String get bizMusic   => _t('Music Type', 'Тоглолтын төрөл');
+  String get bizMusic   => _t('Music Type', 'Хөгжмийн төрөл');
   String get bizContact => _t('Contact', 'Холбоо барих');
 
   // ─── Filter ───
@@ -187,7 +187,7 @@ class AppStrings {
   String get filterOpen => _t('Open', 'Нээлттэй');
 
   // ─── App name ───
-  String get appName    => _t('Night Owl', 'Шөнийн шувуухай');
+  String get appName    => _t('Night Owl', 'Night Owl');
 
   // ─── Helper ───
   String _t(String en, String mn) => locale == 'mn' ? mn : en;

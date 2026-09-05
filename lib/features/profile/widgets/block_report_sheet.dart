@@ -43,8 +43,19 @@ Future<void> showReportSheet(
             title: Text(e.value, style: AppTextStyles.bodyMd),
             onTap: () async {
               Navigator.of(sheetCtx).pop();
+              // 'Бусад' сонговол нэмэлт тайлбар (details) авна — модерацид хэрэгтэй
+              String? details;
+              if (e.key == 'other') {
+                if (!context.mounted) return;
+                details = await _detailsDialog(context);
+                if (details == null) return; // цуцалсан
+              }
+              if (context.mounted) {
+                _toast(context, 'Илгээж байна...');
+              }
               final err = await BlockReportService.report(
-                targetType: targetType, targetId: targetId, reason: e.key);
+                targetType: targetType, targetId: targetId,
+                reason: e.key, details: details);
               if (context.mounted) {
                 _toast(context, err == null
                   ? 'Мэдээлэл хүлээн авлаа. Баярлалаа 🙏'
@@ -194,6 +205,39 @@ Future<void> showPostOptionsSheet(
           ],
         ],
       ),
+    ),
+  );
+}
+
+/// 'Бусад' шалтгаанд нэмэлт тайлбар авах диалог.
+/// Цуцалбал null, оруулбал (хоосон ч байж болно) тайлбар текстийг буцаана.
+Future<String?> _detailsDialog(BuildContext context) {
+  final ctrl = TextEditingController();
+  return showDialog<String>(
+    context: context,
+    builder: (dCtx) => AlertDialog(
+      backgroundColor: AppColors.bgElevated,
+      title: Text('Нэмэлт тайлбар', style: AppTextStyles.h3),
+      content: TextField(
+        controller: ctrl,
+        maxLines: 4,
+        maxLength: 300,
+        autofocus: true,
+        style: AppTextStyles.bodyMd.copyWith(color: AppColors.textPrimary),
+        decoration: const InputDecoration(
+          hintText: 'Юу болсныг товч бичнэ үү (заавал биш)...',
+          border: OutlineInputBorder()),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(dCtx).pop(),
+          child: Text('Болих', style: AppTextStyles.bodyMd.copyWith(
+            color: AppColors.textSecondary))),
+        TextButton(
+          onPressed: () => Navigator.of(dCtx).pop(ctrl.text.trim()),
+          child: Text('Илгээх', style: AppTextStyles.bodyMd.copyWith(
+            color: AppColors.accentStart, fontWeight: FontWeight.w600))),
+      ],
     ),
   );
 }

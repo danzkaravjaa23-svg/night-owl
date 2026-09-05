@@ -20,7 +20,6 @@ Future<Uint8List> compressToJpeg(Uint8List bytes,
     final w = img.naturalWidth;
     final h = img.naturalHeight;
     html.Url.revokeObjectUrl(url);
-    if (w == 0 || h == 0) return bytes;
 
     final longest = w > h ? w : h;
     final scale = longest > maxDim ? maxDim / longest : 1.0;
@@ -28,6 +27,11 @@ Future<Uint8List> compressToJpeg(Uint8List bytes,
     final th = (h * scale).round();
 
     final canvas = html.CanvasElement(width: tw, height: th);
+    // JPEG alpha дэмждэггүй — PNG-ийн тунгалаг хэсэг ХАР болохоос сэргийлж
+    // эхлээд цагаанаар дүүргэнэ (ихэнх фото апп alpha-г цагаанаар flatten хийдэг)
+    canvas.context2D
+      ..fillStyle = '#fff'
+      ..fillRect(0, 0, tw, th);
     canvas.context2D.drawImageScaled(img, 0, 0, tw.toDouble(), th.toDouble());
 
     final outBlob = await canvas.toBlob('image/jpeg', quality);

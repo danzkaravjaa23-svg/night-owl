@@ -17,11 +17,20 @@ class SearchScreen extends StatefulWidget {
 class _SearchScreenState extends State<SearchScreen> {
   final _ctrl = TextEditingController();
   String _q = '';
+  bool _focus = false; // хайлтын талбарын focus glow
   List<Map<String, dynamic>> _users = [];
   List<Map<String, dynamic>> _venues = [];
   List<Map<String, dynamic>> _explore = [];
   bool _loading = false;
+  bool _searchError = false;
+  bool _exploreLoading = true;
+  bool _exploreError = false;
   Timer? _debounce;
+
+  // Тренд chip-үүд — статик түгээмэл хайлтын үгс (талбарыг л бөглөнө)
+  static const _trends = [
+    'Караоке', 'Клуб', 'Lounge', 'Live хөгжим', 'Pub', 'Коктейль', 'DJ',
+  ];
 
   String get _myId => SupabaseService.currentUser?.id ?? '';
 
@@ -32,12 +41,21 @@ class _SearchScreenState extends State<SearchScreen> {
   }
 
   Future<void> _loadExplore() async {
+    if (mounted) setState(() { _exploreLoading = _explore.isEmpty; _exploreError = false; });
     try {
       final data = await SupabaseService.client.from('posts')
           .select('id, media_url, likes_count')
           .order('created_at', ascending: false).limit(30);
-      if (mounted) setState(() => _explore = (data as List).cast<Map<String, dynamic>>());
-    } catch (_) {}
+      if (mounted) {
+        setState(() {
+          _explore = (data as List).cast<Map<String, dynamic>>();
+          _exploreLoading = false;
+        });
+      }
+    } catch (_) {
+      // Чимээгүй алга болгохгүй — алдааны төлөв + дахин оролдох товч
+      if (mounted) setState(() { _exploreLoading = false; _exploreError = _explore.isEmpty; });
+    }
   }
 
   // Товчлуур дарах бүрт query явуулахгүй — 300мс хүлээж debounce хийнэ
@@ -45,29 +63,48 @@ class _SearchScreenState extends State<SearchScreen> {
     setState(() { _q = q; });
     _debounce?.cancel();
     if (q.trim().isEmpty) {
-      setState(() { _users = []; _venues = []; _loading = false; });
+      setState(() { _users = []; _venues = []; _loading = false; _searchError = false; });
       return;
     }
-    setState(() => _loading = true);
+    setState(() { _loading = true; _searchError = false; });
     _debounce = Timer(const Duration(milliseconds: 300), () => _runSearch(q));
   }
 
+  // Тренд chip — талбарын текстийг л бөглөж, хэвийн хайлтын урсгалыг ажиллуулна
+  void _applyTrend(String t) {
+    _ctrl.text = t;
+    _ctrl.selection = TextSelection.collapsed(offset: t.length);
+    _search(t);
+  }
+
   Future<void> _runSearch(String q) async {
+    // PostgREST .or() filter-т таслал/хаалт орвол syntax эвдэрнэ — цэвэрлэнэ
+    final safe = q.trim().replaceAll(RegExp(r'[,()]'), ' ');
     try {
       final u = await SupabaseService.client.from('profiles')
           .select('id, username, full_name, avatar_url, is_verified')
-          .ilike('username', '%$q%')
+          .or('username.ilike.%$safe%,full_name.ilike.%$safe%')
           .eq('is_banned', false).limit(20);
       final v = await SupabaseService.client.from('venues')
           .select('id, name, district, venue_type')
-          .ilike('name', '%$q%').limit(20);
-      if (mounted) setState(() {
+          .ilike('name', '%$safe%').limit(20);
+      // Race guard — хариу ирэхэд query өөрчлөгдсөн бол хуучин үр дүнг хаяна
+      if (!mounted || q.trim() != _ctrl.text.trim()) return;
+      setState(() {
         _users = (u as List).cast<Map<String, dynamic>>().where((p) => p['id'] != _myId).toList();
         _venues = (v as List).cast<Map<String, dynamic>>();
         _loading = false;
+        _searchError = false;
       });
-    } catch (_) { if (mounted) setState(() => _loading = false); }
+    } catch (_) {
+      if (!mounted || q.trim() != _ctrl.text.trim()) return;
+      setState(() { _loading = false; _searchError = true; });
+    }
   }
+
+  // Лайкийн тоог товчилно: 1200 → 1.2k
+  String _fmtLikes(int n) =>
+      n >= 1000 ? '${(n / 1000).toStringAsFixed(1)}k' : '$n';
 
   @override
   void dispose() { _debounce?.cancel(); _ctrl.dispose(); super.dispose(); }
@@ -78,132 +115,385 @@ class _SearchScreenState extends State<SearchScreen> {
     return Scaffold(
       backgroundColor: AppColors.bgBase,
       body: SafeArea(child: Column(children: [
-        // Search bar
+        // ── Header — glass back + том "Хайх" гарчиг ──
         Padding(
-          padding: const EdgeInsets.fromLTRB(4, 12, 16, 8),
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 4),
           child: Row(children: [
-            IconButton(
-              onPressed: () => context.pop(),
-              icon: const Icon(Icons.arrow_back_ios_new,
-                  size: 20, color: AppColors.textPrimary)),
-            Expanded(child: Container(
-              height: 44,
-              decoration: BoxDecoration(
-                color: AppColors.bgElevated, borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: AppColors.hairline)),
-              child: Row(children: [
-              const SizedBox(width: 12),
-              const Icon(Icons.search, color: AppColors.textSecondary, size: 18),
-              const SizedBox(width: 8),
-              Expanded(child: TextField(
+            _Pressable(
+              // Deep link-ээр шууд орж ирсэн үед pop хийх юмгүй — feed рүү
+              onTap: () {
+                if (context.canPop()) { context.pop(); } else { context.go('/feed'); }
+              },
+              child: Container(width: 40, height: 40,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: AppColors.bgElevated.withValues(alpha: 0.72),
+                  border: Border.all(color: AppColors.hairline)),
+                child: const Icon(Icons.arrow_back_ios_new,
+                    size: 16, color: AppColors.textPrimary))),
+            const SizedBox(width: 14),
+            Text('Хайх', style: AppTextStyles.h1),
+          ]),
+        ),
+
+        // ── Search pill 52 — focus үед cyan hairline + glow ──
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
+            curve: Curves.easeOut,
+            height: 52,
+            decoration: BoxDecoration(
+              color: AppColors.bgElevated.withValues(alpha: 0.75),
+              borderRadius: BorderRadius.circular(999),
+              border: Border.all(color: _focus
+                  ? AppColors.neonCyan.withValues(alpha: 0.6)
+                  : AppColors.hairline),
+              boxShadow: _focus
+                  ? AppColors.glowShadow(AppColors.neonCyan,
+                      alpha: 0.18, blur: 16, offset: Offset.zero)
+                  : null),
+            child: Row(children: [
+              const SizedBox(width: 18),
+              Icon(Icons.search, size: 20,
+                color: _focus ? AppColors.neonCyan : AppColors.textSecondary),
+              const SizedBox(width: 10),
+              Expanded(child: Focus(
+                onFocusChange: (f) => setState(() => _focus = f),
+                child: TextField(
                 controller: _ctrl, autofocus: true, onChanged: _search,
                 style: AppTextStyles.bodyMd.copyWith(color: AppColors.textPrimary),
+                cursorColor: AppColors.neonCyan,
                 decoration: InputDecoration(
                   hintText: 'Хүн, газар хайх...',
                   hintStyle: AppTextStyles.bodyMd.copyWith(color: AppColors.textTertiary),
                   border: InputBorder.none, isDense: true,
-                  contentPadding: EdgeInsets.zero))),
+                  contentPadding: EdgeInsets.zero)))),
               if (_q.isNotEmpty)
-                GestureDetector(
+                _Pressable(
                   onTap: () { _ctrl.clear(); _search(''); },
-                  child: const Padding(padding: EdgeInsets.only(right: 12),
+                  child: const Padding(padding: EdgeInsets.all(14),
                     child: Icon(Icons.close, color: AppColors.textTertiary, size: 16))),
+              if (_q.isEmpty) const SizedBox(width: 18),
             ]),
-            )),
-          ]),
+          ),
         ),
-        Expanded(child: searching ? _results() : _exploreGrid()),
+
+        Expanded(child: AnimatedSwitcher(
+          duration: const Duration(milliseconds: 200),
+          switchInCurve: Curves.easeOut,
+          child: searching
+            ? KeyedSubtree(key: const ValueKey('results'), child: _results())
+            : KeyedSubtree(key: const ValueKey('discover'), child: _discover()),
+        )),
       ])),
     );
   }
 
-  Widget _results() {
-    if (_loading) return const Center(child: CircularProgressIndicator(
-      color: AppColors.accentStart, strokeWidth: 2));
-    if (_users.isEmpty && _venues.isEmpty) {
-      return Center(child: Text('Илэрц олдсонгүй',
-        style: AppTextStyles.bodyMd.copyWith(color: AppColors.textSecondary)));
-    }
-    return ListView(children: [
-      if (_users.isNotEmpty) ...[
-        _sectionLabel('ХҮМҮҮС'),
-        for (final u in _users) _userTile(u),
-      ],
-      if (_venues.isNotEmpty) ...[
-        _sectionLabel('ГАЗРУУД'),
-        for (final v in _venues) _venueTile(v),
-      ],
-      const SizedBox(height: 20),
+  // ── Хайлтын өмнөх төлөв: ТРЕНД chip-үүд + explore grid ──
+  Widget _discover() => Column(crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      _sectionLabel('ТРЕНД'),
+      Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        child: Wrap(spacing: 8, runSpacing: 8, children: [
+          for (final t in _trends)
+            _Pressable(
+              onTap: () => _applyTrend(t),
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 14, vertical: 9),
+                decoration: BoxDecoration(
+                  color: AppColors.bgElevated.withValues(alpha: 0.72),
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(color: AppColors.hairline)),
+                // Галын icon — тренд мэдрэмж
+                child: Row(mainAxisSize: MainAxisSize.min, children: [
+                  const Icon(Icons.whatshot_rounded,
+                      size: 14, color: AppColors.amber),
+                  const SizedBox(width: 6),
+                  Text(t, style: AppTextStyles.labelMd.copyWith(
+                      color: AppColors.textSecondary)),
+                ]))),
+        ])),
+      const SizedBox(height: 10),
+      _sectionLabel('НЭЭЖ ҮЗЭХ'),
+      Expanded(child: _exploreGrid()),
     ]);
-  }
 
-  Widget _sectionLabel(String t) => Padding(
-    padding: const EdgeInsets.fromLTRB(20, 14, 20, 6),
-    child: Text(t, style: AppTextStyles.labelSm.copyWith(
-      color: AppColors.textSecondary, letterSpacing: 0.8)));
-
-  Widget _userTile(Map<String, dynamic> u) {
-    final uname = (u['username'] as String? ?? 'User').replaceAll('@', '');
-    return ListTile(
-      onTap: () => context.push('/creator/${u['id']}'),
-      leading: AppAvatar(imageUrl: u['avatar_url'] as String?,
-        initial: uname.isNotEmpty ? uname[0].toUpperCase() : '?', size: 44),
-      title: Row(children: [
-        Text('@$uname', style: AppTextStyles.labelMd.copyWith(color: AppColors.textPrimary)),
-        if (u['is_verified'] == true) ...[
-          const SizedBox(width: 4),
-          const Icon(Icons.verified, color: AppColors.accentStart, size: 14),
+  Widget _results() {
+    // Хуучин үр дүн байхад spinner-ээр бүрхэхгүй — бүдэгрүүлж үлдээнэ
+    if (_loading && _users.isEmpty && _venues.isEmpty) {
+      return const Center(child: CircularProgressIndicator(
+      color: AppColors.accentStart, strokeWidth: 2));
+    }
+    if (_searchError) {
+      return Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
+        const Icon(Icons.wifi_off_rounded, size: 44, color: AppColors.textTertiary),
+        const SizedBox(height: 10),
+        Text('Алдаа гарлаа — дахин оролдоно уу',
+          style: AppTextStyles.bodyMd.copyWith(color: AppColors.textSecondary)),
+        const SizedBox(height: 12),
+        OutlinedButton(
+          onPressed: () {
+            setState(() { _loading = true; _searchError = false; });
+            _runSearch(_ctrl.text.trim());
+          },
+          style: OutlinedButton.styleFrom(
+            foregroundColor: AppColors.accentStart,
+            side: const BorderSide(color: AppColors.hairline2)),
+          child: const Text('Дахин оролдох')),
+      ]));
+    }
+    if (_users.isEmpty && _venues.isEmpty) {
+      return Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
+        const Icon(Icons.search_off_rounded, size: 44, color: AppColors.textTertiary),
+        const SizedBox(height: 10),
+        Text('Илэрц олдсонгүй',
+          style: AppTextStyles.bodyMd.copyWith(color: AppColors.textSecondary)),
+      ]));
+    }
+    return AnimatedOpacity(
+      duration: const Duration(milliseconds: 150),
+      opacity: _loading ? 0.55 : 1,
+      child: ListView(children: [
+        if (_users.isNotEmpty) ...[
+          _sectionLabel('ХҮМҮҮС'),
+          for (final u in _users) _userTile(u),
         ],
+        if (_venues.isNotEmpty) ...[
+          _sectionLabel('ГАЗРУУД'),
+          for (final v in _venues) _venueTile(v),
+        ],
+        const SizedBox(height: 20),
       ]),
-      subtitle: (u['full_name'] as String?)?.isNotEmpty == true
-        ? Text(u['full_name'] as String,
-            style: AppTextStyles.bodyXs.copyWith(color: AppColors.textSecondary))
-        : null,
     );
   }
 
-  Widget _venueTile(Map<String, dynamic> v) => ListTile(
+  // Хэсгийн гарчиг — uppercase sectionLabel + сунгасан hairline (нэгдсэн хэв)
+  Widget _sectionLabel(String t) => Padding(
+    padding: const EdgeInsets.fromLTRB(20, 14, 20, 8),
+    child: Row(children: [
+      Text(t, style: AppTextStyles.sectionLabel),
+      const SizedBox(width: 12),
+      const Expanded(child: Divider(color: AppColors.hairline, height: 1)),
+    ]));
+
+  // Мөрүүд — DM жагсаалтын мөртэй ижил хэмнэлтэй (20/12, avatar 46)
+  Widget _userTile(Map<String, dynamic> u) {
+    final uname = (u['username'] as String? ?? 'User').replaceAll('@', '');
+    return InkWell(
+      onTap: () => context.push('/creator/${u['id']}'),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+        child: Row(children: [
+          AppAvatar(imageUrl: u['avatar_url'] as String?,
+            initial: uname.isNotEmpty ? uname[0].toUpperCase() : '?', size: 46),
+          const SizedBox(width: 12),
+          Expanded(child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(children: [
+                Flexible(child: Text('@$uname',
+                  maxLines: 1, overflow: TextOverflow.ellipsis,
+                  style: AppTextStyles.labelMd.copyWith(
+                    color: AppColors.textPrimary, fontWeight: FontWeight.w700))),
+                if (u['is_verified'] == true) ...[
+                  const SizedBox(width: 4),
+                  const Icon(Icons.verified, color: AppColors.neonCyan, size: 14),
+                ],
+              ]),
+              if ((u['full_name'] as String?)?.isNotEmpty == true) ...[
+                const SizedBox(height: 2),
+                Text(u['full_name'] as String,
+                  maxLines: 1, overflow: TextOverflow.ellipsis,
+                  style: AppTextStyles.bodyXs.copyWith(
+                    color: AppColors.textSecondary)),
+              ],
+            ])),
+          const Icon(Icons.chevron_right,
+            color: AppColors.textTertiary, size: 18),
+        ]),
+      ),
+    );
+  }
+
+  Widget _venueTile(Map<String, dynamic> v) => InkWell(
     onTap: () => context.push('/venue/reviews/${v['id']}'),
-    leading: Container(width: 44, height: 44,
-      decoration: const BoxDecoration(shape: BoxShape.circle,
-        gradient: AppColors.accentGradientSoft),
-      child: const Center(child: Icon(Icons.location_on, color: Colors.white, size: 20))),
-    title: Text(v['name'] as String? ?? '',
-      style: AppTextStyles.labelMd.copyWith(color: AppColors.textPrimary)),
-    subtitle: (v['district'] as String?)?.isNotEmpty == true
-      ? Text(v['district'] as String,
-          style: AppTextStyles.bodyXs.copyWith(color: AppColors.textSecondary))
-      : null,
+    child: Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+      child: Row(children: [
+        // Газрын icon — зөөлөн amber glass дугуй
+        Container(width: 46, height: 46,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: AppColors.amber.withValues(alpha: 0.12),
+            border: Border.all(color: AppColors.amber.withValues(alpha: 0.35))),
+          child: const Center(child: Icon(Icons.location_on,
+            color: AppColors.amber, size: 20))),
+        const SizedBox(width: 12),
+        Expanded(child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(v['name'] as String? ?? '',
+              maxLines: 1, overflow: TextOverflow.ellipsis,
+              style: AppTextStyles.labelMd.copyWith(
+                color: AppColors.textPrimary, fontWeight: FontWeight.w700)),
+            if ((v['district'] as String?)?.isNotEmpty == true) ...[
+              const SizedBox(height: 2),
+              Text(v['district'] as String,
+                maxLines: 1, overflow: TextOverflow.ellipsis,
+                style: AppTextStyles.bodyXs.copyWith(
+                  color: AppColors.textSecondary)),
+            ],
+          ])),
+        const Icon(Icons.chevron_right,
+          color: AppColors.textTertiary, size: 18),
+      ]),
+    ),
   );
 
   Widget _exploreGrid() {
-    if (_explore.isEmpty) return const SizedBox.shrink();
+    if (_exploreLoading && _explore.isEmpty) {
+      // Skeleton grid — bare spinner-ээс илүү зөөлөн
+      return _SkeletonGrid();
+    }
+    if (_exploreError) {
+      return Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
+        const Icon(Icons.wifi_off_rounded, size: 44, color: AppColors.textTertiary),
+        const SizedBox(height: 10),
+        Text('Алдаа гарлаа — дахин оролдоно уу',
+          style: AppTextStyles.bodyMd.copyWith(color: AppColors.textSecondary)),
+        const SizedBox(height: 12),
+        OutlinedButton(
+          onPressed: _loadExplore,
+          style: OutlinedButton.styleFrom(
+            foregroundColor: AppColors.accentStart,
+            side: const BorderSide(color: AppColors.hairline2)),
+          child: const Text('Дахин оролдох')),
+      ]));
+    }
+    if (_explore.isEmpty) {
+      return Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
+        const Icon(Icons.photo_library_outlined, size: 44, color: AppColors.textTertiary),
+        const SizedBox(height: 10),
+        Text('Пост алга байна',
+          style: AppTextStyles.bodyMd.copyWith(color: AppColors.textSecondary)),
+      ]));
+    }
     return GridView.builder(
-      padding: const EdgeInsets.all(1.5),
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 3, crossAxisSpacing: 1.5, mainAxisSpacing: 1.5),
+        crossAxisCount: 3, crossAxisSpacing: 8, mainAxisSpacing: 8),
       itemCount: _explore.length,
       itemBuilder: (_, i) {
         final p = _explore[i];
         final url = p['media_url'] as String?;
         final isVideo = isVideoUrl(url);
-        return GestureDetector(
+        final likes = p['likes_count'] as int? ?? 0;
+        return _Pressable(
           onTap: () => context.push('/post/${p['id']}'),
-          child: Stack(fit: StackFit.expand, children: [
-            if (url != null && !isVideo)
-              CachedNetworkImage(imageUrl: url, fit: BoxFit.cover,
-                placeholder: (_, __) => Container(color: AppColors.bgSurface),
-                errorWidget: (_, __, ___) => Container(color: AppColors.bgSurface,
-                  child: const Icon(Icons.image_not_supported_outlined,
-                    color: AppColors.textTertiary)))
-            else if (isVideo && url != null)
-              // Видеоны эхний кадрыг cover болгож харуулна (+ play icon)
-              NetworkVideo(url: url, posterOnly: true)
-            else
-              Container(color: AppColors.bgSurface),
-          ]),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(14),
+            child: Stack(fit: StackFit.expand, children: [
+              if (url != null && !isVideo)
+                CachedNetworkImage(imageUrl: url, fit: BoxFit.cover,
+                  memCacheWidth: 400, // grid thumbnail — жижиг decode, хурдан
+                  fadeInDuration: const Duration(milliseconds: 150),
+                  placeholder: (_, __) => Container(color: AppColors.bgSurface),
+                  errorWidget: (_, __, ___) => Container(color: AppColors.bgSurface,
+                    child: const Icon(Icons.image_not_supported_outlined,
+                      color: AppColors.textTertiary)))
+              else if (isVideo && url != null)
+                // Видеоны эхний кадрыг cover болгож харуулна (+ play icon)
+                NetworkVideo(url: url, posterOnly: true)
+              else
+                Container(color: AppColors.bgSurface),
+              // Доод scrim + лайкийн тоолуур (татсан likes_count-оо ашиглана)
+              if (likes > 0)
+                Positioned(left: 0, right: 0, bottom: 0, child: IgnorePointer(
+                  child: Container(
+                    padding: const EdgeInsets.fromLTRB(8, 20, 8, 6),
+                    decoration: const BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [Colors.transparent, Colors.black54])),
+                    child: Row(children: [
+                      const Icon(Icons.favorite,
+                          size: 12, color: Colors.white),
+                      const SizedBox(width: 4),
+                      Text(_fmtLikes(likes),
+                          style: const TextStyle(color: Colors.white,
+                              fontSize: 11, fontWeight: FontWeight.w600)),
+                    ])))),
+            ]),
+          ),
         );
       },
     );
   }
+}
+
+// ─── Дарахад агшдаг + web дээр hover cursor-той tappable wrapper ───
+class _Pressable extends StatefulWidget {
+  final Widget child;
+  final VoidCallback onTap;
+  const _Pressable({required this.child, required this.onTap});
+  @override
+  State<_Pressable> createState() => _PressableState();
+}
+
+class _PressableState extends State<_Pressable> {
+  bool _down = false;
+  @override
+  Widget build(BuildContext context) => MouseRegion(
+    cursor: SystemMouseCursors.click,
+    child: GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTapDown: (_) => setState(() => _down = true),
+      onTapUp: (_) => setState(() => _down = false),
+      onTapCancel: () => setState(() => _down = false),
+      onTap: widget.onTap,
+      child: AnimatedScale(
+        scale: _down ? 0.96 : 1,
+        duration: const Duration(milliseconds: 120),
+        curve: Curves.easeOut,
+        child: widget.child),
+    ),
+  );
+}
+
+// ─── Explore grid-ийн skeleton ───
+class _SkeletonGrid extends StatefulWidget {
+  @override
+  State<_SkeletonGrid> createState() => _SkeletonGridState();
+}
+
+class _SkeletonGridState extends State<_SkeletonGrid>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _c = AnimationController(
+    vsync: this, duration: const Duration(milliseconds: 900),
+    lowerBound: 0.35, upperBound: 0.8)..repeat(reverse: true);
+
+  @override
+  void dispose() { _c.dispose(); super.dispose(); }
+
+  @override
+  Widget build(BuildContext context) => FadeTransition(
+    opacity: _c,
+    child: GridView.builder(
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+      physics: const NeverScrollableScrollPhysics(),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 3, crossAxisSpacing: 8, mainAxisSpacing: 8),
+      itemCount: 12,
+      itemBuilder: (_, __) => Container(
+        decoration: BoxDecoration(
+          color: AppColors.bgElevated,
+          borderRadius: BorderRadius.circular(14))),
+    ),
+  );
 }

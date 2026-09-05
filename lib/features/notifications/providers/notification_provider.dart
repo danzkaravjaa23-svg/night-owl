@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/services/supabase_service.dart';
+import '../../auth/providers/auth_provider.dart';
 
 class AppNotification {
   final String id;
@@ -36,9 +37,12 @@ class AppNotification {
 }
 
 // ─── Notifications stream ───
+// authUserProvider-ийг watch хийснээр хаяг солиход (signOut→signIn) stream
+// шинэ хэрэглэгчээр автоматаар дахин үүснэ (currentProfileProvider-той ижил логик).
 final notificationsProvider =
     StreamProvider<List<AppNotification>>((ref) {
-  final me = SupabaseService.currentUser?.id;
+  final me = ref.watch(authUserProvider).valueOrNull?.id
+      ?? SupabaseService.currentUser?.id;
   if (me == null) return const Stream.empty();
 
   return SupabaseService.client
@@ -69,15 +73,6 @@ Future<void> markAllNotifsRead() async {
       .eq('is_read', false);
 }
 
-// ─── FCM setup (Firebase хожим нэмэх үед идэвхжүүлнэ) ───
-Future<void> setupPushNotifications() async {
-  // TODO: Firebase тохиргоо хийсний дараа энд FCM код нэмнэ
-}
-
-Future<void> _saveToken(String token) async {
-  final me = SupabaseService.currentUser?.id;
-  if (me == null) return;
-  await SupabaseService.client.from('profiles').update({
-    'fcm_token': token,
-  }).eq('id', me);
-}
+// Тэмдэглэл: Web push (FCM) хараахан холбогдоогүй. Firebase нэмэгдэх үед
+// profiles.fcm_token багана DB-д бэлэн байгаа — токен хадгалах логикийг
+// тэр үед энд нэмнэ (өмнөх хоосон stub-уудыг устгасан).

@@ -22,7 +22,8 @@ class AppAvatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final avatarSize = showRing ? size - 4 : size;
+    // Ring горимд: 2px sweep ring + 1.5px суурь өнгийн завсар (люкс төрх)
+    final avatarSize = showRing ? size - 7 : size;
 
     Widget avatar;
     if (imageUrl != null && imageUrl!.isNotEmpty) {
@@ -32,6 +33,9 @@ class AppAvatar extends StatelessWidget {
           width: avatarSize,
           height: avatarSize,
           fit: BoxFit.cover,
+          // Аватар жижиг тул decode-ыг 3x хэмжээгээр хязгаарлана (хурд + RAM)
+          memCacheWidth: (avatarSize * 3).round(),
+          fadeInDuration: const Duration(milliseconds: 120),
           placeholder: (_, __) => _placeholder(avatarSize),
           errorWidget: (_, __, ___) => _placeholder(avatarSize),
         ),
@@ -41,15 +45,23 @@ class AppAvatar extends StatelessWidget {
     }
 
     if (showRing) {
+      // Story ring — magenta → pink → cyan sweep + суурь өнгийн нарийн завсар
       avatar = Container(
         width: size,
         height: size,
-        decoration: BoxDecoration(
+        decoration: const BoxDecoration(
           shape: BoxShape.circle,
-          gradient: AppColors.accentGradient,
+          gradient: AppColors.storyRingGradient,
         ),
         padding: const EdgeInsets.all(2),
-        child: avatar,
+        child: Container(
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: AppColors.dynBgBase,
+          ),
+          padding: const EdgeInsets.all(1.5),
+          child: avatar,
+        ),
       );
     }
 
@@ -65,7 +77,14 @@ class AppAvatar extends StatelessWidget {
               decoration: BoxDecoration(
                 color: AppColors.success,
                 shape: BoxShape.circle,
-                border: Border.all(color: AppColors.bgBase, width: 1.5),
+                // Хүрээ нь идэвхтэй theme-ийн суурьтай нийлнэ (light дээр цайвар)
+                border: Border.all(color: AppColors.dynBgBase, width: 1.5),
+                // Online — lime неон гэрэлтэлт
+                boxShadow: [
+                  BoxShadow(
+                      color: AppColors.success.withValues(alpha: 0.55),
+                      blurRadius: 8, spreadRadius: 0.5),
+                ],
               ),
             ),
           ),

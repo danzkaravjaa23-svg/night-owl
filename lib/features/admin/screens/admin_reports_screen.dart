@@ -1,20 +1,23 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/services/supabase_service.dart';
+import '../../auth/providers/auth_provider.dart';
 import '../../profile/services/block_report_service.dart';
 
 /// Админ — мэдээлэгдсэн контентыг хянах дэлгэц
-class AdminReportsScreen extends StatefulWidget {
+class AdminReportsScreen extends ConsumerStatefulWidget {
   const AdminReportsScreen({super.key});
   @override
-  State<AdminReportsScreen> createState() => _AdminReportsScreenState();
+  ConsumerState<AdminReportsScreen> createState() => _AdminReportsScreenState();
 }
 
-class _AdminReportsScreenState extends State<AdminReportsScreen> {
+class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen> {
   List<Map<String, dynamic>> _reports = [];
   bool _loading = true;
+  String? _busy; // '<reportId>:<action>' — тухайн картын аль товч ажиллаж буйг заана
 
   static const _reasonLabels = {
     'spam': 'Спам', 'harassment': 'Дарамт', 'nudity': 'Бэлгийн агуулга',
@@ -28,7 +31,8 @@ class _AdminReportsScreenState extends State<AdminReportsScreen> {
   }
 
   Future<void> _load() async {
-    setState(() => _loading = true);
+    // Жагсаалт байхад spinner-ээр бүрхэхгүй — RefreshIndicator өөрөө харуулна
+    if (_reports.isEmpty) setState(() => _loading = true);
     try {
       final data = await SupabaseService.client
           .from('reports')
@@ -47,40 +51,94 @@ class _AdminReportsScreenState extends State<AdminReportsScreen> {
     }
   }
 
+  void _snack(String msg, {bool error = false}) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(msg),
+      backgroundColor: error ? AppColors.error : null));
+  }
+
+  // Устгах/хориглох мэт эргэлт буцалтгүй үйлдэлд баталгаажуулах dialog
+  Future<bool> _confirm(String title, String body, String action) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.bgElevated,
+        title: Text(title, style: AppTextStyles.h2),
+        content: Text(body,
+          style: AppTextStyles.bodyMd.copyWith(color: AppColors.textSecondary)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text('Болих', style: AppTextStyles.bodyMd.copyWith(
+              color: AppColors.textSecondary))),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: Text(action, style: AppTextStyles.bodyMd.copyWith(
+              color: AppColors.error, fontWeight: FontWeight.w700))),
+        ],
+      ),
+    );
+    return ok == true;
+  }
+
   Future<void> _resolve(String reportId) async {
+    setState(() => _busy = '$reportId:resolve');
     try {
       await SupabaseService.client
           .from('reports').update({'status': 'resolved'}).eq('id', reportId);
-    } catch (_) {}
-    setState(() => _reports.removeWhere((r) => r['id'] == reportId));
+      if (!mounted) return;
+      // Амжилттай үед л жагсаалтаас хасна
+      setState(() => _reports.removeWhere((r) => r['id'] == reportId));
+    } catch (_) {
+      _snack('Алдаа гарлаа — дахин оролдоно уу', error: true);
+    } finally {
+      if (mounted) setState(() => _busy = null);
+    }
   }
 
   Future<void> _banUser(String userId, String reportId) async {
+    final okConfirm = await _confirm('Хэрэглэгчийг хориглох уу?',
+        'Энэ хэрэглэгч аппд нэвтрэх боломжгүй болно.', 'Хориглох');
+    if (!okConfirm) return;
+    if (!mounted) return;
+    setState(() => _busy = '$reportId:ban');
     final err = await BlockReportService.setBanned(userId, true);
     if (err == null) {
-      await SupabaseService.client
-          .from('reports').update({'status': 'resolved'}).eq('id', reportId);
+      try {
+        await SupabaseService.client
+            .from('reports').update({'status': 'resolved'}).eq('id', reportId);
+      } catch (_) {} // ban амжилттай — resolve бүтэлгүйтвэл карт үлдэнэ, refresh-ээр дахин гарна
     }
-    if (mounted) {
-      setState(() => _reports.removeWhere((r) => r['id'] == reportId));
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(err == null
-            ? 'Хэрэглэгч хориглогдлоо' : 'Алдаа: $err')));
-    }
+    if (!mounted) return;
+    setState(() {
+      _busy = null;
+      // Ban амжилтгүй бол картыг хэвээр үлдээнэ
+      if (err == null) _reports.removeWhere((r) => r['id'] == reportId);
+    });
+    _snack(err == null ? 'Хэрэглэгч хориглогдлоо' : 'Алдаа: $err', error: err != null);
   }
 
   Future<void> _deletePost(String postId, String reportId) async {
+    final okConfirm = await _confirm('Постыг устгах уу?',
+        'Пост бүр мөсөн устана. Буцаах боломжгүй.', 'Устгах');
+    if (!okConfirm) return;
+    if (!mounted) return;
+    setState(() => _busy = '$reportId:delete');
+    var ok = false;
     try {
       // posts RLS — админ устгаж болно. Storage trigger файлыг цэвэрлэнэ.
       await SupabaseService.client.from('posts').delete().eq('id', postId);
+      ok = true;
       await SupabaseService.client
           .from('reports').update({'status': 'resolved'}).eq('id', reportId);
     } catch (_) {}
-    if (mounted) {
-      setState(() => _reports.removeWhere((r) => r['id'] == reportId));
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Пост устгагдлаа')));
-    }
+    if (!mounted) return;
+    setState(() {
+      _busy = null;
+      if (ok) _reports.removeWhere((r) => r['id'] == reportId);
+    });
+    _snack(ok ? 'Пост устгагдлаа' : 'Алдаа гарлаа — пост устгагдсангүй', error: !ok);
   }
 
   void _openTarget(String type, String id) {
@@ -93,50 +151,78 @@ class _AdminReportsScreenState extends State<AdminReportsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final profileAsync = ref.watch(currentProfileProvider);
+    final isAdmin = profileAsync.value?.isAdmin ?? false;
+
     return Scaffold(
       backgroundColor: AppColors.bgBase,
       appBar: AppBar(
         backgroundColor: AppColors.bgBase,
         leading: IconButton(
-          onPressed: () => context.pop(),
+          // Deep link-ээр орж ирсэн үед pop хийх юмгүй — админ панел руу
+          onPressed: () {
+            if (context.canPop()) { context.pop(); } else { context.go('/admin'); }
+          },
           icon: const Icon(Icons.arrow_back_ios_new, size: 20)),
         title: Text('Мэдээллүүд', style: AppTextStyles.h2),
         actions: [
-          IconButton(onPressed: _load,
-            icon: const Icon(Icons.refresh, color: AppColors.textPrimary)),
+          if (isAdmin)
+            IconButton(onPressed: _load,
+              icon: const Icon(Icons.refresh, color: AppColors.textPrimary)),
         ],
       ),
-      body: _loading
+      body: profileAsync.isLoading
           ? const Center(child: CircularProgressIndicator(
-              color: AppColors.accentStart))
-          : _reports.isEmpty
+              color: AppColors.accentStart, strokeWidth: 2))
+          : !isAdmin
+              // URL-ээр шууд орж ирэхээс хамгаална — зөвхөн админ
               ? Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-                  const Text('✅', style: TextStyle(fontSize: 48)),
+                  const Icon(Icons.lock_outline, size: 56, color: AppColors.textTertiary),
                   const SizedBox(height: 12),
-                  Text('Хүлээгдэж буй мэдээлэл алга',
-                      style: AppTextStyles.bodyMd.copyWith(
-                          color: AppColors.textSecondary)),
+                  Text('Хандах эрхгүй', style: AppTextStyles.h2),
+                  const SizedBox(height: 6),
+                  Text('Энэ хэсэг зөвхөн админд зориулагдсан.',
+                      style: AppTextStyles.bodyMd.copyWith(color: AppColors.textSecondary)),
                 ]))
-              : RefreshIndicator(
-                  onRefresh: _load,
-                  color: AppColors.accentStart,
-                  child: ListView.separated(
-                    padding: const EdgeInsets.all(16),
-                    itemCount: _reports.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 10),
-                    itemBuilder: (_, i) => _card(_reports[i]),
-                  ),
-                ),
+              : _loading
+                  ? const _SkeletonCards()
+                  : _reports.isEmpty
+                      ? Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
+                          const Text('✅', style: TextStyle(fontSize: 48)),
+                          const SizedBox(height: 12),
+                          Text('Хүлээгдэж буй мэдээлэл алга',
+                              style: AppTextStyles.bodyMd.copyWith(
+                                  color: AppColors.textSecondary)),
+                        ]))
+                      : RefreshIndicator(
+                          onRefresh: _load,
+                          color: AppColors.accentStart,
+                          child: ListView.separated(
+                            padding: const EdgeInsets.all(16),
+                            itemCount: _reports.length,
+                            separatorBuilder: (_, __) => const SizedBox(height: 10),
+                            itemBuilder: (_, i) => _card(_reports[i]),
+                          ),
+                        ),
     );
   }
 
   Widget _card(Map<String, dynamic> r) {
     final type = r['target_type'] as String? ?? '';
     final targetId = r['target_id'] as String? ?? '';
+    final reportId = r['id'] as String;
     final reason = r['reason'] as String? ?? '';
     final reporter = (r['reporter'] as Map<String, dynamic>?)?['username'] as String?;
     final isPost = type == 'post';
     final isUser = type == 'user';
+    final cardBusy = _busy != null && _busy!.startsWith('$reportId:');
+
+    Widget btnChild(String action, IconData icon, String label) =>
+        _busy == '$reportId:$action'
+          ? const SizedBox(width: 16, height: 16,
+              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+          : Row(mainAxisSize: MainAxisSize.min, children: [
+              Icon(icon, size: 14), const SizedBox(width: 5), Text(label)]);
 
     return Container(
       padding: const EdgeInsets.all(14),
@@ -167,7 +253,7 @@ class _AdminReportsScreenState extends State<AdminReportsScreen> {
         const SizedBox(height: 12),
         Row(children: [
           Expanded(child: OutlinedButton.icon(
-            onPressed: () => _openTarget(type, targetId),
+            onPressed: cardBusy ? null : () => _openTarget(type, targetId),
             icon: const Icon(Icons.open_in_new, size: 14),
             label: const Text('Үзэх'),
             style: OutlinedButton.styleFrom(
@@ -177,36 +263,72 @@ class _AdminReportsScreenState extends State<AdminReportsScreen> {
           )),
           const SizedBox(width: 8),
           if (isPost)
-            Expanded(child: ElevatedButton.icon(
-              onPressed: () => _deletePost(targetId, r['id'] as String),
-              icon: const Icon(Icons.delete_outline, size: 14),
-              label: const Text('Устгах'),
+            Expanded(child: ElevatedButton(
+              onPressed: cardBusy ? null : () => _deletePost(targetId, reportId),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.error,
                 foregroundColor: Colors.white,
                 minimumSize: const Size(0, 40)),
+              child: btnChild('delete', Icons.delete_outline, 'Устгах'),
             )),
           if (isPost) const SizedBox(width: 8),
           if (isUser)
-            Expanded(child: ElevatedButton.icon(
-              onPressed: () => _banUser(targetId, r['id'] as String),
-              icon: const Icon(Icons.gavel, size: 14),
-              label: const Text('Хориглох'),
+            Expanded(child: ElevatedButton(
+              onPressed: cardBusy ? null : () => _banUser(targetId, reportId),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.error,
                 foregroundColor: Colors.white,
                 minimumSize: const Size(0, 40)),
+              child: btnChild('ban', Icons.gavel, 'Хориглох'),
             )),
           if (isUser) const SizedBox(width: 8),
           Expanded(child: TextButton(
-            onPressed: () => _resolve(r['id'] as String),
+            onPressed: cardBusy ? null : () => _resolve(reportId),
             style: TextButton.styleFrom(
               foregroundColor: AppColors.textSecondary,
               minimumSize: const Size(0, 40)),
-            child: const Text('Шийдсэн'),
+            child: _busy == '$reportId:resolve'
+              ? const SizedBox(width: 16, height: 16,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2, color: AppColors.textSecondary))
+              : const Text('Шийдсэн'),
           )),
         ]),
       ]),
     );
   }
+}
+
+// ─── Эхний ачаалалтын skeleton картууд ───
+class _SkeletonCards extends StatefulWidget {
+  const _SkeletonCards();
+  @override
+  State<_SkeletonCards> createState() => _SkeletonCardsState();
+}
+
+class _SkeletonCardsState extends State<_SkeletonCards>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _c = AnimationController(
+    vsync: this, duration: const Duration(milliseconds: 900),
+    lowerBound: 0.4, upperBound: 0.9)..repeat(reverse: true);
+
+  @override
+  void dispose() { _c.dispose(); super.dispose(); }
+
+  @override
+  Widget build(BuildContext context) => FadeTransition(
+    opacity: _c,
+    child: ListView.separated(
+      padding: const EdgeInsets.all(16),
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: 5,
+      separatorBuilder: (_, __) => const SizedBox(height: 10),
+      itemBuilder: (_, __) => Container(
+        height: 108,
+        decoration: BoxDecoration(
+          color: AppColors.bgElevated,
+          borderRadius: BorderRadius.circular(14)),
+      ),
+    ),
+  );
 }

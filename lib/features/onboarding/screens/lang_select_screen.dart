@@ -1,5 +1,3 @@
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -16,7 +14,8 @@ class LangSelectScreen extends StatefulWidget {
 }
 
 class _LangSelectScreenState extends State<LangSelectScreen> {
-  String _selected = 'en';
+  // UB-first апп тул Монгол хэл default сонгогдсон байна
+  String _selected = 'mn';
 
   Future<void> _continue() async {
     final prefs = await SharedPreferences.getInstance();
@@ -35,43 +34,57 @@ class _LangSelectScreenState extends State<LangSelectScreen> {
           const _LangAura(),
           SafeArea(
             child: Padding(
-              padding: const EdgeInsets.all(32),
+              padding: const EdgeInsets.all(24),
               child: Column(
                 children: [
                   const Spacer(),
                   // Owl logo hero — neon cyan ring + glow
-                  const _OwlHero(),
+                  const _Entrance(child: _OwlHero()),
                   const SizedBox(height: 32),
-                  Text(
-                    'Choose Language',
-                    style: AppTextStyles.displaySm,
-                    textAlign: TextAlign.center,
-                  ),
-                  Text(
-                    'Хэлээ сонгоно уу',
-                    style: AppTextStyles.bodyMd
-                        .copyWith(color: AppColors.textSecondary),
-                    textAlign: TextAlign.center,
+                  _Entrance(
+                    index: 1,
+                    child: Column(children: [
+                      Text(
+                        'Choose Language',
+                        style: AppTextStyles.displaySm,
+                        textAlign: TextAlign.center,
+                      ),
+                      Text(
+                        'Хэлээ сонгоно уу',
+                        style: AppTextStyles.bodyMd
+                            .copyWith(color: AppColors.textSecondary),
+                        textAlign: TextAlign.center,
+                      ),
+                    ]),
                   ),
                   const SizedBox(height: 40),
-                  _LangTile(
-                    flag: '🇺🇸', lang: 'English', native: 'English',
-                    isSelected: _selected == 'en',
-                    onTap: () => setState(() => _selected = 'en'),
+                  _Entrance(
+                    index: 2,
+                    child: _LangTile(
+                      flag: '🇺🇸', lang: 'English', native: 'English',
+                      isSelected: _selected == 'en',
+                      onTap: () => setState(() => _selected = 'en'),
+                    ),
                   ),
                   const SizedBox(height: 12),
-                  _LangTile(
-                    flag: '🇲🇳', lang: 'Mongolian', native: 'Монгол',
-                    isSelected: _selected == 'mn',
-                    onTap: () => setState(() => _selected = 'mn'),
+                  _Entrance(
+                    index: 3,
+                    child: _LangTile(
+                      flag: '🇲🇳', lang: 'Mongolian', native: 'Монгол',
+                      isSelected: _selected == 'mn',
+                      onTap: () => setState(() => _selected = 'mn'),
+                    ),
                   ),
                   const Spacer(),
-                  GradientButton(
-                    label: _selected == 'mn' ? 'Үргэлжлүүлэх' : 'Continue',
-                    onPressed: _continue,
-                    borderRadius: 16,
-                    trailing: const Icon(Icons.arrow_forward_rounded,
-                        color: Colors.white, size: 19),
+                  _Entrance(
+                    index: 4,
+                    child: GradientButton(
+                      label: _selected == 'mn' ? 'Үргэлжлүүлэх' : 'Continue',
+                      onPressed: _continue,
+                      borderRadius: 16,
+                      trailing: const Icon(Icons.arrow_forward_rounded,
+                          color: Colors.white, size: 19),
+                    ),
                   ),
                   const SizedBox(height: 16),
                 ],
@@ -109,37 +122,32 @@ class _OwlHero extends StatelessWidget {
           ),
         ],
       ),
-      // Outer neon cyan ring
+      // Outer neon cyan ring — blur-гүй glass дотортой (web perf)
       child: Container(
         padding: const EdgeInsets.all(2),
         decoration: const BoxDecoration(
           shape: BoxShape.circle,
           gradient: AppColors.chromeGradient,
         ),
-        child: ClipOval(
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-            child: Container(
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: const Color(0xCC0D0D12),
-                border: Border.all(
-                  color: AppColors.neonCyan.withValues(alpha: 0.35),
-                  width: 1,
-                ),
-              ),
-              alignment: Alignment.center,
-              child: Image.asset(
-                'assets/images/owl_logo.png',
-                width: 92,
-                height: 92,
-                fit: BoxFit.contain,
-                errorBuilder: (context, error, stackTrace) => const Icon(
-                  Icons.nightlight_round,
-                  color: AppColors.neonCyan,
-                  size: 46,
-                ),
-              ),
+        child: Container(
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: AppColors.bgElevated.withValues(alpha: 0.85),
+            border: Border.all(
+              color: AppColors.neonCyan.withValues(alpha: 0.35),
+              width: 1,
+            ),
+          ),
+          alignment: Alignment.center,
+          child: Image.asset(
+            'assets/images/owl_logo.png',
+            width: 92,
+            height: 92,
+            fit: BoxFit.contain,
+            errorBuilder: (context, error, stackTrace) => const Icon(
+              Icons.nightlight_round,
+              color: AppColors.neonCyan,
+              size: 46,
             ),
           ),
         ),
@@ -148,9 +156,33 @@ class _OwlHero extends StatelessWidget {
   }
 }
 
+// ───────────────────────── entrance stagger ─────────────────────────
+
+/// Орох анимаци — fade + 12px гулсалт, index бүрт 40ms шатлана
+class _Entrance extends StatelessWidget {
+  final int index;
+  final Widget child;
+  const _Entrance({this.index = 0, required this.child});
+  @override
+  Widget build(BuildContext context) {
+    final delay = index * 40;
+    final total = 220 + delay;
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0, end: 1),
+      duration: Duration(milliseconds: total),
+      curve: Interval(delay / total, 1, curve: Curves.easeOut),
+      builder: (_, t, c) => Opacity(
+        opacity: t,
+        child: Transform.translate(offset: Offset(0, 12 * (1 - t)), child: c),
+      ),
+      child: child,
+    );
+  }
+}
+
 // ───────────────────────── language tile ─────────────────────────
 
-class _LangTile extends StatelessWidget {
+class _LangTile extends StatefulWidget {
   final String flag, lang, native;
   final bool isSelected;
   final VoidCallback onTap;
@@ -164,14 +196,48 @@ class _LangTile extends StatelessWidget {
   });
 
   @override
+  State<_LangTile> createState() => _LangTileState();
+}
+
+class _LangTileState extends State<_LangTile> {
+  bool _down = false;
+
+  String get flag => widget.flag;
+  String get lang => widget.lang;
+  String get native => widget.native;
+  bool get isSelected => widget.isSelected;
+
+  @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
+    // Web мэдрэмж — hover заагч + дарахад зөөлөн агших
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        onTapDown: (_) => setState(() => _down = true),
+        onTapCancel: () => setState(() => _down = false),
+        onTapUp: (_) => setState(() => _down = false),
+        onTap: widget.onTap,
+        child: AnimatedScale(
+          scale: _down ? 0.97 : 1.0,
+          duration: const Duration(milliseconds: 120),
+          curve: Curves.easeOut,
+          child: _tile(),
+        ),
+      ),
+    );
+  }
+
+  Widget _tile() {
+    // Сонгогдсон үед gradient hairline хүрээ (padding = хүрээний зузаан),
+    // blur-гүй glass дотор — web дээр BackdropFilter удаан
+    return AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         curve: Curves.easeOut,
+        padding: const EdgeInsets.all(1.2),
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(18),
+          gradient: isSelected ? AppColors.chromeGradient : null,
+          color: isSelected ? null : AppColors.hairline2,
           boxShadow: isSelected
               ? [
                   BoxShadow(
@@ -182,25 +248,18 @@ class _LangTile extends StatelessWidget {
                 ]
               : null,
         ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(16),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
-            child: AnimatedContainer(
+        child: AnimatedContainer(
               duration: const Duration(milliseconds: 200),
               curve: Curves.easeOut,
               padding:
                   const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
               decoration: BoxDecoration(
                 color: isSelected
-                    ? AppColors.neonCyan.withValues(alpha: 0.08)
-                    : const Color(0x99151515),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color:
-                      isSelected ? AppColors.neonCyan : AppColors.hairline2,
-                  width: isSelected ? 1.5 : 1,
-                ),
+                    ? Color.alphaBlend(
+                        AppColors.neonCyan.withValues(alpha: 0.07),
+                        AppColors.bgElevated)
+                    : AppColors.bgElevated.withValues(alpha: 0.78),
+                borderRadius: BorderRadius.circular(17),
               ),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.center,
@@ -249,9 +308,6 @@ class _LangTile extends StatelessWidget {
                 ],
               ),
             ),
-          ),
-        ),
-      ),
     );
   }
 }

@@ -4,21 +4,31 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/widgets/gradient_button.dart';
 
-class QPayScreen extends StatefulWidget {
+/// QPay төлбөрийн дэлгэц.
+/// ⚠️ QPay merchant холболт хараахан хийгдээгүй — энэ дэлгэц одоогоор
+/// зөвхөн урьдчилсан UI. Хуурамч unlock хийхгүй (өмнө 2сек delay-ээр
+/// үнэгүй нээдэг байсныг хаасан). Интеграци орж ирэхэд amount-ыг
+/// route extra эсвэл DB-ээс дамжуулна.
+class QPayScreen extends StatelessWidget {
   final String contentId;
-  const QPayScreen({super.key, required this.contentId});
+  /// Төлбөрийн дүн (₮). Хатуу бичихгүй — route/DB-ээс ирэхэд харуулна.
+  final int? amount;
+  const QPayScreen({super.key, required this.contentId, this.amount});
 
-  @override
-  State<QPayScreen> createState() => _QPayScreenState();
-}
+  String get _amountLabel {
+    final a = amount;
+    if (a == null) return '';
+    // ₮5000 → ₮5,000
+    final s = a.toString();
+    final buf = StringBuffer();
+    for (var i = 0; i < s.length; i++) {
+      if (i > 0 && (s.length - i) % 3 == 0) buf.write(',');
+      buf.write(s[i]);
+    }
+    return '₮$buf';
+  }
 
-class _QPayScreenState extends State<QPayScreen> {
-  bool _paid = false;
-  bool _loading = false;
-
-  // ⚠️ QPay merchant холболт хараахан хийгдээгүй. Хуурамч unlock хийхгүй
-  // (өмнө 2сек delay-ээр үнэгүй нээдэг байсныг хаасан).
-  Future<void> _pay() async {
+  void _pay(BuildContext context) {
     showDialog(
       context: context,
       builder: (dCtx) => AlertDialog(
@@ -48,11 +58,11 @@ class _QPayScreenState extends State<QPayScreen> {
         leading: IconButton(
           onPressed: () => context.pop(),
           icon: const Icon(Icons.arrow_back_ios_new, size: 20)),
-        title: Text('QPAY · PAYMENT', style: AppTextStyles.mono),
+        title: Text('QPAY · ТӨЛБӨР', style: AppTextStyles.mono),
       ),
       body: Padding(
         padding: const EdgeInsets.all(32),
-        child: _paid ? _SuccessView() : Column(
+        child: Column(
           children: [
             const Spacer(),
             Container(
@@ -66,21 +76,27 @@ class _QPayScreenState extends State<QPayScreen> {
                 color: AppColors.textTertiary, fontSize: 28, fontWeight: FontWeight.w800))),
             ),
             const SizedBox(height: 24),
-            Text('₮5,000', style: AppTextStyles.displayMd),
-            const SizedBox(height: 8),
-            Text('Waiting for payment confirmation...',
+            if (amount != null) ...[
+              Text(_amountLabel, style: AppTextStyles.displayMd),
+              const SizedBox(height: 8),
+            ] else ...[
+              Text('Түгжээтэй контент', style: AppTextStyles.h2),
+              const SizedBox(height: 8),
+            ],
+            // Юу ч poll хийдэггүй тул "хүлээж байна" гэж хуурахгүй
+            Text('Төлбөрийн систем удахгүй нээгдэнэ',
               style: AppTextStyles.bodyMd.copyWith(color: AppColors.textSecondary),
               textAlign: TextAlign.center),
             const SizedBox(height: 40),
             const Divider(color: AppColors.hairline),
             const SizedBox(height: 20),
-            Text('OR SELECT YOUR BANK', style: AppTextStyles.labelSm),
+            Text('ЭСВЭЛ БАНКАА СОНГО', style: AppTextStyles.labelSm),
             const SizedBox(height: 16),
-            _BankRow(),
+            const _BankRow(),
             const Spacer(),
             GradientButton(
-              label: _loading ? 'Processing...' : 'Pay ₮5,000',
-              onPressed: _loading ? null : _pay,
+              label: amount != null ? 'Төлөх $_amountLabel' : 'Төлбөр хийх',
+              onPressed: () => _pay(context),
             ),
           ],
         ),
@@ -89,45 +105,32 @@ class _QPayScreenState extends State<QPayScreen> {
   }
 }
 
+/// Банкны сонголт — интеграци ороогүй тул идэвхгүй харагдацтай
 class _BankRow extends StatelessWidget {
+  const _BankRow();
+
   @override
   Widget build(BuildContext context) {
     const banks = ['Khan', 'Golomt', 'TDB', 'Xac'];
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-      children: banks.map((b) => Container(
-        width: 60, height: 44,
-        decoration: BoxDecoration(
-          color: AppColors.bgSurface,
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: AppColors.hairline),
+    return Column(children: [
+      Opacity(
+        opacity: 0.4,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: banks.map((b) => Container(
+            width: 60, height: 44,
+            decoration: BoxDecoration(
+              color: AppColors.bgSurface,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: AppColors.hairline),
+            ),
+            child: Center(child: Text(b, style: AppTextStyles.bodyXs)),
+          )).toList(),
         ),
-        child: Center(child: Text(b, style: AppTextStyles.bodyXs)),
-      )).toList(),
-    );
-  }
-}
-
-class _SuccessView extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Container(
-          width: 80, height: 80,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: AppColors.success.withValues(alpha: 0.15),
-          ),
-          child: const Icon(Icons.check_circle_outline,
-            color: AppColors.success, size: 48),
-        ),
-        const SizedBox(height: 24),
-        Text('Content Unlocked!', style: AppTextStyles.h1),
-        const SizedBox(height: 40),
-        GradientButton(label: 'Start Watching', onPressed: () => context.pop()),
-      ],
-    );
+      ),
+      const SizedBox(height: 8),
+      Text('Удахгүй нээгдэнэ',
+          style: AppTextStyles.bodyXs.copyWith(color: AppColors.textTertiary)),
+    ]);
   }
 }

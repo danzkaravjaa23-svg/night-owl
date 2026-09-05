@@ -9,6 +9,7 @@ import '../../../core/theme/app_text_styles.dart';
 import '../../../core/widgets/gradient_button.dart';
 import '../../../core/l10n/app_strings.dart';
 import '../../../core/router/app_router.dart';
+import '../utils/web_permissions.dart';
 
 enum PermissionKind { location, notification }
 
@@ -23,6 +24,7 @@ class PermissionScreen extends StatefulWidget {
 class _PermissionScreenState extends State<PermissionScreen> {
   // Сонгосон хэлээр (default 'mn') — SharedPreferences-с уншина.
   AppStrings _s = AppStrings.mn;
+  bool _requesting = false; // browser prompt хүлээж байгаа эсэх
 
   @override
   void initState() {
@@ -37,21 +39,33 @@ class _PermissionScreenState extends State<PermissionScreen> {
     setState(() => _s = locale == 'mn' ? AppStrings.mn : AppStrings.en);
   }
 
-  void _allow(BuildContext context) {
+  // Дараагийн дэлгэц рүү — сүүлийн алхам дээр onboarded тэмдэглэнэ
+  // (splash дахин onboarding харуулахгүй байх хамгаалалт)
+  Future<void> _goNext() async {
     if (widget.kind == PermissionKind.location) {
       context.go(AppRoutes.permNotif);
     } else {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('onboarded', true);
+      if (!mounted) return;
       context.go(AppRoutes.authLanding);
     }
   }
 
-  void _skip(BuildContext context) {
+  // Зөвшөөрөх — browser-ийн жинхэнэ permission prompt-ыг дуудна
+  Future<void> _allow(BuildContext context) async {
+    setState(() => _requesting = true);
     if (widget.kind == PermissionKind.location) {
-      context.go(AppRoutes.permNotif);
+      await WebPermissions.requestLocation();
     } else {
-      context.go(AppRoutes.authLanding);
+      await WebPermissions.requestNotification();
     }
+    if (!mounted) return;
+    setState(() => _requesting = false);
+    await _goNext();
   }
+
+  void _skip(BuildContext context) => _goNext();
 
   @override
   Widget build(BuildContext context) {
@@ -91,13 +105,17 @@ class _PermissionScreenState extends State<PermissionScreen> {
                   GradientButton(
                     label: s.btnAllow,
                     borderRadius: 16,
-                    onPressed: () => _allow(context),
-                    trailing: const Icon(Icons.check_rounded,
-                      color: Colors.white, size: 19),
+                    onPressed: _requesting ? null : () => _allow(context),
+                    trailing: _requesting
+                        ? const SizedBox(width: 16, height: 16,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2, color: Colors.white))
+                        : const Icon(Icons.check_rounded,
+                            color: Colors.white, size: 19),
                   ),
                   const SizedBox(height: 12),
                   TextButton(
-                    onPressed: () => _skip(context),
+                    onPressed: _requesting ? null : () => _skip(context),
                     child: Text(s.btnLater,
                       style: AppTextStyles.labelMd.copyWith(
                         color: AppColors.textSecondary)),

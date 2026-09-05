@@ -1,7 +1,3 @@
-// ignore_for_file: avoid_web_libraries_in_flutter
-import 'dart:async';
-import 'dart:html' as html;
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -13,16 +9,12 @@ import '../../../core/widgets/gradient_button.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/services/supabase_service.dart';
 import '../../feed/providers/feed_provider.dart';
+import '../utils/post_media.dart';
 
 const int _maxImages = 10;
-
-/// Сонгосон media нэгж
-class _Picked {
-  final html.File file;
-  final String previewUrl;
-  final bool isVideo;
-  _Picked(this.file, this.previewUrl, this.isVideo);
-}
+// Файлын дээд хэмжээ — placeholder дээр амласантай нийцнэ
+const int _maxVideoBytes = 500 * 1024 * 1024; // 500MB
+const int _maxImageBytes = 25 * 1024 * 1024;  // 25MB
 
 class CreatePostScreen extends ConsumerStatefulWidget {
   const CreatePostScreen({super.key});
@@ -32,7 +24,7 @@ class CreatePostScreen extends ConsumerStatefulWidget {
 }
 
 class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
-  final List<_Picked> _media = [];
+  final List<PickedMediaFile> _media = [];
   final PageController _pageCtrl = PageController();
   int _page = 0;
 
@@ -49,25 +41,25 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
   bool get _hasMedia    => _media.isNotEmpty;
   bool get _isVideoPost => _media.length == 1 && _media.first.isVideo;
 
+  void _toast(String msg) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(msg), duration: const Duration(seconds: 3)));
+  }
+
   // ─── Media сонгох (олон зураг эсвэл нэг видео) ───
   Future<void> _pickMedia({bool append = false}) async {
-    final input = html.FileUploadInputElement()
-      ..accept = 'image/*,video/*'
-      ..multiple = !append || !_isVideoPost
-      ..click();
+    final picked = await pickPostMedia(multiple: !append || !_isVideoPost);
+    if (picked.isEmpty) return; // цуцалсан
 
-    await input.onChange.first;
-    final files = input.files;
-    if (files == null || files.isEmpty) return;
-
-    final firstIsVideo = files.first.type.startsWith('video/');
+    final firstIsVideo = picked.first.isVideo;
 
     if (!append) {
       // Цэвэрлэх
       _videoCtrl?.dispose();
       _videoCtrl = null;
       for (final m in _media) {
-        html.Url.revokeObjectUrl(m.previewUrl);
+        revokePreviewUrl(m.previewUrl);
       }
       _media.clear();
       _page = 0;
@@ -75,15 +67,24 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
 
     if (firstIsVideo && !append) {
       // Нэг видеоны пост
-      final f = files.first;
-      final url = html.Url.createObjectUrl(f);
-      _media.add(_Picked(f, url, true));
+      final f = picked.first;
+      for (final extra in picked.skip(1)) {
+        revokePreviewUrl(extra.previewUrl);
+      }
+      // Хэмжээ шалгана — амласан 500MB-с хэтэрвэл upload эхлэхээс өмнө хаана
+      if (f.size > _maxVideoBytes) {
+        revokePreviewUrl(f.previewUrl);
+        setState(() =>
+            _error = 'Файл хэтэрхий том байна — видео 500MB хүртэл');
+        return;
+      }
+      _media.add(f);
       setState(() {
         _error = null;
         _uploadProgress = null;
         _videoPlaying = false;
       });
-      final ctrl = VideoPlayerController.networkUrl(Uri.parse(url));
+      final ctrl = VideoPlayerController.networkUrl(Uri.parse(f.previewUrl));
       try {
         await ctrl.initialize();
         if (mounted) setState(() => _videoCtrl = ctrl);
@@ -91,22 +92,30 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
       return;
     }
 
-    // Зургийн carousel (видео файлуудыг алгасна)
-    for (final f in files) {
-      if (_media.length >= _maxImages) break;
-      if (f.type.startsWith('video/')) continue;
-      final url = html.Url.createObjectUrl(f);
-      _media.add(_Picked(f, url, false));
+    // Зургийн carousel (видео/том файлуудыг алгасаад мэдэгдэнэ)
+    var skippedVideos = 0;
+    var skippedBig = 0;
+    for (final f in picked) {
+      if (_media.length >= _maxImages) { revokePreviewUrl(f.previewUrl); continue; }
+      if (f.isVideo) { skippedVideos++; revokePreviewUrl(f.previewUrl); continue; }
+      if (f.size > _maxImageBytes) { skippedBig++; revokePreviewUrl(f.previewUrl); continue; }
+      _media.add(f);
     }
     setState(() {
       _error = null;
       _uploadProgress = null;
     });
+    if (skippedVideos > 0) {
+      _toast('Видео файл алгасагдлаа — зургийн цомогт зөвхөн зураг нэмнэ');
+    }
+    if (skippedBig > 0) {
+      _toast('$skippedBig зураг хэтэрхий том тул алгаслаа (25MB хүртэл)');
+    }
   }
 
   void _removeAt(int i) {
     if (i < 0 || i >= _media.length) return;
-    html.Url.revokeObjectUrl(_media[i].previewUrl);
+    revokePreviewUrl(_media[i].previewUrl);
     if (_media[i].isVideo) {
       _videoCtrl?.dispose();
       _videoCtrl = null;
@@ -115,71 +124,6 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
       _media.removeAt(i);
       if (_page >= _media.length) _page = _media.isEmpty ? 0 : _media.length - 1;
     });
-  }
-
-  // ─── Зураг resize + JPEG compress (canvas) ───
-  // 500к scale — түүхий 5–20MB зургийг ~1440px / JPEG q0.82 болгож
-  // багасгана (ихэвчлэн 200–600KB). Алдаа гарвал эх файлаараа буцаана.
-  Future<html.Blob> _resizeImage(html.File file,
-      {int maxDim = 1440, num quality = 0.82}) async {
-    final objUrl = html.Url.createObjectUrl(file);
-    try {
-      final img = html.ImageElement(src: objUrl);
-      await img.onLoad.first;
-      final w = img.naturalWidth;
-      final h = img.naturalHeight;
-      if (w == 0 || h == 0) return file;
-
-      final longest = w > h ? w : h;
-      final scale = longest > maxDim ? maxDim / longest : 1.0;
-      final tw = (w * scale).round();
-      final th = (h * scale).round();
-
-      final canvas = html.CanvasElement(width: tw, height: th);
-      final ctx = canvas.context2D;
-      ctx.drawImageScaled(img, 0, 0, tw.toDouble(), th.toDouble());
-
-      final blob = await canvas.toBlob('image/jpeg', quality);
-      // Хэрэв ямар нэг шалтгаанаар томрсон бол эх файлаа хэрэглэнэ
-      if (blob.size >= file.size && scale == 1.0) return file;
-      return blob;
-    } catch (_) {
-      return file; // fallback — эх файл
-    } finally {
-      html.Url.revokeObjectUrl(objUrl);
-    }
-  }
-
-  // ─── Streaming XHR upload ───
-  Future<void> _uploadViaXhr(html.Blob blob, String path, String mime) async {
-    final token = SupabaseService.client.auth.currentSession?.accessToken
-        ?? AppConstants.supabaseAnonKey;
-    final url = '${AppConstants.supabaseUrl}/storage/v1/object/posts/$path';
-
-    final completer = Completer<void>();
-    final xhr = html.HttpRequest()
-      ..open('POST', url)
-      ..setRequestHeader('Authorization', 'Bearer $token')
-      ..setRequestHeader('Content-Type', mime)
-      ..setRequestHeader('x-upsert', 'true');
-
-    xhr.upload.onProgress.listen((e) {
-      if (e.lengthComputable && mounted) {
-        setState(() => _uploadProgress = (e.loaded ?? 0) / (e.total ?? 1));
-      }
-    });
-    xhr.onLoad.listen((_) {
-      final s = xhr.status ?? 0;
-      if (s >= 200 && s < 300) {
-        completer.complete();
-      } else {
-        completer.completeError('Upload failed ($s): ${xhr.responseText}');
-      }
-    });
-    xhr.onError.listen((_) =>
-        completer.completeError('Network error — check Supabase Storage policies'));
-    xhr.send(blob);
-    await completer.future;
   }
 
   // ─── Хуваалцах ───
@@ -194,31 +138,44 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
       final user = SupabaseService.currentUser;
       if (user == null) { if (mounted) context.pop(); return; }
 
+      final token = SupabaseService.client.auth.currentSession?.accessToken
+          ?? AppConstants.supabaseAnonKey;
+
       final urls = <String>[];
       for (var i = 0; i < _media.length; i++) {
         final m = _media[i];
         if (mounted) setState(() { _uploadIndex = i; _uploadProgress = 0; });
         final ts = DateTime.now().millisecondsSinceEpoch;
 
-        html.Blob blob;
+        Object blob;
         String mime;
         String ext;
         if (m.isVideo) {
           // Видеог хэвээр нь (browser-д найдвартай compress хийх боломжгүй)
-          blob = m.file;
-          mime = m.file.type.isNotEmpty ? m.file.type : 'video/mp4';
-          ext = (m.file.name.contains('.')
-              ? m.file.name.split('.').last.toLowerCase()
+          blob = m.file!;
+          mime = m.mimeType.isNotEmpty ? m.mimeType : 'video/mp4';
+          ext = (m.name.contains('.')
+              ? m.name.split('.').last.toLowerCase()
               : 'mp4');
         } else {
-          // Зургийг resize + compress
-          blob = await _resizeImage(m.file);
+          // Зургийг resize + compress (decode алдаа/гацалтад timeout-той)
+          blob = await resizeImageForUpload(m);
           mime = 'image/jpeg';
           ext = 'jpg';
         }
 
         final path = '${user.id}/${ts}_$i.$ext';
-        await _uploadViaXhr(blob, path, mime);
+        final url =
+            '${AppConstants.supabaseUrl}/storage/v1/object/posts/$path';
+        await uploadBlobWithProgress(
+          blob: blob,
+          url: url,
+          token: token,
+          mime: mime,
+          onProgress: (p) {
+            if (mounted) setState(() => _uploadProgress = p);
+          },
+        );
         urls.add(SupabaseService.client.storage.from('posts').getPublicUrl(path));
       }
 
@@ -248,7 +205,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
     _pageCtrl.dispose();
     _videoCtrl?.dispose();
     for (final m in _media) {
-      html.Url.revokeObjectUrl(m.previewUrl);
+      revokePreviewUrl(m.previewUrl);
     }
     super.dispose();
   }
@@ -262,7 +219,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
       leading: IconButton(
         onPressed: _loading ? null : () => context.pop(),
         icon: const Icon(Icons.close)),
-      title: Text('New Post', style: AppTextStyles.h2),
+      title: Text('Шинэ пост', style: AppTextStyles.h2),
       actions: [
         Padding(
           padding: const EdgeInsets.only(right: 8),
@@ -279,7 +236,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                 ? const SizedBox(width: 16, height: 16,
                     child: CircularProgressIndicator(
                         strokeWidth: 2, color: Colors.white))
-                : Text('Share',
+                : Text('Хуваалцах',
                     style: AppTextStyles.labelMd.copyWith(
                       color: _hasMedia ? Colors.white : AppColors.textTertiary)),
           ),
@@ -305,7 +262,8 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
         ),
 
       // ── Media picker / carousel preview ──
-      _hasMedia ? _buildPreview() : GestureDetector(
+      _hasMedia ? _buildPreview() : _Press(
+        scale: 0.98,
         onTap: _loading ? null : () => _pickMedia(),
         child: Container(
           height: 280,
@@ -340,7 +298,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                   onRemove: _loading ? null : () => _removeAt(i),
                 ),
               if (_media.length < _maxImages)
-                GestureDetector(
+                _Press(
                   onTap: _loading ? null : () => _pickMedia(append: true),
                   child: Container(
                     width: 56, height: 56,
@@ -361,7 +319,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
 
       const SizedBox(height: 24),
 
-      Text('CAPTION', style: AppTextStyles.labelSm.copyWith(
+      Text('ТАЙЛБАР', style: AppTextStyles.labelSm.copyWith(
           color: AppColors.textSecondary, letterSpacing: 0.8)),
       const SizedBox(height: 8),
       TextField(
@@ -370,16 +328,17 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
         maxLength: 300,
         style: AppTextStyles.bodyMd.copyWith(color: AppColors.textPrimary),
         decoration: InputDecoration(
-          hintText: 'What happened tonight?...',
+          hintText: 'Өнөө шөнө юу болов?...',
           counterStyle: AppTextStyles.bodyXs.copyWith(
               color: AppColors.textTertiary)),
       ),
       const SizedBox(height: 20),
 
-      Text('LOCATION', style: AppTextStyles.labelSm.copyWith(
+      Text('БАЙРШИЛ', style: AppTextStyles.labelSm.copyWith(
           color: AppColors.textSecondary, letterSpacing: 0.8)),
       const SizedBox(height: 8),
-      GestureDetector(
+      _Press(
+        scale: 0.98,
         onTap: _showVenuePicker,
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
@@ -398,12 +357,12 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
               size: 20),
             const SizedBox(width: 10),
             Expanded(child: Text(
-              _venueName ?? 'Tag a venue',
+              _venueName ?? 'Газар сонгох',
               style: AppTextStyles.bodyMd.copyWith(
                 color: _venueName != null
                     ? AppColors.textPrimary : AppColors.textTertiary))),
             if (_venueName != null)
-              GestureDetector(
+              _Press(
                 onTap: () => setState(() => _venueName = null),
                 child: const Icon(Icons.close,
                     color: AppColors.textTertiary, size: 18))
@@ -415,7 +374,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
       const SizedBox(height: 40),
 
       GradientButton(
-        label: _media.length > 1 ? 'Хуваалцах (${_media.length})' : 'Share Post',
+        label: _media.length > 1 ? 'Хуваалцах (${_media.length})' : 'Хуваалцах',
         onPressed: (!_hasMedia || _loading) ? null : _post,
       ),
       const SizedBox(height: 40),
@@ -479,7 +438,8 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
 
           // Remove current
           if (!_loading)
-            Positioned(top: 12, right: 12, child: GestureDetector(
+            Positioned(top: 12, right: 12, child: _Press(
+              scale: 0.85,
               onTap: () => _removeAt(_page),
               child: Container(
                 padding: const EdgeInsets.all(6),
@@ -523,8 +483,8 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                     style: AppTextStyles.h2.copyWith(color: Colors.white)),
                 const SizedBox(height: 4),
                 Text(_media.length > 1
-                  ? 'Uploading ${_uploadIndex + 1}/${_media.length}...'
-                  : 'Uploading...',
+                  ? 'Илгээж байна ${_uploadIndex + 1}/${_media.length}...'
+                  : 'Илгээж байна...',
                   style: AppTextStyles.bodyMd.copyWith(color: Colors.white70)),
               ])),
             )),
@@ -547,6 +507,41 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
   }
 }
 
+// ─── Дарахад жижигрэх + hover cursor (веб мэдрэмж) ───
+class _Press extends StatefulWidget {
+  final Widget child;
+  final VoidCallback? onTap;
+  final double scale;
+  const _Press({required this.child, this.onTap, this.scale = 0.92});
+
+  @override
+  State<_Press> createState() => _PressState();
+}
+
+class _PressState extends State<_Press> {
+  bool _down = false;
+
+  @override
+  Widget build(BuildContext context) => MouseRegion(
+    cursor: widget.onTap == null
+        ? SystemMouseCursors.basic : SystemMouseCursors.click,
+    child: GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTapDown: widget.onTap == null
+          ? null : (_) => setState(() => _down = true),
+      onTapUp: (_) => setState(() => _down = false),
+      onTapCancel: () => setState(() => _down = false),
+      onTap: widget.onTap,
+      child: AnimatedScale(
+        scale: _down ? widget.scale : 1.0,
+        duration: const Duration(milliseconds: 120),
+        curve: Curves.easeOut,
+        child: widget.child,
+      ),
+    ),
+  );
+}
+
 // ─── Thumbnail ───
 class _Thumb extends StatelessWidget {
   final String url;
@@ -557,7 +552,8 @@ class _Thumb extends StatelessWidget {
     required this.onTap, this.onRemove});
 
   @override
-  Widget build(BuildContext context) => GestureDetector(
+  Widget build(BuildContext context) => _Press(
+    scale: 0.9,
     onTap: onTap,
     child: Container(
       width: 56, height: 56,
@@ -572,7 +568,8 @@ class _Thumb extends StatelessWidget {
       child: Stack(fit: StackFit.expand, children: [
         Image.network(url, fit: BoxFit.cover),
         if (onRemove != null)
-          Positioned(top: 2, right: 2, child: GestureDetector(
+          Positioned(top: 2, right: 2, child: _Press(
+            scale: 0.8,
             onTap: onRemove,
             child: Container(
               padding: const EdgeInsets.all(2),
@@ -594,7 +591,7 @@ class _PickerPlaceholder extends StatelessWidget {
     children: [
       Container(
         width: 80, height: 80,
-        decoration: BoxDecoration(
+        decoration: const BoxDecoration(
           shape: BoxShape.circle,
           gradient: AppColors.accentGradientSoft,
         ),
@@ -605,7 +602,7 @@ class _PickerPlaceholder extends StatelessWidget {
       Text('Зураг (10 хүртэл) эсвэл видео сонгох',
           style: AppTextStyles.labelLg, textAlign: TextAlign.center),
       const SizedBox(height: 6),
-      Text('Up to 500MB  ·  MP4, MOV, JPG, PNG',
+      Text('500MB хүртэл  ·  MP4, MOV, JPG, PNG',
           style: AppTextStyles.bodyXs.copyWith(
               color: AppColors.textTertiary)),
     ],
@@ -655,7 +652,7 @@ class _VenuePickerState extends State<_VenuePicker> {
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20),
           child: Row(children: [
-            Text('Tag a Venue', style: AppTextStyles.h2),
+            Text('Газар сонгох', style: AppTextStyles.h2),
             const Spacer(),
             IconButton(
               onPressed: () => Navigator.pop(context),
@@ -684,7 +681,7 @@ class _VenuePickerState extends State<_VenuePicker> {
                   onChanged: (v) => setState(() => _q = v),
                   style: AppTextStyles.bodyMd.copyWith(color: AppColors.textPrimary),
                   decoration: InputDecoration(
-                    hintText: 'Search venues...',
+                    hintText: 'Газар хайх...',
                     hintStyle: AppTextStyles.bodyMd.copyWith(
                         color: AppColors.textTertiary),
                     border: InputBorder.none,
@@ -700,7 +697,7 @@ class _VenuePickerState extends State<_VenuePicker> {
         const Divider(color: AppColors.hairline),
         Expanded(
           child: _filtered.isEmpty
-              ? Center(child: Text('No venues found',
+              ? Center(child: Text('Газар олдсонгүй',
                   style: AppTextStyles.bodyMd.copyWith(
                       color: AppColors.textTertiary)))
               : ListView.builder(

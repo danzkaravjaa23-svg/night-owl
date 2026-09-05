@@ -5,26 +5,27 @@ import '../../../core/theme/app_text_styles.dart';
 import '../../../core/widgets/app_avatar.dart';
 import '../../../core/services/supabase_service.dart';
 
-/// Note үүссэн хугацааг "Xм/Xц өмнө" болгож харуулна
+/// Note үүссэн хугацааг "Xм/Xц/Xө өмнө" болгож харуулна
 String _noteTimeAgo(String? iso) {
   if (iso == null) return '';
   final dt = DateTime.tryParse(iso);
   if (dt == null) return '';
-  final diff = DateTime.now().difference(dt.toLocal());
-  if (diff.inMinutes < 1) return 'дөнгөж сая';
+  final diff = DateTime.now().toUtc().difference(dt.toUtc());
+  if (diff.isNegative || diff.inMinutes < 1) return 'дөнгөж сая';
   if (diff.inMinutes < 60) return '${diff.inMinutes}м өмнө';
-  return '${diff.inHours}ц өмнө';
+  if (diff.inHours < 24) return '${diff.inHours}ц өмнө';
+  return '${diff.inDays}ө өмнө';
 }
 
 /// Instagram-маягийн Note мөр — DM жагсаалтын дээр. Note нь 24ц богино статус,
-/// зөвхөн venue таглаж болно. Өөрийн bubble дарвал бичих/засах composer нээгдэнэ.
+/// зөвхөн venue тэмдэглэж болно. Өөрийн bubble дарвал бичих/засах composer нээгдэнэ.
 class NotesRow extends StatefulWidget {
   const NotesRow({super.key});
   @override
-  State<NotesRow> createState() => _NotesRowState();
+  State<NotesRow> createState() => NotesRowState();
 }
 
-class _NotesRowState extends State<NotesRow> {
+class NotesRowState extends State<NotesRow> {
   List<Map<String, dynamic>> _notes = []; // {user_id, username, avatar_url, text, venue_name}
   Map<String, dynamic>? _me;              // өөрийн profile
   bool _loaded = false;
@@ -45,8 +46,9 @@ class _NotesRowState extends State<NotesRow> {
         _me = await SupabaseService.client.from('profiles')
             .select('id, username, avatar_url').eq('id', me).maybeSingle();
       }
-      // Зөвхөн сүүлийн 24 цагийн note (хугацаа дууссаныг харуулахгүй)
-      final cutoff = DateTime.now()
+      // Зөвхөн сүүлийн 24 цагийн note (хугацаа дууссаныг харуулахгүй).
+      // created_at нь timestamptz (UTC) тул харьцуулалтыг UTC-ээр хийнэ.
+      final cutoff = DateTime.now().toUtc()
           .subtract(const Duration(hours: 24)).toIso8601String();
       final data = await SupabaseService.client.from('notes')
           .select('user_id, text, venue_id, created_at')
@@ -79,6 +81,7 @@ class _NotesRowState extends State<NotesRow> {
           'username': p?['username'] ?? 'User',
           'avatar_url': p?['avatar_url'],
           'text': r['text'],
+          'venue_id': r['venue_id'],
           'venue_name': r['venue_id'] != null ? vmap[r['venue_id']] : null,
           'created_at': r['created_at'],
         };
@@ -92,6 +95,9 @@ class _NotesRowState extends State<NotesRow> {
     }
   }
 
+  /// Гадаад (DM list refresh) дуудлагаас notes мөрийг дахин ачаална
+  void reload() => _load();
+
   Map<String, dynamic>? get _myNote {
     for (final n in _notes) { if (n['user_id'] == _myId) return n; }
     return null;
@@ -102,7 +108,7 @@ class _NotesRowState extends State<NotesRow> {
       context: context, backgroundColor: AppColors.bgElevated,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
       builder: (_) => _NoteComposer(existing: _myNote),
     );
     if (saved == true) _load();
@@ -114,7 +120,7 @@ class _NotesRowState extends State<NotesRow> {
     showModalBottomSheet(
       context: context, backgroundColor: AppColors.bgElevated,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
       builder: (sheetCtx) => Padding(
         padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
         child: Column(mainAxisSize: MainAxisSize.min,
@@ -148,24 +154,27 @@ class _NotesRowState extends State<NotesRow> {
             if (n['venue_name'] != null) ...[
               const SizedBox(height: 10),
               Row(children: [
-                const Icon(Icons.location_on, size: 16, color: Color(0xFFFF9500)),
+                const Icon(Icons.location_on, size: 16, color: AppColors.amber),
                 const SizedBox(width: 6),
                 Expanded(child: Text(n['venue_name'] as String,
                   style: AppTextStyles.bodyMd.copyWith(color: AppColors.textPrimary))),
               ]),
             ],
             const SizedBox(height: 18),
-            GestureDetector(
+            _Pressable(
               onTap: () {
                 Navigator.pop(sheetCtx);
                 final note = (n['text'] as String? ?? '').trim();
                 final q = note.isEmpty ? '' : '?note=${Uri.encodeComponent(note)}';
                 context.push('/dm/${n['user_id']}$q');
               },
+              // Primary товч — pill 52 + gradient glow
               child: Container(
-                height: 48, width: double.infinity,
+                height: 52, width: double.infinity,
                 decoration: BoxDecoration(
-                  gradient: AppColors.accentGradient, borderRadius: BorderRadius.circular(14)),
+                  gradient: AppColors.accentGradient,
+                  borderRadius: BorderRadius.circular(999),
+                  boxShadow: AppColors.glowShadow(AppColors.accentStart)),
                 alignment: Alignment.center,
                 child: Text('Note-д хариулах', style: AppTextStyles.btn.copyWith(color: Colors.white))),
             ),
@@ -176,14 +185,16 @@ class _NotesRowState extends State<NotesRow> {
 
   @override
   Widget build(BuildContext context) {
-    if (!_loaded) return const SizedBox(height: 0);
+    // Ачааллаж байх үед мөрийн өндрийг (142px) хадгалж, skeleton харуулна —
+    // ингэснээр search bar / жагсаалт доош "үсрэхгүй".
+    if (!_loaded) return const _NotesRowSkeleton();
     final mine = _myNote;
     final others = _notes.where((n) => n['user_id'] != _myId).toList();
 
     return Container(
       padding: const EdgeInsets.only(top: 4, bottom: 6),
       child: SizedBox(
-        height: 142,
+        height: 156,
         child: ListView(
           scrollDirection: Axis.horizontal,
           padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -234,39 +245,62 @@ class _NoteBubble extends StatelessWidget {
     final initial = username.isNotEmpty ? username[0].toUpperCase() : '?';
     final hasNote = noteText != null && (noteText as String).trim().isNotEmpty;
     final bubbleText = hasNote ? noteText! : (isMine ? 'Note үлдээх...' : '');
-    return GestureDetector(
+    return _Pressable(
       onTap: onTap,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 6),
         child: SizedBox(width: 104, child: Column(children: [
-          // Bubble
+          // Bubble — glass; "Note үлдээх" үед accent border-той
           Container(
             constraints: const BoxConstraints(maxWidth: 104, minWidth: 44),
             padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
             decoration: BoxDecoration(
-              color: AppColors.bgSurface,
+              color: AppColors.bgElevated.withValues(alpha: 0.75),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppColors.hairline)),
+              border: Border.all(color: (isMine && !hasNote)
+                  ? AppColors.accentStart.withValues(alpha: 0.45)
+                  : AppColors.hairline)),
             child: Column(mainAxisSize: MainAxisSize.min, children: [
-              Text(bubbleText, maxLines: 3, overflow: TextOverflow.ellipsis,
+              Text(bubbleText, maxLines: 2, overflow: TextOverflow.ellipsis,
                 textAlign: TextAlign.center,
                 style: AppTextStyles.bodyXs.copyWith(
                   color: hasNote ? AppColors.textPrimary : AppColors.textTertiary,
                   height: 1.15)),
               if (venueName != null)
                 Text('📍${venueName!}', maxLines: 1, overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(color: Color(0xFFFF9500), fontSize: 9)),
+                  style: const TextStyle(color: AppColors.amber, fontSize: 9)),
             ]),
           ),
           const SizedBox(height: 2),
+          // Story-rail 64 avatar — note-той бол storyRingGradient ринг
           Stack(clipBehavior: Clip.none, children: [
-            AppAvatar(imageUrl: avatarUrl, initial: initial, size: 46),
+            if (isMine && !hasNote)
+              // "Note үлдээх" — зөөлөн gradient ринг + "+" badge
+              Container(
+                padding: const EdgeInsets.all(2),
+                decoration: const BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: AppColors.accentGradientSoft),
+                child: Container(
+                  padding: const EdgeInsets.all(2),
+                  decoration: const BoxDecoration(
+                    shape: BoxShape.circle, color: AppColors.bgBase),
+                  child: AppAvatar(
+                      imageUrl: avatarUrl, initial: initial, size: 56)))
+            else
+              AppAvatar(imageUrl: avatarUrl, initial: initial,
+                  size: 64, showRing: hasNote),
             if (isMine && !hasNote)
               Positioned(right: -2, bottom: -2, child: Container(
-                width: 18, height: 18, decoration: BoxDecoration(
+                width: 20, height: 20, decoration: BoxDecoration(
                   shape: BoxShape.circle, gradient: AppColors.accentGradient,
-                  border: Border.all(color: AppColors.bgBase, width: 2)),
-                child: const Icon(Icons.add, color: Colors.white, size: 11))),
+                  border: Border.all(color: AppColors.bgBase, width: 2),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.accentStart.withValues(alpha: 0.5),
+                      blurRadius: 10, spreadRadius: -1),
+                  ]),
+                child: const Icon(Icons.add, color: Colors.white, size: 12))),
           ]),
           const SizedBox(height: 2),
           SizedBox(width: 100, child: Text(username,
@@ -281,7 +315,7 @@ class _NoteBubble extends StatelessWidget {
   }
 }
 
-/// Note бичих/засах — текст + (зөвхөн) venue таглах
+/// Note бичих/засах — текст + (зөвхөн) venue тэмдэглэх
 class _NoteComposer extends StatefulWidget {
   final Map<String, dynamic>? existing;
   const _NoteComposer({this.existing});
@@ -300,7 +334,7 @@ class _NoteComposerState extends State<_NoteComposer> {
     super.initState();
     _ctrl = TextEditingController(text: widget.existing?['text'] as String? ?? '');
     _venueName = widget.existing?['venue_name'] as String?;
-    // existing venue_id-г мэдэхгүй (зөвхөн нэр) — дахин сонгоход шинэчлэгдэнэ
+    _venueId   = widget.existing?['venue_id'] as String?;
   }
 
   Future<void> _pickVenue() async {
@@ -308,7 +342,7 @@ class _NoteComposerState extends State<_NoteComposer> {
       context: context, backgroundColor: AppColors.bgElevated,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
       builder: (_) => const _VenueSearchSheet(),
     );
     if (v != null && mounted) {
@@ -322,26 +356,44 @@ class _NoteComposerState extends State<_NoteComposer> {
     if (text.isEmpty || me == null || _busy) return;
     setState(() => _busy = true);
     try {
+      // Хугацааг UTC-ээр бичнэ (timestamptz). Local ISO нь offset-гүй тул
+      // Postgres UTC гэж уншиж 8 цагаар ирээдүйд хадгалдаг байсныг зассан.
+      // venue_id-г үргэлж илгээнэ — null бол хуучин газрыг цэвэрлэнэ.
       await SupabaseService.client.from('notes').upsert({
         'user_id': me,
         'text': text,
-        if (_venueId != null) 'venue_id': _venueId,
-        'expires_at': DateTime.now().add(const Duration(hours: 24)).toIso8601String(),
-        'created_at': DateTime.now().toIso8601String(),
+        'venue_id': _venueId,
+        'expires_at': DateTime.now().toUtc()
+            .add(const Duration(hours: 24)).toIso8601String(),
+        'created_at': DateTime.now().toUtc().toIso8601String(),
       }, onConflict: 'user_id');
       if (mounted) Navigator.pop(context, true);
     } catch (_) {
-      if (mounted) setState(() => _busy = false);
+      if (mounted) {
+        setState(() => _busy = false);
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Хадгалж чадсангүй. Дахин оролдоно уу.'),
+          backgroundColor: AppColors.error));
+      }
     }
   }
 
   Future<void> _delete() async {
     final me = SupabaseService.currentUser?.id;
-    if (me == null) return;
+    if (me == null || _busy) return;
+    setState(() => _busy = true);
     try {
       await SupabaseService.client.from('notes').delete().eq('user_id', me);
-    } catch (_) {}
-    if (mounted) Navigator.pop(context, true);
+      if (mounted) Navigator.pop(context, true);
+    } catch (_) {
+      // Устгаж чадаагүй бол sheet хаагдахгүй, алдааг мэдэгдэнэ
+      if (mounted) {
+        setState(() => _busy = false);
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Устгаж чадсангүй. Дахин оролдоно уу.'),
+          backgroundColor: AppColors.error));
+      }
+    }
   }
 
   @override
@@ -374,8 +426,8 @@ class _NoteComposerState extends State<_NoteComposer> {
               borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none)),
         ),
         const SizedBox(height: 8),
-        // Зөвхөн venue таглах
-        GestureDetector(
+        // Зөвхөн venue тэмдэглэх
+        _Pressable(
           onTap: _pickVenue,
           child: Container(
             width: double.infinity,
@@ -388,11 +440,11 @@ class _NoteComposerState extends State<_NoteComposer> {
               Icon(Icons.location_on_outlined, size: 18,
                 color: _venueName != null ? AppColors.accentStart : AppColors.textSecondary),
               const SizedBox(width: 8),
-              Expanded(child: Text(_venueName ?? 'Газар таглах (заавал биш)',
+              Expanded(child: Text(_venueName ?? 'Газар тэмдэглэх (заавал биш)',
                 style: AppTextStyles.bodyMd.copyWith(
                   color: _venueName != null ? AppColors.textPrimary : AppColors.textSecondary))),
               if (_venueName != null)
-                GestureDetector(
+                _Pressable(
                   onTap: () => setState(() { _venueId = null; _venueName = null; }),
                   child: const Icon(Icons.close, size: 16, color: AppColors.textTertiary)),
             ]),
@@ -401,20 +453,25 @@ class _NoteComposerState extends State<_NoteComposer> {
         const SizedBox(height: 16),
         Row(children: [
           if (editing)
-            Padding(padding: const EdgeInsets.only(right: 10), child: GestureDetector(
-              onTap: _delete,
+            Padding(padding: const EdgeInsets.only(right: 10), child: _Pressable(
+              onTap: _busy ? null : _delete,
               child: Container(
-                height: 48, padding: const EdgeInsets.symmetric(horizontal: 18),
+                height: 52, padding: const EdgeInsets.symmetric(horizontal: 18),
                 decoration: BoxDecoration(
-                  color: AppColors.bgSurface, borderRadius: BorderRadius.circular(14)),
+                  color: AppColors.bgSurface,
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(color: AppColors.hairline2)),
                 alignment: Alignment.center,
                 child: const Icon(Icons.delete_outline, color: AppColors.error)))),
-          Expanded(child: GestureDetector(
+          // Primary товч — pill 52 + gradient glow
+          Expanded(child: _Pressable(
             onTap: _busy ? null : _save,
             child: Container(
-              height: 48,
+              height: 52,
               decoration: BoxDecoration(
-                gradient: AppColors.accentGradient, borderRadius: BorderRadius.circular(14)),
+                gradient: AppColors.accentGradient,
+                borderRadius: BorderRadius.circular(999),
+                boxShadow: AppColors.glowShadow(AppColors.accentStart)),
               alignment: Alignment.center,
               child: _busy
                 ? const SizedBox(width: 20, height: 20, child:
@@ -496,4 +553,90 @@ class _VenueSearchSheetState extends State<_VenueSearchSheet> {
       ]),
     );
   }
+}
+
+/// Web дээр hover cursor + дарахад бага зэрэг агших мэдрэмжтэй wrapper.
+/// (Локал — гадны area-д хамааралгүй.)
+class _Pressable extends StatefulWidget {
+  final Widget child;
+  final VoidCallback? onTap;
+  const _Pressable({required this.child, this.onTap});
+  @override
+  State<_Pressable> createState() => _PressableState();
+}
+
+class _PressableState extends State<_Pressable> {
+  bool _down = false;
+  @override
+  Widget build(BuildContext context) {
+    final enabled = widget.onTap != null;
+    return MouseRegion(
+      cursor: enabled ? SystemMouseCursors.click : MouseCursor.defer,
+      child: GestureDetector(
+        onTap: widget.onTap,
+        onTapDown: enabled ? (_) => setState(() => _down = true) : null,
+        onTapUp: enabled ? (_) => setState(() => _down = false) : null,
+        onTapCancel: enabled ? () => setState(() => _down = false) : null,
+        behavior: HitTestBehavior.opaque,
+        child: AnimatedScale(
+          scale: _down ? 0.96 : 1,
+          duration: const Duration(milliseconds: 120),
+          curve: Curves.easeOut,
+          child: widget.child,
+        ),
+      ),
+    );
+  }
+}
+
+/// Notes мөрийн skeleton — 156px өндрийг хадгалж, зөөлөн анивчина
+class _NotesRowSkeleton extends StatefulWidget {
+  const _NotesRowSkeleton();
+  @override
+  State<_NotesRowSkeleton> createState() => _NotesRowSkeletonState();
+}
+
+class _NotesRowSkeletonState extends State<_NotesRowSkeleton>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _c = AnimationController(
+    vsync: this, duration: const Duration(milliseconds: 700),
+    lowerBound: 0.4, upperBound: 1.0)..repeat(reverse: true);
+  @override
+  void dispose() { _c.dispose(); super.dispose(); }
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.only(top: 4, bottom: 6),
+      child: SizedBox(
+        height: 156,
+        child: FadeTransition(
+          opacity: _c,
+          child: ListView(
+            scrollDirection: Axis.horizontal,
+            physics: const NeverScrollableScrollPhysics(),
+            padding: const EdgeInsets.symmetric(horizontal: 18),
+            children: [for (var i = 0; i < 5; i++) const _NoteSkeletonCell()],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _NoteSkeletonCell extends StatelessWidget {
+  const _NoteSkeletonCell();
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.symmetric(horizontal: 6),
+    child: SizedBox(width: 104, child: Column(children: [
+      Container(height: 40, width: 104, decoration: BoxDecoration(
+        color: AppColors.bgSurface, borderRadius: BorderRadius.circular(12))),
+      const SizedBox(height: 6),
+      Container(width: 64, height: 64, decoration: const BoxDecoration(
+        shape: BoxShape.circle, color: AppColors.bgSurface)),
+      const SizedBox(height: 8),
+      Container(height: 9, width: 60, decoration: BoxDecoration(
+        color: AppColors.bgSurface, borderRadius: BorderRadius.circular(5))),
+    ])),
+  );
 }

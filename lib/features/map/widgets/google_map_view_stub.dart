@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'map_controller.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 
@@ -10,6 +11,7 @@ class GoogleMapView extends StatelessWidget {
   final int zoom;
   final String markersJson;
   final void Function(String venueId)? onVenueTap;
+  final LeafletMapController? controller;
   const GoogleMapView({
     super.key,
     required this.lat,
@@ -17,6 +19,7 @@ class GoogleMapView extends StatelessWidget {
     this.zoom = 13,
     this.markersJson = '[]',
     this.onVenueTap,
+    this.controller,
   });
 
   @override

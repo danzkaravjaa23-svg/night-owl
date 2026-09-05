@@ -1,5 +1,7 @@
+import 'dart:async';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -13,7 +15,9 @@ import '../../../core/utils/image_compress.dart';
 import '../../../core/constants/stickers.dart';
 import '../../../core/constants/story_music.dart';
 import '../../../core/utils/web_audio.dart';
+import '../../../core/utils/web_media_picker.dart';
 import '../providers/stories_provider.dart';
+import '../widgets/story_video.dart';
 import 'story_camera.dart';
 
 const _kStoryEmojis = [
@@ -139,6 +143,8 @@ class _CreateStoryScreenState extends ConsumerState<CreateStoryScreen> {
   Uint8List? _bytes;
   bool _isVideo = false;
   String _videoExt = 'mp4';
+  String? _videoPreviewUrl;   // blob URL — сонгосон видеог урьдчилан харах
+  int _videoDurationSecs = 5; // видеоны бодит урт (metadata-аас)
 
   // Текст overlay
   String _text = '';
@@ -173,30 +179,75 @@ class _CreateStoryScreenState extends ConsumerState<CreateStoryScreen> {
   @override
   void dispose() {
     _previewPlayer.dispose();
+    if (_videoPreviewUrl != null) revokeBlobUrl(_videoPreviewUrl!);
     super.dispose();
   }
 
+  // Видеоны preview blob URL-ыг цэвэрлэнэ
+  void _clearVideoPreview() {
+    if (_videoPreviewUrl != null) {
+      revokeBlobUrl(_videoPreviewUrl!);
+      _videoPreviewUrl = null;
+    }
+  }
+
+  void _toast(String m) => ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(m), behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 2)));
+
   // ── Медиа сонгох ──
   Future<void> _pickGallery() async {
-    final b = await ImageUploader.pickBytesFromGallery();
-    if (b != null && mounted) setState(() { _bytes = b; _isVideo = false; });
+    try {
+      // Веб дээр HTML file input найдвартай; бусад дээр image_picker
+      final b = kIsWeb
+          ? await pickImageBytes()
+          : await ImageUploader.pickBytesFromGallery();
+      if (b != null && mounted) {
+        setState(() { _bytes = b; _isVideo = false; _clearVideoPreview(); });
+      }
+    } catch (e) {
+      if (mounted) _toast('Зураг сонгоход алдаа гарлаа');
+    }
   }
 
   Future<void> _openCamera() async {
-    final b = await openStoryCamera(context); // веб: getUserMedia
-    if (b != null) {
-      if (mounted) setState(() { _bytes = b; _isVideo = false; });
-      return;
+    try {
+      final r = await openStoryCamera(context); // веб: амьд getUserMedia камер
+      if (!mounted) return;
+      if (r.bytes != null) {
+        setState(() { _bytes = r.bytes; _isVideo = false; _clearVideoPreview(); });
+        return;
+      }
+      // X дарж болиулсан бол file picker гаргахгүй
+      if (!r.unsupported) return;
+      // fallback (веб бус / камер дэмжээгүй)
+      final cam = kIsWeb
+          ? await pickCameraPhoto()
+          : await ImageUploader.pickBytesFromCamera();
+      if (cam != null && mounted) {
+        setState(() { _bytes = cam; _isVideo = false; _clearVideoPreview(); });
+      }
+    } catch (e) {
+      if (mounted) _toast('Камер нээхэд алдаа гарлаа');
     }
-    // fallback (веб бус / дэмжээгүй)
-    final cam = await ImageUploader.pickBytesFromCamera();
-    if (cam != null && mounted) setState(() { _bytes = cam; _isVideo = false; });
   }
 
   Future<void> _pickVideo() async {
-    final v = await ImageUploader.pickVideo();
-    if (v != null && mounted) {
-      setState(() { _bytes = v.bytes; _isVideo = true; _videoExt = v.ext; });
+    try {
+      final v = kIsWeb ? await pickVideoBytes() : await ImageUploader.pickVideo();
+      if (v == null || !mounted) return;
+      final mime = _videoContentType(v.ext);
+      // Бодит уртыг metadata-аас хэмжинэ — story үүнээс хойш зөв тоглоно
+      final secs = await videoDurationOf(v.bytes, mime);
+      if (!mounted) return;
+      setState(() {
+        _clearVideoPreview();
+        _bytes = v.bytes; _isVideo = true; _videoExt = v.ext;
+        _videoDurationSecs = (secs ?? 5).clamp(3, 60).round();
+        _videoPreviewUrl = createBlobUrl(v.bytes, mime);
+      });
+    } catch (e) {
+      if (mounted) _toast('Видео сонгоход алдаа гарлаа');
     }
   }
 
@@ -423,10 +474,11 @@ class _CreateStoryScreenState extends ConsumerState<CreateStoryScreen> {
             .timeout(const Duration(seconds: 60));
         bakedCaption = _text.trim().isEmpty ? null : _text.trim();
       } else {
-        // Зураг — текст/хөгжим/зураасыг зураг руу bake хийх (RepaintBoundary)
+        // Зураг — текст/зураас/filter-ийг зураг руу bake хийх (RepaintBoundary)
+        // Хөгжмийн pill bake-д ороогүй — viewer DB-ээс харуулна
         Uint8List out = _bytes!;
         final hasOverlay = _text.trim().isNotEmpty
-            || _songTitle != null || _strokes.isNotEmpty || _filter != 0;
+            || _strokes.isNotEmpty || _filter != 0;
         if (hasOverlay) {
           try {
             // Overlay-ууд (зураас гэх мэт) бүрэн зурагдаж амжихыг хүлээнэ
@@ -458,6 +510,8 @@ class _CreateStoryScreenState extends ConsumerState<CreateStoryScreen> {
         mediaUrl: url,
         mediaType: _isVideo ? 'video' : 'image',
         caption: bakedCaption,
+        // Видео бодит уртаараа тоглоно (5с дээр тайрахгүй)
+        duration: _isVideo ? _videoDurationSecs : 5,
         venueId: _venueId,
         mentions: _mentions.map((m) => m['id'] as String).toList(),
         musicUrl: _songUrl,
@@ -468,10 +522,12 @@ class _CreateStoryScreenState extends ConsumerState<CreateStoryScreen> {
       if (!mounted) return;
       if (err != null) { setState(() { _busy = false; _error = err; }); return; }
       ref.invalidate(storiesProvider);
-      if (context.canPop()) context.pop();
+      setState(() => _busy = false);
+      // Шууд URL-ээр орж ирсэн бол pop хийх юмгүй — feed рүү
+      if (context.canPop()) { context.pop(); } else { context.go('/feed'); }
     } catch (e) {
       if (mounted) {
-        setState(() { _busy = false; _error = 'Алдаа: $e'; });
+        setState(() { _busy = false; _error = 'Алдаа гарлаа. Дахин оролдоно уу.'; });
       }
     }
   }
@@ -493,89 +549,101 @@ class _CreateStoryScreenState extends ConsumerState<CreateStoryScreen> {
       body: Stack(fit: StackFit.expand, children: [
         // ── Preview ──
         if (_isVideo)
-          Container(color: Colors.black, child: const Center(child: Column(
-            mainAxisSize: MainAxisSize.min, children: [
-              Icon(Icons.movie_creation_outlined, color: Colors.white54, size: 64),
-              SizedBox(height: 12),
-              Text('Видео бэлэн', style: TextStyle(color: Colors.white54)),
-            ])))
+          _videoPreviewUrl != null
+            // Сонгосон видеог шууд урьдчилан харуулна (muted, loop)
+            ? Positioned.fill(child: StoryVideoView(
+                url: _videoPreviewUrl!, loop: true))
+            : Container(color: Colors.black, child: const Center(child: Column(
+                mainAxisSize: MainAxisSize.min, children: [
+                  Icon(Icons.movie_creation_outlined, color: Colors.white54, size: 64),
+                  SizedBox(height: 12),
+                  Text('Видео бэлэн', style: TextStyle(color: Colors.white54)),
+                ])))
         else
-          Positioned.fill(child: LayoutBuilder(builder: (ctx, cons) {
+          // Канвасыг 9:16-д барина — desktop цонхон дээр bake хийсэн зураг
+          // хэвтээ гарахаас сэргийлнэ (хажуу талд хар gutters)
+          Positioned.fill(child: Center(child: AspectRatio(
+            aspectRatio: 9 / 16,
+            child: LayoutBuilder(builder: (ctx, cons) {
             final w = cons.maxWidth, h = cons.maxHeight;
             final pos = _textPos ?? Offset(w * 0.1, h * 0.42);
-            return RepaintBoundary(
-              key: _boundaryKey,
-              child: Stack(children: [
-                Positioned.fill(child: _filtered(_filter,
-                    Image.memory(_bytes!, fit: BoxFit.cover))),
-                // Зурсан зураас
-                if (_strokes.isNotEmpty)
-                  Positioned.fill(child: IgnorePointer(
-                    child: CustomPaint(painter: _DrawPainter(_strokes)))),
-                if (hasText)
-                  Positioned(
-                    left: pos.dx, top: pos.dy,
-                    child: GestureDetector(
-                      behavior: HitTestBehavior.opaque,
-                      onPanUpdate: _drawMode ? null : (d) => setState(() {
-                        final cur = _textPos ?? Offset(w * 0.1, h * 0.42);
-                        _textPos = cur + d.delta;
-                      }),
-                      onTap: _drawMode ? null : _editText,
-                      child: SizedBox(width: w * 0.8, child: Text(
-                        _text, textAlign: TextAlign.center,
-                        style: _textStyle(30).copyWith(shadows: const [
-                          Shadow(blurRadius: 12, color: Colors.black54)]))),
-                    )),
-                // Хөгжмийн sticker (чирэгддэг)
-                if (_songTitle != null)
-                  Positioned(
-                    left: (_songPos ?? Offset(w * 0.16, h * 0.8)).dx,
-                    top: (_songPos ?? Offset(w * 0.16, h * 0.8)).dy,
-                    child: GestureDetector(
-                      behavior: HitTestBehavior.opaque,
-                      onPanUpdate: _drawMode ? null : (d) => setState(() {
-                        final cur = _songPos ?? Offset(w * 0.16, h * 0.8);
-                        _songPos = cur + d.delta;
-                      }),
-                      onTap: _drawMode ? null : _musicSheet,
-                      child: Container(
-                        padding: const EdgeInsets.fromLTRB(10, 7, 14, 7),
-                        decoration: BoxDecoration(
-                          color: Colors.black.withValues(alpha: 0.55),
-                          borderRadius: BorderRadius.circular(22),
-                          border: Border.all(color: Colors.white24)),
-                        child: Row(mainAxisSize: MainAxisSize.min, children: [
-                          const Icon(Icons.music_note_rounded,
-                            color: Colors.white, size: 16),
-                          const SizedBox(width: 6),
-                          ConstrainedBox(
-                            constraints: BoxConstraints(maxWidth: w * 0.6),
-                            child: Text('$_songTitle · $_songArtist',
-                              maxLines: 1, overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(color: Colors.white,
-                                fontSize: 13, fontWeight: FontWeight.w600))),
-                        ]),
-                      ),
-                    )),
-                // Зурах горимын gesture overlay (хамгийн дээр)
-                if (_drawMode)
-                  Positioned.fill(child: GestureDetector(
+            return Stack(fit: StackFit.expand, children: [
+              RepaintBoundary(
+                key: _boundaryKey,
+                child: Stack(fit: StackFit.expand, children: [
+                  Positioned.fill(child: _filtered(_filter,
+                      Image.memory(_bytes!, fit: BoxFit.cover))),
+                  // Зурсан зураас
+                  if (_strokes.isNotEmpty)
+                    Positioned.fill(child: IgnorePointer(
+                      child: CustomPaint(painter: _DrawPainter(_strokes)))),
+                  if (hasText)
+                    Positioned(
+                      left: pos.dx, top: pos.dy,
+                      child: GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onPanUpdate: _drawMode ? null : (d) => setState(() {
+                          final cur = _textPos ?? Offset(w * 0.1, h * 0.42);
+                          _textPos = cur + d.delta;
+                        }),
+                        onTap: _drawMode ? null : _editText,
+                        child: SizedBox(width: w * 0.8, child: Text(
+                          _text, textAlign: TextAlign.center,
+                          style: _textStyle(30).copyWith(shadows: const [
+                            Shadow(blurRadius: 12, color: Colors.black54)]))),
+                      )),
+                ]),
+              ),
+              // Хөгжмийн sticker (чирэгддэг) — bake-д ОРОХГҮЙ:
+              // viewer DB-ийн music_title/artist-аас өөрөө харуулдаг тул
+              // зурагт бас baked байвал давхардана
+              if (_songTitle != null)
+                Positioned(
+                  left: (_songPos ?? Offset(w * 0.16, h * 0.8)).dx,
+                  top: (_songPos ?? Offset(w * 0.16, h * 0.8)).dy,
+                  child: GestureDetector(
                     behavior: HitTestBehavior.opaque,
-                    onPanStart: (d) => setState(() {
-                      final s = _Stroke(_kTextColors[_drawColor], 5);
-                      s.points.add(d.localPosition);
-                      _strokes.add(s);
+                    onPanUpdate: _drawMode ? null : (d) => setState(() {
+                      final cur = _songPos ?? Offset(w * 0.16, h * 0.8);
+                      _songPos = cur + d.delta;
                     }),
-                    onPanUpdate: (d) => setState(() {
-                      if (_strokes.isNotEmpty) {
-                        _strokes.last.points.add(d.localPosition);
-                      }
-                    }),
+                    onTap: _drawMode ? null : _musicSheet,
+                    child: Container(
+                      padding: const EdgeInsets.fromLTRB(10, 7, 14, 7),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.55),
+                        borderRadius: BorderRadius.circular(22),
+                        border: Border.all(color: Colors.white24)),
+                      child: Row(mainAxisSize: MainAxisSize.min, children: [
+                        const Icon(Icons.music_note_rounded,
+                          color: Colors.white, size: 16),
+                        const SizedBox(width: 6),
+                        ConstrainedBox(
+                          constraints: BoxConstraints(maxWidth: w * 0.6),
+                          child: Text('$_songTitle · $_songArtist',
+                            maxLines: 1, overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(color: Colors.white,
+                              fontSize: 13, fontWeight: FontWeight.w600))),
+                      ]),
+                    ),
                   )),
-              ]),
-            );
-          })),
+              // Зурах горимын gesture overlay (хамгийн дээр)
+              if (_drawMode)
+                Positioned.fill(child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onPanStart: (d) => setState(() {
+                    final s = _Stroke(_kTextColors[_drawColor], 5);
+                    s.points.add(d.localPosition);
+                    _strokes.add(s);
+                  }),
+                  onPanUpdate: (d) => setState(() {
+                    if (_strokes.isNotEmpty) {
+                      _strokes.last.points.add(d.localPosition);
+                    }
+                  }),
+                )),
+            ]);
+          })))),
 
         // Caption (видеоны үед — bake хийхгүй тул overlay)
         if (_isVideo && hasText)
@@ -590,10 +658,12 @@ class _CreateStoryScreenState extends ConsumerState<CreateStoryScreen> {
             colors: [Colors.black45, Colors.transparent, Colors.transparent, Colors.black87],
             stops: [0, 0.16, 0.62, 1])))),
 
-        // Дээд: хаах
+        // Дээд: хаах (шууд URL-ээр орсон бол feed рүү)
         SafeArea(child: Align(alignment: Alignment.topLeft, child: Padding(
           padding: const EdgeInsets.all(8),
-          child: _circleBtn(Icons.close, () => context.pop())))),
+          child: _circleBtn(Icons.close, () {
+            if (context.canPop()) { context.pop(); } else { context.go('/feed'); }
+          })))),
 
         // Баруун toolbar
         SafeArea(child: Align(alignment: Alignment.topRight, child: Padding(
@@ -670,9 +740,12 @@ class _CreateStoryScreenState extends ConsumerState<CreateStoryScreen> {
         SafeArea(top: false, child: Align(alignment: Alignment.bottomCenter,
           child: Padding(padding: const EdgeInsets.fromLTRB(14, 0, 14, 12),
             child: Column(mainAxisSize: MainAxisSize.min, children: [
-              // ── Filter сонгох зурвас ──
-              if (!_isVideo && _filterBar && !_drawMode && _bytes != null)
-                Padding(
+              // ── Filter сонгох зурвас (зөөлөн нээгдэж/хаагдана) ──
+              AnimatedSize(
+                duration: const Duration(milliseconds: 200),
+                curve: Curves.easeOut,
+                child: (!_isVideo && _filterBar && !_drawMode && _bytes != null)
+                  ? Padding(
                   padding: const EdgeInsets.only(bottom: 12),
                   child: SizedBox(
                     height: 86,
@@ -682,7 +755,7 @@ class _CreateStoryScreenState extends ConsumerState<CreateStoryScreen> {
                       separatorBuilder: (_, __) => const SizedBox(width: 10),
                       itemBuilder: (_, i) {
                         final sel = _filter == i;
-                        return GestureDetector(
+                        return _Pressable(
                           onTap: () => setState(() => _filter = i),
                           child: Column(mainAxisSize: MainAxisSize.min, children: [
                             Container(
@@ -693,9 +766,11 @@ class _CreateStoryScreenState extends ConsumerState<CreateStoryScreen> {
                                 border: Border.all(
                                   color: sel ? AppColors.accentStart : Colors.white24,
                                   width: sel ? 2.5 : 1)),
+                              // cacheWidth — том зургийг thumbnail бүрт бүтэн
+                              // хэмжээгээр нь 9 удаа decode хийхгүй
                               child: _filtered(i,
                                 Image.memory(_bytes!, fit: BoxFit.cover,
-                                  width: 52, height: 64)),
+                                  width: 52, height: 64, cacheWidth: 104)),
                             ),
                             const SizedBox(height: 4),
                             Text(_kFilters[i].name, style: TextStyle(
@@ -707,7 +782,8 @@ class _CreateStoryScreenState extends ConsumerState<CreateStoryScreen> {
                       },
                     ),
                   ),
-                ),
+                )
+                  : const SizedBox(width: double.infinity)),
               if (_venueName != null || _mentions.isNotEmpty)
                 Padding(padding: const EdgeInsets.only(bottom: 10),
                   child: Wrap(spacing: 6, runSpacing: 6, alignment: WrapAlignment.center,
@@ -722,9 +798,12 @@ class _CreateStoryScreenState extends ConsumerState<CreateStoryScreen> {
               if (_error != null)
                 Padding(padding: const EdgeInsets.only(bottom: 8),
                   child: Text(_error!, style: AppTextStyles.bodyXs.copyWith(color: AppColors.error))),
-              GestureDetector(
+              _Pressable(
                 onTap: _busy ? null : _share,
-                child: Container(
+                child: AnimatedOpacity(
+                  opacity: _busy ? 0.75 : 1,
+                  duration: const Duration(milliseconds: 150),
+                  child: Container(
                   height: 50, width: double.infinity,
                   decoration: BoxDecoration(gradient: AppColors.accentGradient,
                     borderRadius: BorderRadius.circular(16)),
@@ -737,7 +816,7 @@ class _CreateStoryScreenState extends ConsumerState<CreateStoryScreen> {
                           style: AppTextStyles.btn.copyWith(color: Colors.white)),
                         const SizedBox(width: 8),
                         const Icon(Icons.send_rounded, color: Colors.white, size: 18),
-                      ])),
+                      ]))),
               ),
               const SizedBox(height: 6),
               Text('24 цагийн дараа автоматаар алга болно',
@@ -752,7 +831,9 @@ class _CreateStoryScreenState extends ConsumerState<CreateStoryScreen> {
     backgroundColor: Colors.black,
     appBar: AppBar(
       backgroundColor: Colors.black, elevation: 0,
-      leading: IconButton(onPressed: () => context.pop(),
+      leading: IconButton(onPressed: () {
+        if (context.canPop()) { context.pop(); } else { context.go('/feed'); }
+      },
         icon: const Icon(Icons.close, color: Colors.white)),
       title: Text('Шинэ story', style: AppTextStyles.labelLg.copyWith(color: Colors.white)),
     ),
@@ -760,9 +841,9 @@ class _CreateStoryScreenState extends ConsumerState<CreateStoryScreen> {
       const Icon(Icons.auto_awesome, color: Colors.white38, size: 64),
       const SizedBox(height: 20),
       Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-        _bigPick(Icons.photo_library_outlined, 'Gallery', _pickGallery),
+        _bigPick(Icons.photo_library_outlined, 'Зургийн сан', _pickGallery),
         const SizedBox(width: 12),
-        _bigPick(Icons.camera_alt_outlined, 'Camera', _openCamera),
+        _bigPick(Icons.camera_alt_outlined, 'Камер', _openCamera),
         const SizedBox(width: 12),
         _bigPick(Icons.videocam_outlined, 'Видео', _pickVideo),
       ]),
@@ -770,7 +851,7 @@ class _CreateStoryScreenState extends ConsumerState<CreateStoryScreen> {
   );
 
   Widget _bigPick(IconData icon, String label, VoidCallback onTap) =>
-      GestureDetector(onTap: onTap, child: Container(
+      _Pressable(onTap: onTap, child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
         decoration: BoxDecoration(
           color: AppColors.bgSurface, borderRadius: BorderRadius.circular(14)),
@@ -780,7 +861,7 @@ class _CreateStoryScreenState extends ConsumerState<CreateStoryScreen> {
           Text(label, style: AppTextStyles.bodyXs.copyWith(color: Colors.white)),
         ])));
 
-  Widget _circleBtn(IconData icon, VoidCallback onTap) => GestureDetector(
+  Widget _circleBtn(IconData icon, VoidCallback onTap) => _Pressable(
     onTap: onTap, child: Container(
       width: 38, height: 38,
       decoration: const BoxDecoration(shape: BoxShape.circle, color: Colors.black38),
@@ -791,7 +872,8 @@ class _CreateStoryScreenState extends ConsumerState<CreateStoryScreen> {
 
   Widget _toolBtnChild(Widget child, VoidCallback onTap, {bool active = false}) =>
       Padding(padding: const EdgeInsets.only(bottom: 14),
-        child: GestureDetector(onTap: onTap, child: Container(
+        child: _Pressable(onTap: onTap, child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
           width: 42, height: 42, alignment: Alignment.center,
           decoration: BoxDecoration(shape: BoxShape.circle,
             color: active ? AppColors.accentStart : Colors.black38),
@@ -805,9 +887,43 @@ class _CreateStoryScreenState extends ConsumerState<CreateStoryScreen> {
       const SizedBox(width: 4),
       Text(label, style: const TextStyle(color: Colors.white, fontSize: 12)),
       const SizedBox(width: 2),
-      GestureDetector(onTap: onClear,
-        child: const Icon(Icons.close, color: Colors.white60, size: 14)),
+      _Pressable(onTap: onClear,
+        child: const Padding(padding: EdgeInsets.all(3),
+          child: Icon(Icons.close, color: Colors.white60, size: 14))),
     ]));
+}
+
+// Дарахад жижигрэх + hover курсор — веб мэдрэмж
+class _Pressable extends StatefulWidget {
+  final Widget child;
+  final VoidCallback? onTap;
+  const _Pressable({required this.child, this.onTap});
+  @override
+  State<_Pressable> createState() => _PressableState();
+}
+
+class _PressableState extends State<_Pressable> {
+  bool _down = false;
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      cursor: widget.onTap == null
+          ? SystemMouseCursors.basic : SystemMouseCursors.click,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTapDown: widget.onTap == null
+            ? null : (_) => setState(() => _down = true),
+        onTapCancel: () => setState(() => _down = false),
+        onTapUp: (_) => setState(() => _down = false),
+        onTap: widget.onTap,
+        child: AnimatedScale(
+          scale: _down ? 0.93 : 1.0,
+          duration: const Duration(milliseconds: 120),
+          curve: Curves.easeOut,
+          child: widget.child),
+      ),
+    );
+  }
 }
 
 enum _PickerMode { venue, user }
@@ -823,33 +939,51 @@ class _PickerSheetState extends State<_PickerSheet> {
   final _searchCtrl = TextEditingController();
   List<Map<String, dynamic>> _results = [];
   bool _loading = false;
+  bool _failed = false; // сүлжээний алдаа — "олдсонгүй"-ээс ялгаатай
+  Timer? _debounce;
+  int _reqSeq = 0; // хоцорсон хариу шинэ үр дүнг дарж бичихээс сэргийлнэ
 
   @override
   void initState() { super.initState(); _search(''); }
 
+  // Keystroke бүрт биш — 300мс debounce-тэй хайна
+  void _onQueryChanged(String q) {
+    _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 300), () => _search(q));
+  }
+
   Future<void> _search(String q) async {
+    final myReq = ++_reqSeq;
     setState(() => _loading = true);
     try {
+      List<Map<String, dynamic>> results;
       if (widget.mode == _PickerMode.venue) {
         var query = SupabaseService.client.from('venues').select('id, name, district');
         if (q.isNotEmpty) query = query.ilike('name', '%$q%');
         final data = await query.limit(30);
-        _results = (data as List).cast<Map<String, dynamic>>();
+        results = (data as List).cast<Map<String, dynamic>>();
       } else {
         final me = SupabaseService.currentUser?.id;
         var query = SupabaseService.client
             .from('profiles').select('id, username, avatar_url');
         if (q.isNotEmpty) query = query.ilike('username', '%$q%');
         final data = await query.limit(30);
-        _results = (data as List).cast<Map<String, dynamic>>()
+        results = (data as List).cast<Map<String, dynamic>>()
             .where((p) => p['id'] != me).toList();
       }
-    } catch (_) { _results = []; }
-    if (mounted) setState(() => _loading = false);
+      if (myReq != _reqSeq) return; // хуучин хүсэлт — хэрэгсэхгүй
+      _results = results;
+      _failed = false;
+    } catch (_) {
+      if (myReq != _reqSeq) return;
+      _results = [];
+      _failed = true;
+    }
+    if (mounted && myReq == _reqSeq) setState(() => _loading = false);
   }
 
   @override
-  void dispose() { _searchCtrl.dispose(); super.dispose(); }
+  void dispose() { _debounce?.cancel(); _searchCtrl.dispose(); super.dispose(); }
 
   @override
   Widget build(BuildContext context) {
@@ -866,7 +1000,8 @@ class _PickerSheetState extends State<_PickerSheet> {
         TextField(
           controller: _searchCtrl, autofocus: true,
           style: AppTextStyles.bodyMd.copyWith(color: AppColors.textPrimary),
-          onChanged: _search,
+          // Keystroke бүрт биш — 300мс debounce-тэй хайна
+          onChanged: _onQueryChanged,
           decoration: InputDecoration(
             hintText: isVenue ? 'Газар хайх...' : '@ хэрэглэгч хайх...',
             prefixIcon: const Icon(Icons.search, color: AppColors.textTertiary),
@@ -881,7 +1016,11 @@ class _PickerSheetState extends State<_PickerSheet> {
             ? const Center(child: CircularProgressIndicator(
                 color: AppColors.accentStart, strokeWidth: 2))
             : _results.isEmpty
-              ? Center(child: Text(isVenue ? 'Газар олдсонгүй' : 'Хэрэглэгч олдсонгүй',
+              ? Center(child: Text(
+                  _failed
+                    ? 'Сүлжээний алдаа. Дахин оролдоно уу.'
+                    : isVenue ? 'Газар олдсонгүй' : 'Хэрэглэгч олдсонгүй',
+                  textAlign: TextAlign.center,
                   style: AppTextStyles.bodyMd.copyWith(color: AppColors.textSecondary)))
               : ListView.builder(
                   itemCount: _results.length,

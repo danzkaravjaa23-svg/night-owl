@@ -4,12 +4,13 @@ import 'package:share_plus/share_plus.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/services/supabase_service.dart';
+import '../utils/app_links.dart';
 
 /// Найзаа урих — урилгын холбоос хуваалцах/хуулах bottom sheet
 Future<void> showInviteSheet(BuildContext context) async {
   final uid = SupabaseService.currentUser?.id ?? '';
   final ref = uid.length >= 8 ? uid.substring(0, 8) : uid;
-  final link = 'https://nightowl.ub/join?ref=$ref';
+  final link = inviteLink(ref);
   const msg = '🦉 Night Owl UB — Улаанбаатарын шөнийн амьдралын апп. '
       'Над дээр нэгдээрэй!';
 
@@ -52,7 +53,9 @@ Future<void> showInviteSheet(BuildContext context) async {
           const SizedBox(height: 16),
 
           // Хуваалцах
-          GestureDetector(
+          MouseRegion(
+            cursor: SystemMouseCursors.click,
+            child: GestureDetector(
             onTap: () async {
               Navigator.of(sheetCtx).pop();
               try {
@@ -74,11 +77,13 @@ Future<void> showInviteSheet(BuildContext context) async {
               child: Center(child: Text('Хуваалцах',
                 style: AppTextStyles.btn.copyWith(color: Colors.white))),
             ),
-          ),
+          )),
           const SizedBox(height: 10),
 
           // Холбоос хуулах
-          GestureDetector(
+          MouseRegion(
+            cursor: SystemMouseCursors.click,
+            child: GestureDetector(
             onTap: () async {
               await Clipboard.setData(ClipboardData(text: link));
               if (sheetCtx.mounted) Navigator.of(sheetCtx).pop();
@@ -97,7 +102,7 @@ Future<void> showInviteSheet(BuildContext context) async {
               child: Center(child: Text('Холбоос хуулах',
                 style: AppTextStyles.btn.copyWith(color: AppColors.textPrimary))),
             ),
-          ),
+          )),
         ]),
       ),
     ),

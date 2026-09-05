@@ -62,7 +62,10 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
       appBar: AppBar(
         backgroundColor: AppColors.bgBase,
         leading: IconButton(
-          onPressed: () => context.pop(),
+          // Deep link-ээр орж ирсэн үед pop хийх юмгүй — settings рүү
+          onPressed: () {
+            if (context.canPop()) { context.pop(); } else { context.go('/settings'); }
+          },
           icon: const Icon(Icons.arrow_back_ios_new, size: 20)),
         title: Text('Админ панел', style: AppTextStyles.h2),
         actions: [
@@ -119,33 +122,45 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Icon(icon, color: color, size: 22),
         const SizedBox(height: 10),
-        Text(_loading ? '…' : (value?.toString() ?? '—'),
-            style: AppTextStyles.displaySm.copyWith(color: AppColors.textPrimary)),
+        // Утга ирэхэд зөөлөн солигдоно
+        AnimatedSwitcher(
+          duration: const Duration(milliseconds: 200),
+          switchInCurve: Curves.easeOut,
+          child: Text(_loading ? '…' : (value?.toString() ?? '—'),
+              key: ValueKey(_loading ? '…' : '$value'),
+              style: AppTextStyles.displaySm.copyWith(color: AppColors.textPrimary))),
         const SizedBox(height: 2),
         Text(label, style: AppTextStyles.bodyXs.copyWith(color: AppColors.textSecondary)),
       ]),
     ),
   );
 
-  Widget _tile(IconData icon, String title, String sub, VoidCallback onTap) => GestureDetector(
-    onTap: onTap,
-    child: Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppColors.bgElevated,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.hairline),
+  // GestureDetector → InkWell: web дээр hover cursor + ripple feedback өгнө
+  Widget _tile(IconData icon, String title, String sub, VoidCallback onTap) => Container(
+    margin: const EdgeInsets.only(bottom: 10),
+    decoration: BoxDecoration(
+      borderRadius: BorderRadius.circular(14),
+      border: Border.all(color: AppColors.hairline),
+    ),
+    child: Material(
+      color: AppColors.bgElevated,
+      borderRadius: BorderRadius.circular(14),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Row(children: [
+            Icon(icon, color: AppColors.accentStart, size: 22),
+            const SizedBox(width: 12),
+            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(title, style: AppTextStyles.labelMd.copyWith(color: AppColors.textPrimary)),
+              Text(sub, style: AppTextStyles.bodyXs.copyWith(color: AppColors.textSecondary)),
+            ])),
+            const Icon(Icons.chevron_right, color: AppColors.textTertiary),
+          ]),
+        ),
       ),
-      child: Row(children: [
-        Icon(icon, color: AppColors.accentStart, size: 22),
-        const SizedBox(width: 12),
-        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(title, style: AppTextStyles.labelMd.copyWith(color: AppColors.textPrimary)),
-          Text(sub, style: AppTextStyles.bodyXs.copyWith(color: AppColors.textSecondary)),
-        ])),
-        const Icon(Icons.chevron_right, color: AppColors.textTertiary),
-      ]),
     ),
   );
 }

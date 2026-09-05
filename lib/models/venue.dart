@@ -1,4 +1,7 @@
 /// Venue — pub / lounge / nightclub / restaurant / rooftop
+/// АНХААР: address / photos / verified / is_open / opening_hours багана
+/// одоогийн live DB-д БАЙХГҮЙ (42703) — fromJson default утга өгдөг тул
+/// эдгээр талбар үргэлж хоосон/false байна. Migration хийсний дараа идэвхжинэ.
 class Venue {
   final String id;
   final String name;

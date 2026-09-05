@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/services/supabase_service.dart';
@@ -31,10 +33,13 @@ class AuthNotifier extends StateNotifier<AsyncValue<UserProfile?>> {
     _init();
   }
 
+  StreamSubscription<AuthState>? _sub;
+
   void _init() {
-    SupabaseService.authStream.listen((state) async {
+    _sub = SupabaseService.authStream.listen((state) async {
       final user = state.session?.user;
       if (user == null) {
+        if (!mounted) return;
         this.state = const AsyncValue.data(null);
         return;
       }
@@ -44,21 +49,33 @@ class AuthNotifier extends StateNotifier<AsyncValue<UserProfile?>> {
             .select()
             .eq('id', user.id)
             .maybeSingle();
+        // await-ийн дараа notifier dispose хийгдсэн байж болно
+        if (!mounted) return;
         this.state = AsyncValue.data(
             data != null ? UserProfile.fromJson(data) : null);
       } catch (e, st) {
+        if (!mounted) return;
         this.state = AsyncValue.error(e, st);
       }
     });
   }
 
+  @override
+  void dispose() {
+    _sub?.cancel();
+    super.dispose();
+  }
+
   Future<void> signOut() async {
     await SupabaseService.client.auth.signOut();
+    if (!mounted) return;
     state = const AsyncValue.data(null);
   }
 
   Future<void> updateProfile(Map<String, dynamic> updates) async {
-    final user = SupabaseService.currentUser!;
+    // Session дууссан үед null байж болно — crash хийхгүй
+    final user = SupabaseService.currentUser;
+    if (user == null) return;
     await SupabaseService.client
         .from('profiles')
         .update({...updates, 'updated_at': DateTime.now().toIso8601String()})
@@ -69,6 +86,7 @@ class AuthNotifier extends StateNotifier<AsyncValue<UserProfile?>> {
         .select()
         .eq('id', user.id)
         .single();
+    if (!mounted) return;
     state = AsyncValue.data(UserProfile.fromJson(data));
   }
 }

@@ -58,16 +58,18 @@ class AppTheme {
         elevation: 0,
       ),
       cardTheme: CardThemeData(
-        color: elevated,
+        // Glass карт — 72% alpha elevated + hairline хүрээ, радиус 20
+        color: isDark ? elevated.withValues(alpha: 0.72) : elevated,
         elevation: 0,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(22),
+          borderRadius: BorderRadius.circular(20),
           side: BorderSide(color: hairline),
         ),
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: surface,
+        // Шилэн талбар — dark горимд бага зэрэг тунгалаг
+        fillColor: isDark ? surface.withValues(alpha: 0.72) : surface,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
           borderSide: BorderSide(color: hairline),
@@ -78,10 +80,22 @@ class AppTheme {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: AppColors.neonCyan, width: 1.5),
+          borderSide: const BorderSide(color: AppColors.neonCyan, width: 1.4),
         ),
-        hintStyle: TextStyle(color: textSec, fontSize: 14),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide(
+              color: AppColors.error.withValues(alpha: 0.6)),
+        ),
+        focusedErrorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: const BorderSide(color: AppColors.error, width: 1.4),
+        ),
+        hintStyle: TextStyle(color: textSec.withValues(alpha: 0.8), fontSize: 14),
         labelStyle: TextStyle(color: textSec, fontSize: 14),
+        errorStyle: const TextStyle(color: AppColors.error, fontSize: 12),
+        prefixIconColor: textSec,
+        suffixIconColor: textSec,
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
@@ -118,9 +132,18 @@ class AppTheme {
       ),
       iconTheme: IconThemeData(color: textPri, size: 24),
       snackBarTheme: SnackBarThemeData(
-        backgroundColor: elevated,
-        contentTextStyle: TextStyle(color: textPri),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        // Glass dark — хөвөгч, hairline хүрээтэй, радиус 14
+        backgroundColor: isDark ? const Color(0xF0121218) : elevated,
+        contentTextStyle: GoogleFonts.inter(
+            color: isDark ? AppColors.textPrimary : textPri,
+            fontSize: 14, fontWeight: FontWeight.w500),
+        actionTextColor: AppColors.neonCyan,
+        elevation: 0,
+        insetPadding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(14),
+          side: BorderSide(color: isDark ? AppColors.hairline : hairline),
+        ),
         behavior: SnackBarBehavior.floating,
       ),
     );

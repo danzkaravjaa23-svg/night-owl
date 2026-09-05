@@ -5,12 +5,31 @@ import '../../../models/user_profile.dart';
 
 // ─── Active stories grouped by user ──────────────────────────────────────────
 final storiesProvider = FutureProvider<List<StoryRing>>((ref) async {
-  // Fetch stories from users I follow + my own
+  // Зөвхөн дагадаг хүмүүс + өөрийн story (500к scale дээр global fetch болохгүй)
   final me = SupabaseService.currentUser?.id;
 
-  final data = await SupabaseService.client
+  List<String> targetIds = [];
+  if (me != null) {
+    try {
+      final f = await SupabaseService.client
+          .from('follows')
+          .select('following_id')
+          .eq('follower_id', me);
+      targetIds = (f as List)
+          .map((e) => e['following_id'].toString())
+          .toList();
+    } catch (_) {}
+    targetIds.add(me); // өөрийн story үргэлж багтана
+  }
+
+  var query = SupabaseService.client
       .from('stories')
       .select('*, profiles!user_id (id, username, avatar_url, is_verified), venues!venue_id (name)')
+      // Хугацаа дууссан story-г сервер талд шүүнэ (200 мөрийн limit үрэхгүй)
+      .gt('expires_at', DateTime.now().toUtc().toIso8601String());
+  if (targetIds.isNotEmpty) query = query.inFilter('user_id', targetIds);
+
+  final data = await query
       .order('created_at', ascending: false)
       .limit(200);
 
@@ -86,7 +105,8 @@ class StoryService {
         'media_url':  mediaUrl,
         'media_type': mediaType,
         'caption':    caption,
-        'duration':   duration,
+        // Видеоны бодит урт (create талд хэмжсэн), зураг 5с
+        'duration':   duration.clamp(1, 120),
         if (venueId != null) 'venue_id': venueId,
         if (mentions.isNotEmpty) 'mentions': mentions,
         if (musicUrl != null) 'music_url': musicUrl,
@@ -130,10 +150,11 @@ class StoryService {
     }
   }
 
-  /// Story лайк toggle (like=true → нэмэх, false → хасах)
-  static Future<void> toggleLike(String storyId, bool like) async {
+  /// Story лайк toggle (like=true → нэмэх, false → хасах).
+  /// Амжилттай бол true — UI optimistic төлөвөө буцаахад ашиглана.
+  static Future<bool> toggleLike(String storyId, bool like) async {
     final me = SupabaseService.currentUser?.id;
-    if (me == null) return;
+    if (me == null) return false;
     try {
       if (like) {
         await SupabaseService.client.from('story_likes').upsert({
@@ -147,6 +168,9 @@ class StoryService {
             .eq('story_id', storyId)
             .eq('user_id', me);
       }
-    } catch (_) {}
+      return true;
+    } catch (_) {
+      return false;
+    }
   }
 }

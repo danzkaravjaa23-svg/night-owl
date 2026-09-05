@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/services/supabase_service.dart';
 import '../../../core/constants/app_constants.dart';
@@ -12,17 +13,42 @@ class FeedNotifier extends StateNotifier<AsyncValue<List<Post>>> {
   DateTime? _cursor;   // сүүлд татсан постын created_at (keyset pagination)
   bool _hasMore = true;
   bool _loading = false;
+  Future<void>? _inflight;
+
+  /// Дараагийн хуудас бий эсэх — footer spinner-ийг зөв харуулна
+  final ValueNotifier<bool> hasMore = ValueNotifier(true);
+  /// Хуудас ачаалахад алдаа гарсан эсэх — footer дээр retry харуулна
+  final ValueNotifier<bool> pageError = ValueNotifier(false);
+
+  @override
+  void dispose() {
+    hasMore.dispose();
+    pageError.dispose();
+    super.dispose();
+  }
 
   Future<void> loadFeed({bool refresh = false}) async {
-    // refresh ч in-flight ачааллыг дайрахгүй (cursor/state race-ээс сэргийлнэ)
-    if (_loading) return;
+    // In-flight ачаалалтай үед: pagination бол алгасна,
+    // refresh бол дуусахыг нь хүлээгээд дараа нь шинэчилнэ (silent no-op болохгүй)
+    while (_loading) {
+      if (!refresh) return;
+      try { await _inflight; } catch (_) {}
+    }
+    if (!refresh && !_hasMore) return;
+    final f = _doLoad(refresh: refresh);
+    _inflight = f;
+    await f;
+  }
+
+  Future<void> _doLoad({required bool refresh}) async {
     if (refresh) {
       _cursor  = null;
       _hasMore = true;
-      state    = const AsyncValue.loading();
+      // Хуучин дата байвал skeleton flash хийхгүй — RefreshIndicator л хангалттай
+      if (state.value == null) state = const AsyncValue.loading();
     }
-    if (!_hasMore) return;
     _loading = true;
+    if (pageError.value) pageError.value = false;
 
     try {
       final userId = SupabaseService.currentUser?.id;
@@ -63,21 +89,29 @@ class FeedNotifier extends StateNotifier<AsyncValue<List<Post>>> {
       final merged = [...existing, ...fetched.where((p) => seen.add(p.id))];
 
       state = AsyncValue.data(merged);
+      hasMore.value = _hasMore;
     } catch (e, st) {
-      if (refresh) state = AsyncValue.error(e, st);
+      if (refresh && state.value == null) {
+        // Анхны ачаалал бүтэлгүйтвэл бүтэн error state
+        state = AsyncValue.error(e, st);
+      } else {
+        // Дата хэвээр үлдээж, footer дээр retry товч харуулна
+        pageError.value = true;
+      }
     } finally {
       _loading = false;
     }
   }
 
-  // ── Optimistic like toggle ──────────────────────────────────────────────────
-  Future<void> toggleLike(String postId) async {
+  // ── Optimistic like toggle (фийдэд байгаа пост) ─────────────────────────────
+  /// true = амжилттай, false = DB бичилт бүтэлгүйтэж rollback хийсэн
+  Future<bool> toggleLike(String postId) async {
     final user = SupabaseService.currentUser;
-    if (user == null) return;
+    if (user == null) return false;
 
     final current = List<Post>.from(state.value ?? []);
     final idx = current.indexWhere((p) => p.id == postId);
-    if (idx == -1) return;
+    if (idx == -1) return false;
 
     final post     = current[idx];
     final nowLiked = !post.isLikedByMe;
@@ -90,49 +124,50 @@ class FeedNotifier extends StateNotifier<AsyncValue<List<Post>>> {
     state = AsyncValue.data(current);
 
     try {
-      if (nowLiked) {
-        await SupabaseService.client.from('likes').insert({
-          'user_id': user.id,
-          'post_id': postId,
-        });
-      } else {
-        await SupabaseService.client
-            .from('likes')
-            .delete()
-            .eq('user_id', user.id)
-            .eq('post_id', postId);
-      }
+      await _writeLike(user.id, postId, nowLiked);
+      return true;
     } catch (_) {
       // Rollback
       final rollback = List<Post>.from(state.value ?? []);
       final i = rollback.indexWhere((p) => p.id == postId);
       if (i != -1) rollback[i] = post;
       state = AsyncValue.data(rollback);
+      return false;
     }
   }
 
-  // ── Create post ─────────────────────────────────────────────────────────────
-  Future<String?> createPost({
-    required String caption,
-    required String mediaUrl,
-    String mediaType = 'image',
-    String? venueId,
-  }) async {
+  // ── Like toggle by id — фийдэд байхгүй пост дээр ч DB бичилт хийнэ ─────────
+  /// Post detail гэх мэт фийдийн гаднаас нээгдсэн постод хэрэглэнэ.
+  /// true = амжилттай (caller optimistic state-ээ хадгална), false = rollback хий.
+  Future<bool> toggleLikeById(String postId, bool currentlyLiked) async {
     final user = SupabaseService.currentUser;
-    if (user == null) return 'Not logged in';
+    if (user == null) return false;
 
+    // Фийдэд байвал optimistic toggle (feed картууд ч мөн шинэчлэгдэнэ)
+    if ((state.value ?? []).any((p) => p.id == postId)) {
+      return toggleLike(postId);
+    }
+    // Фийдэд байхгүй — DB рүү шууд бичнэ
     try {
-      await SupabaseService.client.from('posts').insert({
-        'user_id':    user.id,
-        'venue_id':   venueId,
-        'caption':    caption,
-        'media_url':  mediaUrl,
-        'media_type': mediaType,
+      await _writeLike(user.id, postId, !currentlyLiked);
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<void> _writeLike(String userId, String postId, bool like) async {
+    if (like) {
+      await SupabaseService.client.from('likes').insert({
+        'user_id': userId,
+        'post_id': postId,
       });
-      await loadFeed(refresh: true);
-      return null;
-    } catch (e) {
-      return e.toString();
+    } else {
+      await SupabaseService.client
+          .from('likes')
+          .delete()
+          .eq('user_id', userId)
+          .eq('post_id', postId);
     }
   }
 

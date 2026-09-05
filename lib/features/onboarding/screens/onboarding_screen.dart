@@ -1,5 +1,3 @@
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
@@ -24,18 +22,20 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   late AnimationController _ctrl;
   late Animation<double> _fade;
   late Animation<Offset> _slide;
-  String _locale = 'en';
+  // Default 'mn' — UB-first апп тул англи flash гарахгүй
+  String _locale = 'mn';
 
   @override
   void initState() {
     super.initState();
     // Сонгосон хэлийг уншина (lang_select дээр хадгалсан)
     SharedPreferences.getInstance().then((p) {
-      if (mounted) setState(() => _locale = p.getString('locale') ?? 'en');
+      if (mounted) setState(() => _locale = p.getString('locale') ?? 'mn');
     });
-    _ctrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 500));
+    // 12px орчим гулсалт + fade — богино, premium мэдрэмжтэй easeOut
+    _ctrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 260));
     _fade  = CurvedAnimation(parent: _ctrl, curve: Curves.easeOut);
-    _slide = Tween<Offset>(begin: const Offset(0, 0.08), end: Offset.zero).animate(
+    _slide = Tween<Offset>(begin: const Offset(0, 0.04), end: Offset.zero).animate(
       CurvedAnimation(parent: _ctrl, curve: Curves.easeOut),
     );
     _ctrl.forward();
@@ -48,6 +48,11 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     if (widget.slide < 3) {
       context.go('${AppRoutes.onboarding}?slide=${widget.slide + 1}');
     } else {
+      // Onboarding дууссан — flag тэмдэглэнэ, эс бөгөөс дараагийн
+      // орох болгонд слайдууд дахин харагдана
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('onboarded', true);
+      if (!mounted) return;
       context.go(AppRoutes.permLocation);
     }
   }
@@ -88,76 +93,76 @@ class _OnboardingScreenState extends State<OnboardingScreen>
           _OnboardAura(accent: data.color),
           SafeArea(
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // Skip button
-                Align(
-                  alignment: Alignment.topRight,
-                  child: TextButton(
-                    onPressed: _skip,
-                    child: Text(s.btnSkip,
-                      style: AppTextStyles.labelMd.copyWith(color: AppColors.textSecondary)),
+                // ── Дээд бар — progress pill (зүүн) + Алгасах (баруун) ──
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 10, 8, 0),
+                  child: Row(
+                    children: [
+                      _ProgressPill(slide: widget.slide),
+                      const Spacer(),
+                      TextButton(
+                        onPressed: _skip,
+                        child: Text(s.btnSkip,
+                          style: AppTextStyles.labelMd.copyWith(
+                            color: AppColors.textSecondary)),
+                      ),
+                    ],
                   ),
                 ),
-                const Spacer(),
+
+                // ── Медальон — томруулсан, дэлгэцийн голд ──
+                Expanded(
+                  child: FadeTransition(
+                    opacity: _fade,
+                    child: SlideTransition(
+                      position: _slide,
+                      child: Center(
+                        child: _GlassIconMedallion(
+                          illustration: data.illustration,
+                          glow: data.color, size: 210),
+                      ),
+                    ),
+                  ),
+                ),
+
+                // ── Текст блок — доод талд, CTA-ийн яг дээр зүүн зэрэгцээ ──
                 FadeTransition(
                   opacity: _fade,
                   child: SlideTransition(
                     position: _slide,
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 40),
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
                       child: Column(
-                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          _GlassIconMedallion(
-                            illustration: data.illustration,
-                            glow: data.color, size: 168),
-                          const SizedBox(height: 32),
+                          // Слайдын дугаар — mono eyebrow
+                          Text('0${widget.slide} — 03',
+                            style: AppTextStyles.monoSm.copyWith(
+                              letterSpacing: 2,
+                              color: data.color.withValues(alpha: 0.85))),
+                          const SizedBox(height: 10),
                           Text(data.title,
-                            style: AppTextStyles.displayMd,
-                            textAlign: TextAlign.center),
-                          const SizedBox(height: 16),
+                            style: AppTextStyles.displayMd.copyWith(height: 1.12)),
+                          const SizedBox(height: 12),
                           Text(data.sub,
                             style: AppTextStyles.bodyMd.copyWith(
-                              color: AppColors.textSecondary, height: 1.5),
-                            textAlign: TextAlign.center),
+                              color: AppColors.textSecondary, height: 1.55)),
                         ],
                       ),
                     ),
                   ),
                 ),
-                const Spacer(),
-                // Dots
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: List.generate(3, (i) {
-                    final active = i + 1 == widget.slide;
-                    return AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      margin: const EdgeInsets.symmetric(horizontal: 4),
-                      width: active ? 22 : 6,
-                      height: 6,
-                      decoration: BoxDecoration(
-                        // Идэвхтэй цэг — неон cyan gradient + зөөлөн гэрэлтэлт
-                        gradient: active ? AppColors.chromeGradient : null,
-                        color: active ? null : AppColors.textTertiary,
-                        borderRadius: BorderRadius.circular(3),
-                        boxShadow: active
-                            ? [
-                                BoxShadow(
-                                  color: AppColors.neonCyan.withValues(alpha: 0.55),
-                                  blurRadius: 12, spreadRadius: -1),
-                              ]
-                            : null,
-                      ),
-                    );
-                  }),
-                ),
-                const SizedBox(height: 40),
+                const SizedBox(height: 28),
+
+                // ── CTA — pill primary, дэлгэцийн доод захад ──
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 32),
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
                   child: GradientButton(
                     label: widget.slide == 3 ? s.btnStart : s.btnContinue,
                     onPressed: _next,
+                    borderRadius: 999,
                     trailing: Icon(
                       widget.slide == 3
                           ? Icons.auto_awesome_rounded
@@ -165,7 +170,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                       color: Colors.white, size: 19),
                   ),
                 ),
-                const SizedBox(height: 32),
+                const SizedBox(height: 24),
               ],
             ),
           ),
@@ -184,6 +189,56 @@ class _SlideData {
 
 // ───────────────────────── onboarding UI bits ─────────────────────────
 
+/// Dots → progress pill — шилэн pill дотор 3 сегмент + "1/3" тоолуур.
+class _ProgressPill extends StatelessWidget {
+  final int slide;
+  const _ProgressPill({required this.slide});
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+    decoration: BoxDecoration(
+      color: AppColors.bgElevated.withValues(alpha: 0.72),
+      borderRadius: BorderRadius.circular(999),
+      border: Border.all(color: AppColors.hairline2),
+    ),
+    child: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        ...List.generate(3, (i) {
+          final active = i + 1 == slide;
+          final done   = i + 1 < slide;
+          return AnimatedContainer(
+            duration: const Duration(milliseconds: 220),
+            curve: Curves.easeOut,
+            margin: const EdgeInsets.only(right: 5),
+            width: active ? 22 : 8,
+            height: 5,
+            decoration: BoxDecoration(
+              // Идэвхтэй сегмент — cyan chrome gradient + гэрэлтэлт
+              gradient: active ? AppColors.chromeGradient : null,
+              color: active
+                  ? null
+                  : (done
+                      ? AppColors.neonCyan.withValues(alpha: 0.55)
+                      : AppColors.hairline2),
+              borderRadius: BorderRadius.circular(999),
+              boxShadow: active
+                  ? [BoxShadow(
+                      color: AppColors.neonCyan.withValues(alpha: 0.55),
+                      blurRadius: 12, spreadRadius: -1)]
+                  : null,
+            ),
+          );
+        }),
+        const SizedBox(width: 4),
+        Text('$slide/3', style: AppTextStyles.monoSm.copyWith(
+          letterSpacing: 1, color: AppColors.textSecondary)),
+      ],
+    ),
+  );
+}
+
 /// Слайдын өнгөнд тааруулсан зөөлөн неон aura — login дэлгэцийн blob маягаар.
 class _OnboardAura extends StatelessWidget {
   final Color accent;
@@ -195,7 +250,7 @@ class _OnboardAura extends StatelessWidget {
       child: AnimatedSwitcher(
         duration: const Duration(milliseconds: 600),
         child: Stack(
-          key: ValueKey(accent.value),
+          key: ValueKey(accent.toARGB32()),
           children: [
             Positioned(
               top: -120, right: -100,
@@ -233,8 +288,8 @@ class _GlassIconMedallion extends StatefulWidget {
   final bool pulse;
   const _GlassIconMedallion({
     required this.illustration, required this.glow,
-    this.size = 168, this.pulse = true,
-  });
+    this.size = 168,
+  }) : pulse = true;
   @override
   State<_GlassIconMedallion> createState() => _GlassIconMedallionState();
 }
@@ -271,26 +326,20 @@ class _GlassIconMedallionState extends State<_GlassIconMedallion>
                   BoxShadow(color: widget.glow.withValues(alpha: 0.35 + 0.25 * t),
                     blurRadius: 50 + 30 * t, spreadRadius: 6 + 8 * t),
                 ])),
-            // Frosted шилэн медальон
-            ClipRRect(
-              borderRadius: BorderRadius.circular(sz),
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-                child: Container(
-                  width: sz * 0.82, height: sz * 0.82,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft, end: Alignment.bottomRight,
-                      colors: [
-                        Colors.white.withValues(alpha: 0.16),
-                        widget.glow.withValues(alpha: 0.10),
-                        Colors.white.withValues(alpha: 0.04),
-                      ]),
-                    border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.22), width: 1.4),
-                  ),
-                ),
+            // Шилэн медальон — blur-гүй gradient glass (web perf)
+            Container(
+              width: sz * 0.82, height: sz * 0.82,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft, end: Alignment.bottomRight,
+                  colors: [
+                    Colors.white.withValues(alpha: 0.16),
+                    widget.glow.withValues(alpha: 0.10),
+                    Colors.white.withValues(alpha: 0.04),
+                  ]),
+                border: Border.all(
+                  color: Colors.white.withValues(alpha: 0.22), width: 1.4),
               ),
             ),
             // Дотор зөөлөн өнгөт гэрэл

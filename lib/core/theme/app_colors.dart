@@ -58,6 +58,21 @@ abstract class AppColors {
   static const Color textSecondaryLight = Color(0xFF5C4A82);
   static const Color textTertiaryLight  = Color(0xFF9A8DB8);
 
+  // ─── Theme-aware (динамик) резолюц ───
+  // ThemeModeNotifier горим солигдоход энэ флагийг шинэчилдэг;
+  // MaterialApp бүх мод-оо дахин build хийдэг тул getter-ууд шинэ утга буцаана.
+  // const токенууд хэвээр (дээрх) — эдгээр нь НЭМЭЛТ, light горимд зөв өнгө өгнө.
+  static bool isDarkMode = true;
+  static Color get dynBgBase        => isDarkMode ? bgBase        : bgBaseLight;
+  static Color get dynBgElevated    => isDarkMode ? bgElevated    : bgElevatedLight;
+  static Color get dynBgSurface     => isDarkMode ? bgSurface     : bgSurfaceLight;
+  static Color get dynHairline      => isDarkMode ? hairline      : hairlineLight;
+  static Color get dynHairline2     => isDarkMode ? hairline2     : hairline2Light;
+  static Color get dynTextPrimary   => isDarkMode ? textPrimary   : textPrimaryLight;
+  static Color get dynTextSecondary => isDarkMode ? textSecondary : textSecondaryLight;
+  static Color get dynTextTertiary  => isDarkMode ? textTertiary  : textTertiaryLight;
+  static Color get dynTextMono      => isDarkMode ? textMono      : textSecondaryLight;
+
   // ─── Primary action gradient — magenta → purple → pink ───
   static const LinearGradient accentGradient = LinearGradient(
     begin: Alignment.topLeft,
@@ -98,4 +113,32 @@ abstract class AppColors {
     radius: 1.2,
     colors: [Color(0x4022E7FF), Colors.transparent],
   );
+
+  // ─── Story ring — magenta → pink → cyan люкс sweep ───
+  // Эхлэл/төгсгөл ижил өнгө тул эргэлт залгаасгүй, тасралтгүй харагдана.
+  static const SweepGradient storyRingGradient = SweepGradient(
+    transform: GradientRotation(-1.5708), // дээд цэгээс эхэлнэ
+    colors: [magenta, accentEnd, Color(0xFFFF6FB3), neonCyan, accentPurple, magenta],
+    stops: [0.0, 0.25, 0.45, 0.65, 0.85, 1.0],
+  );
+
+  // ─── Неон glow сүүдэр — CTA/идэвхтэй элементэд нэг мөрөөр ───
+  static List<BoxShadow> glowShadow(Color color,
+      {double alpha = 0.35, double blur = 22, double spread = -2,
+      Offset offset = const Offset(0, 6)}) => [
+    BoxShadow(color: color.withValues(alpha: alpha),
+        blurRadius: blur, spreadRadius: spread, offset: offset),
+  ];
+
+  // ─── Давхарласан сүүдэр пресетүүд — glass элемент агаарт хөвөх мэдрэмж ───
+  // Карт: ойрын нягт + холын зөөлөн сүүдэр
+  static const List<BoxShadow> shadowCard = [
+    BoxShadow(color: Color(0x59000000), blurRadius: 24, offset: Offset(0, 10)),
+    BoxShadow(color: Color(0x33000000), blurRadius: 6, offset: Offset(0, 2)),
+  ];
+  // Хөвөгч док/шилэн бар — илүү гүн, өргөн сүүдэр
+  static const List<BoxShadow> shadowDock = [
+    BoxShadow(color: Color(0x8C000000), blurRadius: 30, offset: Offset(0, 12)),
+    BoxShadow(color: Color(0x40000000), blurRadius: 8, offset: Offset(0, 3)),
+  ];
 }

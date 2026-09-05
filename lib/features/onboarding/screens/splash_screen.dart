@@ -1,11 +1,14 @@
+import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/widgets/gradient_text.dart';
 import '../../../core/router/app_router.dart';
+import '../../auth/screens/reset_password_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -20,23 +23,62 @@ class _SplashScreenState extends State<SplashScreen>
   late AnimationController _pulse;  // давтагдах гялбаа/ачаалал
   late Animation<double> _fade;
   late Animation<double> _scale;
+  StreamSubscription<AuthState>? _authSub;
+  bool _recovery = false; // нууц үг сэргээх холбоосоор орж ирсэн эсэх
 
   @override
   void initState() {
     super.initState();
     _ctrl = AnimationController(
       vsync: this, duration: const Duration(milliseconds: 1200));
-    _fade  = CurvedAnimation(parent: _ctrl, curve: const Interval(0, 0.7, curve: Curves.easeOut));
-    _scale = Tween<double>(begin: 0.85, end: 1.0).animate(
-      CurvedAnimation(parent: _ctrl, curve: const Interval(0, 0.7, curve: Curves.easeOutBack)));
+    // Fade нь эрт, зөөлөн cubic-аар; scale нь жаахан удаан overshoot-той —
+    // нийт хугацаа хэвээр, зөвхөн муруйн мэдрэмж premium болов
+    _fade  = CurvedAnimation(parent: _ctrl, curve: const Interval(0, 0.6, curve: Curves.easeOutCubic));
+    _scale = Tween<double>(begin: 0.88, end: 1.0).animate(
+      CurvedAnimation(parent: _ctrl, curve: const Interval(0, 0.75, curve: Curves.easeOutBack)));
     _pulse = AnimationController(
       vsync: this, duration: const Duration(milliseconds: 1600))..repeat();
     _ctrl.forward();
-    Future.delayed(const Duration(milliseconds: 2400), _navigate);
+    // Нууц үг сэргээх и-мэйлийн холбоосоор ирвэл supabase_flutter
+    // token-ыг сольж passwordRecovery event гаргана — түүнийг барина
+    _authSub = Supabase.instance.client.auth.onAuthStateChange.listen((s) {
+      if (s.event == AuthChangeEvent.passwordRecovery) _recovery = true;
+    });
+    Future.delayed(const Duration(milliseconds: 1800), _navigate);
   }
 
   Future<void> _navigate() async {
     if (!mounted) return;
+
+    // 1) Нууц үг сэргээх flow — шинэ нууц үгийн дэлгэц нээнэ
+    if (_recovery) {
+      Navigator.of(context, rootNavigator: true).push(MaterialPageRoute(
+        builder: (_) => const ResetPasswordScreen()));
+      return;
+    }
+
+    // 2) Хадгалагдсан session байвал шууд апп руу —
+    //    нэвтэрсэн хэрэглэгчийг дахин sign-in руу оруулахгүй
+    final session = Supabase.instance.client.auth.currentSession;
+    if (session != null) {
+      var hasProfile = true;
+      try {
+        final data = await Supabase.instance.client
+            .from('profiles')
+            .select('username')
+            .eq('id', session.user.id)
+            .maybeSingle();
+        hasProfile = (data?['username'] as String? ?? '').isNotEmpty;
+      } catch (_) {
+        // Уншиж чадаагүй бол feed рүү — тэнд өөрөө шийднэ
+      }
+      if (!mounted) return;
+      // Шинэ (жишээ нь Google-ээр орсон) хэрэглэгч профайлгүй бол setup руу
+      context.go(hasProfile ? AppRoutes.feed : AppRoutes.setup);
+      return;
+    }
+
+    // 3) Анхны орох урсгал
     final prefs = await SharedPreferences.getInstance();
     final hasOnboarded = prefs.getBool('onboarded') ?? false;
     final locale = prefs.getString('locale');
@@ -52,6 +94,7 @@ class _SplashScreenState extends State<SplashScreen>
 
   @override
   void dispose() {
+    _authSub?.cancel();
     _ctrl.dispose();
     _pulse.dispose();
     super.dispose();
@@ -63,6 +106,8 @@ class _SplashScreenState extends State<SplashScreen>
       backgroundColor: Colors.black, // disco owl — цэвэр хар дэвсгэр
       body: Stack(
         children: [
+          // Маш бүдэг неон уур амьсгал — magenta зүүн дээд, cyan баруун доод
+          const Positioned.fill(child: _VoidGlow()),
           // Мөнгөлөг гялтгануур оч
           const Positioned.fill(child: _Sparkles()),
           // Төв контент
@@ -76,7 +121,9 @@ class _SplashScreenState extends State<SplashScreen>
                   children: [
                     _OwlLogo(pulse: _pulse),
                     const SizedBox(height: 28),
-                    NightOwlLogoText(fontSize: 38),
+                    // Хром shimmer — лого текст дээгүүр шүргэн өнгөрөх гялбаа
+                    _ChromeShimmer(pulse: _pulse,
+                      child: const NightOwlLogoText(fontSize: 38)),
                     const SizedBox(height: 8),
                     Text('UB · ШӨНИЙН НИЙГЭМ',
                       style: AppTextStyles.mono.copyWith(
@@ -106,6 +153,59 @@ class _SplashScreenState extends State<SplashScreen>
       ),
     );
   }
+}
+
+/// Хром shimmer sweep — цагаан гялбааны зурвас текст дээгүүр гулсана.
+/// _pulse (1600ms) давталт бүрт нэг удаа шүргэнэ — нэмэлт controller хэрэггүй.
+class _ChromeShimmer extends StatelessWidget {
+  final Animation<double> pulse;
+  final Widget child;
+  const _ChromeShimmer({required this.pulse, required this.child});
+
+  @override
+  Widget build(BuildContext context) => AnimatedBuilder(
+    animation: pulse,
+    builder: (_, c) {
+      final dx = -1.6 + 3.2 * pulse.value; // -1.6..1.6 хөндлөн давалт
+      return ShaderMask(
+        blendMode: BlendMode.srcATop, // текстийн өнгө хэвээр, дээр нь гялбаа
+        shaderCallback: (r) => LinearGradient(
+          begin: Alignment(dx - 0.5, -0.4),
+          end: Alignment(dx + 0.5, 0.4),
+          colors: [
+            Colors.transparent,
+            AppColors.silverLight.withValues(alpha: 0.55),
+            Colors.transparent,
+          ],
+          stops: const [0.35, 0.5, 0.65],
+        ).createShader(r),
+        child: c,
+      );
+    },
+    child: child,
+  );
+}
+
+/// Маш бүдэг atmospheric wash — void black дэвсгэр дээрх хоёр туйлт glow
+class _VoidGlow extends StatelessWidget {
+  const _VoidGlow();
+  @override
+  Widget build(BuildContext context) => IgnorePointer(
+    child: Stack(children: [
+      Positioned(top: -140, left: -120,
+        child: _blob(320, AppColors.accentStart.withValues(alpha: 0.10))),
+      Positioned(bottom: -150, right: -110,
+        child: _blob(340, AppColors.neonCyan.withValues(alpha: 0.08))),
+    ]),
+  );
+
+  Widget _blob(double size, Color color) => Container(
+    width: size, height: size,
+    decoration: BoxDecoration(
+      shape: BoxShape.circle,
+      gradient: RadialGradient(colors: [color, Colors.transparent]),
+    ),
+  );
 }
 
 /// Disco owl logo — asset зураг (байхгүй бол fallback) + мөнгөлөг гэрэлтэлт

@@ -32,6 +32,7 @@ class _VenueEditScreenState extends ConsumerState<VenueEditScreen> {
   Uint8List? _coverBytes;
   bool _loading = true;
   bool _busy = false;
+  bool _loadFailed = false; // ачаалал бүтэлгүйтвэл save-ийг хориглоно (давхар venue үүсэхээс сэргийлнэ)
   String? _error;
 
   String get _myId => SupabaseService.currentUser?.id ?? '';
@@ -43,12 +44,14 @@ class _VenueEditScreenState extends ConsumerState<VenueEditScreen> {
   }
 
   Future<void> _load() async {
+    if (mounted) setState(() { _loading = true; _loadFailed = false; });
     try {
       final data = await SupabaseService.client
           .from('venues').select()
           .eq('owner_id', _myId)
           .limit(1).maybeSingle();
-      if (data != null && mounted) {
+      if (!mounted) return;
+      if (data != null) {
         _venueId = data['id'] as String;
         _nameCtrl.text = data['name'] as String? ?? '';
         _districtCtrl.text = data['district'] as String? ?? '';
@@ -65,7 +68,11 @@ class _VenueEditScreenState extends ConsumerState<VenueEditScreen> {
         _latCtrl.text = AppConstants.ubLat.toString();
         _lngCtrl.text = AppConstants.ubLng.toString();
       }
-    } catch (_) {}
+    } catch (_) {
+      // Ачаалал бүтэлгүйтвэл _venueId null хэвээр — save хийвэл давхар venue үүсэх
+      // эрсдэлтэй тул save-ийг хориглож, дахин оролдох сонголт харуулна.
+      if (mounted) _loadFailed = true;
+    }
     if (mounted) setState(() => _loading = false);
   }
 
@@ -85,8 +92,14 @@ class _VenueEditScreenState extends ConsumerState<VenueEditScreen> {
       String? coverUrl = _coverUrl;
       if (_coverBytes != null) {
         final ts = DateTime.now().millisecondsSinceEpoch;
-        coverUrl = await ImageUploader.uploadBytes(
+        final uploaded = await ImageUploader.uploadBytes(
           bytes: _coverBytes!, bucket: 'venues', path: '$_myId/cover_$ts.jpg');
+        // Upload бүтэлгүйтвэл (null) — хуучин cover-оор чимээгүй хадгалахгүй, алдаа мэдэгдэнэ
+        if (uploaded == null) {
+          setState(() { _busy = false; _error = 'Зураг илгээж чадсангүй. Дахин оролдоно уу'; });
+          return;
+        }
+        coverUrl = uploaded;
       }
       final row = <String, dynamic>{
         'owner_id': _myId,
@@ -111,8 +124,10 @@ class _VenueEditScreenState extends ConsumerState<VenueEditScreen> {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
         content: Text('Хадгалагдлаа ✓'), behavior: SnackBarBehavior.floating));
       context.pop();
-    } catch (e) {
-      if (mounted) setState(() { _busy = false; _error = e.toString(); });
+    } catch (_) {
+      if (mounted) {
+        setState(() { _busy = false; _error = 'Хадгалж чадсангүй. Дахин оролдоно уу'; });
+      }
     }
   }
 
@@ -138,6 +153,8 @@ class _VenueEditScreenState extends ConsumerState<VenueEditScreen> {
       body: _loading
         ? const Center(child: CircularProgressIndicator(
             color: AppColors.accentStart, strokeWidth: 2))
+        : _loadFailed
+        ? _loadError()
         : ListView(padding: const EdgeInsets.all(20), children: [
             // Cover
             GestureDetector(
@@ -219,6 +236,34 @@ class _VenueEditScreenState extends ConsumerState<VenueEditScreen> {
           ]),
     );
   }
+
+  // Ачаалал бүтэлгүйтсэн үед — форм харуулахгүй (давхар venue үүсэхээс сэргийлнэ)
+  Widget _loadError() => Center(
+    child: Column(mainAxisSize: MainAxisSize.min, children: [
+      const Icon(Icons.cloud_off_outlined,
+        color: AppColors.textTertiary, size: 48),
+      const SizedBox(height: 14),
+      Text('Ачаалж чадсангүй', style: AppTextStyles.h3),
+      const SizedBox(height: 6),
+      Text('Дахин оролдоно уу', style: AppTextStyles.bodySm.copyWith(
+        color: AppColors.textTertiary)),
+      const SizedBox(height: 18),
+      GestureDetector(
+        onTap: _load,
+        child: MouseRegion(
+          cursor: SystemMouseCursors.click,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 11),
+            decoration: BoxDecoration(
+              gradient: AppColors.accentGradient,
+              borderRadius: BorderRadius.circular(12)),
+            child: Text('Дахин оролдох',
+              style: AppTextStyles.btn.copyWith(color: Colors.white)),
+          ),
+        ),
+      ),
+    ]),
+  );
 
   Widget _field(TextEditingController c, String hint, {int lines = 1, bool number = false}) =>
     TextField(

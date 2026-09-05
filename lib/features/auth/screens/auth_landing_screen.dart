@@ -6,9 +6,32 @@ import '../../../core/widgets/gradient_button.dart';
 import '../../../core/widgets/gradient_text.dart';
 import '../../../core/widgets/mesh_gradient.dart';
 import '../../../core/router/app_router.dart';
+import '../widgets/auth_ui.dart';
 
-class AuthLandingScreen extends StatelessWidget {
+class AuthLandingScreen extends StatefulWidget {
   const AuthLandingScreen({super.key});
+
+  @override
+  State<AuthLandingScreen> createState() => _AuthLandingScreenState();
+}
+
+class _AuthLandingScreenState extends State<AuthLandingScreen> {
+  bool _gLoading = false;
+
+  // Google OAuth — жинхэнэ нэвтрэлт (web дээр бүтэн хуудас redirect)
+  Future<void> _googleSignIn() async {
+    setState(() => _gLoading = true);
+    try {
+      await signInWithGoogle();
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Google-ээр нэвтрэхэд алдаа гарлаа. Дахин оролдоно уу.')));
+      }
+    } finally {
+      if (mounted) setState(() => _gLoading = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -18,96 +41,110 @@ class AuthLandingScreen extends StatelessWidget {
         children: [
           // Удаан хөдөлдөг mesh gradient дэвсгэр
           const Positioned.fill(child: MeshGradientBackground()),
+          // Хоёр туйлт atmospheric glow — magenta зүүн дээд, cyan баруун доод
+          const _LandingAura(),
           // Starfield
           Positioned.fill(child: CustomPaint(painter: _StarPainter())),
           // Content
           SafeArea(
             child: Column(
               children: [
-                // Top half — logo
+                // ── Дээд hero — том owl + тусгал + display гарчиг ──
                 Expanded(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      // Owl mark — disco owl брэнд тэмдэг
-                      const OwlLogoMark(size: 150),
-                      const SizedBox(height: 24),
-                      // Title
-                      RichText(
-                        textAlign: TextAlign.center,
-                        text: TextSpan(
-                          style: AppTextStyles.displayLg,
-                          children: [
-                            const TextSpan(text: 'The '),
-                            WidgetSpan(
-                              child: GradientText(
-                                'Night',
-                                style: AppTextStyles.displayLg.copyWith(
-                                  fontStyle: FontStyle.italic,
-                                ),
+                  child: Center(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          // Owl mark — disco owl брэнд тэмдэг + шалан дээрх тусгал
+                          const AuthEntrance(child: _HeroOwl()),
+                          const SizedBox(height: 4),
+                          // Title — display хэмжээтэй hero гарчиг
+                          AuthEntrance(
+                            index: 1,
+                            child: RichText(
+                              textAlign: TextAlign.center,
+                              text: TextSpan(
+                                style: AppTextStyles.displayLg,
+                                children: [
+                                  WidgetSpan(
+                                    child: GradientText(
+                                      'Шөнө',
+                                      style: AppTextStyles.displayLg.copyWith(
+                                        fontStyle: FontStyle.italic,
+                                      ),
+                                    ),
+                                  ),
+                                  const TextSpan(text: ' эхэлж байна'),
+                                ],
                               ),
                             ),
-                            const TextSpan(text: ' Begins'),
-                          ],
-                        ),
+                          ),
+                          const SizedBox(height: 12),
+                          AuthEntrance(
+                            index: 2,
+                            child: Text(
+                              "UB-гийн шөнийн амьдрал · нэг tap-аар",
+                              style: AppTextStyles.bodyMd.copyWith(
+                                color: AppColors.textSecondary,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: 12),
-                      Text(
-                        "UB-гийн шөнийн амьдрал · нэг tap-аар",
-                        style: AppTextStyles.bodyMd.copyWith(
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                      const SizedBox(height: 28),
-                    ],
+                    ),
                   ),
                 ),
 
-                // Bottom half — buttons
+                // ── CTA блок — дэлгэцийн доод захад бэхлэгдсэн ──
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(32, 0, 32, 40),
+                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      GradientButton(
-                        label: 'Sign In',
-                        onPressed: () => context.push(AppRoutes.login),
-                      ),
-                      const SizedBox(height: 12),
-                      _OutlineBtn(
-                        label: 'Create Account',
-                        onTap: () => context.push(AppRoutes.register),
-                      ),
-                      const SizedBox(height: 20),
-                      // Divider
-                      Row(children: [
-                        const Expanded(child: Divider(color: AppColors.hairline)),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          child: Text('OR', style: AppTextStyles.monoSm),
+                      AuthEntrance(
+                        index: 3,
+                        child: GradientButton(
+                          label: 'Нэвтрэх',
+                          borderRadius: 999,
+                          onPressed: () => context.push(AppRoutes.login),
                         ),
-                        const Expanded(child: Divider(color: AppColors.hairline)),
-                      ]),
-                      const SizedBox(height: 20),
-                      // Google
-                      _OutlineBtn(
-                        label: 'Continue with Google',
-                        leading: Container(
-                          width: 22, height: 22,
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: const Center(
-                            child: Text('G',
-                              style: TextStyle(
-                                color: Color(0xFF4285F4),
-                                fontWeight: FontWeight.w800,
-                                fontSize: 13,
-                              )),
-                          ),
+                      ),
+                      const SizedBox(height: 14),
+                      AuthEntrance(
+                        index: 4,
+                        child: _OutlineBtn(
+                          label: 'Бүртгэл үүсгэх',
+                          onTap: () => context.push(AppRoutes.register),
                         ),
-                        onTap: () => context.push(AppRoutes.setup),
+                      ),
+                      const SizedBox(height: 18),
+                      const AuthEntrance(index: 5, child: OrDivider()),
+                      const SizedBox(height: 18),
+                      // Google — жинхэнэ OAuth
+                      AuthEntrance(
+                        index: 6,
+                        child: _OutlineBtn(
+                          label: _gLoading
+                              ? 'Түр хүлээнэ үү...'
+                              : 'Google-ээр үргэлжлүүлэх',
+                          leading: _gLoading
+                              ? const SizedBox(width: 16, height: 16,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2, color: AppColors.textSecondary))
+                              : const GoogleMark(),
+                          onTap: _gLoading ? null : _googleSignIn,
+                        ),
+                      ),
+                      const SizedBox(height: 18),
+                      // Footer micro text
+                      AuthEntrance(
+                        index: 7,
+                        child: Text('UB · ШӨНИЙН НИЙГЭМ · 2025',
+                          textAlign: TextAlign.center,
+                          style: AppTextStyles.monoSm.copyWith(
+                            letterSpacing: 2, color: AppColors.textTertiary)),
                       ),
                     ],
                   ),
@@ -121,9 +158,49 @@ class AuthLandingScreen extends StatelessWidget {
   }
 }
 
+/// Том owl hero + доод талын тусгал — хөмөрсөн лого gradient маскаар бүдгэрнэ.
+class _HeroOwl extends StatelessWidget {
+  const _HeroOwl();
+
+  static const double _size = 180;
+  static const double _reflectH = 56;
+
+  @override
+  Widget build(BuildContext context) => Column(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      const OwlLogoMark(size: _size),
+      // Тусгал — scaleY:-1 хөмрөлт + доошоо бүдгэрэх gradient маск (0.15)
+      SizedBox(
+        width: _size, height: _reflectH,
+        child: ShaderMask(
+          shaderCallback: (rect) => const LinearGradient(
+            begin: Alignment.topCenter, end: Alignment.bottomCenter,
+            colors: [Colors.white, Colors.transparent],
+          ).createShader(rect),
+          blendMode: BlendMode.dstIn,
+          child: ClipRect(
+            child: Align(
+              alignment: Alignment.topCenter,
+              heightFactor: _reflectH / _size,
+              child: Opacity(
+                opacity: 0.15,
+                child: Transform.scale(
+                  scaleY: -1,
+                  child: const OwlLogoMark(size: _size),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    ],
+  );
+}
+
 class _OutlineBtn extends StatelessWidget {
   final String label;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
   final Widget? leading;
 
   const _OutlineBtn({required this.label, required this.onTap, this.leading});
@@ -132,17 +209,18 @@ class _OutlineBtn extends StatelessWidget {
   Widget build(BuildContext context) {
     return SizedBox(
       height: 52,
+      // Хоёрдогч glass товч — pill хэлбэр, bgElevated шилэн давхарга + hairline
       child: DecoratedBox(
         decoration: BoxDecoration(
-          color: AppColors.bgSurface,
-          borderRadius: BorderRadius.circular(14),
+          color: AppColors.bgElevated.withValues(alpha: 0.70),
+          borderRadius: BorderRadius.circular(999),
           border: Border.all(color: AppColors.hairline2),
         ),
         child: TextButton(
           onPressed: onTap,
           style: TextButton.styleFrom(
             foregroundColor: AppColors.textPrimary,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -155,6 +233,30 @@ class _OutlineBtn extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Хоёр туйлт glow талбар — маш бага alpha, void black дээр уур амьсгал өгнө
+class _LandingAura extends StatelessWidget {
+  const _LandingAura();
+  @override
+  Widget build(BuildContext context) => Positioned.fill(
+    child: IgnorePointer(
+      child: Stack(children: [
+        Positioned(top: -150, left: -130,
+          child: _blob(340, AppColors.accentStart.withValues(alpha: 0.14))),
+        Positioned(bottom: -160, right: -120,
+          child: _blob(360, AppColors.neonCyan.withValues(alpha: 0.10))),
+      ]),
+    ),
+  );
+
+  Widget _blob(double size, Color color) => Container(
+    width: size, height: size,
+    decoration: BoxDecoration(
+      shape: BoxShape.circle,
+      gradient: RadialGradient(colors: [color, Colors.transparent]),
+    ),
+  );
 }
 
 class _StarPainter extends CustomPainter {

@@ -1,5 +1,4 @@
 import 'dart:math' as math;
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 
@@ -105,117 +104,18 @@ class _MeshPainter extends CustomPainter {
       final dx = math.sin(v + phase) * size.width * 0.08;
       final dy = math.cos(v * 0.8 + phase) * size.height * 0.06;
       final c = Offset(baseX * size.width + dx, baseY * size.height + dy);
+      // RadialGradient shader — MaskFilter.blur(80)-тай бараг ижил зөөлөн бөмбөлөг,
+      // гэхдээ frame бүрт 5 фулл-скрин Gaussian blur хийхгүй (сул төхөөрөмжид чухал)
       canvas.drawCircle(c, rad, Paint()
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 80)
-        ..color = color.withValues(alpha: 0.30));
+        ..shader = RadialGradient(colors: [
+          color.withValues(alpha: 0.30),
+          color.withValues(alpha: 0.18),
+          color.withValues(alpha: 0.0),
+        ], stops: const [0.0, 0.55, 1.0])
+            .createShader(Rect.fromCircle(center: c, radius: rad)));
     }
   }
 
   @override
   bool shouldRepaint(_MeshPainter old) => false; // repaint via Animation
-}
-
-/// Glassmorphic 3D-маягийн дүрс — frosted шил + неон гэрэлтэлт + том emoji.
-/// Жишээ: 🍸 (бар), 📡 (radar/map).
-class GlassMedallion extends StatefulWidget {
-  final String emoji;
-  final Color glow;
-  final double size;
-  final bool pulse;
-  const GlassMedallion({
-    super.key, required this.emoji, required this.glow,
-    this.size = 160, this.pulse = true,
-  });
-  @override
-  State<GlassMedallion> createState() => _GlassMedallionState();
-}
-
-class _GlassMedallionState extends State<GlassMedallion>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _c;
-  @override
-  void initState() {
-    super.initState();
-    _c = AnimationController(
-      vsync: this, duration: const Duration(milliseconds: 2600))
-      ..repeat(reverse: true);
-  }
-  @override
-  void dispose() { _c.dispose(); super.dispose(); }
-
-  @override
-  Widget build(BuildContext context) {
-    final sz = widget.size;
-    return AnimatedBuilder(
-      animation: _c,
-      builder: (_, __) {
-        final t = widget.pulse ? _c.value : 0.5; // 0..1
-        return SizedBox(
-          width: sz, height: sz,
-          child: Stack(alignment: Alignment.center, children: [
-            // Гадна неон гэрэлтэлт (амьсгалдаг)
-            Container(
-              width: sz * 0.86, height: sz * 0.86,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(color: widget.glow.withValues(alpha: 0.35 + 0.25 * t),
-                    blurRadius: 50 + 30 * t, spreadRadius: 6 + 8 * t),
-                ])),
-            // Frosted шилэн медальон
-            ClipRRect(
-              borderRadius: BorderRadius.circular(sz),
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-                child: Container(
-                  width: sz * 0.82, height: sz * 0.82,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft, end: Alignment.bottomRight,
-                      colors: [
-                        Colors.white.withValues(alpha: 0.16),
-                        widget.glow.withValues(alpha: 0.10),
-                        Colors.white.withValues(alpha: 0.04),
-                      ]),
-                    border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.22), width: 1.4),
-                  ),
-                ),
-              ),
-            ),
-            // Дотор зөөлөн өнгөт гэрэл
-            Container(
-              width: sz * 0.5, height: sz * 0.5,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: RadialGradient(colors: [
-                  widget.glow.withValues(alpha: 0.5),
-                  Colors.transparent,
-                ]))),
-            // Emoji (3D-ish glow сүүдэртэй)
-            Text(widget.emoji, style: TextStyle(
-              fontSize: sz * 0.42,
-              shadows: [
-                Shadow(color: widget.glow.withValues(alpha: 0.8), blurRadius: 24),
-                const Shadow(color: Colors.black54, blurRadius: 8,
-                  offset: Offset(0, 4)),
-              ])),
-            // Дээд талын specular highlight (шилэн гялбаа)
-            Positioned(
-              top: sz * 0.16, left: sz * 0.26,
-              child: Container(
-                width: sz * 0.22, height: sz * 0.10,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(sz),
-                  gradient: LinearGradient(colors: [
-                    Colors.white.withValues(alpha: 0.45),
-                    Colors.white.withValues(alpha: 0.0),
-                  ]))),
-            ),
-          ]),
-        );
-      },
-    );
-  }
 }

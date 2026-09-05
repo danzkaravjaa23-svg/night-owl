@@ -12,7 +12,24 @@ import '../../../models/post.dart';
 import '../../../models/comment.dart';
 import '../providers/comment_provider.dart';
 import '../providers/feed_provider.dart';
+import '../providers/saved_provider.dart';
 import '../../profile/widgets/block_report_sheet.dart';
+
+/// Сэтгэгдлийн input-д харуулах өөрийн mini профайл (avatar + username)
+final _myMiniProfileProvider =
+    FutureProvider<Map<String, dynamic>?>((ref) async {
+  final me = SupabaseService.currentUser?.id;
+  if (me == null) return null;
+  try {
+    return await SupabaseService.client
+        .from('profiles')
+        .select('username, avatar_url')
+        .eq('id', me)
+        .maybeSingle();
+  } catch (_) {
+    return null;
+  }
+});
 
 class PostDetailScreen extends ConsumerStatefulWidget {
   final String postId;
@@ -29,6 +46,7 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
   bool  _sending      = false;
   Post? _post;
   bool  _postLoading  = true;
+  bool  _postError    = false; // сүлжээний алдаа ≠ пост олдсонгүй
   Comment? _replyTo;
 
   @override
@@ -46,6 +64,9 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
   }
 
   Future<void> _fetchPost() async {
+    if (mounted && (!_postLoading || _postError)) {
+      setState(() { _postLoading = true; _postError = false; });
+    }
     try {
       final me = SupabaseService.currentUser?.id;
       // Постыг id-аар шууд татна (хуучин get_feed_posts(limit 1)-ийн оронд)
@@ -75,7 +96,36 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
         setState(() { _post = Post.fromJson(map); _postLoading = false; });
       }
     } catch (_) {
-      if (mounted) setState(() => _postLoading = false);
+      // Сүлжээний алдаа — "олдсонгүй" гэж хуурахгүй, retry харуулна
+      if (mounted) setState(() { _postLoading = false; _postError = true; });
+    }
+  }
+
+  /// Like — фийдэд байгаа эсэхээс үл хамааран DB-д бичигдэнэ
+  Future<void> _toggleLike() async {
+    final post = _post;
+    if (post == null) return;
+    final was = post.isLikedByMe;
+    HapticFeedback.lightImpact();
+    setState(() {
+      _post = post.copyWith(
+        isLikedByMe: !was,
+        likesCount: post.likesCount + (was ? -1 : 1),
+      );
+    });
+    final ok = await ref.read(feedProvider.notifier)
+        .toggleLikeById(widget.postId, was);
+    if (!ok && mounted) {
+      // Rollback + мэдэгдэнэ
+      setState(() {
+        _post = _post!.copyWith(
+          isLikedByMe: was,
+          likesCount: _post!.likesCount + (was ? 1 : -1),
+        );
+      });
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Лайк илгээж чадсангүй'),
+        backgroundColor: AppColors.error));
     }
   }
 
@@ -121,6 +171,14 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
     _focusNode.requestFocus();
   }
 
+  Future<void> _deleteComment(Comment c) async {
+    final err = await CommentService.deleteComment(c.id);
+    if (err != null && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(err), backgroundColor: AppColors.error));
+    }
+  }
+
   /// Сэтгэгдлийг thread болгон бүлэглэх: эх сэтгэгдэл + доор нь reply-ууд
   Widget _buildCommentSliver(List<Comment> comments, String? me) {
     final tops = comments.where((c) => c.parentId == null).toList();
@@ -157,7 +215,7 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
             comment:  comment,
             isOwn:    comment.userId == me,
             isReply:  isReply,
-            onDelete: () => CommentService.deleteComment(comment.id),
+            onDelete: () => _deleteComment(comment),
             onReply:  () => _startReply(comment),
           );
         },
@@ -166,234 +224,488 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
     );
   }
 
+  /// Өөрийн пост дээрх засах/устгах sheet (хуучин AppBar action-оос зөөсөн)
+  void _openOwnOptions() {
+    showPostOptionsSheet(
+      context,
+      postId: _post!.id,
+      authorId: _post!.userId,
+      authorUsername: _post!.author?.username?.replaceAll('@', '') ?? '',
+      isOwn: true,
+      currentCaption: _post!.caption,
+      onEditCaption: (text) async {
+        await ref.read(feedProvider.notifier)
+            .editCaption(_post!.id, text);
+        if (mounted) setState(() => _post = _post!.copyWith(caption: text));
+      },
+      onDelete: () async {
+        final ok = await ref.read(feedProvider.notifier)
+            .deletePost(_post!.id);
+        if (!mounted || !context.mounted) return;
+        if (ok) {
+          context.pop();
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('Устгаж чадсангүй. Дахин оролдоно уу.'),
+            backgroundColor: AppColors.error));
+        }
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final commentsAsync = ref.watch(commentsProvider(widget.postId));
     final me = SupabaseService.currentUser?.id;
+    final myProfile = ref.watch(_myMiniProfileProvider).valueOrNull;
 
     return Scaffold(
       backgroundColor: AppColors.bgBase,
-      appBar: AppBar(
-        backgroundColor: AppColors.bgBase,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new,
-              color: AppColors.textPrimary, size: 20),
-          onPressed: () => context.pop(),
-        ),
-        title: Text('Пост', style: AppTextStyles.h2),
-        centerTitle: true,
-        actions: [
-          // Өөрийн пост (live бичлэг ч мөн адил)-ыг засах/устгах
-          if (_post != null && _post!.userId == me)
-            IconButton(
-              icon: const Icon(Icons.more_horiz, color: AppColors.textPrimary),
-              onPressed: () => showPostOptionsSheet(
-                context,
-                postId: _post!.id,
-                authorId: _post!.userId,
-                authorUsername: _post!.author?.username?.replaceAll('@', '') ?? '',
-                isOwn: true,
-                currentCaption: _post!.caption,
-                onEditCaption: (text) async {
-                  await ref.read(feedProvider.notifier)
-                      .editCaption(_post!.id, text);
-                  if (mounted) setState(() => _post = _post!.copyWith(caption: text));
-                },
-                onDelete: () async {
-                  final ok = await ref.read(feedProvider.notifier)
-                      .deletePost(_post!.id);
-                  if (!mounted) return;
-                  if (ok) {
-                    context.pop();
-                  } else {
-                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                      content: Text('Устгаж чадсангүй. Дахин оролдоно уу.'),
-                      backgroundColor: AppColors.error));
-                  }
-                },
-              ),
-            ),
-        ],
-      ),
-      body: Column(children: [
-        Expanded(
-          child: CustomScrollView(
-            controller: _scrollCtrl,
-            slivers: [
-              // ── Post media + info ──
-              SliverToBoxAdapter(
-                child: _postLoading
-                    ? const SizedBox(
-                        height: 340,
-                        child: Center(child: CircularProgressIndicator(
-                            color: AppColors.accentStart, strokeWidth: 2)))
-                    : _post == null
-                        ? const SizedBox(
-                            height: 200,
-                            child: Center(child: Text('Пост олдсонгүй')))
-                        : _PostHeader(
-                            post: _post!,
-                            onLike: () {
-                              ref.read(feedProvider.notifier)
-                                  .toggleLike(_post!.id);
-                              setState(() {
-                                _post = _post!.copyWith(
-                                  isLikedByMe: !_post!.isLikedByMe,
-                                  likesCount: _post!.likesCount +
-                                      (_post!.isLikedByMe ? -1 : 1),
-                                );
-                              });
-                            },
-                          ),
-              ),
+      body: Stack(children: [
+        Column(children: [
+          Expanded(
+            child: CustomScrollView(
+              controller: _scrollCtrl,
+              slivers: [
+                // ── Post media (full-bleed) + sheet контент ──
+                SliverToBoxAdapter(
+                  child: _postLoading
+                      ? const _PostHeaderSkeleton()
+                      : _postError
+                          ? Padding(
+                              padding: const EdgeInsets.only(top: 72),
+                              child: _PostErrorBox(onRetry: _fetchPost))
+                          : _post == null
+                              ? const SizedBox(
+                                  height: 260,
+                                  child: Center(child: Text('Пост олдсонгүй')))
+                              : _PostHeader(
+                                  post: _post!,
+                                  // Header тоолуур realtime сэтгэгдлийн урсгалаас
+                                  commentCount:
+                                      commentsAsync.valueOrNull?.length,
+                                  onLike: _toggleLike,
+                                  onComment: () => _focusNode.requestFocus(),
+                                ),
+                ),
 
-              // ── Comments header ──
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-                  child: Row(children: [
-                    Text('Сэтгэгдлүүд', style: AppTextStyles.labelMd),
-                    const SizedBox(width: 8),
-                    commentsAsync.when(
-                      data: (c) => _CountBadge(count: c.length),
-                      loading: () => const SizedBox.shrink(),
-                      error: (_, __) => const SizedBox.shrink(),
+                // ── Comments header — жижиг том үсэг, tertiary (нэгдсэн хэв маяг) ──
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 18, 20, 8),
+                    child: Row(children: [
+                      Text('СЭТГЭГДЛҮҮД', style: AppTextStyles.sectionLabel),
+                      const SizedBox(width: 8),
+                      commentsAsync.when(
+                        data: (c) => _CountBadge(count: c.length),
+                        loading: () => const SizedBox.shrink(),
+                        error: (_, __) => const SizedBox.shrink(),
+                      ),
+                    ]),
+                  ),
+                ),
+
+                // ── Comments list ──
+                commentsAsync.when(
+                  loading: () => const SliverToBoxAdapter(
+                    child: Padding(
+                      padding: EdgeInsets.all(32),
+                      child: Center(child: CircularProgressIndicator(
+                          color: AppColors.accentStart, strokeWidth: 2)),
                     ),
-                  ]),
-                ),
-              ),
-
-              // ── Comments list ──
-              commentsAsync.when(
-                loading: () => const SliverToBoxAdapter(
-                  child: Padding(
-                    padding: EdgeInsets.all(32),
-                    child: Center(child: CircularProgressIndicator(
-                        color: AppColors.accentStart, strokeWidth: 2)),
                   ),
-                ),
-                error: (e, _) => SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: Text('Алдаа: $e',
-                        style: AppTextStyles.bodyXs.copyWith(
-                            color: AppColors.textTertiary)),
+                  error: (e, _) => SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Text('Алдаа: $e',
+                          style: AppTextStyles.bodyXs.copyWith(
+                              color: AppColors.textTertiary)),
+                    ),
                   ),
+                  data: (comments) => comments.isEmpty
+                      ? SliverToBoxAdapter(
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                                vertical: 32, horizontal: 24),
+                            child: Column(children: [
+                              const Text('💬',
+                                  style: TextStyle(fontSize: 36)),
+                              const SizedBox(height: 12),
+                              Text('Эхний сэтгэгдлийг үлдээгээрэй',
+                                  style: AppTextStyles.bodyMd.copyWith(
+                                      color: AppColors.textSecondary)),
+                            ]),
+                          ),
+                        )
+                      : _buildCommentSliver(comments, me),
                 ),
-                data: (comments) => comments.isEmpty
-                    ? SliverToBoxAdapter(
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(
-                              vertical: 32, horizontal: 24),
-                          child: Column(children: [
-                            const Text('💬',
-                                style: TextStyle(fontSize: 36)),
-                            const SizedBox(height: 12),
-                            Text('Эхний сэтгэгдлийг үлдээгээрэй',
-                                style: AppTextStyles.bodyMd.copyWith(
-                                    color: AppColors.textSecondary)),
-                          ]),
-                        ),
-                      )
-                    : _buildCommentSliver(comments, me),
-              ),
 
-              const SliverToBoxAdapter(child: SizedBox(height: 16)),
-            ],
+                const SliverToBoxAdapter(child: SizedBox(height: 16)),
+              ],
+            ),
           ),
-        ),
 
-        // ── Comment input ──
-        _CommentInput(
-          controller: _commentCtrl,
-          focusNode:  _focusNode,
-          sending:    _sending,
-          onSend:     _sendComment,
-          replyingTo: _replyTo?.author?.username,
-          onCancelReply: () => setState(() => _replyTo = null),
-        ),
+          // ── Comment input ──
+          _CommentInput(
+            controller: _commentCtrl,
+            focusNode:  _focusNode,
+            sending:    _sending,
+            onSend:     _sendComment,
+            replyingTo: _replyTo?.author?.username,
+            onCancelReply: () => setState(() => _replyTo = null),
+            avatarUrl:  myProfile?['avatar_url'] as String?,
+            initial: ((myProfile?['username'] as String?)?.trim().isNotEmpty == true
+                    ? (myProfile!['username'] as String).trim()[0]
+                    : SupabaseService.currentUser?.email?[0] ?? 'U')
+                .toUpperCase(),
+          ),
+        ]),
+
+        // ── Хөвөгч glass удирдлага — медиа дээгүүр давхарлана ──
+        SafeArea(child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+          child: Row(children: [
+            _GlassCircleButton(
+              icon: Icons.arrow_back_ios_new,
+              onTap: () => context.pop(),
+            ),
+            const Spacer(),
+            // Өөрийн пост (live бичлэг ч мөн адил)-ыг засах/устгах
+            if (_post != null && _post!.userId == me)
+              _GlassCircleButton(
+                icon: Icons.more_horiz,
+                onTap: _openOwnOptions,
+              ),
+          ]),
+        )),
       ]),
     );
   }
 }
 
+// ─── Дарахад жижигрэх + hover cursor (веб мэдрэмж) ───
+class _Press extends StatefulWidget {
+  final Widget child;
+  final VoidCallback? onTap;
+  final double scale;
+  const _Press({required this.child, this.onTap, this.scale = 0.92});
+
+  @override
+  State<_Press> createState() => _PressState();
+}
+
+class _PressState extends State<_Press> {
+  bool _down = false;
+
+  @override
+  Widget build(BuildContext context) => MouseRegion(
+    cursor: widget.onTap == null
+        ? SystemMouseCursors.basic : SystemMouseCursors.click,
+    child: GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTapDown: widget.onTap == null
+          ? null : (_) => setState(() => _down = true),
+      onTapUp: (_) => setState(() => _down = false),
+      onTapCancel: () => setState(() => _down = false),
+      onTap: widget.onTap,
+      child: AnimatedScale(
+        scale: _down ? widget.scale : 1.0,
+        duration: const Duration(milliseconds: 120),
+        curve: Curves.easeOut,
+        child: widget.child,
+      ),
+    ),
+  );
+}
+
+// ─── Хөвөгч glass дугуй товч (back / more) ────────────────────────────────────
+class _GlassCircleButton extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback onTap;
+  const _GlassCircleButton({required this.icon, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) => _Press(
+    scale: 0.9,
+    onTap: onTap,
+    child: Container(
+      width: 40, height: 40,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: Colors.black.withValues(alpha: 0.45),
+        border: Border.all(color: AppColors.hairline2),
+        boxShadow: AppColors.shadowCard,
+      ),
+      child: Icon(icon, size: 17, color: Colors.white),
+    ),
+  );
+}
+
+// ─── Пост ачаалах skeleton ────────────────────────────────────────────────────
+class _PostHeaderSkeleton extends StatelessWidget {
+  const _PostHeaderSkeleton();
+
+  @override
+  Widget build(BuildContext context) => TweenAnimationBuilder<double>(
+    tween: Tween(begin: 0.5, end: 1.0),
+    duration: const Duration(milliseconds: 250),
+    curve: Curves.easeOut,
+    builder: (_, o, child) => Opacity(opacity: o, child: child),
+    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      // Full-bleed медиа placeholder + доод талд sheet булан
+      Stack(children: [
+        Container(height: 340, width: double.infinity,
+            color: AppColors.bgSurface),
+        const Positioned(left: 0, right: 0, bottom: 0, child: _SheetCap()),
+      ]),
+      Padding(
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
+        child: Row(children: [
+          Container(width: 44, height: 44,
+              decoration: const BoxDecoration(
+                  color: AppColors.bgSurface, shape: BoxShape.circle)),
+          const SizedBox(width: 12),
+          Container(width: 120, height: 12,
+              decoration: BoxDecoration(
+                  color: AppColors.bgSurface,
+                  borderRadius: BorderRadius.circular(6))),
+        ]),
+      ),
+      Padding(
+        padding: const EdgeInsets.fromLTRB(20, 4, 20, 8),
+        child: Container(width: 160, height: 12,
+            decoration: BoxDecoration(
+                color: AppColors.bgSurface,
+                borderRadius: BorderRadius.circular(6))),
+      ),
+    ]),
+  );
+}
+
+// ─── Пост татахад алдаа гарсан (олдсонгүйгээс тусдаа) ─────────────────────────
+class _PostErrorBox extends StatelessWidget {
+  final VoidCallback onRetry;
+  const _PostErrorBox({required this.onRetry});
+
+  @override
+  Widget build(BuildContext context) => SizedBox(
+    height: 240,
+    child: Center(
+      child: Column(mainAxisSize: MainAxisSize.min, children: [
+        const Icon(Icons.wifi_off_outlined,
+            color: AppColors.textTertiary, size: 40),
+        const SizedBox(height: 12),
+        Text('Алдаа гарлаа', style: AppTextStyles.labelLg),
+        const SizedBox(height: 6),
+        Text('Пост ачаалж чадсангүй',
+            style: AppTextStyles.bodySm.copyWith(
+                color: AppColors.textTertiary)),
+        const SizedBox(height: 16),
+        OutlinedButton(
+          onPressed: onRetry,
+          style: OutlinedButton.styleFrom(
+            side: const BorderSide(color: AppColors.hairline),
+            foregroundColor: AppColors.accentStart),
+          child: const Text('Дахин оролдох'),
+        ),
+      ]),
+    ),
+  );
+}
+
+// ─── Sheet-ийн дээд булан — медиаг 28px давхарлан бүрхэж "хуудас" мэдрэмж өгнө ─
+class _SheetCap extends StatelessWidget {
+  const _SheetCap();
+
+  @override
+  Widget build(BuildContext context) => Container(
+    height: 28,
+    decoration: const BoxDecoration(
+      color: AppColors.bgBase,
+      borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+    ),
+    child: Center(
+      child: Container(width: 44, height: 4,
+          decoration: BoxDecoration(
+            color: AppColors.hairline2,
+            borderRadius: BorderRadius.circular(2))),
+    ),
+  );
+}
+
 // ─── Post header (media + actions + caption) ──────────────────────────────────
-class _PostHeader extends StatelessWidget {
+class _PostHeader extends ConsumerStatefulWidget {
   final Post post;
+  final int? commentCount; // realtime тоолуур (null бол snapshot-оос)
   final VoidCallback onLike;
-  const _PostHeader({required this.post, required this.onLike});
+  final VoidCallback onComment;
+  const _PostHeader({
+    required this.post,
+    this.commentCount,
+    required this.onLike,
+    required this.onComment,
+  });
+
+  @override
+  ConsumerState<_PostHeader> createState() => _PostHeaderState();
+}
+
+class _PostHeaderState extends ConsumerState<_PostHeader> {
+  bool? _savedOverride;
+
+  bool get _saved => _savedOverride ??
+      (ref.watch(savedPostIdsProvider).valueOrNull
+              ?.contains(widget.post.id) ?? false);
+
+  Future<void> _toggleSave() async {
+    final was = _savedOverride ??
+        (ref.read(savedPostIdsProvider).valueOrNull
+                ?.contains(widget.post.id) ?? false);
+    setState(() => _savedOverride = !was);
+    HapticFeedback.lightImpact();
+    final err = await SavedService.toggle(widget.post.id, was);
+    if (!mounted) return;
+    if (err != null) {
+      setState(() => _savedOverride = was);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(err), backgroundColor: AppColors.error));
+      return;
+    }
+    ref.invalidate(savedPostIdsProvider);
+    try { await ref.read(savedPostIdsProvider.future); } catch (_) {}
+    if (mounted) setState(() => _savedOverride = null);
+  }
+
+  Future<void> _share() async {
+    final link = '${Uri.base.origin}/post/${widget.post.id}';
+    await Clipboard.setData(ClipboardData(text: link));
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Холбоос хуулагдлаа 🔗'),
+          duration: Duration(seconds: 2)));
+    }
+  }
+
+  String _fmt(int n) =>
+      n >= 1000 ? '${(n / 1000).toStringAsFixed(1)}k' : '$n';
+
+  /// Full-bleed медиа (carousel / видео / зураг)
+  Widget _media(Post post) {
+    if (post.mediaUrls.length > 1) {
+      return _DetailCarousel(urls: post.mediaUrls);
+    }
+    if (isVideoUrl(post.mediaUrl?.split('?').first)) {
+      return NetworkVideo(url: post.mediaUrl!);
+    }
+    return CachedNetworkImage(
+      imageUrl: post.mediaUrl!,
+      width: double.infinity,
+      fit: BoxFit.cover,
+      placeholder: (_, __) => Container(
+          height: 360, color: AppColors.bgSurface),
+      errorWidget: (_, __, ___) => Container(
+        height: 300, color: AppColors.bgSurface,
+        child: const Center(child: Text('📸',
+            style: TextStyle(fontSize: 48))),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
+    final post = widget.post;
     final author = post.author;
+    final hasMedia = post.mediaUrls.length > 1 || post.mediaUrl != null;
+
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      // Author
+      // ── Media full-bleed + sheet булангийн давхарга ──
+      if (hasMedia)
+        Stack(children: [
+          _media(post),
+          // Дээд scrim — хөвөгч glass товчнууд цайвар медиа дээр ч тод харагдана
+          Positioned(top: 0, left: 0, right: 0, child: IgnorePointer(
+            child: Container(height: 96,
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [Colors.black54, Colors.transparent]))))),
+          const Positioned(left: 0, right: 0, bottom: 0, child: _SheetCap()),
+        ])
+      else
+        // Медиагүй пост — хөвөгч back товчны зай
+        const SizedBox(height: 64),
+
+      // ── Author row (sheet доторх эхний мөр) ──
       Padding(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+        padding: const EdgeInsets.fromLTRB(20, 6, 20, 14),
         child: Row(children: [
-          GestureDetector(
+          _Press(
+            scale: 0.94,
             onTap: () => context.push('/creator/${post.userId}'),
             child: AppAvatar(
               imageUrl: author?.avatarUrl,
               initial:  author?.initial ?? '?',
-              size: 40, showRing: true,
+              size: 44, showRing: true,
             ),
           ),
-          const SizedBox(width: 10),
-          Expanded(child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(children: [
-                Text(author?.username ?? '—', style: AppTextStyles.labelMd),
-                if (author?.isVerified == true) ...[
-                  const SizedBox(width: 4),
-                  const Icon(Icons.verified,
-                      color: AppColors.accentStart, size: 14),
+          const SizedBox(width: 12),
+          Expanded(child: MouseRegion(
+            cursor: SystemMouseCursors.click,
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () => context.push('/creator/${post.userId}'),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(children: [
+                    Text(author?.username ?? '—', style: AppTextStyles.labelLg),
+                    if (author?.isVerified == true) ...[
+                      const SizedBox(width: 4),
+                      const Icon(Icons.verified,
+                          color: AppColors.accentStart, size: 14),
+                    ],
+                  ]),
+                  if (post.venueName != null)
+                    Row(children: [
+                      const Icon(Icons.location_on,
+                          size: 10, color: AppColors.accentStart),
+                      const SizedBox(width: 2),
+                      Text(post.venueName!,
+                          style: AppTextStyles.bodyXs
+                              .copyWith(color: AppColors.textSecondary)),
+                    ]),
                 ],
-              ]),
-              if (post.venueName != null)
-                Row(children: [
-                  const Icon(Icons.location_on,
-                      size: 10, color: AppColors.accentStart),
-                  const SizedBox(width: 2),
-                  Text(post.venueName!,
-                      style: AppTextStyles.bodyXs
-                          .copyWith(color: AppColors.textSecondary)),
-                ]),
-            ],
+              ),
+            ),
           )),
-          Text(post.timeAgo,
-              style: AppTextStyles.bodyXs.copyWith(
-                  color: AppColors.textTertiary)),
+          // Хугацаа — micro pill
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+            decoration: BoxDecoration(
+              color: AppColors.bgElevated.withValues(alpha: 0.72),
+              borderRadius: BorderRadius.circular(999),
+              border: Border.all(color: AppColors.hairline)),
+            child: Text(post.timeAgo,
+                style: AppTextStyles.bodyXs.copyWith(
+                    color: AppColors.textTertiary))),
         ]),
       ),
 
-      // Media — олон зураг бол carousel, видео бол тоглуулна, эс бол зураг
-      if (post.mediaUrls.length > 1)
-        _DetailCarousel(urls: post.mediaUrls)
-      else if (post.mediaUrl != null)
-        isVideoUrl(post.mediaUrl)
-          ? NetworkVideo(url: post.mediaUrl!)
-          : CachedNetworkImage(
-              imageUrl: post.mediaUrl!,
-              width: double.infinity,
-              fit: BoxFit.cover,
-              placeholder: (_, __) => Container(
-                  height: 360, color: AppColors.bgSurface),
-              errorWidget: (_, __, ___) => Container(
-                height: 300, color: AppColors.bgSurface,
-                child: const Center(child: Text('📸',
-                    style: TextStyle(fontSize: 48))),
-              ),
-            ),
-
-      // Actions
-      Padding(
-        padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
+      // ── Action glass bar — like / comment / share / save ──
+      Container(
+        margin: const EdgeInsets.symmetric(horizontal: 20),
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+        decoration: BoxDecoration(
+          color: AppColors.bgElevated.withValues(alpha: 0.72),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: AppColors.hairline),
+          boxShadow: AppColors.shadowCard,
+        ),
         child: Row(children: [
-          GestureDetector(
-            onTap: onLike,
+          _Press(
+            scale: 0.85,
+            onTap: widget.onLike,
             child: Row(children: [
               Icon(
                 post.isLikedByMe ? Icons.favorite : Icons.favorite_border,
@@ -408,22 +720,42 @@ class _PostHeader extends StatelessWidget {
                       color: AppColors.textSecondary)),
             ]),
           ),
-          const SizedBox(width: 18),
-          Row(children: [
-            const Icon(Icons.chat_bubble_outline,
+          const SizedBox(width: 20),
+          _Press(
+            scale: 0.88,
+            onTap: widget.onComment,
+            child: Row(children: [
+              const Icon(Icons.chat_bubble_outline,
+                  color: AppColors.textSecondary, size: 22),
+              const SizedBox(width: 6),
+              Text(_fmt(widget.commentCount ?? post.commentsCount),
+                  style: AppTextStyles.labelSm.copyWith(
+                      color: AppColors.textSecondary)),
+            ]),
+          ),
+          const Spacer(),
+          _Press(
+            scale: 0.85,
+            onTap: _share,
+            child: const Icon(Icons.send_outlined,
                 color: AppColors.textSecondary, size: 22),
-            const SizedBox(width: 6),
-            Text(post.formattedComments,
-                style: AppTextStyles.labelSm.copyWith(
-                    color: AppColors.textSecondary)),
-          ]),
+          ),
+          const SizedBox(width: 18),
+          _Press(
+            scale: 0.85,
+            onTap: _toggleSave,
+            child: Icon(_saved ? Icons.bookmark : Icons.bookmark_border,
+                color: _saved
+                    ? AppColors.accentStart : AppColors.textSecondary,
+                size: 22),
+          ),
         ]),
       ),
 
       // Caption
       if (post.caption?.isNotEmpty == true)
         Padding(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+          padding: const EdgeInsets.fromLTRB(20, 14, 20, 12),
           child: RichText(
             text: TextSpan(style: AppTextStyles.bodyMd, children: [
               TextSpan(
@@ -432,7 +764,9 @@ class _PostHeader extends StatelessWidget {
               TextSpan(text: post.caption),
             ]),
           ),
-        ),
+        )
+      else
+        const SizedBox(height: 14),
 
       const Divider(color: AppColors.hairline, height: 1),
     ]);
@@ -493,18 +827,20 @@ class _CommentTileState extends State<_CommentTile> {
   Widget build(BuildContext context) {
     final comment = widget.comment;
     final author = comment.author;
+    // Мөрийн хэмнэл: avatar 34 (reply 28), зай 12
     return Padding(
-      padding: EdgeInsets.fromLTRB(widget.isReply ? 48 : 16, 10, 16, 4),
+      padding: EdgeInsets.fromLTRB(widget.isReply ? 54 : 20, 10, 20, 4),
       child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        GestureDetector(
+        _Press(
+          scale: 0.94,
           onTap: () => context.push('/creator/${comment.userId}'),
           child: AppAvatar(
             imageUrl: author?.avatarUrl,
             initial:  author?.initial ?? '?',
-            size: widget.isReply ? 26 : 32,
+            size: widget.isReply ? 28 : 34,
           ),
         ),
-        const SizedBox(width: 10),
+        const SizedBox(width: 12),
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Row(children: [
@@ -520,7 +856,8 @@ class _CommentTileState extends State<_CommentTile> {
                 style: AppTextStyles.bodyMd.copyWith(height: 1.4)),
             const SizedBox(height: 4),
             Row(children: [
-              GestureDetector(
+              _Press(
+                scale: 0.95,
                 onTap: widget.onReply,
                 child: Text('Хариулах',
                     style: AppTextStyles.bodyXs.copyWith(
@@ -529,7 +866,8 @@ class _CommentTileState extends State<_CommentTile> {
               ),
               if (widget.isOwn) ...[
                 const SizedBox(width: 16),
-                GestureDetector(
+                _Press(
+                  scale: 0.95,
                   onTap: () => _confirmDelete(context),
                   child: Text('Устгах',
                       style: AppTextStyles.bodyXs.copyWith(
@@ -540,7 +878,8 @@ class _CommentTileState extends State<_CommentTile> {
           ]),
         ),
         // Like
-        GestureDetector(
+        _Press(
+          scale: 0.8,
           onTap: _toggleLike,
           child: Padding(
             padding: const EdgeInsets.only(left: 8, top: 2),
@@ -566,7 +905,7 @@ class _CommentTileState extends State<_CommentTile> {
       context: ctx,
       backgroundColor: AppColors.bgElevated,
       shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
       builder: (_) => SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(20),
@@ -618,6 +957,8 @@ class _CommentInput extends StatelessWidget {
   final VoidCallback onSend;
   final String? replyingTo;
   final VoidCallback onCancelReply;
+  final String? avatarUrl;
+  final String initial;
   const _CommentInput({
     required this.controller,
     required this.focusNode,
@@ -625,19 +966,28 @@ class _CommentInput extends StatelessWidget {
     required this.onSend,
     this.replyingTo,
     required this.onCancelReply,
+    this.avatarUrl,
+    this.initial = 'U',
   });
 
   @override
   Widget build(BuildContext context) {
+    // Шилэн input bar — translucent дэвсгэр + дээшээ зөөлөн сүүдэр
     return Container(
       padding: EdgeInsets.only(
         left: 16, right: 8,
         top: replyingTo != null ? 0 : 10,
         bottom: MediaQuery.of(context).viewInsets.bottom + 10,
       ),
-      decoration: const BoxDecoration(
-        color: AppColors.bgElevated,
-        border: Border(top: BorderSide(color: AppColors.hairline)),
+      decoration: BoxDecoration(
+        color: AppColors.bgElevated.withValues(alpha: 0.92),
+        border: const Border(top: BorderSide(color: AppColors.hairline)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.4),
+            blurRadius: 18, spreadRadius: -4,
+            offset: const Offset(0, -6)),
+        ],
       ),
       child: Column(mainAxisSize: MainAxisSize.min, children: [
       // Reply banner
@@ -645,12 +995,12 @@ class _CommentInput extends StatelessWidget {
         Padding(
           padding: const EdgeInsets.only(right: 8, top: 8, bottom: 6),
           child: Row(children: [
-            Icon(Icons.reply, size: 14, color: AppColors.textSecondary),
+            const Icon(Icons.reply, size: 14, color: AppColors.textSecondary),
             const SizedBox(width: 6),
             Expanded(child: Text('@$replyingTo-д хариулж байна',
                 style: AppTextStyles.bodyXs.copyWith(
                     color: AppColors.textSecondary))),
-            GestureDetector(
+            _Press(
               onTap: onCancelReply,
               child: const Icon(Icons.close,
                   size: 16, color: AppColors.textTertiary)),
@@ -658,8 +1008,8 @@ class _CommentInput extends StatelessWidget {
         ),
       Row(children: [
         AppAvatar(
-          imageUrl: null,
-          initial: SupabaseService.currentUser?.email?[0].toUpperCase() ?? 'U',
+          imageUrl: avatarUrl,
+          initial: initial,
           size: 32,
         ),
         const SizedBox(width: 10),
@@ -667,8 +1017,8 @@ class _CommentInput extends StatelessWidget {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
             decoration: BoxDecoration(
-              color: AppColors.bgSurface,
-              borderRadius: BorderRadius.circular(24),
+              color: AppColors.bgSurface.withValues(alpha: 0.65),
+              borderRadius: BorderRadius.circular(999),
               border: Border.all(color: AppColors.hairline),
             ),
             child: TextField(
@@ -690,15 +1040,22 @@ class _CommentInput extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 8),
-        GestureDetector(
+        _Press(
+          scale: 0.88,
           onTap: sending ? null : onSend,
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 200),
             width: 38, height: 38,
+            // Primary CTA — неон glow сүүдэр
             decoration: BoxDecoration(
               gradient: sending ? null : AppColors.accentGradient,
               color: sending ? AppColors.bgSurface : null,
               shape: BoxShape.circle,
+              boxShadow: sending ? null : [
+                BoxShadow(
+                  color: AppColors.accentStart.withValues(alpha: 0.35),
+                  blurRadius: 18, spreadRadius: -2),
+              ],
             ),
             child: sending
                 ? const Padding(
@@ -754,7 +1111,7 @@ class _DetailCarouselState extends State<_DetailCarousel> {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 380,
+      height: 400,
       child: Stack(children: [
         PageView.builder(
           controller: _ctrl,
@@ -762,7 +1119,9 @@ class _DetailCarouselState extends State<_DetailCarousel> {
           onPageChanged: (i) => setState(() => _page = i),
           itemBuilder: (_, i) {
             final url = widget.urls[i];
-            if (isVideoUrl(url)) return NetworkVideo(url: url, height: 380);
+            if (isVideoUrl(url.split('?').first)) {
+              return NetworkVideo(url: url, height: 400);
+            }
             return CachedNetworkImage(
               imageUrl: url,
               width: double.infinity,
@@ -776,7 +1135,8 @@ class _DetailCarouselState extends State<_DetailCarousel> {
             );
           },
         ),
-        Positioned(top: 12, right: 12, child: Container(
+        // Тоолуур — хөвөгч back товчтой давхцахгүй байрлалд
+        Positioned(top: 64, right: 16, child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
           decoration: BoxDecoration(
             color: Colors.black54, borderRadius: BorderRadius.circular(20)),
@@ -784,7 +1144,8 @@ class _DetailCarouselState extends State<_DetailCarousel> {
             style: const TextStyle(color: Colors.white, fontSize: 11,
               fontWeight: FontWeight.w600)),
         )),
-        Positioned(bottom: 12, left: 0, right: 0, child: Row(
+        // Цэгүүд — sheet булангийн дээгүүр харагдана
+        Positioned(bottom: 40, left: 0, right: 0, child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             for (var i = 0; i < widget.urls.length; i++)

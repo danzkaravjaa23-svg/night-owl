@@ -5,6 +5,7 @@ class UserProfile {
   final String? name;
   final String? bio;
   final String? avatarUrl;
+  final String? coverUrl;
   final List<String> interests;
   final bool isVerified;
   final bool isBusiness;
@@ -20,6 +21,7 @@ class UserProfile {
     this.name,
     this.bio,
     this.avatarUrl,
+    this.coverUrl,
     this.interests      = const [],
     this.isVerified     = false,
     this.isBusiness     = false,
@@ -36,6 +38,7 @@ class UserProfile {
     name:           (json['full_name'] ?? json['name']) as String?,
     bio:            json['bio'] as String?,
     avatarUrl:      json['avatar_url'] as String?,
+    coverUrl:       json['cover_url'] as String?,
     interests:      List<String>.from(json['interests'] ?? []),
     isVerified:     json['is_verified'] as bool? ?? false,
     isBusiness:     json['is_business'] as bool? ?? false,
@@ -52,6 +55,7 @@ class UserProfile {
     'full_name':   name,
     'bio':         bio,
     'avatar_url':  avatarUrl,
+    'cover_url':   coverUrl,
     'interests':   interests,
     'is_business': isBusiness,
     'updated_at':  DateTime.now().toIso8601String(),
@@ -59,8 +63,8 @@ class UserProfile {
 
   UserProfile copyWith({
     String? username, String? name, String? bio,
-    String? avatarUrl, List<String>? interests,
-    bool? isVerified, bool? isBusiness,
+    String? avatarUrl, String? coverUrl, List<String>? interests,
+    bool? isVerified, bool? isBusiness, bool? isAdmin,
     int? followersCount, int? followingCount, int? postsCount,
   }) => UserProfile(
     id:             id,
@@ -68,9 +72,11 @@ class UserProfile {
     name:           name           ?? this.name,
     bio:            bio            ?? this.bio,
     avatarUrl:      avatarUrl      ?? this.avatarUrl,
+    coverUrl:       coverUrl       ?? this.coverUrl,
     interests:      interests      ?? this.interests,
     isVerified:     isVerified     ?? this.isVerified,
     isBusiness:     isBusiness     ?? this.isBusiness,
+    isAdmin:        isAdmin        ?? this.isAdmin,
     followersCount: followersCount ?? this.followersCount,
     followingCount: followingCount ?? this.followingCount,
     postsCount:     postsCount     ?? this.postsCount,

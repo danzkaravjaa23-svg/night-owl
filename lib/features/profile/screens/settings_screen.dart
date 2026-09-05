@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
@@ -17,11 +18,35 @@ class SettingsScreen extends ConsumerStatefulWidget {
 }
 
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
+  // Тохиргоо — SharedPreferences-т хадгалагдана (ThemeModeNotifier шиг)
+  static const _kNotif = 'settings_notif';
+  static const _kActivity = 'settings_activity_status';
   bool _notifLikes = true;
-  bool _notifFollowers = true;
-  bool _notifEvents = false;
-  bool _privateAccount = false;
   bool _activityStatus = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPrefs();
+  }
+
+  Future<void> _loadPrefs() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      if (!mounted) return;
+      setState(() {
+        _notifLikes = prefs.getBool(_kNotif) ?? true;
+        _activityStatus = prefs.getBool(_kActivity) ?? true;
+      });
+    } catch (_) {/* prefs уншиж чадвал default утга ашиглана */}
+  }
+
+  Future<void> _setPref(String key, bool value) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(key, value);
+    } catch (_) {/* локал хадгалалт бүтэлгүйтэвч UI төлөв хадгалагдана */}
+  }
 
   void _toast(String msg) => ScaffoldMessenger.of(context).showSnackBar(
     SnackBar(content: Text(msg), duration: const Duration(seconds: 2)));
@@ -52,19 +77,36 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     if (ok != true) return;
     final me = Supabase.instance.client.auth.currentUser?.id;
     if (me == null) return;
+
+    // 1) Edge function-аар auth хэрэглэгч + бүх датаг бүрмөсөн устгахыг оролдоно
     try {
-      // 1) Эхлээд edge function-аар auth хэрэглэгчийг бүрмөсөн устгахыг оролдоно
-      //    (deploy хийгдсэн бол бүх дата + auth устана)
-      try {
-        await Supabase.instance.client.functions.invoke('delete-account');
-      } catch (_) {
-        // 2) Function deploy хийгдээгүй бол — profiles устгах (контент cascade)
-        await Supabase.instance.client.from('profiles').delete().eq('id', me);
-      }
+      await Supabase.instance.client.functions.invoke('delete-account');
       await Supabase.instance.client.auth.signOut();
       if (mounted) context.go(AppRoutes.authLanding);
-    } catch (e) {
-      if (mounted) _toast('Устгахад алдаа: $e');
+      return;
+    } on FunctionException catch (e) {
+      // Зөвхөн function байхгүй (404) үед л profiles-only fallback руу орно.
+      // Бусад алдааг (RLS/сүлжээ) хэрэглэгчид харуулна — чимээгүй нуухгүй.
+      if (e.status != 404) {
+        if (mounted) _toast('Данс устгаж чадсангүй. Дахин оролдоно уу');
+        return;
+      }
+    } catch (_) {
+      if (mounted) _toast('Данс устгаж чадсангүй. Дахин оролдоно уу');
+      return;
+    }
+
+    // 2) Fallback — function deploy хийгдээгүй тул profiles-ыг устгана (контент cascade).
+    //    Гэхдээ auth хэрэглэгч устахгүй тул нэвтрэлт хэвээр үлдэхийг мэдэгдэнэ.
+    try {
+      await Supabase.instance.client.from('profiles').delete().eq('id', me);
+      await Supabase.instance.client.auth.signOut();
+      if (mounted) {
+        _toast('Профайл устлаа. Нэвтрэх эрх серверт хэвээр — админд хандана уу');
+        context.go(AppRoutes.authLanding);
+      }
+    } catch (_) {
+      if (mounted) _toast('Данс устгаж чадсангүй. Дахин оролдоно уу');
     }
   }
 
@@ -78,14 +120,30 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       backgroundColor: AppColors.bgBase,
       body: Stack(
         children: [
-          // ─── Aurora glow backdrop ───
+          // ─── Aurora glow backdrop — magenta зүүн дээд, cyan баруун доод ───
           Positioned(
             top: -160, left: -120,
             child: Container(
               width: 360, height: 360,
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                gradient: AppColors.auroraGradient,
+                gradient: RadialGradient(colors: [
+                  AppColors.magenta.withValues(alpha: 0.12),
+                  Colors.transparent,
+                ]),
+              ),
+            ),
+          ),
+          Positioned(
+            bottom: -140, right: -100,
+            child: Container(
+              width: 320, height: 320,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: RadialGradient(colors: [
+                  AppColors.neonCyan.withValues(alpha: 0.08),
+                  Colors.transparent,
+                ]),
               ),
             ),
           ),
@@ -113,7 +171,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       const SizedBox(height: 28),
 
                       // ─── БҮРТГЭЛ ───
-                      _SectionLabel('Бүртгэл'),
+                      const _SectionLabel('Бүртгэл'),
                       const SizedBox(height: 10),
                       _GlassCard(children: [
                         _SettingRow(
@@ -139,7 +197,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       const SizedBox(height: 24),
 
                       // ─── ТОХИРГОО ───
-                      _SectionLabel('Тохиргоо'),
+                      const _SectionLabel('Тохиргоо'),
                       const SizedBox(height: 10),
                       _GlassCard(children: [
                         _SettingRow(
@@ -158,7 +216,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                           label: 'Мэдэгдэл',
                           trailing: _NeonSwitch(
                             value: _notifLikes,
-                            onChanged: (v) => setState(() => _notifLikes = v),
+                            onChanged: (v) {
+                              setState(() => _notifLikes = v);
+                              _setPref(_kNotif, v);
+                            },
                           ),
                         ),
                       ]),
@@ -166,17 +227,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       const SizedBox(height: 24),
 
                       // ─── НУУЦЛАЛ ───
-                      _SectionLabel('Нууцлал'),
+                      const _SectionLabel('Нууцлал'),
                       const SizedBox(height: 10),
                       _GlassCard(children: [
-                        _SettingRow(
+                        // 'Хувийн данс' — profiles.is_private багана серверт байхгүй тул
+                        // одоохондоо идэвхгүй ("тун удахгүй") болгосон.
+                        const _SettingRow(
                           icon: Icons.lock_person_outlined,
                           label: 'Хувийн данс',
-                          trailing: _NeonSwitch(
-                            value: _privateAccount,
-                            onChanged: (v) =>
-                                setState(() => _privateAccount = v),
-                          ),
+                          trailingValue: 'Тун удахгүй',
+                          disabled: true,
                         ),
                         const _RowDivider(),
                         _SettingRow(
@@ -185,8 +245,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                           sub: 'Найзууд таныг шөнө олох боломжтой',
                           trailing: _NeonSwitch(
                             value: _activityStatus,
-                            onChanged: (v) =>
-                                setState(() => _activityStatus = v),
+                            onChanged: (v) {
+                              setState(() => _activityStatus = v);
+                              _setPref(_kActivity, v);
+                            },
                           ),
                         ),
                       ]),
@@ -194,13 +256,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       const SizedBox(height: 24),
 
                       // ─── ТӨЛБӨР ───
-                      _SectionLabel('Төлбөр'),
+                      const _SectionLabel('Төлбөр'),
                       const SizedBox(height: 10),
                       _GlassCard(children: [
-                        _SettingRow(
+                        // QPay түүх — payments хүснэгт серверт байхгүй тул идэвхгүй
+                        const _SettingRow(
                           icon: Icons.receipt_long_outlined,
                           label: 'QPay түүх',
-                          onTap: () => _toast('Төлбөрийн түүх хоосон байна'),
+                          trailingValue: 'Тун удахгүй',
+                          disabled: true,
                         ),
                         const _RowDivider(),
                         _SettingRow(
@@ -213,7 +277,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       const SizedBox(height: 24),
 
                       // ─── ТУХАЙ ───
-                      _SectionLabel('Тухай'),
+                      const _SectionLabel('Тухай'),
                       const SizedBox(height: 10),
                       _GlassCard(children: [
                         _SettingRow(
@@ -222,13 +286,20 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                           onTap: () => showInviteSheet(context),
                         ),
                         const _RowDivider(),
+                        // Түншлэлийн хөтөлбөр — өмнө нь зөвхөн URL бичиж л хүрдэг байсан
                         _SettingRow(
-                          icon: Icons.help_outline,
-                          label: 'Тусламж',
-                          onTap: () => _toast('Тусламж: support@nightowl.ub'),
+                          icon: Icons.handshake_outlined,
+                          label: 'Түншлэлийн хөтөлбөр',
+                          onTap: () => context.push(AppRoutes.affiliate),
                         ),
                         const _RowDivider(),
                         _SettingRow(
+                          icon: Icons.help_outline,
+                          label: 'Тусламж',
+                          onTap: () => _toast('Тусламж: support@nightowl.mn'),
+                        ),
+                        const _RowDivider(),
+                        const _SettingRow(
                           icon: Icons.account_tree_outlined,
                           label: 'Хувилбар',
                           trailingValue: '1.0.0',
@@ -249,16 +320,17 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         },
                       ),
                       const SizedBox(height: 18),
+                      // Устгах мөр — error өнгө (destructive)
                       Center(
                         child: TextButton(
                           onPressed: _deleteAccount,
                           style: TextButton.styleFrom(
-                            foregroundColor: AppColors.textTertiary,
+                            foregroundColor: AppColors.error,
                           ),
                           child: Text(
                             'Бүртгэл устгах',
                             style: AppTextStyles.bodySm.copyWith(
-                              color: AppColors.textTertiary,
+                              color: AppColors.error.withValues(alpha: 0.8),
                               fontWeight: FontWeight.w600,
                             ),
                           ),
@@ -290,17 +362,20 @@ class _Header extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
       child: Row(
         children: [
-          GestureDetector(
-            onTap: onBack,
-            child: Container(
-              width: 40, height: 40,
-              decoration: BoxDecoration(
-                color: AppColors.bgSurface,
-                shape: BoxShape.circle,
-                border: Border.all(color: AppColors.hairline2),
+          MouseRegion(
+            cursor: SystemMouseCursors.click,
+            child: GestureDetector(
+              onTap: onBack,
+              child: Container(
+                width: 40, height: 40,
+                decoration: BoxDecoration(
+                  color: AppColors.bgSurface,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: AppColors.hairline2),
+                ),
+                child: const Icon(Icons.chevron_left,
+                    color: AppColors.textPrimary, size: 22),
               ),
-              child: const Icon(Icons.chevron_left,
-                  color: AppColors.textPrimary, size: 22),
             ),
           ),
           const SizedBox(width: 16),
@@ -340,7 +415,9 @@ class _ProfileCard extends StatelessWidget {
     ].join(' · ');
     final avatarUrl = p?.avatarUrl;
 
-    return GestureDetector(
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.all(16),
@@ -414,9 +491,13 @@ class _ProfileCard extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 10),
-            _LivePill(),
+            // 'LIVE' pill байсан нь худал (жинхэнэ live төлөвтэй холбоогүй) —
+            // "Профайл засах" гэдгийг илэрхийлсэн саармаг chevron-оор солив.
+            const Icon(Icons.chevron_right,
+                color: AppColors.textTertiary, size: 20),
           ],
         ),
+      ),
       ),
     );
   }
@@ -480,41 +561,6 @@ class _ProfileCardSkeleton extends StatelessWidget {
   }
 }
 
-class _LivePill extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
-      decoration: BoxDecoration(
-        color: AppColors.lime.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: AppColors.lime.withValues(alpha: 0.35)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 6, height: 6,
-            decoration: const BoxDecoration(
-              shape: BoxShape.circle,
-              color: AppColors.lime,
-            ),
-          ),
-          const SizedBox(width: 5),
-          Text(
-            'LIVE',
-            style: AppTextStyles.monoSm.copyWith(
-              color: AppColors.lime,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 1.0,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 // ─────────────────────────────────────────────────────────────
 //  Section label (eyebrow)
 // ─────────────────────────────────────────────────────────────
@@ -528,7 +574,7 @@ class _SectionLabel extends StatelessWidget {
           label.toUpperCase(),
           style: AppTextStyles.labelSm.copyWith(
             color: AppColors.textTertiary,
-            letterSpacing: 1.4,
+            letterSpacing: 1.2,
           ),
         ),
       );
@@ -544,7 +590,7 @@ class _GlassCard extends StatelessWidget {
   Widget build(BuildContext context) => Container(
         padding: const EdgeInsets.all(6),
         decoration: BoxDecoration(
-          color: AppColors.bgElevated,
+          color: AppColors.bgElevated.withValues(alpha: 0.72),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(color: AppColors.hairline),
         ),
@@ -555,8 +601,8 @@ class _GlassCard extends StatelessWidget {
 class _RowDivider extends StatelessWidget {
   const _RowDivider();
   @override
-  Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.only(left: 56, right: 12),
+  Widget build(BuildContext context) => const Padding(
+        padding: EdgeInsets.only(left: 56, right: 12),
         child: Divider(height: 1, thickness: 1, color: AppColors.hairline),
       );
 }
@@ -572,6 +618,7 @@ class _SettingRow extends StatelessWidget {
   final Widget? trailing;
   final VoidCallback? onTap;
   final bool mono;
+  final bool disabled; // идэвхгүй мөр (сааралдуулж, дарагдахгүй)
   const _SettingRow({
     required this.icon,
     required this.label,
@@ -580,11 +627,16 @@ class _SettingRow extends StatelessWidget {
     this.trailing,
     this.onTap,
     this.mono = false,
+    this.disabled = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    final row = Padding(
+    final iconColor =
+        disabled ? AppColors.textTertiary : AppColors.neonCyan;
+    final row = Opacity(
+      opacity: disabled ? 0.55 : 1.0,
+      child: Padding(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 11),
       child: Row(
         children: [
@@ -592,12 +644,11 @@ class _SettingRow extends StatelessWidget {
           Container(
             width: 36, height: 36,
             decoration: BoxDecoration(
-              color: AppColors.neonCyan.withValues(alpha: 0.10),
+              color: iconColor.withValues(alpha: 0.10),
               borderRadius: BorderRadius.circular(11),
-              border: Border.all(
-                  color: AppColors.neonCyan.withValues(alpha: 0.22)),
+              border: Border.all(color: iconColor.withValues(alpha: 0.22)),
             ),
-            child: Icon(icon, size: 18, color: AppColors.neonCyan),
+            child: Icon(icon, size: 18, color: iconColor),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -625,28 +676,32 @@ class _SettingRow extends StatelessWidget {
                   ? AppTextStyles.mono
                       .copyWith(color: AppColors.textTertiary, fontSize: 12)
                   : AppTextStyles.bodySm
-                      .copyWith(color: AppColors.textSecondary),
+                      .copyWith(color: AppColors.textTertiary),
             ),
           ],
           if (trailing != null) ...[
             const SizedBox(width: 8),
             trailing!,
-          ] else if (onTap != null) ...[
+          ] else if (onTap != null && !disabled) ...[
             const SizedBox(width: 4),
             const Icon(Icons.chevron_right,
                 size: 18, color: AppColors.textTertiary),
           ],
         ],
       ),
+    ),
     );
 
-    if (onTap == null) return row;
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(14),
-        child: row,
+    if (onTap == null || disabled) return row;
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(14),
+          child: row,
+        ),
       ),
     );
   }
@@ -662,7 +717,9 @@ class _NeonSwitch extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
       onTap: () => onChanged(!value),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
@@ -698,6 +755,7 @@ class _NeonSwitch extends StatelessWidget {
           ),
         ),
       ),
+      ),
     );
   }
 }
@@ -712,7 +770,9 @@ class _DangerButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
       onTap: onTap,
       child: Container(
         height: 52,
@@ -733,6 +793,7 @@ class _DangerButton extends StatelessWidget {
             ),
           ],
         ),
+      ),
       ),
     );
   }

@@ -14,7 +14,7 @@ class BlockReportService {
       await _c.from('blocks').upsert({
         'blocker_id': me,
         'blocked_id': userId,
-      }, onConflict: 'blocker_id, blocked_id');
+      }, onConflict: 'blocker_id,blocked_id');
       return null;
     } catch (e) {
       return e.toString();

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../theme/app_colors.dart';
 
 /// Gradient shimmer text — matches .ns-grad-text CSS class
@@ -40,21 +41,22 @@ class NightOwlLogoText extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // GoogleFonts.manrope — фонтыг runtime дээр татаж бүртгэдэг тул
+    // pubspec-д bundle хийлгүйгээр брэнд бичиг баталгаатай гарна
+    // (урьд нь 'Manrope' string нь бүртгэлгүй тул Roboto руу унадаг байсан).
     return RichText(
       text: TextSpan(
-        style: TextStyle(
-          fontFamily: 'Manrope',
+        style: GoogleFonts.manrope(
           fontSize: fontSize,
           fontWeight: FontWeight.w800,
-          color: AppColors.textPrimary,
+          color: AppColors.dynTextPrimary,
         ),
         children: [
           TextSpan(text: isMn ? 'Шөнийн ' : 'Night'),
           WidgetSpan(
             child: GradientText(
               isMn ? 'шувуухай' : ' Owl',
-              style: TextStyle(
-                fontFamily: 'Manrope',
+              style: GoogleFonts.manrope(
                 fontSize: fontSize,
                 fontWeight: FontWeight.w800,
                 fontStyle: FontStyle.italic,

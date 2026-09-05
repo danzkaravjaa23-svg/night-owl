@@ -24,7 +24,9 @@ class NightOwlScaffold extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: backgroundColor ?? AppColors.bgBase,
+      // Theme-ээс уншина — Dark горимд bgBase хэвээр, Light горимд цайвар суурь
+      backgroundColor:
+          backgroundColor ?? Theme.of(context).scaffoldBackgroundColor,
       extendBodyBehindAppBar: extendBehindAppBar,
       appBar: appBar,
       bottomNavigationBar: bottomNavigationBar,
@@ -52,11 +54,11 @@ class _AuroraBackground extends StatelessWidget {
 class _AuroraPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
-    // Top-left purple glow
+    // Зүүн дээд — magenta неон уур
     final paint1 = Paint()
       ..shader = RadialGradient(
         colors: [
-          AppColors.accentPurple.withValues(alpha: 0.12),
+          AppColors.accentStart.withValues(alpha: 0.10),
           Colors.transparent,
         ],
       ).createShader(Rect.fromCircle(
@@ -69,11 +71,11 @@ class _AuroraPainter extends CustomPainter {
       paint1,
     );
 
-    // Bottom-right pink glow
+    // Баруун доод — cyan неон уур
     final paint2 = Paint()
       ..shader = RadialGradient(
         colors: [
-          AppColors.accentStart.withValues(alpha: 0.10),
+          AppColors.neonCyan.withValues(alpha: 0.07),
           Colors.transparent,
         ],
       ).createShader(Rect.fromCircle(
@@ -85,56 +87,26 @@ class _AuroraPainter extends CustomPainter {
       size.width * 0.5,
       paint2,
     );
+
+    // Доод төв — magenta spotlight: хөвөгч док болон FAB-ийн ард
+    // гүн мэдрэмж өгөх статик гэрэл (blur биш — web perf аюулгүй)
+    final paint3 = Paint()
+      ..shader = RadialGradient(
+        colors: [
+          AppColors.accentStart.withValues(alpha: 0.09),
+          Colors.transparent,
+        ],
+      ).createShader(Rect.fromCircle(
+        center: Offset(size.width * 0.5, size.height * 1.05),
+        radius: size.width * 0.55,
+      ));
+    canvas.drawCircle(
+      Offset(size.width * 0.5, size.height * 1.05),
+      size.width * 0.55,
+      paint3,
+    );
   }
 
   @override
   bool shouldRepaint(_) => false;
-}
-
-/// Phone status bar (time + icons) — matches PhoneStatus JSX
-class PhoneStatusBar extends StatelessWidget implements PreferredSizeWidget {
-  const PhoneStatusBar({super.key});
-
-  @override
-  Size get preferredSize => const Size.fromHeight(44);
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: 44,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              _currentTime(),
-              style: const TextStyle(
-                color: AppColors.textPrimary,
-                fontSize: 15,
-                fontWeight: FontWeight.w600,
-                letterSpacing: -0.3,
-              ),
-            ),
-            Row(
-              children: const [
-                Icon(Icons.signal_cellular_alt, size: 16, color: AppColors.textPrimary),
-                SizedBox(width: 6),
-                Icon(Icons.wifi, size: 16, color: AppColors.textPrimary),
-                SizedBox(width: 6),
-                Icon(Icons.battery_full, size: 16, color: AppColors.textPrimary),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  String _currentTime() {
-    final now = DateTime.now();
-    final h = now.hour.toString().padLeft(2, '0');
-    final m = now.minute.toString().padLeft(2, '0');
-    return '$h:$m';
-  }
 }

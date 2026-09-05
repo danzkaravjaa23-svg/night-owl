@@ -15,9 +15,10 @@ final savedPostIdsProvider = FutureProvider<Set<String>>((ref) async {
 });
 
 class SavedService {
-  static Future<void> toggle(String postId, bool currentlySaved) async {
+  /// null = амжилттай, String = Монгол алдааны мессеж (snackbar-т)
+  static Future<String?> toggle(String postId, bool currentlySaved) async {
     final me = SupabaseService.currentUser?.id;
-    if (me == null) return;
+    if (me == null) return 'Нэвтэрнэ үү';
     try {
       if (currentlySaved) {
         await SupabaseService.client.from('saved_posts')
@@ -26,6 +27,11 @@ class SavedService {
         await SupabaseService.client.from('saved_posts')
             .insert({'user_id': me, 'post_id': postId});
       }
-    } catch (_) {}
+      return null;
+    } catch (_) {
+      return currentlySaved
+          ? 'Хадгалснаа хасаж чадсангүй'
+          : 'Хадгалж чадсангүй. Дахин оролдоно уу';
+    }
   }
 }

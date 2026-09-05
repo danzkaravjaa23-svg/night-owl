@@ -60,6 +60,9 @@ class ImageUploader {
           .from(bucket)
           .getPublicUrl(path);
     } catch (e) {
+      // Алдааг залгиж null буцаадаг гэрээ хэвээр — гэхдээ dev дээр шалтгаан
+      // (RLS, буруу bucket, хэт том payload, сүлжээ) харагдана
+      if (kDebugMode) debugPrint('uploadBytes [$bucket/$path] failed: $e');
       return null;
     }
   }
@@ -76,14 +79,16 @@ class ImageUploader {
     );
   }
 
-  /// Avatar upload
+  /// Avatar upload — timestamp-тай зам: URL солигдсоноор browser/CDN/
+  /// CachedNetworkImage кэш хуучин аватараа үзүүлсээр байх багаас сэргийлнэ
   static Future<String?> uploadAvatar(Uint8List bytes) async {
     final user = SupabaseService.currentUser;
     if (user == null) return null;
+    final ts = DateTime.now().millisecondsSinceEpoch;
     return uploadBytes(
       bytes:  bytes,
       bucket: 'avatars',
-      path:   '${user.id}/avatar.jpg',
+      path:   '${user.id}/avatar_$ts.jpg',
     );
   }
 

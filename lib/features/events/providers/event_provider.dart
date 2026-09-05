@@ -11,6 +11,7 @@ class EventItem {
   final int price;
   final String? venueName;
   final String? organizerName;
+  final int attendeeCount; // бодит RSVP тоо (events.attendee_count)
   const EventItem({
     required this.id,
     required this.title,
@@ -20,6 +21,7 @@ class EventItem {
     this.price = 0,
     this.venueName,
     this.organizerName,
+    this.attendeeCount = 0,
   });
 }
 
@@ -29,7 +31,7 @@ final upcomingEventsProvider = FutureProvider<List<EventItem>>((ref) async {
   final now = DateTime.now().subtract(const Duration(hours: 3)).toIso8601String();
   final data = await client
       .from('events')
-      .select('id, title, description, cover_url, starts_at, price, venue_id, organizer_id')
+      .select('id, title, description, cover_url, starts_at, price, venue_id, organizer_id, attendee_count')
       .gte('starts_at', now)
       .order('starts_at', ascending: true)
       .limit(30);
@@ -61,6 +63,7 @@ final upcomingEventsProvider = FutureProvider<List<EventItem>>((ref) async {
     price: r['price'] as int? ?? 0,
     venueName: r['venue_id'] != null ? vmap[r['venue_id']] : null,
     organizerName: r['organizer_id'] != null ? omap[r['organizer_id']] : null,
+    attendeeCount: (r['attendee_count'] as num?)?.toInt() ?? 0,
   )).toList();
 });
 

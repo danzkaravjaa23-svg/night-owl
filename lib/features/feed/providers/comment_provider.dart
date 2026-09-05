@@ -120,13 +120,19 @@ class CommentService {
     }
   }
 
-  static Future<void> deleteComment(String commentId) async {
+  /// null = амжилттай, String = алдааны мессеж (snackbar-т)
+  static Future<String?> deleteComment(String commentId) async {
     final user = SupabaseService.currentUser;
-    if (user == null) return;
-    await SupabaseService.client
-        .from('comments')
-        .delete()
-        .eq('id', commentId)
-        .eq('user_id', user.id);
+    if (user == null) return 'Нэвтэрнэ үү';
+    try {
+      await SupabaseService.client
+          .from('comments')
+          .delete()
+          .eq('id', commentId)
+          .eq('user_id', user.id);
+      return null;
+    } catch (_) {
+      return 'Сэтгэгдэл устгаж чадсангүй';
+    }
   }
 }
