@@ -8,7 +8,8 @@ import '../../../core/router/app_router.dart';
 import '../widgets/auth_ui.dart';
 
 /// Нууц үг сэргээх холбоосоор ирсэн хэрэглэгчид шинэ нууц үг тавих дэлгэц.
-/// Splash нь AuthChangeEvent.passwordRecovery event-ийг барьж энэ дэлгэцийг нээнэ.
+/// Router (AuthGate.recovery) нь token_hash холбоос/passwordRecovery event үед
+/// энэ дэлгэц рүү автоматаар аваачна.
 class ResetPasswordScreen extends StatefulWidget {
   const ResetPasswordScreen({super.key});
 
@@ -46,10 +47,8 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
         content: Text('Нууц үг амжилттай шинэчлэгдлээ')));
-      // Splash-с pageless route-оор нээгдсэн бол эхлээд хаана,
-      // дараа нь feed рүү шилжинэ
-      final nav = Navigator.of(context);
-      if (nav.canPop()) nav.pop();
+      // Recovery горимыг унтрааж (router дахин /auth/reset руу буцаахгүй) feed рүү
+      authGate.finishRecovery();
       context.go(AppRoutes.feed);
     } on AuthException catch (e) {
       if (!mounted) return;

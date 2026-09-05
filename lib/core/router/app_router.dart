@@ -12,6 +12,8 @@ import '../../features/auth/screens/login_screen.dart';
 import '../../features/auth/screens/register_screen.dart';
 import '../../features/auth/screens/setup_screen.dart';
 import '../../features/auth/screens/forgot_password_screen.dart';
+import '../../features/auth/screens/reset_password_screen.dart';
+import '../services/supabase_service.dart' show pendingPasswordRecovery;
 import '../../features/shell/main_shell.dart';
 import '../../features/feed/screens/feed_screen.dart';
 import '../../features/feed/screens/post_detail_screen.dart';
@@ -56,6 +58,7 @@ abstract class AppRoutes {
   static const register        = '/auth/register';
   static const setup           = '/auth/setup';
   static const forgotPassword  = '/auth/forgot-password';
+  static const resetPassword   = '/auth/reset';
   static const feed            = '/feed';
   static const postDetail      = '/post/:id';
   static const creator         = '/creator/:id';
@@ -91,7 +94,7 @@ abstract class AppRoutes {
   // Нэвтрэлт шаардахгүй routes
   static const _publicRoutes = {
     splash, langSelect, onboarding, permLocation, permNotif,
-    authLanding, login, register, setup, forgotPassword,
+    authLanding, login, register, setup, forgotPassword, resetPassword,
   };
 
   static bool isPublic(String location) =>
@@ -179,6 +182,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       if (!loggedIn) {
         return AppRoutes.isPublic(loc) ? null : AppRoutes.authLanding;
       }
+      // Нэвтэрсэн + нууц үг сэргээх горимд — шинэ нууц үгийн дэлгэц
+      if (authGate.recovery) {
+        return loc == AppRoutes.resetPassword ? null : AppRoutes.resetPassword;
+      }
       // Нэвтэрсэн — профайлаа дуусгаагүй бол заавал setup
       if (authGate.needsSetup) {
         return loc == AppRoutes.setup ? null : AppRoutes.setup;
@@ -220,6 +227,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         pageBuilder: (_, s) => _slidePage(s, const SetupScreen())),
       GoRoute(path: AppRoutes.forgotPassword,
         pageBuilder: (_, s) => _slidePage(s, const ForgotPasswordScreen())),
+      GoRoute(path: AppRoutes.resetPassword,
+        pageBuilder: (_, s) => _slidePage(s, const ResetPasswordScreen())),
 
       // ── Main shell (bottom nav) ──
       ShellRoute(
@@ -322,11 +331,23 @@ final appRouterProvider = Provider<GoRouter>((ref) {
 final authGate = AuthGate();
 
 class AuthGate extends ChangeNotifier {
+  /// Нууц үг сэргээх горим — token_hash холбоос (pendingPasswordRecovery)
+  /// эсвэл passwordRecovery event-ээр асна; нууц үг солимогц унтарна.
+  bool recovery = pendingPasswordRecovery;
+
   AuthGate() {
     // Аливаа auth өөрчлөлтөд redirect-ийг дахин ажиллуулна
-    Supabase.instance.client.auth.onAuthStateChange.listen((_) {
+    Supabase.instance.client.auth.onAuthStateChange.listen((s) {
+      if (s.event == AuthChangeEvent.passwordRecovery) recovery = true;
+      if (s.event == AuthChangeEvent.signedOut) recovery = false;
       notifyListeners();
     });
+  }
+
+  /// Нууц үг амжилттай солигдлоо — recovery горимоос гарна
+  void finishRecovery() {
+    recovery = false;
+    notifyListeners();
   }
 
   /// Хэрэглэгч профайлаа дуусгаагүй (setup хийгээгүй) эсэх — СИНХРОН.

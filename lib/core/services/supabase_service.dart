@@ -6,6 +6,10 @@ import '../constants/app_constants.dart';
 /// (Нэвтрэх дэлгэц дээр харуулж, шалтгааныг нуухгүй.)
 String? lastAuthCallbackError;
 
+/// Нууц үг сэргээх холбоосоор (token_hash) орж ирж, session амжилттай
+/// баталгаажсан бол true — router шинэ нууц үгийн дэлгэц рүү аваачна.
+bool pendingPasswordRecovery = false;
+
 /// Supabase client singleton
 class SupabaseService {
   SupabaseService._();
@@ -15,6 +19,27 @@ class SupabaseService {
       url: AppConstants.supabaseUrl,
       anonKey: AppConstants.supabaseAnonKey,
     );
+
+    // ── Нууц үг сэргээх холбоос (token_hash) ──
+    // Имэйлийн template: {{ .SiteURL }}/?token_hash=…&type=recovery
+    // verifyOTP нь ямар ч төхөөрөмж/browser дээр ажиллана (PKCE verifier
+    // шаардахгүй) — тиймээс утасны Gmail-ээс дарсан ч ажиллана.
+    if (kIsWeb) {
+      final q = Uri.base.queryParameters;
+      final th = q['token_hash'];
+      if (th != null && th.isNotEmpty && q['type'] == 'recovery') {
+        try {
+          await Supabase.instance.client.auth
+              .verifyOTP(tokenHash: th, type: OtpType.recovery);
+          pendingPasswordRecovery = true;
+        } catch (e) {
+          lastAuthCallbackError =
+              'Сэргээх холбоос хүчингүй эсвэл хугацаа нь дууссан байна. '
+              'Нууц үг сэргээхийг дахин хүсээрэй.';
+          debugPrint('recovery verifyOTP failed: $e');
+        }
+      }
+    }
 
     // ── OAuth callback fallback ──
     // supabase_flutter өөрөө URL-аас session солихыг оролддог ч web дээр
