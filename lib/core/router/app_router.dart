@@ -316,50 +316,29 @@ final appRouterProvider = Provider<GoRouter>((ref) {
 });
 
 /// Supabase auth state → GoRouter refresh
-/// Нэвтрэлтийн төлөв + "профайл дуусгасан эсэх"-ийг router-т дамжуулна.
+/// Нэвтрэлтийн төлөв + "профайлаа дуусгасан эсэх"-ийг router-т дамжуулна.
 /// Global singleton — signIn болмогц GoRouter redirect дахин ажиллаж,
 /// шинэ хэрэглэгчийг setup руу, бүртгэлтэйг feed рүү автоматаар аваачна.
 final authGate = AuthGate();
 
 class AuthGate extends ChangeNotifier {
-  bool _needsSetup = false;
-  bool get needsSetup => _needsSetup;
-
   AuthGate() {
-    Supabase.instance.client.auth.onAuthStateChange.listen((s) {
-      switch (s.event) {
-        case AuthChangeEvent.signedOut:
-          _needsSetup = false;
-          notifyListeners();
-          break;
-        case AuthChangeEvent.signedIn:
-        case AuthChangeEvent.initialSession:
-        case AuthChangeEvent.userUpdated:
-          refresh(); // профайл дуусгасан эсэхийг DB-ээс шалгаад мэдэгдэнэ
-          break;
-        default:
-          notifyListeners();
-      }
+    // Аливаа auth өөрчлөлтөд redirect-ийг дахин ажиллуулна
+    Supabase.instance.client.auth.onAuthStateChange.listen((_) {
+      notifyListeners();
     });
   }
 
-  /// profiles.updated_at NULL бол setup хийгээгүй ШИНЭ хэрэглэгч.
-  /// (handle_new_user trigger зөвхөн created_at тавьдаг; setup._save
-  ///  updated_at-ыг бичдэг тул энэ нь "дуусгасан эсэх"-ийн найдвартай дохио.)
-  Future<void> refresh() async {
+  /// Хэрэглэгч профайлаа дуусгаагүй (setup хийгээгүй) эсэх — СИНХРОН.
+  /// Дохио нь auth user-ийн metadata дахь `setup_complete` — зөвхөн
+  /// setup._save л тавьдаг тул presence/follow зэрэг бусад UPDATE
+  /// үүнд нөлөөлөхгүй (updated_at-ийн адил найдваргүй биш). DB дуудлагагүй.
+  bool get needsSetup {
     final user = Supabase.instance.client.auth.currentUser;
-    if (user == null) { _needsSetup = false; notifyListeners(); return; }
-    try {
-      final row = await Supabase.instance.client
-          .from('profiles')
-          .select('username, updated_at')
-          .eq('id', user.id)
-          .maybeSingle();
-      final username = (row?['username'] as String?)?.trim() ?? '';
-      _needsSetup = row == null || row['updated_at'] == null || username.isEmpty;
-    } catch (_) {
-      _needsSetup = false; // DB уншиж чадсангүй — feed рүү (setup-д гацаахгүй)
-    }
-    notifyListeners();
+    if (user == null) return false;
+    return user.userMetadata?['setup_complete'] != true;
   }
+
+  /// setup._save дараа шууд redirect-ийг сэргээхэд (metadata аль хэдийн шинэчлэгдсэн)
+  void refresh() => notifyListeners();
 }

@@ -52,9 +52,10 @@ class _SetupScreenState extends State<SetupScreen> {
       if (data != null) {
         final username = data['username'] as String? ?? '';
         setState(() {
-          // updated_at NULL = профайлаа хараахан дуусгаагүй ШИНЭ хэрэглэгч →
-          // "үүсгэх" горим (буцах товчгүй). Дуусгасан бол засах горим.
-          _isEditMode = data['updated_at'] != null;
+          // setup_complete metadata = профайлаа дуусгасан → засах горим.
+          // Байхгүй бол ШИНЭ хэрэглэгч → "үүсгэх" горим (буцах товчгүй).
+          _isEditMode = Supabase.instance.client.auth.currentUser
+                  ?.userMetadata?['setup_complete'] == true;
           _usernameCtrl.text = username;
           _bioCtrl.text      = data['bio'] as String? ?? '';
           _avatarUrl         = data['avatar_url'] as String?;
@@ -163,8 +164,13 @@ class _SetupScreenState extends State<SetupScreen> {
 
       await Supabase.instance.client.from('profiles').upsert(updates);
 
-      // Профайл дууссан гэдгийг router-т мэдэгдэнэ (setup-д гацахгүй)
-      await authGate.refresh();
+      // "Профайл дуусгасан" тэмдгийг auth metadata-д тавина — router AuthGate
+      // үүгээр л шинэ/бүртгэлтэйг ялгадаг (presence/follow update нөлөөлөхгүй)
+      try {
+        await Supabase.instance.client.auth.updateUser(
+          UserAttributes(data: {'setup_complete': true}));
+      } catch (_) {/* metadata тавьж чадсангүй ч feed рүү явуулна */}
+      authGate.refresh();
       if (!mounted) return;
       context.go(AppRoutes.feed);
     } on PostgrestException catch (e) {
