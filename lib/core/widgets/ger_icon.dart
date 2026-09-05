@@ -1,90 +1,181 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 
-/// Монгол гэрийн icon — бөмбөгөр дээвэр, ханын хэвтээ зураас, утаа, улзий хээ.
-/// Брэндийн accent градиентаар дүүргэнэ (апп-д тааруулсан).
+/// Мэдэгдлийн icon — неон гэр, хаалганд нь хонх.
+/// Үндсэн дүрс нь бэлэн зураг ([_asset]); мэдэгдэл ирсэн үед код дээрээс
+/// гэрлийн туяа + гэрэлтэлт нэмэгддэг (тоо нь дуудагч талд — badge).
+///
+/// [ringing] = true үед туяа анивчиж, гэр бага зэрэг "амьсгална".
+/// Анимац хэрэгтэй бол [AnimatedGerIcon] ашигла.
 class GerIcon extends StatelessWidget {
+  static const String _asset = 'assets/icons/ger_bell.png';
+
   final double size;
+
+  /// Туяаны өнгө (сүүлийн өнгийг ашиглана). Брэнд солигдвол энд дамжуулна.
   final List<Color> colors;
+
+  /// Мэдэгдэл ирсэн эсэх.
+  final bool ringing;
+
+  /// Анимацийн фаз (0..1). [AnimatedGerIcon] дамжуулна.
+  final double phase;
+
   const GerIcon({
     super.key,
     this.size = 26,
     this.colors = const [
       AppColors.accentStart, AppColors.accentMid, AppColors.accentEnd,
     ],
+    this.ringing = false,
+    this.phase = 0,
   });
 
   @override
-  Widget build(BuildContext context) => SizedBox(
-        width: size,
-        height: size,
-        child: CustomPaint(painter: _GerPainter(colors)),
+  Widget build(BuildContext context) {
+    // Хонх дуугарахад гэр зөөлөн томорч-жижигрэнэ (2% — мэдрэгдэх ч анзаарагдахгүй)
+    final pulse = ringing ? 1 + 0.025 * math.sin(phase * math.pi * 2) : 1.0;
+
+    return SizedBox(
+      width: size,
+      height: size,
+      child: Stack(
+        clipBehavior: Clip.none,
+        alignment: Alignment.center,
+        children: [
+          Transform.scale(
+            scale: pulse,
+            child: Image.asset(
+              _asset,
+              width: size,
+              height: size,
+              filterQuality: FilterQuality.medium,
+              // Зураг ачаалагдаагүй агшинд байрлал үсрэхээс сэргийлнэ
+              gaplessPlayback: true,
+            ),
+          ),
+          if (ringing)
+            Positioned.fill(
+              child: IgnorePointer(
+                child: CustomPaint(
+                  painter: _SparkPainter(colors.last, phase),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Мэдэгдэл ирсэн үед өөрөө анивчдаг хувилбар.
+/// [ringing] false бол анимац зогсоно (батерей хэмнэнэ).
+class AnimatedGerIcon extends StatefulWidget {
+  final double size;
+  final List<Color> colors;
+  final bool ringing;
+
+  const AnimatedGerIcon({
+    super.key,
+    this.size = 26,
+    this.colors = const [
+      AppColors.accentStart, AppColors.accentMid, AppColors.accentEnd,
+    ],
+    this.ringing = false,
+  });
+
+  @override
+  State<AnimatedGerIcon> createState() => _AnimatedGerIconState();
+}
+
+class _AnimatedGerIconState extends State<AnimatedGerIcon>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _c = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 1600),
+  );
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.ringing) _c.repeat();
+  }
+
+  @override
+  void didUpdateWidget(AnimatedGerIcon old) {
+    super.didUpdateWidget(old);
+    if (widget.ringing && !_c.isAnimating) {
+      _c.repeat();
+    } else if (!widget.ringing && _c.isAnimating) {
+      _c.stop();
+      _c.value = 0;
+    }
+  }
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => AnimatedBuilder(
+        animation: _c,
+        builder: (_, __) => GerIcon(
+          size: widget.size,
+          colors: widget.colors,
+          ringing: widget.ringing,
+          phase: _c.value,
+        ),
       );
 }
 
-class _GerPainter extends CustomPainter {
-  final List<Color> colors;
-  _GerPainter(this.colors);
+/// Дээвэр дээрх гэрлийн туяа — зургийн геометрт тааруулсан байрлал.
+class _SparkPainter extends CustomPainter {
+  final Color color;
+  final double phase;
+
+  _SparkPainter(this.color, this.phase);
 
   @override
   void paint(Canvas canvas, Size size) {
     final w = size.width, h = size.height;
-    final rect = Offset.zero & size;
-    final shader = LinearGradient(
-      begin: Alignment.topLeft,
-      end: Alignment.bottomRight,
-      colors: colors,
-    ).createShader(rect);
+    final blink = (0.5 + 0.5 * math.sin(phase * math.pi * 2)).clamp(0.0, 1.0);
 
-    final fill = Paint()
-      ..shader = shader
-      ..style = PaintingStyle.fill
-      ..isAntiAlias = true;
+    // Цайвар ягаан — зурган дээрх хонхны өнгөтэй нийцнэ
+    final tint = Color.lerp(color, Colors.white, 0.6)!;
 
-    final r = w * 0.04; // банд булангийн радиус
-
-    // ── Бөмбөгөр дээвэр (тооно бүхий нам бөмбөгөр) ──
-    final roof = Path()
-      ..moveTo(w * 0.05, h * 0.53)
-      ..quadraticBezierTo(w * 0.50, h * 0.15, w * 0.95, h * 0.53)
-      ..close();
-    canvas.drawPath(roof, fill);
-
-    // ── Ханын хэвтээ зураас (band-ууд) ──
-    RRect bar(double l, double t, double rgt, double b) =>
-        RRect.fromRectAndRadius(
-            Rect.fromLTRB(w * l, h * t, w * rgt, h * b), Radius.circular(r));
-
-    // 1-р банд — бүтэн өргөн
-    canvas.drawRRect(bar(0.13, 0.55, 0.87, 0.64), fill);
-    // 2, 3-р банд — голдоо хаалганы зайтай
-    canvas.drawRRect(bar(0.13, 0.66, 0.42, 0.75), fill);
-    canvas.drawRRect(bar(0.58, 0.66, 0.87, 0.75), fill);
-    canvas.drawRRect(bar(0.13, 0.77, 0.42, 0.86), fill);
-    canvas.drawRRect(bar(0.58, 0.77, 0.87, 0.86), fill);
-
-    // ── Улзий хээ (хаалганы оронд төв чимэг) — ромб ──
-    final knot = Path()
-      ..moveTo(w * 0.50, h * 0.655)
-      ..lineTo(w * 0.585, h * 0.755)
-      ..lineTo(w * 0.50, h * 0.855)
-      ..lineTo(w * 0.415, h * 0.755)
-      ..close();
-    canvas.drawPath(knot, fill);
-
-    // ── Утаа (тооноос дээш мушгиа) ──
-    final smoke = Paint()
-      ..shader = shader
+    final ray = Paint()
+      ..color = tint.withValues(alpha: 0.35 + 0.65 * blink)
       ..style = PaintingStyle.stroke
       ..strokeWidth = w * 0.045
       ..strokeCap = StrokeCap.round
       ..isAntiAlias = true;
-    final smokePath = Path()
-      ..moveTo(w * 0.52, h * 0.28)
-      ..cubicTo(w * 0.40, h * 0.20, w * 0.64, h * 0.14, w * 0.50, h * 0.06);
-    canvas.drawPath(smokePath, smoke);
+
+    final glow = Paint()
+      ..color = tint.withValues(alpha: 0.30 * blink)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = w * 0.075
+      ..strokeCap = StrokeCap.round
+      ..maskFilter = MaskFilter.blur(BlurStyle.normal, w * 0.03)
+      ..isAntiAlias = true;
+
+    void spark(double x1, double y1, double x2, double y2) {
+      final a = Offset(w * x1, h * y1), b = Offset(w * x2, h * y2);
+      canvas.drawLine(a, b, glow);
+      canvas.drawLine(a, b, ray);
+    }
+
+    // зүүн тал
+    spark(0.352, 0.232, 0.312, 0.168);
+    spark(0.302, 0.288, 0.240, 0.252);
+    // баруун тал
+    spark(0.648, 0.232, 0.688, 0.168);
+    spark(0.698, 0.288, 0.760, 0.252);
   }
 
   @override
-  bool shouldRepaint(_GerPainter old) => old.colors != colors;
+  bool shouldRepaint(_SparkPainter old) =>
+      old.phase != phase || old.color != color;
 }

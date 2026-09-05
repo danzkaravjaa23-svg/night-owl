@@ -8,6 +8,7 @@ import 'core/theme/app_theme.dart';
 import 'core/theme/theme_provider.dart';
 import 'core/router/app_router.dart';
 import 'core/services/supabase_service.dart';
+import 'core/widgets/mobile_frame.dart';
 import 'features/auth/providers/auth_provider.dart';
 import 'features/feed/providers/feed_provider.dart';
 import 'features/feed/providers/saved_provider.dart';
@@ -68,7 +69,9 @@ class NightOwlApp extends ConsumerWidget {
 
       // device_preview — сонгосон утасны хэмжээ/locale-ийг апп-д тусгана
       locale: DevicePreview.locale(context),
-      builder: DevicePreview.appBuilder,
+      // Веб/desktop дээр утасны өргөнөөр голлуулна (MobileFrame).
+      builder: (context, child) =>
+          MobileFrame(child: DevicePreview.appBuilder(context, child)),
 
       // Theme
       theme: AppTheme.light,

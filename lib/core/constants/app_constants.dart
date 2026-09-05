@@ -4,6 +4,15 @@ abstract class AppConstants {
   static const String supabaseUrl    = 'https://jbbdnpsvstwxtgtjoeru.supabase.co';
   static const String supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpiYmRucHN2c3R3eHRndGpvZXJ1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNzg1ODIsImV4cCI6MjA5NTY1NDU4Mn0.90qjYby2XNwierEh9XORoP2FEs2LPlRqBC6W74_2oqE';
 
+  // CARTO basemap түлхүүр — 2026/08-аас хойш дэвсгэр зураг түлхүүр шаарддаг
+  // болсон. Үнэгүй, сард 5 сая tile хүртэл: https://carto.com/basemaps/apikey
+  // Энэ түлхүүр нь вэб код дотор ил харагдана (өөр аргагүй) — хамгаалалт нь
+  // CARTO дээр тохируулсан домэйны хязгаарлалт.
+  // Хоосон бол зураг дээр "API KEY REQUIRED" ус тэмдэг гарна.
+  static const String cartoBasemapKey =
+      String.fromEnvironment('CARTO_KEY',
+          defaultValue: 'cb1_2y7y_1_1996637335a244a9eaf546ea');
+
   // UB location (Сүхбаатар талбай)
   static const double ubLat = 47.9077;
   static const double ubLng = 106.8832;

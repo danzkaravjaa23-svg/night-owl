@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:html' as html;
 import 'dart:ui_web' as ui_web;
 import 'package:flutter/material.dart';
+import '../../../core/constants/app_constants.dart';
 import 'map_controller.dart';
 
 int _mapCounter = 0;
@@ -33,7 +34,13 @@ class _GoogleMapViewState extends State<GoogleMapView> {
   late final String _viewType;
   html.IFrameElement? _iframe;
 
-  // Leaflet + OpenStreetMap (үнэгүй, key шаардахгүй)
+  // Leaflet + CARTO dark_all дэвсгэр зураг (2026/08-аас түлхүүр шаардана)
+  /// CARTO дэвсгэр зургийн түлхүүр — тохируулаагүй бол хоосон (ус тэмдэгтэй).
+  static String get _cartoKeyParam {
+    const k = AppConstants.cartoBasemapKey;
+    return k.isEmpty ? '' : '?key=$k';
+  }
+
   String _buildHtml() => '''
 <!DOCTYPE html><html><head>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -114,8 +121,8 @@ class _GoogleMapViewState extends State<GoogleMapView> {
   // Эхний 6 секундэд хагас секунд тутам шалгана (iframe хожуу байрлах үед)
   var fixN = 0;
   var fixIv = setInterval(function(){ fixSize(); if(++fixN > 12) clearInterval(fixIv); }, 500);
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
-    {maxZoom:19, keepBuffer:5, updateWhenIdle:false,
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png$_cartoKeyParam',
+    {maxZoom:19, keepBuffer:5, updateWhenIdle:false, subdomains:'abcd',
      attribution:'© OpenStreetMap, © CARTO'}).addTo(map);
   var venues = ${widget.markersJson.replaceAll('<', r'\u003c')};
   // HTML escape — газрын нэр дотор тег байсан ч код болж ажиллахгүй

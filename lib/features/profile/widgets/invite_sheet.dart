@@ -16,94 +16,111 @@ Future<void> showInviteSheet(BuildContext context) async {
 
   await showModalBottomSheet(
     context: context,
+    isScrollControlled: true,
     backgroundColor: AppColors.bgElevated,
     shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
     builder: (sheetCtx) => SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
-          Container(width: 40, height: 4, decoration: BoxDecoration(
-            color: AppColors.hairline2, borderRadius: BorderRadius.circular(2))),
-          const SizedBox(height: 20),
-          const Text('🦉', style: TextStyle(fontSize: 44)),
-          const SizedBox(height: 12),
-          Text('Найзаа урих', style: AppTextStyles.h2),
-          const SizedBox(height: 6),
-          Text('Урилгын холбоосоо найзууддаа илгээгээрэй',
-            textAlign: TextAlign.center,
-            style: AppTextStyles.bodyMd.copyWith(color: AppColors.textSecondary)),
-          const SizedBox(height: 20),
+      child: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                    color: AppColors.hairline2,
+                    borderRadius: BorderRadius.circular(2))),
+            const SizedBox(height: 20),
+            const Text('🦉', style: TextStyle(fontSize: 44)),
+            const SizedBox(height: 12),
+            Text('Найзаа урих', style: AppTextStyles.h2),
+            const SizedBox(height: 6),
+            Text('Урилгын холбоосоо найзууддаа илгээгээрэй',
+                textAlign: TextAlign.center,
+                style: AppTextStyles.bodyMd
+                    .copyWith(color: AppColors.textSecondary)),
+            const SizedBox(height: 20),
 
-          // Холбоос
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-            decoration: BoxDecoration(
-              color: AppColors.bgSurface,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppColors.hairline)),
-            child: Row(children: [
-              const Icon(Icons.link, size: 18, color: AppColors.textSecondary),
-              const SizedBox(width: 10),
-              Expanded(child: Text(link,
-                maxLines: 1, overflow: TextOverflow.ellipsis,
-                style: AppTextStyles.bodyMd.copyWith(color: AppColors.textPrimary))),
-            ]),
-          ),
-          const SizedBox(height: 16),
-
-          // Хуваалцах
-          MouseRegion(
-            cursor: SystemMouseCursors.click,
-            child: GestureDetector(
-            onTap: () async {
-              Navigator.of(sheetCtx).pop();
-              try {
-                await Share.share('$msg\n$link', subject: 'Night Owl UB');
-              } catch (_) {
-                await Clipboard.setData(ClipboardData(text: link));
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                    content: Text('Холбоос хуулагдлаа 🔗')));
-                }
-              }
-            },
-            child: Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(vertical: 14),
+            // Холбоос
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
               decoration: BoxDecoration(
-                gradient: AppColors.accentGradient,
-                borderRadius: BorderRadius.circular(14)),
-              child: Center(child: Text('Хуваалцах',
-                style: AppTextStyles.btn.copyWith(color: Colors.white))),
+                  color: AppColors.bgSurface,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppColors.hairline)),
+              child: Row(children: [
+                const Icon(Icons.link,
+                    size: 18, color: AppColors.textSecondary),
+                const SizedBox(width: 10),
+                Expanded(
+                    child: Text(link,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTextStyles.bodyMd
+                            .copyWith(color: AppColors.textPrimary))),
+              ]),
             ),
-          )),
-          const SizedBox(height: 10),
+            const SizedBox(height: 16),
 
-          // Холбоос хуулах
-          MouseRegion(
-            cursor: SystemMouseCursors.click,
-            child: GestureDetector(
-            onTap: () async {
-              await Clipboard.setData(ClipboardData(text: link));
-              if (sheetCtx.mounted) Navigator.of(sheetCtx).pop();
-              if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                  content: Text('Холбоос хуулагдлаа 🔗')));
-              }
-            },
-            child: Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(vertical: 14),
-              decoration: BoxDecoration(
-                color: AppColors.bgSurface,
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: AppColors.hairline)),
-              child: Center(child: Text('Холбоос хуулах',
-                style: AppTextStyles.btn.copyWith(color: AppColors.textPrimary))),
-            ),
-          )),
-        ]),
+            // Хуваалцах
+            MouseRegion(
+                cursor: SystemMouseCursors.click,
+                child: GestureDetector(
+                  onTap: () async {
+                    Navigator.of(sheetCtx).pop();
+                    try {
+                      await Share.share('$msg\n$link', subject: 'Night Owl UB');
+                    } catch (_) {
+                      await Clipboard.setData(ClipboardData(text: link));
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                                content: Text('Холбоос хуулагдлаа 🔗')));
+                      }
+                    }
+                  },
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    decoration: BoxDecoration(
+                        gradient: AppColors.accentGradient,
+                        borderRadius: BorderRadius.circular(14)),
+                    child: Center(
+                        child: Text('Хуваалцах',
+                            style: AppTextStyles.btn
+                                .copyWith(color: Colors.white))),
+                  ),
+                )),
+            const SizedBox(height: 10),
+
+            // Холбоос хуулах
+            MouseRegion(
+                cursor: SystemMouseCursors.click,
+                child: GestureDetector(
+                  onTap: () async {
+                    await Clipboard.setData(ClipboardData(text: link));
+                    if (sheetCtx.mounted) Navigator.of(sheetCtx).pop();
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                          content: Text('Холбоос хуулагдлаа 🔗')));
+                    }
+                  },
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    decoration: BoxDecoration(
+                        color: AppColors.bgSurface,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: AppColors.hairline)),
+                    child: Center(
+                        child: Text('Холбоос хуулах',
+                            style: AppTextStyles.btn
+                                .copyWith(color: AppColors.textPrimary))),
+                  ),
+                )),
+          ]),
+        ),
       ),
     ),
   );

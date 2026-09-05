@@ -203,8 +203,9 @@ class _FeedTopBar extends ConsumerWidget {
         ),
         const SizedBox(width: 10),
         _TopIconBtn(
-          icon: const GerIcon(size: 22),
+          icon: AnimatedGerIcon(size: 40, ringing: unread > 0),
           tooltip: 'Мэдэгдэл',
+          bare: true, // зурагт өөрийн дугуй хүрээ бий
           badgeCount: unread,
           onTap: () => context.push(AppRoutes.notifications),
         ),
@@ -225,11 +226,16 @@ class _TopIconBtn extends StatelessWidget {
   final VoidCallback onTap;
   final int badgeCount;
   final String? tooltip;
+
+  /// Дэвсгэр/хүрээгүй — icon өөрөө дугуй хэлбэртэй үед (ж: гэрийн зураг).
+  final bool bare;
+
   const _TopIconBtn({
     required this.icon,
     required this.onTap,
     this.badgeCount = 0,
     this.tooltip,
+    this.bare = false,
   });
 
   @override
@@ -239,10 +245,12 @@ class _TopIconBtn extends StatelessWidget {
       onTap: onTap,
       child: Container(
         width: 40, height: 40,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: AppColors.bgElevated.withValues(alpha: 0.72),
-          border: Border.all(color: AppColors.hairline, width: 1)),
+        decoration: bare
+            ? null
+            : BoxDecoration(
+                shape: BoxShape.circle,
+                color: AppColors.bgElevated.withValues(alpha: 0.72),
+                border: Border.all(color: AppColors.hairline, width: 1)),
         alignment: Alignment.center,
         child: icon,
       ),
@@ -257,9 +265,12 @@ class _TopIconBtn extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
             constraints: const BoxConstraints(minWidth: 16),
             decoration: BoxDecoration(
-              color: AppColors.accentStart,
+              color: AppColors.error, // улаан — мэдэгдэл ирсэн
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: AppColors.bgBase, width: 1.5)),
+              border: Border.all(color: AppColors.bgBase, width: 1.5),
+              boxShadow: [BoxShadow(
+                color: AppColors.error.withValues(alpha: 0.55),
+                blurRadius: 6, spreadRadius: 0)]),
             child: Text(badgeCount > 99 ? '99+' : '$badgeCount',
               textAlign: TextAlign.center,
               style: const TextStyle(color: Colors.white, fontSize: 9,
