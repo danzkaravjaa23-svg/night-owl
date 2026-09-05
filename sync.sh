@@ -289,7 +289,7 @@ do_push() {
       *"rejected"*|*"non-fast-forward"*|*"fetch first"*)
         red "  GITHUB ТАТГАЛЗЛАА"
         echo "  Хамтрагч чинь яг одоо шинэ юм илгээсэн бололтой."
-        echo "  Энэ цонхыг хаагаад дахин нээж, эхлээд 1) ТАТАХ, дараа нь 2) ИЛГЭЭХ хий." ;;
+        echo "  Цэс рүү буцаад эхлээд 1) ТАТАХ, дараа нь 2) ИЛГЭЭХ хий." ;;
       *) explain_error "$OUT" ;;
     esac
     return
@@ -306,32 +306,114 @@ do_push() {
 }
 
 # ============================================================
+#  3) АЖИЛЛУУЛАХ
+# ============================================================
+PORT=5556
+
+do_run() {
+  echo
+  if ! command -v flutter >/dev/null 2>&1; then
+    red "  FLUTTER ОЛДСОНГҮЙ"
+    echo "  Терминал дээр  flutter --version  гэж шалгаад үзээрэй."
+    dim "  Суулгах заавар: https://docs.flutter.dev/get-started/install/macos"
+    return
+  fi
+
+  # --- Порт завгүй бол ---
+  if lsof -nP -iTCP:$PORT -sTCP:LISTEN >/dev/null 2>&1; then
+    warn "  $PORT порт дээр апп аль хэдийн ажиллаж байна."
+    printf "  ${B}Түүнийг хааж шинээр эхлүүлэх үү? (T/u):${N} "
+    read -r ans
+    case "$ans" in
+      [Uu]*|[Үү]*)
+        echo; dim "  За, эхлүүлсэнгүй."
+        dim "  Ажиллаж байгаа апп: http://localhost:$PORT"
+        return ;;
+      *)
+        lsof -nP -tiTCP:$PORT -sTCP:LISTEN 2>/dev/null | xargs kill 2>/dev/null
+        sleep 2
+        dim "  Хуучныг хаалаа."
+        echo ;;
+    esac
+  fi
+
+  # --- Багцууд бэлэн эсэх (pubspec өөрчлөгдсөн бол өөрөө татна) ---
+  NEED_PUB=0
+  [ -f ".dart_tool/package_config.json" ] || NEED_PUB=1
+  [ "pubspec.yaml" -nt ".dart_tool/package_config.json" ] && NEED_PUB=1
+  [ "pubspec.lock" -nt ".dart_tool/package_config.json" ] && NEED_PUB=1
+
+  if [ "$NEED_PUB" -eq 1 ]; then
+    info "  Багцуудыг шинэчилж байна (flutter pub get)..."
+    if ! flutter pub get >/dev/null 2>&1; then
+      echo
+      red "  БАГЦ ТАТАХАД АЛДАА ГАРЛАА"
+      echo "  Терминал дээр  flutter pub get  гэж ажиллуулж алдааг нь хараарай."
+      return
+    fi
+    green "  Багцууд бэлэн."
+    echo
+  fi
+
+  info "  Аппыг Chrome дээр нээж байна..."
+  dim "  (утасны хүрээтэй preview горимд — эхний удаа 1-2 минут болно)"
+  echo
+  echo "  ${B}Апп нээгдсэний дараа энэ цонхонд:${N}"
+  echo "    ${G}r${N}  = хурдан шинэчлэх (hot reload)"
+  echo "    ${G}R${N}  = бүрэн дахин ачаалах"
+  echo "    ${Y}q${N}  = аппыг хааж, цэс рүү буцах"
+  echo
+  echo "${D}  ------------------------------------------${N}"
+
+  flutter run -d chrome --web-port "$PORT" --dart-define=DEVICE_PREVIEW=true
+
+  echo "${D}  ------------------------------------------${N}"
+  echo
+  green "  Апп хаагдлаа."
+}
+
+# ============================================================
 #  ЦЭС
 # ============================================================
-clear 2>/dev/null || true
-echo
-echo "${B}${C}    NIGHT OWL  <->  GITHUB${N}"
-echo "${C}    ======================${N}"
-echo
-echo "    Салбар: ${B}$BRANCH${N}"
-echo
-echo "    Юу хиймээр байна?"
-echo
-echo "      ${G}1)${N} ТАТАХ    - GitHub дээрх шинэ өөрчлөлтийг авах"
-echo "      ${Y}2)${N} ИЛГЭЭХ   - миний өөрчлөлтийг GitHub руу явуулах"
-echo
-echo "      ${D}0)${N} Гарах"
-echo
+draw_menu() {
+  clear 2>/dev/null || true
+  echo
+  echo "${B}${C}    NIGHT OWL  <->  GITHUB${N}"
+  echo "${C}    ======================${N}"
+  echo
+  echo "    Салбар: ${B}$BRANCH${N}"
+  echo
+  echo "    Юу хиймээр байна?"
+  echo
+  echo "      ${G}1)${N} ТАТАХ       - GitHub дээрх шинэ өөрчлөлтийг авах"
+  echo "      ${Y}2)${N} ИЛГЭЭХ      - миний өөрчлөлтийг GitHub руу явуулах"
+  echo "      ${C}3)${N} АЖИЛЛУУЛАХ  - аппыг Chrome дээр нээх"
+  echo
+  echo "      ${D}0)${N} Гарах"
+  echo
+}
 
 while true; do
-  printf "    ${B}Сонголт:${N} "
-  read -r CHOICE
-  case "$CHOICE" in
-    1) do_pull; break ;;
-    2) do_push; break ;;
-    0) echo; dim "    Хаалаа."; bye 0 ;;
-    *) warn "    1, 2 эсвэл 0 гэж бичээрэй." ;;
+  draw_menu
+
+  while true; do
+    printf "    ${B}Сонголт:${N} "
+    read -r CHOICE
+    case "$CHOICE" in
+      1) do_pull; break ;;
+      2) do_push; break ;;
+      3) do_run;  break ;;
+      0) echo; dim "    Хаалаа."; bye 0 ;;
+      "") ;;
+      *) warn "    1, 2, 3 эсвэл 0 гэж бичээрэй." ;;
+    esac
+  done
+
+  echo
+  echo "${D}------------------------------------------${N}"
+  printf "  ${B}Enter${N} = цэс рүү буцах,  ${B}0${N} = хаах:  "
+  read -r AGAIN
+  case "$AGAIN" in
+    0|[XxQq]*) echo; dim "    Хаалаа."; echo; exit 0 ;;
   esac
 done
-
-bye 0
