@@ -58,12 +58,14 @@ class AppTheme {
         elevation: 0,
       ),
       cardTheme: CardThemeData(
-        // Glass карт — 72% alpha elevated + hairline хүрээ, радиус 20
+        // Premium glass card — slightly tighter radius, deeper separation
         color: isDark ? elevated.withValues(alpha: 0.72) : elevated,
         elevation: 0,
+        margin: EdgeInsets.zero,
+        clipBehavior: Clip.antiAlias,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-          side: BorderSide(color: hairline),
+          borderRadius: BorderRadius.circular(18),
+          side: BorderSide(color: hairline, width: 1),
         ),
       ),
       inputDecorationTheme: InputDecorationTheme(
@@ -99,29 +101,48 @@ class AppTheme {
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
-        style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.accentStart,
-          foregroundColor: Colors.white,
-          minimumSize: const Size(double.infinity, 52),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14),
+        style: ButtonStyle(
+          backgroundColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.disabled)) {
+              return AppColors.textTertiary.withValues(alpha: 0.35);
+            }
+            return AppColors.accentStart;
+          }),
+          foregroundColor: const WidgetStatePropertyAll(Colors.white),
+          overlayColor: WidgetStateProperty.resolveWith((states) {
+            return AppColors.accentEnd.withValues(alpha: 0.18);
+          }),
+          minimumSize: const WidgetStatePropertyAll(Size(double.infinity, 52)),
+          padding: const WidgetStatePropertyAll(
+            EdgeInsets.symmetric(horizontal: 18, vertical: 14),
           ),
-          textStyle: GoogleFonts.inter(
-            fontSize: 15, fontWeight: FontWeight.w700,
+          shape: WidgetStatePropertyAll(
+            RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
           ),
-          elevation: 0,
+          elevation: const WidgetStatePropertyAll(0),
+          shadowColor: const WidgetStatePropertyAll(Colors.transparent),
+          textStyle: WidgetStatePropertyAll(
+            GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w700),
+          ),
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
-        style: OutlinedButton.styleFrom(
-          foregroundColor: textPri,
-          side: BorderSide(color: hairline, width: 1),
-          minimumSize: const Size(double.infinity, 52),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14),
+        style: ButtonStyle(
+          foregroundColor: WidgetStatePropertyAll(textPri),
+          side: WidgetStatePropertyAll(BorderSide(color: hairline, width: 1)),
+          minimumSize: const WidgetStatePropertyAll(Size(double.infinity, 52)),
+          padding: const WidgetStatePropertyAll(
+            EdgeInsets.symmetric(horizontal: 18, vertical: 14),
           ),
-          textStyle: GoogleFonts.inter(
-            fontSize: 15, fontWeight: FontWeight.w600,
+          shape: WidgetStatePropertyAll(
+            RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+          ),
+          textStyle: WidgetStatePropertyAll(
+            GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w600),
           ),
         ),
       ),
