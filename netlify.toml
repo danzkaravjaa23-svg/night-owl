@@ -11,7 +11,7 @@
     flutter --version && \
     flutter config --enable-web && \
     flutter pub get && \
-    flutter build web --release
+    flutter build web --release --pwa-strategy=none
   """
 
 # SPA — go_router-ийн бүх зам index.html руу (шууд /profile гэх мэт хаяг руу орж болно)

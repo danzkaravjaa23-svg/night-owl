@@ -7,6 +7,7 @@ import '../../../core/widgets/gradient_text.dart';
 import '../../../core/widgets/mesh_gradient.dart';
 import '../../../core/router/app_router.dart';
 import '../widgets/auth_ui.dart';
+import '../../../core/services/supabase_service.dart';
 
 class AuthLandingScreen extends StatefulWidget {
   const AuthLandingScreen({super.key});
@@ -17,6 +18,24 @@ class AuthLandingScreen extends StatefulWidget {
 
 class _AuthLandingScreenState extends State<AuthLandingScreen> {
   bool _gLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Google-ээс буцахад session солих алдаа гарсан бол нуухгүй харуулна
+    final err = lastAuthCallbackError;
+    if (err != null) {
+      lastAuthCallbackError = null;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Google нэвтрэлт: $err'),
+          backgroundColor: AppColors.error,
+          duration: const Duration(seconds: 12),
+        ));
+      });
+    }
+  }
 
   // Google OAuth — жинхэнэ нэвтрэлт (web дээр бүтэн хуудас redirect)
   Future<void> _googleSignIn() async {
