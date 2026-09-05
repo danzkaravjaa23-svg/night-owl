@@ -98,7 +98,9 @@ class _BottomNav extends ConsumerWidget {
                         borderRadius: BorderRadius.circular(31),
                         border: Border.all(color: AppColors.hairline, width: 1),
                       ),
-                      child: Row(children: [
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
                         _NavItem(
                           icon: Icons.home_outlined, activeIcon: Icons.home,
                           label: 'Feed', isActive: currentIndex == 0,
@@ -227,7 +229,10 @@ class _BottomNav extends ConsumerWidget {
 
 /// Tab — filled icon + доор нь 4px cyan glow цэг (label-гүй template хэлбэр).
 /// label нь Semantics/Tooltip-д үлдэнэ — хүртээмж хэвээр.
-class _NavItem extends StatelessWidget {
+// Идэвхтэй tab-ийн улаан гэрэл (spotlight) — хэрэглэгчийн дуртай дизайнаас буцаав
+const Color _navActiveRed = Color(0xFFFF2E4D);
+
+class _NavItem extends StatefulWidget {
   final IconData icon;
   final IconData activeIcon;
   final String label;
@@ -241,89 +246,149 @@ class _NavItem extends StatelessWidget {
     required this.label,
     required this.isActive,
     required this.onTap,
-  }) : badge = 0;
+    // ignore: unused_element_parameter — badge stream-ээс ирэх утга хожим холбогдоно
+    this.badge = 0,
+  });
+
+  @override
+  State<_NavItem> createState() => _NavItemState();
+}
+
+class _NavItemState extends State<_NavItem>
+    with SingleTickerProviderStateMixin {
+  // Улаан гэрлийн "амьсгал" — зөвхөн идэвхтэй tab дээр давтагдана (CPU хэмнэнэ)
+  late final AnimationController _pulse = AnimationController(
+      vsync: this, duration: const Duration(milliseconds: 1400));
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.isActive) _pulse.repeat(reverse: true);
+  }
+
+  @override
+  void didUpdateWidget(_NavItem old) {
+    super.didUpdateWidget(old);
+    if (widget.isActive && !_pulse.isAnimating) _pulse.repeat(reverse: true);
+    if (!widget.isActive && _pulse.isAnimating) _pulse.stop();
+  }
+
+  @override
+  void dispose() {
+    _pulse.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    final iconData = isActive ? activeIcon : icon;
+    final active = widget.isActive;
+    final iconData = active ? widget.activeIcon : widget.icon;
     return Expanded(
       child: Semantics(
-        label: label,
+        label: widget.label,
         button: true,
-        selected: isActive,
+        selected: active,
         child: Tooltip(
-          message: label,
+          message: widget.label,
           waitDuration: const Duration(milliseconds: 600),
           child: MouseRegion(
             cursor: SystemMouseCursors.click,
             child: GestureDetector(
-              onTap: onTap,
+              onTap: widget.onTap,
               behavior: HitTestBehavior.opaque,
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
+              child: Stack(
+                alignment: Alignment.center,
                 children: [
-                  // Идэвхтэй icon томорч "сэргэх" — идэвхгүй нь жаахан жижиг
-                  AnimatedScale(
-                    scale: isActive ? 1.0 : 0.9,
-                    duration: const Duration(milliseconds: 200),
-                    curve: Curves.easeOut,
-                    child: Stack(clipBehavior: Clip.none, children: [
-                      Icon(iconData, size: 25,
-                          color: isActive
-                              ? AppColors.textPrimary
-                              : AppColors.textTertiary,
-                          shadows: isActive
-                              ? [
-                                  Shadow(
-                                      color: AppColors.neonCyan
-                                          .withValues(alpha: 0.45),
-                                      blurRadius: 16),
-                                ]
-                              : null),
-                      if (badge > 0)
-                        Positioned(
-                          top: -4, right: -8,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 4, vertical: 1),
-                            decoration: BoxDecoration(
-                              color: AppColors.accentStart,
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(
-                                  color: AppColors.bgElevated, width: 1.5),
-                            ),
-                            child: Text(
-                              badge > 99 ? '99+' : '$badge',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 9,
-                                fontWeight: FontWeight.w800,
-                              ),
-                            ),
+                  // ── Дээрээс тусах улаан туяа — солигдоход зөөлөн асч, амьсгална ──
+                  Positioned(
+                    top: 0, left: 0, right: 0,
+                    child: IgnorePointer(
+                      child: AnimatedOpacity(
+                        opacity: active ? 1 : 0,
+                        duration: const Duration(milliseconds: 260),
+                        curve: Curves.easeOut,
+                        child: AnimatedBuilder(
+                          animation: _pulse,
+                          builder: (_, __) => CustomPaint(
+                            size: const Size(double.infinity, 44),
+                            painter: _BeamPainter(_navActiveRed,
+                                intensity: 0.7 + 0.3 * _pulse.value),
                           ),
                         ),
-                    ]),
-                  ),
-                  const SizedBox(height: 5),
-                  // ── 4px cyan glow цэг — идэвхтэй tab-ийн индикатор ──
-                  AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    curve: Curves.easeOut,
-                    width: 4, height: 4,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: isActive
-                          ? AppColors.neonCyan
-                          : Colors.transparent,
-                      boxShadow: isActive
-                          ? [
-                              BoxShadow(
-                                  color: AppColors.neonCyan
-                                      .withValues(alpha: 0.85),
-                                  blurRadius: 8, spreadRadius: 1),
-                            ]
-                          : const [],
+                      ),
                     ),
+                  ),
+                  Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      // Идэвхтэй icon томорч "сэргэх" + улаан амьсгалдаг glow
+                      AnimatedScale(
+                        scale: active ? 1.0 : 0.9,
+                        duration: const Duration(milliseconds: 200),
+                        curve: Curves.easeOut,
+                        child: Stack(clipBehavior: Clip.none, children: [
+                          AnimatedBuilder(
+                            animation: _pulse,
+                            builder: (_, __) => Icon(iconData, size: 25,
+                                color: active
+                                    ? _navActiveRed
+                                    : AppColors.textTertiary,
+                                shadows: active
+                                    ? [
+                                        Shadow(
+                                            color: _navActiveRed.withValues(
+                                                alpha: 0.65 + 0.3 * _pulse.value),
+                                            blurRadius: 16),
+                                        Shadow(
+                                            color: _navActiveRed.withValues(
+                                                alpha: 0.3 + 0.2 * _pulse.value),
+                                            blurRadius: 28),
+                                      ]
+                                    : null),
+                          ),
+                          if (widget.badge > 0)
+                            Positioned(
+                              top: -4, right: -8,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 4, vertical: 1),
+                                decoration: BoxDecoration(
+                                  color: AppColors.accentStart,
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(
+                                      color: AppColors.bgElevated, width: 1.5),
+                                ),
+                                child: Text(
+                                  widget.badge > 99 ? '99+' : '${widget.badge}',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                              ),
+                            ),
+                        ]),
+                      ),
+                      const SizedBox(height: 5),
+                      // ── 4px улаан glow цэг — идэвхтэй tab-ийн индикатор ──
+                      AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        curve: Curves.easeOut,
+                        width: 4, height: 4,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: active ? _navActiveRed : Colors.transparent,
+                          boxShadow: active
+                              ? [
+                                  BoxShadow(
+                                      color: _navActiveRed.withValues(alpha: 0.85),
+                                      blurRadius: 8, spreadRadius: 1),
+                                ]
+                              : const [],
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -335,7 +400,42 @@ class _NavItem extends StatelessWidget {
   }
 }
 
-/// Төв CREATE FAB — 54px gradient дугуй, хүчтэй неон glow, дарахад агшина.
+/// Дээрээс тусах конус хэлбэрийн улаан гэрэл (дээр нарийн, доош өргөн)
+class _BeamPainter extends CustomPainter {
+  final Color color;
+  final double intensity; // 0..1 — амьсгалын тодрол
+  const _BeamPainter(this.color, {this.intensity = 1});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final w = size.width, h = size.height, cx = w / 2;
+    const topHalf = 10.0, botHalf = 27.0;
+    final path = Path()
+      ..moveTo(cx - topHalf, 0)
+      ..lineTo(cx + topHalf, 0)
+      ..lineTo(cx + botHalf, h)
+      ..lineTo(cx - botHalf, h)
+      ..close();
+    final shader = LinearGradient(
+      begin: Alignment.topCenter, end: Alignment.bottomCenter,
+      colors: [color.withValues(alpha: 0.55 * intensity), color.withValues(alpha: 0.0)],
+    ).createShader(Rect.fromLTWH(0, 0, w, h));
+    canvas.drawPath(path, Paint()..shader = shader);
+    // Гэрлийн эх — дээд ирмэг дээрх тод улаан зураас + glow
+    final notch = RRect.fromRectAndRadius(
+      Rect.fromCenter(center: Offset(cx, 2.5), width: topHalf * 2.4, height: 3.5),
+      const Radius.circular(2));
+    canvas.drawRRect(notch, Paint()
+      ..color = color.withValues(alpha: intensity)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4));
+    canvas.drawRRect(notch, Paint()..color = color);
+  }
+
+  @override
+  bool shouldRepaint(covariant _BeamPainter old) =>
+      old.color != color || old.intensity != intensity;
+}
+
 class _CreateFab extends StatefulWidget {
   final VoidCallback onTap;
   const _CreateFab({required this.onTap});
