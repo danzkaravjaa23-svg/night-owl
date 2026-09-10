@@ -495,20 +495,29 @@ class _PostCardState extends ConsumerState<_PostCard>
               _PostCarousel(urls: widget.post.mediaUrls)
             else if (widget.post.mediaUrl != null)
               _isVideoUrl(widget.post.mediaUrl)
-                  ? NetworkVideo(url: widget.post.mediaUrl!, height: 380)
-                  : CachedNetworkImage(
-                      imageUrl: widget.post.mediaUrl!,
-                      width: double.infinity,
-                      fit: BoxFit.cover,
-                      memCacheWidth: 900, // feed зураг — дэлгэцийн өргөнөөр decode
-                      fadeInDuration: const Duration(milliseconds: 180),
-                      placeholder: (_, __) => Container(
-                          height: 380, color: AppColors.bgSurface),
-                      errorWidget: (_, __, ___) => Container(
-                        height: 300,
-                        color: AppColors.bgSurface,
-                        child: const Center(
-                            child: Text('📸', style: TextStyle(fontSize: 48))),
+                  // Видео ч мөн зурагтай ижил 4:5 хайрцагт — эс бөгөөс
+                  // холимог фийд зураг/видео хооронд өндрөө сольж үсэрнэ
+                  ? AspectRatio(
+                      aspectRatio: 4 / 5,
+                      child: NetworkVideo(url: widget.post.mediaUrl!),
+                    )
+                  // 4:5 харьцаанд түгжинэ — зураг ачаалахад карт хэмжээгээ
+                  // өөрчилж фийд үсрэхгүй (placeholder ч мөн адил хайрцагт)
+                  : AspectRatio(
+                      aspectRatio: 4 / 5,
+                      child: CachedNetworkImage(
+                        imageUrl: widget.post.mediaUrl!,
+                        width: double.infinity,
+                        fit: BoxFit.cover,
+                        memCacheWidth: 900, // feed зураг — дэлгэцийн өргөнөөр decode
+                        fadeInDuration: const Duration(milliseconds: 180),
+                        placeholder: (_, __) =>
+                            Container(color: AppColors.bgSurface),
+                        errorWidget: (_, __, ___) => Container(
+                          color: AppColors.bgSurface,
+                          child: const Center(
+                              child: Text('📸', style: TextStyle(fontSize: 48))),
+                        ),
                       ),
                     )
             else
@@ -533,7 +542,7 @@ class _PostCardState extends ConsumerState<_PostCard>
           ]),
         ))),
 
-        // ── Actions — IG-2025 эрэмбэ: зүүнд heart/comment/share кластер (26px
+        // ── Actions — IG-2025 эрэмбэ: зүүнд heart/comment/share кластер (24px
         //    icon + labelMd count), баруунд bookmark ганцаараа ──
         Padding(
           padding: const EdgeInsets.fromLTRB(14, 10, 14, 2),
@@ -548,7 +557,7 @@ class _PostCardState extends ConsumerState<_PostCard>
                   ? Icons.favorite
                   : Icons.favorite_border,
               color: widget.post.isLikedByMe
-                  ? AppColors.accentStart
+                  ? AppColors.like
                   : AppColors.textSecondary,
               label: widget.post.likesCount > 0
                   ? widget.post.formattedLikes
@@ -589,7 +598,7 @@ class _PostCardState extends ConsumerState<_PostCard>
               child: Padding(
                 padding: const EdgeInsets.all(6),
                 child: Icon(_saved ? Icons.bookmark : Icons.bookmark_border,
-                    color: _saved ? AppColors.accentStart : AppColors.textSecondary,
+                    color: _saved ? AppColors.saved : AppColors.textSecondary,
                     size: 24),
               ),
             ),
@@ -665,8 +674,9 @@ class _PostCarouselState extends State<_PostCarousel> {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: 380,
+    // Ганц зурагтай посттой ижил 4:5 хайрцаг — фийд үсрэхгүй
+    return AspectRatio(
+      aspectRatio: 4 / 5,
       child: Stack(children: [
         PageView.builder(
           controller: _ctrl,
@@ -675,7 +685,7 @@ class _PostCarouselState extends State<_PostCarousel> {
           itemBuilder: (_, i) {
             final url = widget.urls[i];
             if (_isVideoUrl(url)) {
-              return NetworkVideo(url: url, height: 380);
+              return NetworkVideo(url: url);
             }
             return CachedNetworkImage(
               imageUrl: url,
@@ -741,7 +751,7 @@ class _ActionBtn extends StatelessWidget {
     child: Padding(
       padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 2),
       child: Row(children: [
-        Icon(icon, color: color, size: 26),
+        Icon(icon, color: color, size: 24),
         // Тоо байхгүй бол icon ганцаараа (хоосон зай үлдээхгүй)
         if (label.isNotEmpty) ...[
           const SizedBox(width: 6),
@@ -895,14 +905,15 @@ class _SkeletonCard extends StatelessWidget {
         ),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 4),
-          child: _box(w: double.infinity, h: 320, r: 20),
+          // Жинхэнэ медиатай ижил 4:5 хайрцаг — skeleton→контент үсрэхгүй
+          child: AspectRatio(aspectRatio: 4 / 5, child: _box(r: 20)),
         ),
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
           child: Row(children: [
-            _box(w: 26, h: 26, r: 8),
+            _box(w: 24, h: 24, r: 8),
             const SizedBox(width: 14),
-            _box(w: 26, h: 26, r: 8),
+            _box(w: 24, h: 24, r: 8),
             const Spacer(),
             _box(w: 24, h: 24, r: 8),
           ]),

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/widgets/app_avatar.dart';
 import '../../../core/widgets/empty_state.dart';
@@ -160,12 +161,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                                 onTap: () => context.push(AppRoutes.saved),
                               ),
                               const SizedBox(width: 8),
-                              // 🔗 Хуваалцах (clipboard)
-                              _GlassRoundBtn(
-                                icon: Icons.ios_share,
-                                onTap: () => _shareProfile(context, profile),
-                              ),
-                              const SizedBox(width: 8),
+                              // Хуваалцах товч доорх action мөрөнд байгаа тул
+                              // cover дээрх давхардлыг нь хассан.
                               // ⚙️ Тохиргоо
                               _GlassRoundBtn(
                                 icon: Icons.menu,
@@ -201,11 +198,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                           style: AppTextStyles.h2),
                     const SizedBox(height: 4),
 
-                    // ── @handle — neonCyan eyebrow ──
+                    // ── @handle — хэрэглэгчийн үндсэн таних тэмдэг тул
+                    //    жижиг шошго биш, уншигдахуйц bodyMd-ээр ──
                     Text('@${profile.username ?? 'profile'}',
                         textAlign: TextAlign.center,
-                        style: AppTextStyles.labelSm.copyWith(
-                            color: AppColors.neonCyan, letterSpacing: 1.2)),
+                        style: AppTextStyles.bodyMd.copyWith(
+                            color: AppColors.textSecondary,
+                            letterSpacing: 0)),
 
                     // ── Bio (голд, 2 мөр) ──
                     if (profile.bio?.isNotEmpty == true) ...[
@@ -391,7 +390,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   userId: profile.id,
                   reelsOnly: _tab == 1),
             ),
-            const SliverToBoxAdapter(child: SizedBox(height: 24)),
+            // Доод док (MainShell, extendBody) сүүлийн мөрийг дарахгүйн тулд
+            // док + safe area-ийн зайг нөөцөлнө.
+            SliverToBoxAdapter(
+              child: SizedBox(
+                  height: AppSpacing.dockClearance +
+                      MediaQuery.of(context).padding.bottom),
+            ),
           ]),
           ),
           ]);

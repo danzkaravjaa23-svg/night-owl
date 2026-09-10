@@ -4,10 +4,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_radii.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/services/supabase_service.dart';
 import '../../../core/utils/image_uploader.dart';
+import '../../../core/widgets/gradient_button.dart';
 import '../providers/event_provider.dart';
 
 class CreateEventScreen extends ConsumerStatefulWidget {
@@ -32,7 +34,7 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
       context: context, backgroundColor: AppColors.bgElevated,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadii.xl))),
       builder: (_) => const _VenuePick(),
     );
     if (v != null && mounted) {
@@ -123,7 +125,7 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
           child: Container(
             height: 150,
             decoration: BoxDecoration(
-              color: AppColors.bgElevated, borderRadius: BorderRadius.circular(16),
+              color: AppColors.bgElevated, borderRadius: AppRadii.mdR,
               border: Border.all(color: AppColors.hairline),
               image: _cover != null
                 ? DecorationImage(image: MemoryImage(_cover!), fit: BoxFit.cover) : null),
@@ -150,17 +152,11 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
           Text(_error!, style: AppTextStyles.bodyXs.copyWith(color: AppColors.error)),
         ],
         const SizedBox(height: 20),
-        _Tap(
-          onTap: _busy ? null : _save,
-          child: Container(
-            height: 52,
-            decoration: BoxDecoration(
-              gradient: AppColors.accentGradient, borderRadius: BorderRadius.circular(16)),
-            alignment: Alignment.center,
-            child: _busy
-              ? const SizedBox(width: 22, height: 22, child:
-                  CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-              : Text('Эвент нийтлэх', style: AppTextStyles.btn.copyWith(color: Colors.white))),
+        // Үндсэн үйлдэл — апп даяарх нэгдсэн gradient товч
+        GradientButton(
+          label: 'Эвент нийтлэх',
+          busy: _busy,
+          onPressed: _save,
         ),
       ]),
     );
@@ -176,14 +172,14 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
         hintStyle: AppTextStyles.bodyMd.copyWith(color: AppColors.textTertiary),
         filled: true, fillColor: AppColors.bgElevated,
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none)));
+          borderRadius: AppRadii.mdR, borderSide: BorderSide.none)));
 
   Widget _tile(IconData i, String label, VoidCallback onTap) => _Tap(
     onTap: onTap,
     child: Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
       decoration: BoxDecoration(
-        color: AppColors.bgElevated, borderRadius: BorderRadius.circular(12),
+        color: AppColors.bgElevated, borderRadius: AppRadii.mdR,
         border: Border.all(color: AppColors.hairline)),
       child: Row(children: [
         Icon(i, size: 18, color: AppColors.textSecondary),
@@ -283,7 +279,7 @@ class _VenuePickState extends State<_VenuePick> {
           prefixIcon: const Icon(Icons.search, color: AppColors.textTertiary),
           filled: true, fillColor: AppColors.bgSurface, isDense: true,
           border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none))),
+            borderRadius: AppRadii.mdR, borderSide: BorderSide.none))),
       const SizedBox(height: 8),
       SizedBox(height: 320, child: _loading
         ? const Center(child: CircularProgressIndicator(

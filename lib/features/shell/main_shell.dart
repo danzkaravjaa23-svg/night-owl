@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../core/router/app_router.dart';
 import '../../core/services/supabase_service.dart';
@@ -57,9 +58,15 @@ class _MainShellState extends State<MainShell> {
 
 class _BottomNav extends ConsumerWidget {
   // ── Center-FAB dock хэмжээс ──
+  // _dockMargin + _dockHeight + _fabLift = AppSpacing.dockClearance (92).
+  // Дэлгэцүүд ёроолын нөөц зайг мөн AppSpacing.dockClearance-аас авдаг тул
+  // энд ганц эх сурвалж (токен) л шийднэ.
   static const double _dockHeight = 62; // glass бар өндөр
   static const double _fabSize = 54;    // төв CREATE FAB
   static const double _fabLift = 16;    // FAB док дээгүүр цухуйх хэмжээ
+  // Доод ирмэгээс хөвөх зай — токеноос ухаж авна (92 - 62 - 16 = 14)
+  static const double _dockMargin =
+      AppSpacing.dockClearance - _dockHeight - _fabLift;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -69,7 +76,8 @@ class _BottomNav extends ConsumerWidget {
 
     return Padding(
       // Доод ирмэгээс хөвүүлж, хажуу талаас 20 зай (дэлгэцийн padding-тай ижил)
-      padding: EdgeInsets.fromLTRB(20, 0, 20, 14 + bottomInset),
+      padding: EdgeInsets.fromLTRB(
+          AppSpacing.page, 0, AppSpacing.page, _dockMargin + bottomInset),
       child: SizedBox(
         // FAB дээш цухуйдаг тул Stack-д нэмэлт өндөр өгнө
         height: _dockHeight + _fabLift,
@@ -103,21 +111,21 @@ class _BottomNav extends ConsumerWidget {
                         children: [
                         _NavItem(
                           icon: Icons.home_outlined, activeIcon: Icons.home,
-                          label: 'Feed', isActive: currentIndex == 0,
+                          label: 'Нүүр', isActive: currentIndex == 0,
                           onTap: () => context.go(AppRoutes.feed)),
                         _NavItem(
                           icon: Icons.explore_outlined, activeIcon: Icons.explore,
-                          label: 'Explore', isActive: currentIndex == 1,
+                          label: 'Нээх', isActive: currentIndex == 1,
                           onTap: () => context.go(AppRoutes.explore)),
                         // FAB-ийн суудал — төв хоосон зай
                         const SizedBox(width: _fabSize + 18),
                         _NavItem(
                           icon: Icons.smart_display_outlined, activeIcon: Icons.smart_display,
-                          label: 'Discovery', isActive: currentIndex == 3,
+                          label: 'Богино', isActive: currentIndex == 3,
                           onTap: () => context.go(AppRoutes.reels)),
                         _NavItem(
                           icon: Icons.person_outline, activeIcon: Icons.person,
-                          label: 'Profile', isActive: currentIndex == 4,
+                          label: 'Профайл', isActive: currentIndex == 4,
                           onTap: () => context.go(AppRoutes.profile)),
                       ]),
                     ),
@@ -158,11 +166,11 @@ class _BottomNav extends ConsumerWidget {
             Text('Шинээр үүсгэх', style: AppTextStyles.h2),
             const SizedBox(height: 20),
 
-            // Post
+            // Нийтлэл
             _CreateOption(
               icon: Icons.add_photo_alternate_outlined,
-              label: 'Post',
-              subtitle: 'Photo эсвэл video хуваалцах',
+              label: 'Нийтлэл',
+              subtitle: 'Зураг эсвэл видео хуваалцах',
               gradient: AppColors.accentGradient,
               onTap: () {
                 Navigator.pop(context);
@@ -171,13 +179,12 @@ class _BottomNav extends ConsumerWidget {
             ),
             const SizedBox(height: 12),
 
-            // Discovery (зөвхөн venue эзэд)
+            // Богино видео (зөвхөн venue эзэд)
             _CreateOption(
               icon: Icons.explore_outlined,
-              label: 'Discovery',
-              subtitle: 'Богино видео — зөвхөн venue эзэд',
-              gradient: const LinearGradient(
-                  colors: [Color(0xFF7B2FF7), Color(0xFFF107A3)]),
+              label: 'Богино видео',
+              subtitle: 'Зөвхөн газрын эзэд нийтэлнэ',
+              gradient: AppColors.accentGradient,
               onTap: () {
                 Navigator.pop(context);
                 context.push(AppRoutes.createReel);
@@ -185,13 +192,12 @@ class _BottomNav extends ConsumerWidget {
             ),
             const SizedBox(height: 12),
 
-            // Live
+            // Шууд
             _CreateOption(
               icon: Icons.sensors_rounded,
-              label: 'Live',
+              label: 'Шууд',
               subtitle: 'Шууд дамжуулалт эхлүүлэх',
-              gradient: const LinearGradient(
-                  colors: [Color(0xFFFF416C), Color(0xFFFF4B2B)]),
+              gradient: AppColors.accentGradient,
               onTap: () {
                 Navigator.pop(context);
                 context.push(AppRoutes.goLive);
@@ -199,13 +205,12 @@ class _BottomNav extends ConsumerWidget {
             ),
             const SizedBox(height: 12),
 
-            // Event
+            // Эвент
             _CreateOption(
               icon: Icons.event_rounded,
-              label: 'Event',
+              label: 'Эвент',
               subtitle: 'Үйл явдал зарлах (бизнес)',
-              gradient: const LinearGradient(
-                  colors: [Color(0xFF11998E), Color(0xFF38EF7D)]),
+              gradient: AppColors.accentGradient,
               onTap: () {
                 Navigator.pop(context);
                 context.push(AppRoutes.createEvent);
@@ -256,21 +261,31 @@ class _NavItem extends StatefulWidget {
 
 class _NavItemState extends State<_NavItem>
     with SingleTickerProviderStateMixin {
-  // Улаан гэрлийн "амьсгал" — зөвхөн идэвхтэй tab дээр давтагдана (CPU хэмнэнэ)
+  // Улаан гэрэл "асах" хөдөлгөөн — ЗӨВХӨН tab солигдох үед нэг удаа тоглоно.
+  // Тайван үедээ 1.0 дээр зогсох тул идэвхтэй tab бүрэн туяатай хэвээр
+  // (тасралтгүй давталт байхгүй — CPU/батарей хэмнэнэ, анхаарал сарниулахгүй).
   late final AnimationController _pulse = AnimationController(
-      vsync: this, duration: const Duration(milliseconds: 1400));
+      vsync: this, duration: const Duration(milliseconds: 420), value: 1);
+
+  // Системийн "хөдөлгөөн багасгах" тохиргоо — статик туяа шууд харуулна
+  bool _reduceMotion = false;
 
   @override
-  void initState() {
-    super.initState();
-    if (widget.isActive) _pulse.repeat(reverse: true);
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _reduceMotion = MediaQuery.of(context).disableAnimations;
   }
 
   @override
   void didUpdateWidget(_NavItem old) {
     super.didUpdateWidget(old);
-    if (widget.isActive && !_pulse.isAnimating) _pulse.repeat(reverse: true);
-    if (!widget.isActive && _pulse.isAnimating) _pulse.stop();
+    if (widget.isActive == old.isActive) return;
+    // Идэвхтэй болмогц нэг удаа асна; хөдөлгөөн хаалттай бол шууд бүрэн туяа
+    if (widget.isActive && !_reduceMotion) {
+      _pulse.forward(from: 0);
+    } else {
+      _pulse.value = 1;
+    }
   }
 
   @override
@@ -299,7 +314,7 @@ class _NavItemState extends State<_NavItem>
               child: Stack(
                 alignment: Alignment.center,
                 children: [
-                  // ── Дээрээс тусах улаан туяа — солигдоход зөөлөн асч, амьсгална ──
+                  // ── Дээрээс тусах улаан туяа — tab солигдоход нэг удаа зөөлөн асна ──
                   Positioned(
                     top: 0, left: 0, right: 0,
                     child: IgnorePointer(
@@ -321,7 +336,7 @@ class _NavItemState extends State<_NavItem>
                   Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      // Идэвхтэй icon томорч "сэргэх" + улаан амьсгалдаг glow
+                      // Идэвхтэй icon томорч "сэргэх" + улаан glow (асахдаа тодорно)
                       AnimatedScale(
                         scale: active ? 1.0 : 0.9,
                         duration: const Duration(milliseconds: 200),
@@ -403,7 +418,7 @@ class _NavItemState extends State<_NavItem>
 /// Дээрээс тусах конус хэлбэрийн улаан гэрэл (дээр нарийн, доош өргөн)
 class _BeamPainter extends CustomPainter {
   final Color color;
-  final double intensity; // 0..1 — амьсгалын тодрол
+  final double intensity; // 0..1 — туяа асах үеийн тодрол
   const _BeamPainter(this.color, {this.intensity = 1});
 
   @override

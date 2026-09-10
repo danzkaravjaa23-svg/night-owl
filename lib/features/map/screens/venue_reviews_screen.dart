@@ -4,9 +4,11 @@ import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_radii.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/widgets/app_avatar.dart';
+import '../../../core/widgets/glass_icon_button.dart';
 import '../../../core/services/supabase_service.dart';
 import '../../events/providers/event_provider.dart' show EventItem;
 import '../../events/widgets/events_rail.dart' show showEventDetailSheet;
@@ -135,7 +137,7 @@ class _VenueDetailScreenState extends ConsumerState<VenueDetailScreen> {
       context: context, backgroundColor: AppColors.bgElevated,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadii.xl))),
       builder: (_) => _ReviewsSheet(venueId: widget.venueId),
     ).then((_) => _load()); // хаагдахад дундаж шинэчлэх
   }
@@ -219,9 +221,12 @@ class _VenueDetailScreenState extends ConsumerState<VenueDetailScreen> {
                 child: SafeArea(bottom: false, child: Padding(
                   padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
                   child: Row(children: [
-                    _CircleBtn(icon: Icons.arrow_back_ios_new, onTap: _goBack),
+                    // Нэгдсэн шилэн icon товч — зураг дээр бараан дүүргэлттэй
+                    GlassIconButton(icon: Icons.chevron_left_rounded,
+                      onMedia: true, tooltip: 'Буцах', onTap: _goBack),
                     const Spacer(),
-                    _CircleBtn(icon: Icons.directions_rounded,
+                    GlassIconButton(icon: Icons.directions_rounded,
+                      onMedia: true, tooltip: 'Чиглэл',
                       onTap: _openDirections),
                   ])))),
             ])),
@@ -241,7 +246,7 @@ class _VenueDetailScreenState extends ConsumerState<VenueDetailScreen> {
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: AppColors.bgElevated.withValues(alpha: 0.72),
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: AppRadii.lgR,
         border: Border.all(color: AppColors.hairline2),
         boxShadow: AppColors.shadowCard,
       ),
@@ -323,7 +328,7 @@ class _VenueDetailScreenState extends ConsumerState<VenueDetailScreen> {
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: AppColors.bgElevated.withValues(alpha: 0.72),
-              borderRadius: BorderRadius.circular(24),
+              borderRadius: AppRadii.lgR,
               border: Border.all(color: AppColors.hairline)),
             child: Row(children: [
               const Icon(Icons.rate_review_outlined,
@@ -352,18 +357,26 @@ class _VenueDetailScreenState extends ConsumerState<VenueDetailScreen> {
     ],
   ];
 
+  // Мөрийн өндөр 44 — "Бүгд →" холбоос хүрэхэд хангалттай талбайтай болно
   Widget _sectionHeader(String title, {VoidCallback? onSeeAll}) => Padding(
-    padding: const EdgeInsets.fromLTRB(20, 28, 20, 12),
-    child: Row(children: [
-      Text(title.toUpperCase(), style: AppTextStyles.sectionLabel),
-      const Spacer(),
-      if (onSeeAll != null)
-        _Tap(
-          behavior: HitTestBehavior.opaque,
-          onTap: onSeeAll,
-          child: Text('Бүгд →', style: AppTextStyles.labelSm.copyWith(
-            color: AppColors.neonCyan, letterSpacing: 0))),
-    ]),
+    padding: const EdgeInsets.fromLTRB(20, 12, 20, 4),
+    child: SizedBox(
+      height: 44,
+      child: Row(children: [
+        Text(title.toUpperCase(), style: AppTextStyles.sectionLabel),
+        const Spacer(),
+        if (onSeeAll != null)
+          _Tap(
+            behavior: HitTestBehavior.opaque,
+            onTap: onSeeAll,
+            child: Container(
+              height: 44,
+              alignment: Alignment.center,
+              padding: const EdgeInsets.only(left: 16),
+              child: Text('Бүгд →', style: AppTextStyles.labelSm.copyWith(
+                color: AppColors.neonCyan, letterSpacing: 0)))),
+      ]),
+    ),
   );
 
   // ── Ачаалж байх үеийн skeleton — шинэ layout-ын хэлбэрээр ──
@@ -376,13 +389,13 @@ class _VenueDetailScreenState extends ConsumerState<VenueDetailScreen> {
         Padding(
           padding: EdgeInsets.all(20),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            _SkelBox(height: 230, radius: 24), // хөвөгч info card
+            _SkelBox(height: 230, radius: AppRadii.lg), // хөвөгч info card
             SizedBox(height: 28),
             _SkelBox(width: 140, height: 12, radius: 6),
             SizedBox(height: 12),
-            _SkelBox(height: 84, radius: 24),
+            _SkelBox(height: 84, radius: AppRadii.lg),
             SizedBox(height: 10),
-            _SkelBox(height: 84, radius: 24),
+            _SkelBox(height: 84, radius: AppRadii.lg),
           ]),
         ),
       ]),
@@ -393,8 +406,8 @@ class _VenueDetailScreenState extends ConsumerState<VenueDetailScreen> {
   Widget _problemView() => Scaffold(
     backgroundColor: AppColors.bgBase,
     body: SafeArea(child: Stack(children: [
-      Positioned(top: 8, left: 12, child: _CircleBtn(
-        icon: Icons.arrow_back_ios_new, onTap: _goBack)),
+      Positioned(top: 8, left: 12, child: GlassIconButton(
+        icon: Icons.chevron_left_rounded, tooltip: 'Буцах', onTap: _goBack)),
       Center(child: Padding(
         padding: const EdgeInsets.all(32),
         child: Column(mainAxisSize: MainAxisSize.min, children: [
@@ -423,17 +436,18 @@ class _VenueDetailScreenState extends ConsumerState<VenueDetailScreen> {
     decoration: const BoxDecoration(gradient: AppColors.accentGradient),
     child: Center(child: Text(_venueEmoji(type), style: const TextStyle(fontSize: 72))));
 
-  // Check-in pill — идэвхгүй үед accentGradient, идэвхтэй үед lime glass
+  // Check-in pill — идэвхгүй үед accentGradient, идэвхтэй үед lime glass.
+  // Өндөр 52 / радиус pill — дэлгэц дэх бүх үндсэн товчтой нэг хэмжээст.
   Widget _checkInPill(bool checkedIn) => _Tap(
     onTap: _checkinBusy ? null : _toggleCheckIn,
     child: AnimatedContainer(
       duration: const Duration(milliseconds: 200),
       curve: Curves.easeOut,
-      height: 50,
+      height: 52,
       decoration: BoxDecoration(
         gradient: checkedIn ? null : AppColors.accentGradient,
         color: checkedIn ? AppColors.lime.withValues(alpha: 0.14) : null,
-        borderRadius: BorderRadius.circular(999),
+        borderRadius: AppRadii.pillR,
         border: checkedIn
             ? Border.all(color: AppColors.lime.withValues(alpha: 0.7))
             : null,
@@ -461,10 +475,10 @@ class _VenueDetailScreenState extends ConsumerState<VenueDetailScreen> {
   // Glass pill товч — icon + label
   Widget _glassPill(IconData icon, String label, VoidCallback onTap) =>
     _Tap(onTap: onTap, child: Container(
-      height: 50,
+      height: 52,
       decoration: BoxDecoration(
         color: AppColors.bgSurface.withValues(alpha: 0.72),
-        borderRadius: BorderRadius.circular(999),
+        borderRadius: AppRadii.pillR,
         border: Border.all(color: AppColors.hairline2)),
       child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
         Icon(icon, size: 18, color: AppColors.textPrimary),
@@ -495,11 +509,12 @@ class _VenueDetailScreenState extends ConsumerState<VenueDetailScreen> {
       // Шилэн эвент карт — glass давхарга + hairline
       decoration: BoxDecoration(
         color: AppColors.bgElevated.withValues(alpha: 0.72),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: AppRadii.lgR,
         border: Border.all(color: AppColors.hairline)),
       child: Row(children: [
         ClipRRect(
-          borderRadius: const BorderRadius.horizontal(left: Radius.circular(20)),
+          borderRadius: const BorderRadius.horizontal(
+            left: Radius.circular(AppRadii.lg)),
           child: SizedBox(width: 74, height: 74,
             child: e['cover_url'] != null
               ? CachedNetworkImage(imageUrl: e['cover_url'] as String, fit: BoxFit.cover,
@@ -522,27 +537,11 @@ class _VenueDetailScreenState extends ConsumerState<VenueDetailScreen> {
     );
   }
 
+  // Эвентийн зураггүй үеийн орлуулагч — emoji биш, Material icon
   Widget _evPlaceholder() => Container(
     decoration: const BoxDecoration(gradient: AppColors.accentGradient),
-    child: const Center(child: Text('🎉', style: TextStyle(fontSize: 26))));
-}
-
-// ─── Шилэн дугуй товч — hero дээрх back/directions ───
-class _CircleBtn extends StatelessWidget {
-  final IconData icon;
-  final VoidCallback onTap;
-  const _CircleBtn({required this.icon, required this.onTap});
-  @override
-  Widget build(BuildContext context) => _Tap(
-    onTap: onTap,
-    child: Container(
-      width: 42, height: 42,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: Colors.black.withValues(alpha: 0.45),
-        border: Border.all(color: AppColors.hairline2)),
-      child: Icon(icon, size: 18, color: Colors.white)),
-  );
+    child: const Center(child: Icon(Icons.celebration_rounded,
+      color: Colors.white, size: 26)));
 }
 
 // ─── Review preview карт — АМЬДРАЛ section ───
@@ -557,7 +556,7 @@ class _ReviewCard extends StatelessWidget {
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: AppColors.bgElevated.withValues(alpha: 0.72),
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: AppRadii.lgR,
         border: Border.all(color: AppColors.hairline)),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [
@@ -731,13 +730,13 @@ class _ReviewsSheetState extends State<_ReviewsSheet> {
         child: _loading
           ? ListView(controller: scrollCtrl, children: const [
               SizedBox(height: 14),
-              _SkelBox(height: 26, width: 200, radius: 8),
+              _SkelBox(height: 26, width: 200, radius: AppRadii.sm),
               SizedBox(height: 14),
-              _SkelBox(height: 180, radius: 14),
+              _SkelBox(height: 180, radius: AppRadii.lg),
               SizedBox(height: 14),
-              _SkelBox(height: 70, radius: 12),
+              _SkelBox(height: 70, radius: AppRadii.lg),
               SizedBox(height: 10),
-              _SkelBox(height: 70, radius: 12),
+              _SkelBox(height: 70, radius: AppRadii.lg),
             ])
           : ListView(controller: scrollCtrl, children: [
               Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(
@@ -750,7 +749,7 @@ class _ReviewsSheetState extends State<_ReviewsSheet> {
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
                   color: AppColors.bgSurface.withValues(alpha: 0.7),
-                  borderRadius: BorderRadius.circular(14),
+                  borderRadius: AppRadii.lgR,
                   border: Border.all(color: AppColors.hairline)),
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   Text('Таны үнэлгээ', style: AppTextStyles.labelLg),
@@ -772,16 +771,25 @@ class _ReviewsSheetState extends State<_ReviewsSheet> {
                     decoration: InputDecoration(hintText: 'Сэтгэгдэл...',
                       hintStyle: AppTextStyles.bodyMd.copyWith(color: AppColors.textTertiary),
                       filled: true, fillColor: AppColors.bgElevated,
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10),
+                      border: OutlineInputBorder(borderRadius: AppRadii.mdR,
                         borderSide: BorderSide.none))),
                   const SizedBox(height: 10),
+                  // Илгээх — од сонгоогүй үед идэвхгүй: хэлбэр, өндөр нь
+                  // хэвээр, зөвхөн саармаг гадарга + hairline хүрээ болно.
+                  // Идэвхтэй үедээ градиент — товч ялгаатай хэвээр байна.
                   _Tap(
                     onTap: (_myRating == 0 || _busy) ? null : _submit,
-                    child: Container(height: 44, width: double.infinity,
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 160),
+                      curve: Curves.easeOut,
+                      height: 52, width: double.infinity,
                       decoration: BoxDecoration(
                         gradient: _myRating == 0 ? null : AppColors.accentGradient,
-                        color: _myRating == 0 ? AppColors.bgElevated : null,
-                        borderRadius: BorderRadius.circular(999)),
+                        color: _myRating == 0
+                          ? AppColors.bgSurface.withValues(alpha: 0.9) : null,
+                        border: _myRating == 0
+                          ? Border.all(color: AppColors.hairline) : null,
+                        borderRadius: AppRadii.pillR),
                       alignment: Alignment.center,
                       child: _busy
                         ? const SizedBox(width: 20, height: 20, child:
@@ -802,7 +810,7 @@ class _ReviewsSheetState extends State<_ReviewsSheet> {
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
                     color: AppColors.bgSurface.withValues(alpha: 0.7),
-                    borderRadius: BorderRadius.circular(14),
+                    borderRadius: AppRadii.lgR,
                     border: Border.all(color: AppColors.hairline)),
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                     Row(children: [

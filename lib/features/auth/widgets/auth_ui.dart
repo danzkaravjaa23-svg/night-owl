@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_radii.dart';
 import '../../../core/theme/app_text_styles.dart';
 
 /// Нэвтрэлтийн дэлгэцүүдийн хуваалцсан UI хэсгүүд.
@@ -19,15 +20,23 @@ Future<void> signInWithGoogle() async {
   );
 }
 
+/// Талбарт бичигдэх текстийн нэгдсэн хэв маяг — бүх auth талбар үүнийг
+/// хэрэглэнэ (өмнө нь талбар бүр түүхий TextStyle дамжуулж, төрлийн
+/// шатлалаас гардаг байсан).
+TextStyle get authFieldStyle =>
+    AppTextStyles.bodyLg.copyWith(color: AppColors.textPrimary);
+
 // ── Талбарын нийтлэг чимэглэл — шилэн fill, фокус үед cyan hairline ──
 InputDecoration authInputDec({
   required String hint, required IconData icon, Widget? suffix,
 }) {
   OutlineInputBorder b(Color c, [double w = 1]) => OutlineInputBorder(
-    borderRadius: BorderRadius.circular(14),
+    borderRadius: AppRadii.mdR,
     borderSide: BorderSide(color: c, width: w));
   return InputDecoration(
     hintText: hint,
+    // Hint нь бичсэн текстийн хэмжээтэй ижил — зөвхөн өнгөөр ялгарна
+    hintStyle: AppTextStyles.bodyLg.copyWith(color: AppColors.textSecondary),
     prefixIcon: Icon(icon, color: AppColors.textTertiary, size: 20),
     suffixIcon: suffix,
     filled: true,
@@ -108,9 +117,9 @@ class FieldLabel extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Padding(
     padding: const EdgeInsets.only(left: 2),
-    // Микро uppercase label — хэсгийн толгойн хэв маягтай ижил хэмнэл
-    child: Text(label.toUpperCase(), style: AppTextStyles.labelSm.copyWith(
-      color: AppColors.textTertiary, letterSpacing: 1.2)),
+    // Формын шошго — өгүүлбэрийн бичиглэл, уншигдахуйц контраст
+    child: Text(label, style: AppTextStyles.labelSm.copyWith(
+      color: AppColors.textSecondary, letterSpacing: 0.4)),
   );
 }
 

@@ -64,8 +64,13 @@ class ThemeModeNotifier extends StateNotifier<ThemeMode>
     } catch (_) {}
   }
 
+  // Гэрэл горим түр хаалттай: features дотор AppColors.dyn* getter-ууд хараахан
+  // ашиглагдаагүй (≈950 газар харанхуй өнгө хатуу бичигдсэн) тул light горимд
+  // хагас эвдэрсэн дэлгэц гарна. Тохиргооны унтраалгыг нь авсан; энд хадгалагдсан
+  // хуучин сонголтыг ч мөн харанхуй руу татна — эс бөгөөс өмнө нь асаасан
+  // хэрэглэгч гарц олдохгүй гацна. dyn* нүүлгэлт дуусахад буцааж нээнэ.
   static ThemeMode _parse(String? v) => switch (v) {
-        'light'  => ThemeMode.light,
+        'light'  => ThemeMode.dark, // TODO(dyn-colors): => ThemeMode.light
         'system' => ThemeMode.system,
         _        => ThemeMode.dark,
       };

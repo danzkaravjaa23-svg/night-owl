@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_radii.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/router/app_router.dart';
 import '../../../models/venue.dart';
@@ -106,11 +107,13 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
                 SliverPadding(
                   padding: const EdgeInsets.fromLTRB(20, 6, 20, 110),
                   sliver: SliverGrid(
+                    // Тогтмол өндөр (228) — bento-гийн өндөр хувилбар нь ч ~14px нөөцтэй багтана
+                    // нүдэндээ багтана (харьцаа хэрэглэвэл өндөр нь халина)
                     gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                       crossAxisCount: 2,
                       mainAxisSpacing: 14,
                       crossAxisSpacing: 14,
-                      childAspectRatio: 0.62,
+                      mainAxisExtent: 228,
                     ),
                     delegate: SliverChildBuilderDelegate(
                       // Bento хэмнэл — шатрын хөлөг маягаар өндөр/намхан зураг ээлжилнэ
@@ -153,7 +156,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
           decoration: BoxDecoration(
             color: AppColors.bgElevated.withValues(alpha: 0.72),
-            borderRadius: BorderRadius.circular(999),
+            borderRadius: AppRadii.pillR,
             border: Border.all(color: AppColors.hairline)),
           child: Text(trailing, style: AppTextStyles.labelSm.copyWith(
             color: AppColors.textSecondary, letterSpacing: 0))),
@@ -170,7 +173,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
         // Шилэн pill хайлт — фокус үед cyan хүрээ + glow
         decoration: BoxDecoration(
           color: AppColors.bgElevated.withValues(alpha: 0.72),
-          borderRadius: BorderRadius.circular(999),
+          borderRadius: AppRadii.pillR,
           border: Border.all(color: _searchFocused
               ? AppColors.neonCyan.withValues(alpha: 0.6)
               : AppColors.hairline),
@@ -199,15 +202,18 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
               isDense: true,
               contentPadding: EdgeInsets.zero),
           )),
-          if (_query.isNotEmpty)
+          if (_query.isNotEmpty) ...[
+            // Цэвэрлэх — icon жижиг ч хүрэх талбар 44×44
             _Tap(
               behavior: HitTestBehavior.opaque,
               onTap: () {
                 _searchCtrl.clear(); // харагдах текстийг мөн цэвэрлэнэ
                 setState(() => _query = '');
               },
-              child: const Padding(padding: EdgeInsets.only(right: 16),
-                child: Icon(Icons.close, color: AppColors.textTertiary, size: 16))),
+              child: const SizedBox(width: 44, height: 44,
+                child: Icon(Icons.close, color: AppColors.textTertiary, size: 18))),
+            const SizedBox(width: 4),
+          ],
         ]),
       )),
       const SizedBox(width: 12),
@@ -218,7 +224,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
           width: 52, height: 52,
           decoration: BoxDecoration(
             color: AppColors.bgElevated.withValues(alpha: 0.72),
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: AppRadii.mdR,
             border: Border.all(color: AppColors.neonCyan.withValues(alpha: 0.4)),
             boxShadow: AppColors.glowShadow(AppColors.neonCyan, alpha: 0.2)),
           child: const Icon(Icons.map_rounded,
@@ -249,7 +255,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
             decoration: BoxDecoration(
               gradient: active ? AppColors.accentGradient : null,
               color: active ? null : AppColors.bgElevated.withValues(alpha: 0.72),
-              borderRadius: BorderRadius.circular(999),
+              borderRadius: AppRadii.pillR,
               border: Border.all(color: active
                 ? Colors.transparent : AppColors.hairline),
               boxShadow: active
@@ -318,14 +324,14 @@ class _StatusPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final s = _statusFor(checkins);
+    // Гэрэлтэх цагираг (halo) авсан — неон гэрлийг зөвхөн үндсэн үйлдэлд
+    // үлдээв. Өнгөт дүүргэлт + цэг нь төлвөө хангалттай хэлнэ.
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
         color: s.color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(999),
+        borderRadius: AppRadii.pillR,
         border: Border.all(color: s.color.withValues(alpha: 0.4)),
-        boxShadow: [BoxShadow(color: s.color.withValues(alpha: 0.25),
-          blurRadius: 12, spreadRadius: -3)],
       ),
       child: Row(mainAxisSize: MainAxisSize.min, children: [
         Container(width: 6, height: 6, decoration: BoxDecoration(
@@ -376,7 +382,7 @@ class _RatingChip extends StatelessWidget {
     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
     decoration: BoxDecoration(
       color: AppColors.bgElevated.withValues(alpha: 0.72),
-      borderRadius: BorderRadius.circular(999),
+      borderRadius: AppRadii.pillR,
       border: Border.all(color: AppColors.hairline)),
     child: Row(mainAxisSize: MainAxisSize.min, children: [
       const Icon(Icons.star_rounded, color: AppColors.amber, size: 12),
@@ -389,24 +395,26 @@ class _RatingChip extends StatelessWidget {
   );
 }
 
-// ─── Жижиг stat chip — grid картын amber/cyan мөрөнд ───
+// ─── Жижиг stat chip — grid картын мэдээллийн мөрөнд ───
+// Өмнө нь amber/cyan өнгөт дүүргэлттэй байсныг саармаг болгов: карт бүр
+// гурван неон элемент асаахаа больж, эдгээр нь энгийн metadata мэт уншигдана.
 class _StatChip extends StatelessWidget {
   final IconData icon;
   final String text;
-  final Color color;
-  const _StatChip({required this.icon, required this.text, required this.color});
+  const _StatChip({required this.icon, required this.text});
   @override
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
     decoration: BoxDecoration(
-      color: color.withValues(alpha: 0.12),
-      borderRadius: BorderRadius.circular(999),
-      border: Border.all(color: color.withValues(alpha: 0.35))),
+      color: AppColors.bgSurface.withValues(alpha: 0.7),
+      borderRadius: AppRadii.pillR,
+      border: Border.all(color: AppColors.hairline)),
     child: Row(mainAxisSize: MainAxisSize.min, children: [
-      Icon(icon, size: 11, color: color),
+      Icon(icon, size: 11, color: AppColors.textSecondary),
       const SizedBox(width: 3),
       Text(text, style: AppTextStyles.labelSm.copyWith(
-        color: color, letterSpacing: 0, fontWeight: FontWeight.w700)),
+        color: AppColors.textSecondary, letterSpacing: 0,
+        fontWeight: FontWeight.w700)),
     ]),
   );
 }
@@ -476,12 +484,12 @@ class _HotCard extends StatelessWidget {
     child: Container(
       width: 280,
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: AppRadii.lgR,
         border: Border.all(color: AppColors.hairline2),
         boxShadow: AppColors.shadowCard,
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: AppRadii.lgR,
         child: Stack(fit: StackFit.expand, children: [
           _VenueImage(venue: venue, height: 180),
           // Доод scrim — нэр уншигдахуйц гүн
@@ -522,22 +530,23 @@ class _VenueCard extends StatelessWidget {
   const _VenueCard({required this.venue, this.tall = true});
   @override
   Widget build(BuildContext context) {
-    final imgH = tall ? 140.0 : 104.0;
+    // 220px нүдэнд өндөр хувилбар нь ч багтахаар (зураг + доод блок) тохируулав
+    final imgH = tall ? 124.0 : 96.0;
     return _Tap(
       onTap: () => context.push('/venue/reviews/${venue.id}'),
       child: Container(
         decoration: BoxDecoration(
           color: AppColors.bgElevated.withValues(alpha: 0.72),
-          borderRadius: BorderRadius.circular(24),
+          borderRadius: AppRadii.lgR,
           border: Border.all(color: AppColors.hairline),
           boxShadow: AppColors.shadowCard,
         ),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          // Зураг — картын дотор 20 радиустай media
+          // Зураг — картын дотор inset media радиус (md)
           Padding(
             padding: const EdgeInsets.fromLTRB(6, 6, 6, 0),
             child: ClipRRect(
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: AppRadii.mdR,
               child: Stack(children: [
                 SizedBox(height: imgH, width: double.infinity,
                   child: _VenueImage(venue: venue, height: imgH)),
@@ -566,11 +575,11 @@ class _VenueCard extends StatelessWidget {
               const Spacer(),
               // Rating + check-in stat chips
               Row(children: [
-                _StatChip(icon: Icons.star_rounded, color: AppColors.amber,
+                _StatChip(icon: Icons.star_rounded,
                   text: venue.rating > 0 ? venue.rating.toStringAsFixed(1) : '—'),
                 const SizedBox(width: 6),
                 Flexible(child: _StatChip(icon: Icons.bolt_rounded,
-                  color: AppColors.neonCyan, text: '${venue.checkinCount}')),
+                  text: '${venue.checkinCount}')),
               ]),
             ]),
           )),
@@ -622,14 +631,14 @@ class _ExploreSkeleton extends StatelessWidget {
       const SizedBox(height: 18),
       // хайлт pill + map товч
       const Row(children: [
-        Expanded(child: _SkelBox(height: 52, radius: 999)),
+        Expanded(child: _SkelBox(height: 52, radius: AppRadii.pill)),
         SizedBox(width: 12),
-        _SkelBox(width: 52, height: 52, radius: 16),
+        _SkelBox(width: 52, height: 52, radius: AppRadii.md),
       ]),
       const SizedBox(height: 12),
       Row(children: [ // chips
         for (int i = 0; i < 4; i++) ...[
-          const _SkelBox(width: 84, height: 40, radius: 999),
+          const _SkelBox(width: 84, height: 40, radius: AppRadii.pill),
           const SizedBox(width: 8),
         ]]),
       const SizedBox(height: 28),
@@ -637,19 +646,22 @@ class _ExploreSkeleton extends StatelessWidget {
       const SizedBox(height: 12),
       // Carousel skeleton
       const SizedBox(height: 180, child: Row(children: [
-        Expanded(child: _SkelBox(height: 180, radius: 24)),
+        Expanded(child: _SkelBox(height: 180, radius: AppRadii.lg)),
         SizedBox(width: 14),
-        _SkelBox(width: 60, height: 180, radius: 24),
+        _SkelBox(width: 60, height: 180, radius: AppRadii.lg),
       ])),
       const SizedBox(height: 28),
       const _SkelBox(width: 120, height: 12, radius: 6),
       const SizedBox(height: 12),
-      // Grid skeleton — 4 карт
-      GridView.count(
-        crossAxisCount: 2, shrinkWrap: true,
+      // Grid skeleton — 4 карт (бодит grid-ийн mainAxisExtent-тэй ижил)
+      GridView(
+        shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),
-        mainAxisSpacing: 14, crossAxisSpacing: 14, childAspectRatio: 0.62,
-        children: [for (int i = 0; i < 4; i++) const _SkelBox(radius: 24)]),
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 2, mainAxisSpacing: 14, crossAxisSpacing: 14,
+          mainAxisExtent: 228),
+        children: [for (int i = 0; i < 4; i++)
+          const _SkelBox(radius: AppRadii.lg)]),
     ]),
   );
 }

@@ -26,17 +26,17 @@ Future<void> showReportSheet(
 }) async {
   await showModalBottomSheet(
     context: context,
-    backgroundColor: AppColors.bgElevated,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+    // Өндөр агуулга халихаас сэргийлж — scroll + safe area
+    // (өнгө, булан, drag handle-ийг theme өгнө)
+    isScrollControlled: true,
+    useSafeArea: true,
     builder: (sheetCtx) => SafeArea(
+      top: false,
+      child: SingleChildScrollView(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const SizedBox(height: 12),
-          Container(width: 40, height: 4, decoration: BoxDecoration(
-            color: AppColors.hairline2, borderRadius: BorderRadius.circular(2))),
-          const SizedBox(height: 16),
+          const SizedBox(height: 4),
           Text(title ?? 'Юунд мэдээлэх вэ?', style: AppTextStyles.h3),
           const SizedBox(height: 8),
           ..._reasons.entries.map((e) => ListTile(
@@ -66,6 +66,7 @@ Future<void> showReportSheet(
           const SizedBox(height: 12),
         ],
       ),
+      ),
     ),
   );
 }
@@ -79,17 +80,17 @@ Future<void> showUserOptionsSheet(
 }) async {
   await showModalBottomSheet(
     context: context,
-    backgroundColor: AppColors.bgElevated,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+    // Өндөр агуулга халихаас сэргийлж — scroll + safe area
+    // (өнгө, булан, drag handle-ийг theme өгнө)
+    isScrollControlled: true,
+    useSafeArea: true,
     builder: (sheetCtx) => SafeArea(
+      top: false,
+      child: SingleChildScrollView(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const SizedBox(height: 12),
-          Container(width: 40, height: 4, decoration: BoxDecoration(
-            color: AppColors.hairline2, borderRadius: BorderRadius.circular(2))),
-          const SizedBox(height: 8),
+          const SizedBox(height: 4),
           ListTile(
             leading: const Icon(Icons.block, color: AppColors.error),
             title: Text('@$username-г блоклох',
@@ -119,6 +120,7 @@ Future<void> showUserOptionsSheet(
           const SizedBox(height: 12),
         ],
       ),
+      ),
     ),
   );
 }
@@ -138,17 +140,17 @@ Future<void> showPostOptionsSheet(
 }) async {
   await showModalBottomSheet(
     context: context,
-    backgroundColor: AppColors.bgElevated,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+    // Өндөр агуулга халихаас сэргийлж — scroll + safe area
+    // (өнгө, булан, drag handle-ийг theme өгнө)
+    isScrollControlled: true,
+    useSafeArea: true,
     builder: (sheetCtx) => SafeArea(
+      top: false,
+      child: SingleChildScrollView(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const SizedBox(height: 12),
-          Container(width: 40, height: 4, decoration: BoxDecoration(
-            color: AppColors.hairline2, borderRadius: BorderRadius.circular(2))),
-          const SizedBox(height: 8),
+          const SizedBox(height: 4),
 
           // ── Өөрийн пост: Тайлбар засах + Delete ──
           if (isOwn) ...[
@@ -204,6 +206,7 @@ Future<void> showPostOptionsSheet(
           const SizedBox(height: 12),
           ],
         ],
+      ),
       ),
     ),
   );

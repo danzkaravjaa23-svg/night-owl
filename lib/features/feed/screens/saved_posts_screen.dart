@@ -4,6 +4,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:shimmer/shimmer.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/network_video.dart';
 import '../../../core/services/supabase_service.dart';
 
@@ -106,19 +107,18 @@ class _SavedPostsScreenState extends State<SavedPostsScreen> {
                   backgroundColor: AppColors.bgElevated,
                   onRefresh: _load,
                   child: _posts.isEmpty
+                    // Нэгдсэн хоосон төлөв (medallion + h3 + дэд текст) —
+                    // pull-to-refresh ажиллахын тулд scroll дотор
                     ? ListView(
                         physics: const AlwaysScrollableScrollPhysics(),
                         children: [
-                          SizedBox(height: MediaQuery.of(context).size.height * 0.22),
-                          const Icon(Icons.bookmark_border_rounded,
-                              size: 64, color: AppColors.textTertiary),
-                          const SizedBox(height: 12),
-                          Center(child: Text('Хадгалсан пост алга',
-                              style: AppTextStyles.h2)),
-                          const SizedBox(height: 6),
-                          Center(child: Text('Постын 🔖 товч дарж хадгална',
-                              style: AppTextStyles.bodyMd.copyWith(
-                                  color: AppColors.textSecondary))),
+                          SizedBox(
+                              height: MediaQuery.of(context).size.height * 0.14),
+                          const EmptyState(
+                            icon: Icons.bookmark_border_rounded,
+                            title: 'Хадгалсан пост алга',
+                            subtitle: 'Постын 🔖 товч дарж хадгална',
+                          ),
                         ],
                       )
                     : _masonry(),

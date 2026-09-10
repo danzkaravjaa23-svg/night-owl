@@ -5,6 +5,8 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_radii.dart';
+import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/widgets/gradient_button.dart';
 import '../../../core/l10n/app_strings.dart';
@@ -87,7 +89,9 @@ class _PermissionScreenState extends State<PermissionScreen> {
           _PermAura(accent: color),
           SafeArea(
             child: Padding(
-              padding: const EdgeInsets.all(40),
+              // Хажуугийн зай — onboarding слайдтай ижил 20px
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.x5, 10, AppSpacing.x5, AppSpacing.x6),
               child: Column(
                 children: [
                   const Spacer(),
@@ -104,7 +108,7 @@ class _PermissionScreenState extends State<PermissionScreen> {
                   const Spacer(),
                   GradientButton(
                     label: s.btnAllow,
-                    borderRadius: 16,
+                    borderRadius: AppRadii.md,
                     onPressed: _requesting ? null : () => _allow(context),
                     trailing: _requesting
                         ? const SizedBox(width: 16, height: 16,

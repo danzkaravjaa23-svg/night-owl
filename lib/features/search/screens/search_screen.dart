@@ -5,8 +5,13 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/widgets/app_avatar.dart';
+import '../../../core/widgets/empty_state.dart';
+import '../../../core/widgets/glass_icon_button.dart';
+import '../../../core/widgets/gradient_button.dart';
 import '../../../core/widgets/network_video.dart';
 import '../../../core/services/supabase_service.dart';
+// Хайлтын талбар нь DM-тэй нэг л хувилбар байхаар хуваалцсан widget
+import '../../dm/widgets/search_field.dart';
 
 class SearchScreen extends StatefulWidget {
   const SearchScreen({super.key});
@@ -17,7 +22,6 @@ class SearchScreen extends StatefulWidget {
 class _SearchScreenState extends State<SearchScreen> {
   final _ctrl = TextEditingController();
   String _q = '';
-  bool _focus = false; // хайлтын талбарын focus glow
   List<Map<String, dynamic>> _users = [];
   List<Map<String, dynamic>> _venues = [];
   List<Map<String, dynamic>> _explore = [];
@@ -119,64 +123,27 @@ class _SearchScreenState extends State<SearchScreen> {
         Padding(
           padding: const EdgeInsets.fromLTRB(20, 16, 20, 4),
           child: Row(children: [
-            _Pressable(
+            // Буцах — апп даяар нэг л хэлбэр (GlassIconButton)
+            GlassIconButton(
+              icon: Icons.chevron_left_rounded, iconSize: 24,
+              tooltip: 'Буцах',
               // Deep link-ээр шууд орж ирсэн үед pop хийх юмгүй — feed рүү
               onTap: () {
                 if (context.canPop()) { context.pop(); } else { context.go('/feed'); }
-              },
-              child: Container(width: 40, height: 40,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: AppColors.bgElevated.withValues(alpha: 0.72),
-                  border: Border.all(color: AppColors.hairline)),
-                child: const Icon(Icons.arrow_back_ios_new,
-                    size: 16, color: AppColors.textPrimary))),
-            const SizedBox(width: 14),
+              }),
+            const SizedBox(width: 10),
             Text('Хайх', style: AppTextStyles.h1),
           ]),
         ),
 
-        // ── Search pill 52 — focus үед cyan hairline + glow ──
+        // ── Search — апп даяарх нэгдсэн шилэн pill талбар (48) ──
         Padding(
           padding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 180),
-            curve: Curves.easeOut,
-            height: 52,
-            decoration: BoxDecoration(
-              color: AppColors.bgElevated.withValues(alpha: 0.75),
-              borderRadius: BorderRadius.circular(999),
-              border: Border.all(color: _focus
-                  ? AppColors.neonCyan.withValues(alpha: 0.6)
-                  : AppColors.hairline),
-              boxShadow: _focus
-                  ? AppColors.glowShadow(AppColors.neonCyan,
-                      alpha: 0.18, blur: 16, offset: Offset.zero)
-                  : null),
-            child: Row(children: [
-              const SizedBox(width: 18),
-              Icon(Icons.search, size: 20,
-                color: _focus ? AppColors.neonCyan : AppColors.textSecondary),
-              const SizedBox(width: 10),
-              Expanded(child: Focus(
-                onFocusChange: (f) => setState(() => _focus = f),
-                child: TextField(
-                controller: _ctrl, autofocus: true, onChanged: _search,
-                style: AppTextStyles.bodyMd.copyWith(color: AppColors.textPrimary),
-                cursorColor: AppColors.neonCyan,
-                decoration: InputDecoration(
-                  hintText: 'Хүн, газар хайх...',
-                  hintStyle: AppTextStyles.bodyMd.copyWith(color: AppColors.textTertiary),
-                  border: InputBorder.none, isDense: true,
-                  contentPadding: EdgeInsets.zero)))),
-              if (_q.isNotEmpty)
-                _Pressable(
-                  onTap: () { _ctrl.clear(); _search(''); },
-                  child: const Padding(padding: EdgeInsets.all(14),
-                    child: Icon(Icons.close, color: AppColors.textTertiary, size: 16))),
-              if (_q.isEmpty) const SizedBox(width: 18),
-            ]),
-          ),
+          child: SearchField(
+            controller: _ctrl,
+            autofocus: true,
+            onChanged: _search,
+            hint: 'Хүн, газар хайх...'),
         ),
 
         Expanded(child: AnimatedSwitcher(
@@ -234,24 +201,23 @@ class _SearchScreenState extends State<SearchScreen> {
         Text('Алдаа гарлаа — дахин оролдоно уу',
           style: AppTextStyles.bodyMd.copyWith(color: AppColors.textSecondary)),
         const SizedBox(height: 12),
-        OutlinedButton(
+        // Нэгдсэн primary CTA — GradientButton (md)
+        GradientButton(
+          label: 'Дахин оролдох',
+          size: GradientButtonSize.md,
+          fullWidth: false,
           onPressed: () {
             setState(() { _loading = true; _searchError = false; });
             _runSearch(_ctrl.text.trim());
-          },
-          style: OutlinedButton.styleFrom(
-            foregroundColor: AppColors.accentStart,
-            side: const BorderSide(color: AppColors.hairline2)),
-          child: const Text('Дахин оролдох')),
+          }),
       ]));
     }
     if (_users.isEmpty && _venues.isEmpty) {
-      return Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-        const Icon(Icons.search_off_rounded, size: 44, color: AppColors.textTertiary),
-        const SizedBox(height: 10),
-        Text('Илэрц олдсонгүй',
-          style: AppTextStyles.bodyMd.copyWith(color: AppColors.textSecondary)),
-      ]));
+      // Хоосон төлөв — апп даяарх нэгдсэн EmptyState (icon хувилбар)
+      return const EmptyState(
+        icon: Icons.search_off_rounded,
+        title: 'Илэрц олдсонгүй',
+        subtitle: 'Өөр түлхүүр үгээр хайж үзээрэй.');
     }
     return AnimatedOpacity(
       duration: const Duration(milliseconds: 150),
@@ -367,21 +333,20 @@ class _SearchScreenState extends State<SearchScreen> {
         Text('Алдаа гарлаа — дахин оролдоно уу',
           style: AppTextStyles.bodyMd.copyWith(color: AppColors.textSecondary)),
         const SizedBox(height: 12),
-        OutlinedButton(
-          onPressed: _loadExplore,
-          style: OutlinedButton.styleFrom(
-            foregroundColor: AppColors.accentStart,
-            side: const BorderSide(color: AppColors.hairline2)),
-          child: const Text('Дахин оролдох')),
+        // Нэгдсэн primary CTA — GradientButton (md)
+        GradientButton(
+          label: 'Дахин оролдох',
+          size: GradientButtonSize.md,
+          fullWidth: false,
+          onPressed: _loadExplore),
       ]));
     }
     if (_explore.isEmpty) {
-      return Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-        const Icon(Icons.photo_library_outlined, size: 44, color: AppColors.textTertiary),
-        const SizedBox(height: 10),
-        Text('Пост алга байна',
-          style: AppTextStyles.bodyMd.copyWith(color: AppColors.textSecondary)),
-      ]));
+      // Хоосон төлөв — апп даяарх нэгдсэн EmptyState (icon хувилбар)
+      return const EmptyState(
+        icon: Icons.photo_library_outlined,
+        title: 'Пост алга байна',
+        subtitle: 'Одоохондоо нээж үзэх контент алга.');
     }
     return GridView.builder(
       padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),

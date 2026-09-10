@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_radii.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../providers/event_provider.dart';
 
@@ -23,9 +24,10 @@ String _fmtPrice(int n) {
 String _fmtCount(int n) =>
     n >= 1000 ? '${(n / 100).round() / 10}k' : '$n';
 
-/// Постерын өргөн — дэлгэц бүтэн (хажуу 20 padding), веб өргөн цонхонд clamp
+/// Постерын өргөн — хажуугийн 20 padding-аас гадна 34 үлдээж дараагийн карт
+/// ирмэгээрээ "цухуйна" (rail гүйдэг нь харагдана), веб өргөн цонхонд clamp
 double _posterWidth(BuildContext context) =>
-    (MediaQuery.of(context).size.width - 40).clamp(240.0, 540.0);
+    (MediaQuery.of(context).size.width - 40 - 34).clamp(240.0, 540.0);
 
 class EventsRail extends ConsumerWidget {
   const EventsRail({super.key});
@@ -81,9 +83,9 @@ class _RailSkeleton extends StatelessWidget {
             physics: const NeverScrollableScrollPhysics(),
             padding: const EdgeInsets.symmetric(horizontal: 20),
             children: [
-              _SkelBox(width: w, height: 200, radius: 24),
+              _SkelBox(width: w, height: 200, radius: AppRadii.lg),
               const SizedBox(width: 14),
-              _SkelBox(width: w, height: 200, radius: 24),
+              _SkelBox(width: w, height: 200, radius: AppRadii.lg),
             ]),
         ),
         const SizedBox(height: 14),
@@ -179,15 +181,15 @@ class _EventCard extends StatelessWidget {
         width: _posterWidth(context),
         // Постер хүрээ + гүн сүүдэр (карт агаарт хөвөх мэдрэмж)
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(24),
+          borderRadius: AppRadii.lgR,
           boxShadow: AppColors.shadowCard,
         ),
         foregroundDecoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(24),
+          borderRadius: AppRadii.lgR,
           border: Border.all(color: AppColors.hairline, width: 1),
         ),
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(24),
+          borderRadius: AppRadii.lgR,
           child: Stack(fit: StackFit.expand, children: [
             // ── Бүтэн зураг (full-bleed постер) ──
             event.coverUrl != null
@@ -214,14 +216,15 @@ class _EventCard extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
               decoration: BoxDecoration(
                 color: Colors.black.withValues(alpha: 0.45),
-                borderRadius: BorderRadius.circular(14),
+                borderRadius: AppRadii.mdR,
                 border: Border.all(color: AppColors.hairline2, width: 1)),
+              // Огноо — токен хэмжээс (өмнө нь сарын шошго 8px, уншигдахгүй байв)
               child: Column(mainAxisSize: MainAxisSize.min, children: [
                 Text(d.day.toString().padLeft(2, '0'),
-                  style: const TextStyle(color: Colors.white, fontSize: 18,
+                  style: AppTextStyles.h2.copyWith(color: Colors.white,
                     fontWeight: FontWeight.w800, height: 1.05)),
                 Text('${d.month}-Р САР',
-                  style: const TextStyle(color: Colors.white70, fontSize: 8,
+                  style: AppTextStyles.bodyXs.copyWith(color: Colors.white70,
                     fontWeight: FontWeight.w700, letterSpacing: 1.1)),
               ]),
             )),
@@ -231,12 +234,12 @@ class _EventCard extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 5),
               decoration: BoxDecoration(
                 color: Colors.black.withValues(alpha: 0.45),
-                borderRadius: BorderRadius.circular(999),
+                borderRadius: AppRadii.pillR,
                 border: Border.all(color: AppColors.hairline2, width: 1)),
               child: Text(event.price == 0 ? 'Үнэгүй' : _fmtPrice(event.price),
-                style: TextStyle(
+                style: AppTextStyles.labelSm.copyWith(
                   color: event.price == 0 ? AppColors.lime : Colors.white,
-                  fontSize: 11, fontWeight: FontWeight.w800)),
+                  letterSpacing: 0, fontWeight: FontWeight.w800)),
             )),
 
             // ── Доод контент: гарчиг+газар (зүүн) / RSVP stack (баруун) ──
@@ -246,9 +249,10 @@ class _EventCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min, children: [
                     Text(event.title, maxLines: 2, overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(color: Colors.white, fontSize: 17,
+                      style: AppTextStyles.labelLg.copyWith(color: Colors.white,
                         fontWeight: FontWeight.w800, height: 1.15,
-                        shadows: [Shadow(blurRadius: 8, color: Colors.black87)])),
+                        shadows: const [
+                          Shadow(blurRadius: 8, color: Colors.black87)])),
                     const SizedBox(height: 5),
                     Row(children: [
                       const Icon(Icons.location_on, size: 12, color: Colors.white70),
@@ -279,9 +283,11 @@ class _EventCard extends StatelessWidget {
     );
   }
 
+  // Зураггүй эвентийн орлуулагч — emoji биш, Material icon
   Widget _coverPlaceholder() => Container(
     decoration: const BoxDecoration(gradient: AppColors.accentGradient),
-    child: const Center(child: Text('🎉', style: TextStyle(fontSize: 36))));
+    child: const Center(child: Icon(Icons.celebration_rounded,
+      color: Colors.white, size: 36)));
 }
 
 /// Оролцогчдын stack — 3 давхарласан 24px дүрс (-8 offset) + "+N" шилэн pill.
@@ -313,11 +319,11 @@ class _AttendeeStack extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         decoration: BoxDecoration(
           color: Colors.black.withValues(alpha: 0.5),
-          borderRadius: BorderRadius.circular(999),
+          borderRadius: AppRadii.pillR,
           border: Border.all(color: AppColors.hairline2, width: 1)),
         child: Text('+${_fmtCount(count)}',
-          style: const TextStyle(color: Colors.white, fontSize: 11,
-            fontWeight: FontWeight.w800)),
+          style: AppTextStyles.labelSm.copyWith(color: Colors.white,
+            letterSpacing: 0, fontWeight: FontWeight.w800)),
       ),
     ]);
 }
@@ -329,7 +335,7 @@ void showEventDetailSheet(BuildContext context, EventItem event) {
     // Урт тайлбартай эвент overflow хийхгүй — өндөр нь дотроо scroll-тай
     isScrollControlled: true,
     shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
+      borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadii.xl))),
     builder: (_) => _EventDetailSheet(event: event),
   );
 }
@@ -454,7 +460,7 @@ class _EventDetailSheetState extends State<_EventDetailSheet> {
         padding: const EdgeInsets.symmetric(vertical: 12),
         decoration: BoxDecoration(
           color: active ? color.withValues(alpha: 0.18) : AppColors.bgSurface,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: AppRadii.mdR,
           border: Border.all(color: active ? color : AppColors.hairline,
             width: active ? 1.5 : 1),
         ),

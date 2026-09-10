@@ -37,6 +37,8 @@ class _LoginScreenState extends State<LoginScreen> {
   final _emailCtrl = TextEditingController();
   final _pwCtrl    = TextEditingController();
   final _formKey   = GlobalKey<FormState>();
+  // Гар дээрх "Дараах" товч талбараас талбар руу шилжүүлнэ
+  final _pwFocus   = FocusNode();
   bool _showPw     = false;
   bool _loading    = false;
   bool _gLoading   = false;
@@ -46,6 +48,7 @@ class _LoginScreenState extends State<LoginScreen> {
   void dispose() {
     _emailCtrl.dispose();
     _pwCtrl.dispose();
+    _pwFocus.dispose();
     super.dispose();
   }
 
@@ -59,6 +62,8 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _signIn() async {
+    // Enter дарж давхар илгээхээс сэргийлнэ
+    if (_loading) return;
     if (!_formKey.currentState!.validate()) return;
     setState(() { _loading = true; _error = null; });
 
@@ -179,7 +184,10 @@ class _LoginScreenState extends State<LoginScreen> {
                                             controller: _emailCtrl,
                                             keyboardType: TextInputType.emailAddress,
                                             autofillHints: const [AutofillHints.username, AutofillHints.email],
-                                            style: const TextStyle(color: AppColors.textPrimary),
+                                            style: authFieldStyle,
+                                            textInputAction: TextInputAction.next,
+                                            onFieldSubmitted: (_) =>
+                                                _pwFocus.requestFocus(),
                                             decoration: authInputDec(
                                               hint: 'name@email.com',
                                               icon: Icons.mail_outline_rounded),
@@ -201,9 +209,12 @@ class _LoginScreenState extends State<LoginScreen> {
                                           const SizedBox(height: 8),
                                           TextFormField(
                                             controller: _pwCtrl,
+                                            focusNode: _pwFocus,
                                             obscureText: !_showPw,
                                             autofillHints: const [AutofillHints.password],
-                                            style: const TextStyle(color: AppColors.textPrimary),
+                                            style: authFieldStyle,
+                                            textInputAction: TextInputAction.done,
+                                            onFieldSubmitted: (_) => _signIn(),
                                             decoration: authInputDec(
                                               hint: '••••••••',
                                               icon: Icons.lock_outline_rounded,
@@ -234,11 +245,18 @@ class _LoginScreenState extends State<LoginScreen> {
                                       index: 4,
                                       child: Align(
                                         alignment: Alignment.centerRight,
+                                        // Хүрэх талбай 44px-ээс багагүй, уншигдах хэмжээ
                                         child: TextButton(
                                           onPressed: () => context.push(AppRoutes.forgotPassword),
+                                          style: TextButton.styleFrom(
+                                            minimumSize: const Size(0, 44),
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 12, vertical: 12),
+                                          ),
                                           child: Text('Нууц үг мартсан уу?',
-                                            style: AppTextStyles.labelSm.copyWith(
-                                              color: AppColors.neonCyan, letterSpacing: 0)),
+                                            style: AppTextStyles.bodySm.copyWith(
+                                              color: AppColors.neonCyan,
+                                              fontWeight: FontWeight.w600)),
                                         ),
                                       ),
                                     ),

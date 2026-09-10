@@ -17,7 +17,8 @@ abstract class AppColors {
   // Text — cool white / steel
   static const Color textPrimary   = Color(0xFFF4F6FA);
   static const Color textSecondary = Color(0xFFA7ADBA);
-  static const Color textTertiary  = Color(0xFF6A7080);
+  // WCAG AA (4.5:1) хангахаар цайруулсан — 10–11px жижиг шошгонд уншигдана.
+  static const Color textTertiary  = Color(0xFF7E8494);
   static const Color textMono      = Color(0xFF9FB6C2);
 
   // ─── Electric cyan (active / selected / focus — "silver" нэрээр) ───
@@ -41,6 +42,11 @@ abstract class AppColors {
   static const Color accentEnd    = Color(0xFFFF2D8E); // pink (gradient end)
   static const Color accentPurple = Color(0xFF7C3AED); // purple
 
+  // ─── Үйлдлийн семантик өнгө — апп даяар НЭГ өнгө ───
+  // (Өмнө нь feed / reels / story viewer гурав өөр өнгөөр зүрх будаж байсан.)
+  static const Color like  = accentEnd;    // зүрх — дарсан үе
+  static const Color saved = accentStart;  // хадгалсан тэмдэг
+
   // Status
   static const Color success = Color(0xFFB4FF2E); // glowing lime (live/active)
   static const Color error   = Color(0xFFFF4566);
@@ -56,7 +62,8 @@ abstract class AppColors {
 
   static const Color textPrimaryLight   = Color(0xFF13031F);
   static const Color textSecondaryLight = Color(0xFF5C4A82);
-  static const Color textTertiaryLight  = Color(0xFF9A8DB8);
+  // Цайвар дэвсгэр дээр AA хангахаар бараантуулсан.
+  static const Color textTertiaryLight  = Color(0xFF6F6390);
 
   // ─── Theme-aware (динамик) резолюц ───
   // ThemeModeNotifier горим солигдоход энэ флагийг шинэчилдэг;

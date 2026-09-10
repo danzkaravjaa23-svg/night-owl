@@ -7,6 +7,8 @@ import '../../../core/theme/app_text_styles.dart';
 import '../../../core/l10n/app_strings.dart';
 import '../../../core/widgets/app_avatar.dart';
 import '../../../core/widgets/empty_state.dart';
+import '../../../core/widgets/glass_icon_button.dart';
+import '../../../core/widgets/gradient_button.dart';
 import '../../../core/widgets/network_video.dart';
 import '../../../core/services/supabase_service.dart';
 import '../providers/notification_provider.dart' show markAllNotifsRead;
@@ -190,16 +192,12 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
           padding: const EdgeInsets.fromLTRB(20, 16, 12, 12),
           child: Row(children: [
             if (context.canPop()) ...[
-              _Press(
-                onTap: () => context.pop(),
-                child: Container(width: 40, height: 40,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: AppColors.bgElevated.withValues(alpha: 0.72),
-                    border: Border.all(color: AppColors.hairline)),
-                  child: const Icon(Icons.arrow_back_ios_new,
-                    size: 16, color: AppColors.textPrimary))),
-              const SizedBox(width: 14),
+              // Буцах — апп даяар нэг л хэлбэр (GlassIconButton)
+              GlassIconButton(
+                icon: Icons.chevron_left_rounded, iconSize: 24,
+                tooltip: 'Буцах',
+                onTap: () => context.pop()),
+              const SizedBox(width: 10),
             ],
             Text('Мэдэгдэл', style: AppTextStyles.h1),
             if (unread > 0) ...[
@@ -493,12 +491,12 @@ class _ErrorState extends StatelessWidget {
       Text('Алдаа гарлаа — дахин оролдоно уу',
         style: AppTextStyles.bodyMd.copyWith(color: AppColors.textSecondary)),
       const SizedBox(height: 14),
-      OutlinedButton(
+      // Нэгдсэн primary CTA — GradientButton (md)
+      GradientButton(
+        label: 'Дахин оролдох',
         onPressed: onRetry,
-        style: OutlinedButton.styleFrom(
-          foregroundColor: AppColors.accentStart,
-          side: const BorderSide(color: AppColors.hairline2)),
-        child: const Text('Дахин оролдох')),
+        size: GradientButtonSize.md,
+        fullWidth: false),
     ]),
   );
 }

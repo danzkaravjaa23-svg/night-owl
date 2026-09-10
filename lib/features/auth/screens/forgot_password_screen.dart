@@ -35,6 +35,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   }
 
   Future<void> _send() async {
+    // Enter дарж давхар илгээхээс сэргийлнэ
+    if (_loading) return;
     if (!_formKey.currentState!.validate()) return;
     setState(() { _loading = true; _error = null; });
     try {
@@ -143,7 +145,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                   controller: _emailCtrl,
                   keyboardType: TextInputType.emailAddress,
                   autofillHints: const [AutofillHints.email],
-                  style: const TextStyle(color: AppColors.textPrimary),
+                  style: authFieldStyle,
+                  textInputAction: TextInputAction.done,
+                  onFieldSubmitted: (_) => _send(),
                   decoration: authInputDec(
                     hint: 'name@email.com',
                     icon: Icons.mail_outline_rounded),

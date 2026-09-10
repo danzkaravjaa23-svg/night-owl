@@ -4,8 +4,11 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_radii.dart';
+import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/widgets/app_avatar.dart';
+import '../../../core/widgets/gradient_button.dart';
 import '../../../core/widgets/network_video.dart' show isVideoUrl;
 import '../../../core/services/supabase_service.dart';
 import '../providers/saved_provider.dart';
@@ -269,7 +272,6 @@ class _ReelsScreenState extends ConsumerState<ReelsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final h = MediaQuery.of(context).size.height;
     final visible = _visible;
     return Scaffold(
       backgroundColor: Colors.black,
@@ -293,7 +295,6 @@ class _ReelsScreenState extends ConsumerState<ReelsScreen> {
               return _ReelPage(
                 key: ValueKey('reel-$id'),
                 reel: reel,
-                height: h,
                 active: i == _page && !_covered,
                 muted: _muted,
                 liked: _liked.contains(id),
@@ -392,17 +393,13 @@ class _ReelsScreenState extends ConsumerState<ReelsScreen> {
           style: AppTextStyles.bodyMd.copyWith(color: Colors.white54)),
         if (_canCreate && !followingEmpty) ...[
           const SizedBox(height: 20),
-          _Pressable(
-            onTap: () => _pushCovered('/reels/create'),
-            child: Container(
-              height: 48,
-              padding: const EdgeInsets.symmetric(horizontal: 30),
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                gradient: AppColors.accentGradient,
-                borderRadius: BorderRadius.circular(999),
-                boxShadow: AppColors.glowShadow(AppColors.accentStart)),
-              child: Text('Бичлэг нэмэх', style: AppTextStyles.btn.copyWith(color: Colors.white)))),
+          // Нэгдсэн primary CTA — гараар бүтээсэн градиент товчны оронд
+          GradientButton(
+            label: 'Бичлэг нэмэх',
+            fullWidth: false,
+            borderRadius: AppRadii.pill,
+            onPressed: () => _pushCovered('/reels/create'),
+          ),
         ],
         const SizedBox(height: 14),
         _Pressable(
@@ -539,7 +536,6 @@ class _SegmentedTabs extends StatelessWidget {
 
 class _ReelPage extends StatefulWidget {
   final Map<String, dynamic> reel;
-  final double height;
   final bool active;
   final ValueNotifier<bool> muted;
   final bool liked;
@@ -555,7 +551,7 @@ class _ReelPage extends StatefulWidget {
   final Future<void> Function(String route) onNavigate;
   const _ReelPage({
     super.key,
-    required this.reel, required this.height,
+    required this.reel,
     this.active = true,
     required this.muted,
     required this.liked, required this.saved,
@@ -637,6 +633,10 @@ class _ReelPageState extends State<_ReelPage> with SingleTickerProviderStateMixi
     final comments = reel['comments_count'] as int? ?? 0;
     final initial = username.isNotEmpty ? username[0].toUpperCase() : '?';
     final userId = reel['user_id'];
+    // Overlay-ууд док (dockClearance) + системийн доод зайг (home indicator)
+    // хоёуланг нь тооцно — эс бөгөөс индикаторын доогуур орж далдлагдана
+    final bottomInset = MediaQuery.of(context).padding.bottom;
+    final dock = AppSpacing.dockClearance + bottomInset;
 
     return Stack(fit: StackFit.expand, children: [
       // Видео (autoplay loop) — идэвхтэй reel л тоглоно, явцыг _progress руу
@@ -645,7 +645,10 @@ class _ReelPageState extends State<_ReelPage> with SingleTickerProviderStateMixi
         onTap: _tapVideo,
         child: StoryVideoView(
           url: reel['media_url'] as String,
-          height: widget.height,
+          // Өндрийг MediaQuery-ээс таамаглахгүй — Stack(fit: expand) хуудасны
+          // БОДИТ өндрийг өгнө. Таамаглал нь PageView-ийн жинхэнэ өндрөөс
+          // зөрөхөд доод талд хар зурвас үлдээж байсан.
+          height: null,
           loop: true,
           active: widget.active,
           paused: _paused,
@@ -678,7 +681,7 @@ class _ReelPageState extends State<_ReelPage> with SingleTickerProviderStateMixi
       ))),
 
       // ── Баруун үйлдлийн рейл — TikTok маягийн босоо стек ──
-      Positioned(right: 10, bottom: 158, child: Column(children: [
+      Positioned(right: 10, bottom: dock + 66, child: Column(children: [
         // (1) Зохиогчийн avatar 44 — градиент ring + "+" badge → /creator/:id
         _Pressable(
           onTap: () => widget.onNavigate('/creator/$userId'),
@@ -730,8 +733,8 @@ class _ReelPageState extends State<_ReelPage> with SingleTickerProviderStateMixi
         // (2) LIKE 30 + шахсан тоолуур — magenta glow when liked
         _RailButton(
           icon: liked ? Icons.favorite : Icons.favorite_border,
-          iconColor: liked ? AppColors.accentEnd : Colors.white,
-          glow: liked ? AppColors.accentEnd : null,
+          iconColor: liked ? AppColors.like : Colors.white,
+          glow: liked ? AppColors.like : null,
           label: _fmtCount(likes),
           onTap: widget.onLike,
         ),
@@ -756,8 +759,8 @@ class _ReelPageState extends State<_ReelPage> with SingleTickerProviderStateMixi
         // (5) BOOKMARK — saved_posts руу хадгална
         _RailButton(
           icon: widget.saved ? Icons.bookmark : Icons.bookmark_border,
-          iconColor: widget.saved ? AppColors.neonCyan : Colors.white,
-          glow: widget.saved ? AppColors.neonCyan : null,
+          iconColor: widget.saved ? AppColors.saved : Colors.white,
+          glow: widget.saved ? AppColors.saved : null,
           label: 'Хадгалах',
           onTap: widget.onSave,
         ),
@@ -802,7 +805,7 @@ class _ReelPageState extends State<_ReelPage> with SingleTickerProviderStateMixi
       ])),
 
       // ── Доод зүүн: зохиогч + дагах pill + тайлбар + аудио мөр ──
-      Positioned(left: 14, right: 84, bottom: 108, child: Column(
+      Positioned(left: 14, right: 84, bottom: dock + 16, child: Column(
         crossAxisAlignment: CrossAxisAlignment.start, children: [
           Row(children: [
             _Pressable(
@@ -869,7 +872,7 @@ class _ReelPageState extends State<_ReelPage> with SingleTickerProviderStateMixi
         ])),
 
       // ── Доод нимгэн прогресс шугам — үзүүр рүүгээ тодрох glow tip ──
-      Positioned(left: 0, right: 0, bottom: 92, child: IgnorePointer(child: Container(
+      Positioned(left: 0, right: 0, bottom: dock, child: IgnorePointer(child: Container(
         height: 2,
         color: Colors.white.withValues(alpha: 0.14),
         child: ValueListenableBuilder<double>(

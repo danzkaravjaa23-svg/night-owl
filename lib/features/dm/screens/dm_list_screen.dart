@@ -4,9 +4,12 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/widgets/app_avatar.dart';
 import '../../../core/widgets/empty_state.dart';
+import '../../../core/widgets/glass_icon_button.dart';
+import '../../../core/widgets/gradient_button.dart';
 import '../../../core/services/supabase_service.dart';
 import '../widgets/notes_row.dart';
 import '../widgets/create_group_sheet.dart';
+import '../widgets/search_field.dart';
 import '../providers/group_provider.dart';
 
 class DmListScreen extends StatefulWidget {
@@ -15,8 +18,8 @@ class DmListScreen extends StatefulWidget {
 }
 
 class _DmListScreenState extends State<DmListScreen> {
+  final _searchCtrl = TextEditingController();
   String _search = '';
-  bool _searchFocus = false; // хайлтын талбарын focus glow
   List<Map<String, dynamic>> _convos = [];
   List<Map<String, dynamic>> _groups = [];
   bool _loading = true;
@@ -25,6 +28,9 @@ class _DmListScreenState extends State<DmListScreen> {
 
   @override
   void initState() { super.initState(); _load(); }
+
+  @override
+  void dispose() { _searchCtrl.dispose(); super.dispose(); }
 
   Future<void> _load() async {
     // Анхны ачаалалд л skeleton харуулна — refresh үед хуучин жагсаалт хэвээр
@@ -182,11 +188,11 @@ class _DmListScreenState extends State<DmListScreen> {
           padding: const EdgeInsets.fromLTRB(20, 18, 20, 14),
           child: Row(children: [
             if (context.canPop()) ...[
-              _CircleBtn(
+              GlassIconButton(
                 icon: Icons.chevron_left_rounded, iconSize: 24,
                 tooltip: 'Буцах',
                 onTap: () => context.pop()),
-              const SizedBox(width: 12),
+              const SizedBox(width: 8),
             ],
             Text('Чат', style: AppTextStyles.h1),
             if (unreadCount > 0) ...[
@@ -202,64 +208,25 @@ class _DmListScreenState extends State<DmListScreen> {
                     fontSize: 11, fontWeight: FontWeight.w700))),
             ],
             const Spacer(),
-            _CircleBtn(
-              icon: Icons.group_add_outlined,
+            GlassIconButton(
+              icon: Icons.group_add_outlined, iconSize: 21,
               tooltip: 'Групп чат үүсгэх',
               onTap: _newGroup),
-            const SizedBox(width: 10),
-            _CircleBtn(
+            const SizedBox(width: 4),
+            GlassIconButton(
               icon: Icons.refresh_rounded, iconSize: 19,
               tooltip: 'Дахин ачаалах',
               onTap: _load),
           ]),
         ),
 
-        // ── Search — шилэн pill 48, focus үед cyan glow ──
+        // ── Search — апп даяарх нэгдсэн шилэн pill талбар (48) ──
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 180),
-            curve: Curves.easeOut,
-            height: 48,
-            decoration: BoxDecoration(
-              color: AppColors.bgElevated.withValues(alpha: 0.72),
-              borderRadius: BorderRadius.circular(999),
-              border: Border.all(color: _searchFocus
-                  ? AppColors.neonCyan.withValues(alpha: 0.6)
-                  : AppColors.hairline),
-              boxShadow: _searchFocus
-                  ? [
-                      BoxShadow(
-                        color: AppColors.neonCyan.withValues(alpha: 0.18),
-                        blurRadius: 16, spreadRadius: -2),
-                    ]
-                  : AppColors.shadowCard),
-            child: Row(children: [
-              const SizedBox(width: 16),
-              Icon(Icons.search, size: 19,
-                color: _searchFocus
-                    ? AppColors.neonCyan : AppColors.textTertiary),
-              const SizedBox(width: 10),
-              Expanded(child: Focus(
-                onFocusChange: (f) => setState(() => _searchFocus = f),
-                child: TextField(
-                onChanged: (v) => setState(() => _search = v),
-                style: AppTextStyles.bodyMd.copyWith(color: AppColors.textPrimary),
-                cursorColor: AppColors.neonCyan,
-                decoration: InputDecoration(
-                  hintText: 'Мессеж хайх...',
-                  hintStyle: AppTextStyles.bodyMd.copyWith(
-                    color: AppColors.textTertiary),
-                  border: InputBorder.none, isDense: true,
-                  contentPadding: EdgeInsets.zero)))),
-              if (_search.isNotEmpty)
-                InkResponse(
-                  onTap: () => setState(() => _search = ''),
-                  radius: 16,
-                  child: const Padding(padding: EdgeInsets.only(right: 14),
-                    child: Icon(Icons.close,
-                      color: AppColors.textTertiary, size: 16))),
-            ])),
+          child: SearchField(
+            controller: _searchCtrl,
+            onChanged: (v) => setState(() => _search = v),
+            hint: 'Мессеж хайх...'),
         ),
         const SizedBox(height: 4),
 
@@ -308,60 +275,24 @@ class _DmListScreenState extends State<DmListScreen> {
   }
 }
 
-/// Шилэн section карт — мөрүүдийг radius-24 glass блокт багцалж,
-/// хооронд нь indent-тэй hairline зураасаар тусгаарлана (Messenger 2025 template)
+/// Яриануудын хэсэг — мөрүүд бүтэн өргөнөөр (full-bleed) урсаж,
+/// хооронд нь зөвхөн indent-тэй hairline зураас тусгаарлана.
+/// (Өмнө нь radius-24 шилэн картад багцлагдсан байсныг Мэдэгдэл/Хайлтын
+/// хавтгай жагсаалттай нийцүүлж хавтгайруулав.)
 class _SectionCard extends StatelessWidget {
   final List<Widget> children;
   const _SectionCard({required this.children});
 
   @override
-  Widget build(BuildContext context) => Container(
-    margin: const EdgeInsets.symmetric(horizontal: 20),
-    decoration: BoxDecoration(
-      color: AppColors.bgElevated.withValues(alpha: 0.72),
-      borderRadius: BorderRadius.circular(24),
-      border: Border.all(color: AppColors.hairline),
-      boxShadow: AppColors.shadowCard),
-    clipBehavior: Clip.antiAlias,
-    child: Column(children: [
-      for (var i = 0; i < children.length; i++) ...[
-        if (i > 0)
-          const Padding(
-            padding: EdgeInsets.only(left: 84),
-            child: Divider(height: 1, thickness: 1, color: AppColors.hairline)),
-        children[i],
-      ],
-    ]));
-}
-
-/// Шилэн дугуй icon товч — header үйлдлүүдэд (hover cursor + tooltip)
-class _CircleBtn extends StatelessWidget {
-  final IconData icon;
-  final double iconSize;
-  final String? tooltip;
-  final VoidCallback onTap;
-  const _CircleBtn({
-    required this.icon, required this.onTap,
-    this.iconSize = 21, this.tooltip});
-
-  @override
-  Widget build(BuildContext context) {
-    final btn = MouseRegion(
-      cursor: SystemMouseCursors.click,
-      child: GestureDetector(
-        onTap: onTap,
-        behavior: HitTestBehavior.opaque,
-        child: Container(
-          width: 40, height: 40,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: AppColors.bgSurface.withValues(alpha: 0.6),
-            border: Border.all(color: AppColors.hairline2)),
-          child: Icon(icon, size: iconSize, color: AppColors.textPrimary)),
-      ),
-    );
-    return tooltip != null ? Tooltip(message: tooltip!, child: btn) : btn;
-  }
+  Widget build(BuildContext context) => Column(children: [
+    for (var i = 0; i < children.length; i++) ...[
+      if (i > 0)
+        const Padding(
+          padding: EdgeInsets.only(left: 88),
+          child: Divider(height: 1, thickness: 1, color: AppColors.hairline)),
+      children[i],
+    ],
+  ]);
 }
 
 /// Сүүлийн 2 минутад идэвхтэй байсан бол online гэж үзнэ
@@ -464,7 +395,7 @@ class _ConvoTile extends StatelessWidget {
       onTap: () => context.push('/dm/$partnerId').then((_) => onChanged()),
       onLongPress: () => _showOptions(context, partnerId, username, isRead),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 11),
         child: Row(children: [
           Stack(children: [
             AppAvatar(imageUrl: avatarUrl, initial: initial, size: 54),
@@ -478,8 +409,8 @@ class _ConvoTile extends StatelessWidget {
                     color: online
                         ? AppColors.success
                         : const Color(0xFF6E6E78),
-                    // Карт дотор тул хүрээ нь elevated дэвсгэртэй нийлнэ
-                    border: Border.all(color: AppColors.bgElevated, width: 2),
+                    // Хавтгай жагсаалт тул хүрээ нь суурь дэвсгэртэй нийлнэ
+                    border: Border.all(color: AppColors.bgBase, width: 2),
                     boxShadow: online
                         ? [
                             BoxShadow(
@@ -581,29 +512,21 @@ class _ErrorState extends StatelessWidget {
       Text('Ачаалж чадсангүй', style: AppTextStyles.bodyMd.copyWith(
         color: AppColors.textSecondary)),
       const SizedBox(height: 16),
-      InkWell(
-        onTap: onRetry,
-        borderRadius: BorderRadius.circular(14),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 11),
-          decoration: BoxDecoration(
-            gradient: AppColors.accentGradient,
-            borderRadius: BorderRadius.circular(14)),
-          child: Text('Дахин оролдох', style: AppTextStyles.btn.copyWith(
-            color: Colors.white)))),
+      // Нэгдсэн primary CTA — GradientButton (md)
+      GradientButton(
+        label: 'Дахин оролдох',
+        onPressed: onRetry,
+        size: GradientButtonSize.md,
+        fullWidth: false),
     ]));
 }
 
-/// Ачааллах skeleton — шилэн карт дотор avatar + 2 мөр бүхий 6 tile
+/// Ачааллах skeleton — жагсаалттай ижил хавтгай хэлбэр: avatar + 2 мөр, 6 tile
 class _ListSkeleton extends StatelessWidget {
   const _ListSkeleton();
   @override
-  Widget build(BuildContext context) => _Pulse(child: Container(
-    margin: const EdgeInsets.fromLTRB(20, 24, 20, 0),
-    decoration: BoxDecoration(
-      color: AppColors.bgElevated.withValues(alpha: 0.72),
-      borderRadius: BorderRadius.circular(24),
-      border: Border.all(color: AppColors.hairline)),
+  Widget build(BuildContext context) => _Pulse(child: Padding(
+    padding: const EdgeInsets.only(top: 24),
     child: Column(
       children: [for (var i = 0; i < 6; i++) const _SkeletonTile()])));
 }
@@ -612,7 +535,7 @@ class _SkeletonTile extends StatelessWidget {
   const _SkeletonTile();
   @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
     child: Row(children: [
       Container(width: 52, height: 52, decoration: const BoxDecoration(
         shape: BoxShape.circle, color: AppColors.bgSurface)),
@@ -661,7 +584,7 @@ class _GroupTile extends StatelessWidget {
           '/group/${group['id']}?name=${Uri.encodeComponent(name)}')
           .then((_) => onChanged()),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 11),
         child: Row(children: [
           // Stacked avatar — ард гишүүний дугуй, урд gradient групп дугуй
           SizedBox(
@@ -682,7 +605,7 @@ class _GroupTile extends StatelessWidget {
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     gradient: AppColors.accentGradient,
-                    border: Border.all(color: AppColors.bgElevated, width: 2),
+                    border: Border.all(color: AppColors.bgBase, width: 2),
                     boxShadow: AppColors.glowShadow(AppColors.accentStart,
                         blur: 12, offset: const Offset(0, 3))),
                   child: const Icon(Icons.groups_rounded,

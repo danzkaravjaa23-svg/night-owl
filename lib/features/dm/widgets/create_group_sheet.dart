@@ -5,6 +5,7 @@ import '../../../core/theme/app_text_styles.dart';
 import '../../../core/widgets/app_avatar.dart';
 import '../../../core/services/supabase_service.dart';
 import '../providers/group_provider.dart';
+import 'search_field.dart';
 
 /// Групп чат үүсгэх sheet — нэр + гишүүд сонгох.
 /// Амжилттай бол {'id': ..., 'name': ...} буцаана (нэрийг refetch хүлээлгүй
@@ -132,7 +133,7 @@ class _CreateGroupSheetState extends State<_CreateGroupSheet> {
           // Группийн нэр — шилэн pill талбар
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: _PillField(
+            child: SearchField(
               controller: _nameCtrl,
               onChanged: (_) => setState(() {}),
               hint: 'Группийн нэр...',
@@ -143,7 +144,7 @@ class _CreateGroupSheetState extends State<_CreateGroupSheet> {
           // Сонгосон гишүүд — avatar pill chips
           if (_selected.isNotEmpty)
             SizedBox(
-              height: 42,
+              height: 48,
               child: ListView(
                 scrollDirection: Axis.horizontal,
                 padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -161,11 +162,10 @@ class _CreateGroupSheetState extends State<_CreateGroupSheet> {
           // Хайлт — шилэн pill талбар
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 6, 20, 4),
-            child: _PillField(
+            child: SearchField(
               controller: _searchCtrl,
               onChanged: _onSearchChanged,
               hint: 'Гишүүн хайх...',
-              icon: Icons.search,
             )),
 
           // Хэрэглэгчид
@@ -243,44 +243,6 @@ class _CreateGroupSheetState extends State<_CreateGroupSheet> {
   }
 }
 
-/// Шилэн pill input талбар (48) — зүүн icon + хүрээгүй TextField
-class _PillField extends StatelessWidget {
-  final TextEditingController controller;
-  final ValueChanged<String>? onChanged;
-  final String hint;
-  final IconData icon;
-  const _PillField({
-    required this.controller, required this.hint,
-    required this.icon, this.onChanged});
-
-  @override
-  Widget build(BuildContext context) => Container(
-    height: 48,
-    decoration: BoxDecoration(
-      color: AppColors.bgSurface.withValues(alpha: 0.7),
-      borderRadius: BorderRadius.circular(999),
-      border: Border.all(color: AppColors.hairline)),
-    child: Row(children: [
-      const SizedBox(width: 16),
-      Icon(icon, size: 19, color: AppColors.textTertiary),
-      const SizedBox(width: 10),
-      Expanded(child: TextField(
-        controller: controller,
-        onChanged: onChanged,
-        style: AppTextStyles.bodyMd.copyWith(color: AppColors.textPrimary),
-        cursorColor: AppColors.neonCyan,
-        decoration: InputDecoration(
-          hintText: hint,
-          hintStyle: AppTextStyles.bodyMd.copyWith(
-              color: AppColors.textTertiary),
-          border: InputBorder.none,
-          enabledBorder: InputBorder.none,
-          focusedBorder: InputBorder.none,
-          isDense: true, contentPadding: EdgeInsets.zero))),
-      const SizedBox(width: 16),
-    ]));
-}
-
 /// Сонгосон гишүүний avatar pill chip — жижиг avatar + нэр + хасах
 class _MemberChip extends StatelessWidget {
   final String username;
@@ -292,7 +254,8 @@ class _MemberChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Container(
     margin: const EdgeInsets.only(right: 8),
-    padding: const EdgeInsets.fromLTRB(4, 4, 10, 4),
+    // Өндрийг хасах товчны 44×44 хүрэх талбар тодорхойлно (rail 48)
+    padding: const EdgeInsets.only(left: 4),
     decoration: BoxDecoration(
       color: AppColors.bgSurface,
       borderRadius: BorderRadius.circular(999),
@@ -305,15 +268,40 @@ class _MemberChip extends StatelessWidget {
       const SizedBox(width: 6),
       Text(username, style: AppTextStyles.bodyXs.copyWith(
           color: AppColors.textPrimary, fontWeight: FontWeight.w600)),
-      const SizedBox(width: 6),
-      MouseRegion(
-        cursor: SystemMouseCursors.click,
-        child: GestureDetector(
-          onTap: onRemove,
-          behavior: HitTestBehavior.opaque,
-          child: const Icon(Icons.close,
-              size: 14, color: AppColors.textTertiary))),
+      // Хасах — глиф 14 хэвээр, хүрэх талбар 44×44
+      _RemoveBtn(onTap: onRemove),
     ]));
+}
+
+/// Гишүүнийг хасах ✕ — 44×44 хүрэх талбар, ripple-гүй агших press идиом
+class _RemoveBtn extends StatefulWidget {
+  final VoidCallback onTap;
+  const _RemoveBtn({required this.onTap});
+  @override
+  State<_RemoveBtn> createState() => _RemoveBtnState();
+}
+
+class _RemoveBtnState extends State<_RemoveBtn> {
+  bool _down = false;
+  @override
+  Widget build(BuildContext context) => MouseRegion(
+    cursor: SystemMouseCursors.click,
+    child: GestureDetector(
+      onTap: widget.onTap,
+      onTapDown: (_) => setState(() => _down = true),
+      onTapUp: (_) => setState(() => _down = false),
+      onTapCancel: () => setState(() => _down = false),
+      behavior: HitTestBehavior.opaque,
+      child: AnimatedScale(
+        scale: _down ? 0.9 : 1,
+        duration: const Duration(milliseconds: 120),
+        curve: Curves.easeOut,
+        child: const SizedBox(width: 44, height: 44,
+          child: Center(child: Icon(Icons.close,
+              size: 14, color: AppColors.textTertiary))),
+      ),
+    ),
+  );
 }
 
 /// Үүсгэх товч — web hover cursor + дарахад агших feedback (локал)

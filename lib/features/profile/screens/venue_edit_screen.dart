@@ -7,9 +7,20 @@ import '../../../core/theme/app_text_styles.dart';
 import '../../../core/services/supabase_service.dart';
 import '../../../core/utils/image_uploader.dart';
 import '../../../core/constants/app_constants.dart';
+import '../../../core/widgets/gradient_button.dart';
 import '../../map/providers/venue_provider.dart';
 
-const _kVenueTypes = ['bar', 'lounge', 'nightclub', 'pub', 'rooftop', 'karaoke', 'jazz'];
+/// Газрын төрөл — түлхүүр нь өгөгдлийн санд (venue_type) хэвээр англиар
+/// хадгалагдана, харин дэлгэц дээр монголоор харагдана.
+const _kVenueTypes = <String, String>{
+  'bar':       'Бар',
+  'lounge':    'Лаунж',
+  'nightclub': 'Шөнийн клуб',
+  'pub':       'Паб',
+  'rooftop':   'Дээвэр бар',
+  'karaoke':   'Караоке',
+  'jazz':      'Жазз',
+};
 
 class VenueEditScreen extends ConsumerStatefulWidget {
   const VenueEditScreen({super.key});
@@ -183,17 +194,17 @@ class _VenueEditScreenState extends ConsumerState<VenueEditScreen> {
             Text('ТӨРӨЛ', style: AppTextStyles.labelSm.copyWith(
               color: AppColors.textSecondary, letterSpacing: 0.8)),
             const SizedBox(height: 8),
-            Wrap(spacing: 8, runSpacing: 8, children: _kVenueTypes.map((t) {
-              final active = _type == t;
+            Wrap(spacing: 8, runSpacing: 8, children: _kVenueTypes.entries.map((e) {
+              final active = _type == e.key;
               return GestureDetector(
-                onTap: () => setState(() => _type = t),
+                onTap: () => setState(() => _type = e.key),
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                   decoration: BoxDecoration(
                     color: active ? AppColors.accentStart : AppColors.bgElevated,
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(color: active ? AppColors.accentStart : AppColors.hairline)),
-                  child: Text(t, style: AppTextStyles.bodyXs.copyWith(
+                  child: Text(e.value, style: AppTextStyles.bodyXs.copyWith(
                     color: active ? Colors.white : AppColors.textSecondary,
                     fontWeight: active ? FontWeight.w700 : FontWeight.w500))),
               );
@@ -221,17 +232,10 @@ class _VenueEditScreenState extends ConsumerState<VenueEditScreen> {
               Text(_error!, style: AppTextStyles.bodyXs.copyWith(color: AppColors.error)),
             ],
             const SizedBox(height: 22),
-            GestureDetector(
-              onTap: _busy ? null : _save,
-              child: Container(
-                height: 52,
-                decoration: BoxDecoration(
-                  gradient: AppColors.accentGradient, borderRadius: BorderRadius.circular(16)),
-                alignment: Alignment.center,
-                child: _busy
-                  ? const SizedBox(width: 22, height: 22, child:
-                      CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                  : Text('Хадгалах', style: AppTextStyles.btn.copyWith(color: Colors.white))),
+            GradientButton(
+              label: 'Хадгалах',
+              busy: _busy,
+              onPressed: _save,
             ),
           ]),
     );
@@ -270,10 +274,6 @@ class _VenueEditScreenState extends ConsumerState<VenueEditScreen> {
       controller: c, maxLines: lines,
       keyboardType: number ? const TextInputType.numberWithOptions(decimal: true) : TextInputType.text,
       style: AppTextStyles.bodyMd.copyWith(color: AppColors.textPrimary),
-      decoration: InputDecoration(
-        hintText: hint,
-        hintStyle: AppTextStyles.bodyMd.copyWith(color: AppColors.textTertiary),
-        filled: true, fillColor: AppColors.bgElevated,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none)));
+      // Дүрс/хүрээ/дүүргэлтийг апп даяарх InputDecorationTheme-ээс өвлөнө
+      decoration: InputDecoration(hintText: hint));
 }

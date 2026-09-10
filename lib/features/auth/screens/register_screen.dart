@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/gestures.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/theme/app_colors.dart';
@@ -19,6 +20,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _emailCtrl = TextEditingController();
   final _pwCtrl    = TextEditingController();
   final _formKey   = GlobalKey<FormState>();
+  // Гар дээрх "Дараах" товч талбараас талбар руу шилжүүлнэ
+  final _emailFocus = FocusNode();
+  final _pwFocus    = FocusNode();
   bool _agreedTos  = false;
   bool _showPw     = false;
   bool _loading    = false;
@@ -26,9 +30,30 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool _sent       = false; // и-мэйл баталгаажуулалт илгээгдсэн эсэх
   String? _error;
 
+  // Зөвшөөрлийн текст доторх холбоосуудын товшилт таниулагч
+  late final TapGestureRecognizer _tosTap;
+  late final TapGestureRecognizer _privacyTap;
+
+  @override
+  void initState() {
+    super.initState();
+    _tosTap = TapGestureRecognizer()
+      ..onTap = () => _showLegal(context, 'Үйлчилгээний нөхцөл',
+          'Night Owl UB-г ашигласнаар та манай үйлчилгээний нөхцөлийг хүлээн '
+          'зөвшөөрч байна. Хууль бус контент, дарамт, спам хориотой. '
+          'Бид дансыг түр болон бүрмөсөн хаах эрхтэй.');
+    _privacyTap = TapGestureRecognizer()
+      ..onTap = () => _showLegal(context, 'Нууцлалын бодлого',
+          'Бид таны мэдээллийг зөвхөн үйлчилгээгээ сайжруулах зорилгоор '
+          'ашиглана. Таны өгөгдлийг гуравдагч этгээдэд зарахгүй. '
+          'Та хүссэн үедээ дансаа устгаж болно.');
+  }
+
   @override
   void dispose() {
     _nameCtrl.dispose(); _emailCtrl.dispose(); _pwCtrl.dispose();
+    _emailFocus.dispose(); _pwFocus.dispose();
+    _tosTap.dispose(); _privacyTap.dispose();
     super.dispose();
   }
 
@@ -69,6 +94,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
 
   Future<void> _register() async {
+    // Enter дарж давхар илгээхээс сэргийлнэ
+    if (_loading) return;
     if (!_formKey.currentState!.validate()) return;
     if (!_agreedTos) {
       setState(() => _error = 'Үйлчилгээний нөхцөлийг зөвшөөрнө үү');
@@ -142,7 +169,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           SafeArea(
             child: Column(
               children: [
-                // ── Дээд hero (~30%) — back chip + glyph + гарчиг + perk pills ──
+                // ── Дээд hero (~30%) — back chip + glyph + гарчиг ──
                 Padding(
                   padding: const EdgeInsets.fromLTRB(20, 10, 20, 0),
                   child: Row(children: [
@@ -166,19 +193,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       style: AppTextStyles.bodyMd.copyWith(
                         color: AppColors.textSecondary)),
                   ]),
-                ),
-                const SizedBox(height: 14),
-                // Perk pills — hero-гийн доор төвлөрсөн
-                const AuthEntrance(
-                  index: 1,
-                  child: Wrap(
-                    spacing: 8, runSpacing: 8,
-                    alignment: WrapAlignment.center,
-                    children: [
-                      _Pill(label: 'VIP эрх', color: AppColors.neonCyan),
-                      _Pill(label: 'Live эвентүүд', color: AppColors.lime),
-                      _Pill(label: 'Priority орц', color: AppColors.amber),
-                    ]),
                 ),
                 const SizedBox(height: 18),
 
@@ -286,7 +300,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 TextFormField(
                   controller: _nameCtrl,
                   autofillHints: const [AutofillHints.name],
-                  style: const TextStyle(color: AppColors.textPrimary),
+                  style: authFieldStyle,
+                  textInputAction: TextInputAction.next,
+                  onFieldSubmitted: (_) => _emailFocus.requestFocus(),
                   decoration: authInputDec(hint: 'Чиний нэр',
                     icon: Icons.person_outline_rounded),
                   validator: (v) => v!.trim().isNotEmpty ? null : 'Заавал бөглөнө',
@@ -303,9 +319,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 const SizedBox(height: 8),
                 TextFormField(
                   controller: _emailCtrl,
+                  focusNode: _emailFocus,
                   keyboardType: TextInputType.emailAddress,
                   autofillHints: const [AutofillHints.newUsername, AutofillHints.email],
-                  style: const TextStyle(color: AppColors.textPrimary),
+                  style: authFieldStyle,
+                  textInputAction: TextInputAction.next,
+                  onFieldSubmitted: (_) => _pwFocus.requestFocus(),
                   decoration: authInputDec(hint: 'name@email.com',
                     icon: Icons.mail_outline_rounded),
                   validator: (v) => v!.contains('@') ? null : 'И-мэйл хаяг буруу байна',
@@ -322,9 +341,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 const SizedBox(height: 8),
                 TextFormField(
                   controller: _pwCtrl,
+                  focusNode: _pwFocus,
                   obscureText: !_showPw,
                   autofillHints: const [AutofillHints.newPassword],
-                  style: const TextStyle(color: AppColors.textPrimary),
+                  style: authFieldStyle,
+                  textInputAction: TextInputAction.done,
+                  onFieldSubmitted: (_) => _register(),
                   decoration: authInputDec(
                     hint: '••••••••',
                     icon: Icons.lock_outline_rounded,
@@ -343,55 +365,58 @@ class _RegisterScreenState extends State<RegisterScreen> {
           ),
           const SizedBox(height: 22),
 
-          // ToS checkbox
+          // ToS checkbox — бүтэн мөр нь toggle (хаана ч дарахад асна/унтарна),
+          // мөрийн өндөр 48px-ээс багагүй, холбоос бүр өөрийн 44px талбайтай
           AuthEntrance(
             index: 6,
-            child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              TapScale(
-                onTap: () => setState(() => _agreedTos = !_agreedTos),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 150),
-                  width: 22, height: 22,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(7),
-                    color: _agreedTos ? AppColors.neonCyan : AppColors.bgSurface,
-                    border: Border.all(
-                      color: _agreedTos ? AppColors.neonCyan : AppColors.hairline2),
-                    boxShadow: _agreedTos
-                        ? [BoxShadow(color: AppColors.neonCyan.withValues(alpha: 0.5),
-                            blurRadius: 12, spreadRadius: -2)]
-                        : [],
+            child: TapScale(
+              onTap: () => setState(() => _agreedTos = !_agreedTos),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(minHeight: 48),
+                child: Row(children: [
+                  AnimatedContainer(
+                    duration: const Duration(milliseconds: 150),
+                    width: 22, height: 22,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(7),
+                      color: _agreedTos ? AppColors.neonCyan : AppColors.bgSurface,
+                      border: Border.all(
+                        color: _agreedTos ? AppColors.neonCyan : AppColors.hairline2),
+                      boxShadow: _agreedTos
+                          ? [BoxShadow(color: AppColors.neonCyan.withValues(alpha: 0.5),
+                              blurRadius: 12, spreadRadius: -2)]
+                          : [],
+                    ),
+                    child: _agreedTos
+                        ? const Icon(Icons.check_rounded, size: 15, color: AppColors.bgBase)
+                        : null,
                   ),
-                  child: _agreedTos
-                      ? const Icon(Icons.check_rounded, size: 15, color: AppColors.bgBase)
-                      : null,
-                ),
-              ),
-              const SizedBox(width: 11),
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.only(top: 1),
-                  child: Wrap(crossAxisAlignment: WrapCrossAlignment.center, children: [
-                    TapScale(
-                      onTap: () => _showLegal(context, 'Үйлчилгээний нөхцөл',
-                        'Night Owl UB-г ашигласнаар та манай үйлчилгээний нөхцөлийг хүлээн зөвшөөрч байна. Хууль бус контент, дарамт, спам хориотой. Бид дансыг түр болон бүрмөсөн хаах эрхтэй.'),
-                      child: Text('Үйлчилгээний нөхцөл',
-                        style: AppTextStyles.bodySm.copyWith(color: AppColors.neonCyan)),
+                  const SizedBox(width: 11),
+                  // Хууль зүйн зөвшөөрөл — урсгал текст доторх холбоос
+                  // (стандарт бүртгэлийн загвар). Мөр бүхэлдээ чагтыг
+                  // сэлгэдэг тул холбоосуудад 44px хайрцаг шаардлагагүй;
+                  // тэгвэл 420px дээр блок хоёр дахин өндөрсөнө.
+                  Expanded(
+                    child: Text.rich(
+                      TextSpan(children: [
+                        TextSpan(text: 'Үйлчилгээний нөхцөл',
+                          style: AppTextStyles.bodySm.copyWith(
+                            color: AppColors.neonCyan,
+                            fontWeight: FontWeight.w600),
+                          recognizer: _tosTap),
+                        TextSpan(text: ' болон ', style: AppTextStyles.bodySm),
+                        TextSpan(text: 'Нууцлалын бодлогыг',
+                          style: AppTextStyles.bodySm.copyWith(
+                            color: AppColors.neonCyan,
+                            fontWeight: FontWeight.w600),
+                          recognizer: _privacyTap),
+                        TextSpan(text: ' зөвшөөрч байна',
+                          style: AppTextStyles.bodySm),
+                      ]),
                     ),
-                    Text(' болон ', style: AppTextStyles.bodySm),
-                    TapScale(
-                      onTap: () => _showLegal(context, 'Нууцлалын бодлого',
-                        'Бид таны мэдээллийг зөвхөн үйлчилгээгээ сайжруулах зорилгоор ашиглана. Таны өгөгдлийг гуравдагч этгээдэд зарахгүй. Та хүссэн үедээ дансаа устгаж болно.'),
-                      child: Text('Нууцлалын бодлогыг',
-                        style: AppTextStyles.bodySm.copyWith(color: AppColors.neonCyan)),
-                    ),
-                    Text(' зөвшөөрч байна', style: AppTextStyles.bodySm),
-                  ]),
-                ),
+                  ),
+                ]),
               ),
-            ],
             ),
           ),
 
@@ -503,31 +528,6 @@ class _GhostBtn extends StatelessWidget {
         ),
       ),
     ),
-  );
-}
-
-class _Pill extends StatelessWidget {
-  final String label;
-  final Color color;
-  const _Pill({required this.label, required this.color});
-  @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-    decoration: BoxDecoration(
-      color: color.withValues(alpha: 0.10),
-      borderRadius: BorderRadius.circular(999),
-      border: Border.all(color: color.withValues(alpha: 0.35)),
-      boxShadow: [BoxShadow(color: color.withValues(alpha: 0.18),
-        blurRadius: 14, spreadRadius: -4)],
-    ),
-    child: Row(mainAxisSize: MainAxisSize.min, children: [
-      Container(width: 6, height: 6, decoration: BoxDecoration(
-        shape: BoxShape.circle, color: color,
-        boxShadow: [BoxShadow(color: color, blurRadius: 6)])),
-      const SizedBox(width: 7),
-      Text(label, style: AppTextStyles.labelSm.copyWith(
-        color: color, letterSpacing: 0)),
-    ]),
   );
 }
 

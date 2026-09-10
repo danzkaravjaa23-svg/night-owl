@@ -34,6 +34,9 @@ class _PressScaleState extends State<_PressScale> {
   }
 }
 
+/// Gradient товчны хэмжээ: lg = 52px (үндсэн CTA), md = 40px (мөрөнд суух товч).
+enum GradientButtonSize { lg, md }
+
 /// Primary gradient button — CSS .ns-btn-primary
 /// Дарахад зөөлөн агшиж (spring press) премиум мэдрэмж өгнө.
 /// busy=true үед label-ийн оронд спиннер гарч, товч түр идэвхгүй болно.
@@ -42,9 +45,13 @@ class GradientButton extends StatelessWidget {
   final VoidCallback? onPressed;
   final Widget? icon;
   final Widget? trailing;
-  final double height;
+  /// Тодорхой өндөр өгвөл [size]-аас давуу.
+  final double? height;
   final double borderRadius;
   final bool busy;
+  final GradientButtonSize size;
+  /// false бол агуулгынхаа өргөнөөр (мөрөнд зэрэгцүүлэхэд).
+  final bool fullWidth;
 
   const GradientButton({
     super.key,
@@ -52,21 +59,26 @@ class GradientButton extends StatelessWidget {
     this.onPressed,
     this.icon,
     this.trailing,
-    this.height = 52,
+    this.height,
     this.borderRadius = 14,
     this.busy = false,
+    this.size = GradientButtonSize.lg,
+    this.fullWidth = true,
   });
 
   @override
   Widget build(BuildContext context) {
+    final md = size == GradientButtonSize.md;
+    final h = height ?? (md ? 40.0 : 52.0);
+    final labelStyle = md ? AppTextStyles.btnSm : AppTextStyles.btn;
     // busy үед gradient хэвээр (ажиллаж буй мэдрэмж), зөвхөн disabled үед бүдгэрнэ
     final disabled = onPressed == null;
     final effective = (busy || disabled) ? null : onPressed;
     return _PressScale(
       enabled: effective != null,
       child: SizedBox(
-        width: double.infinity,
-        height: height,
+        width: fullWidth ? double.infinity : null,
+        height: h,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 180),
           curve: Curves.easeOut,
@@ -103,8 +115,16 @@ class GradientButton extends StatelessWidget {
             onPressed: effective,
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.transparent,
+              // busy үед onPressed=null дамждаг тул M3-ийн disabled саарал
+              // gradient-ийг дардаг байв — үндсэн CTA хүлээж байхдаа
+              // идэвхгүй мэт харагдана. Тунгалаг болгож gradient-ийг хэвээр үлдээв.
+              disabledBackgroundColor: Colors.transparent,
+              disabledForegroundColor: Colors.white,
               shadowColor: Colors.transparent,
-              minimumSize: Size(double.infinity, height),
+              minimumSize: Size(fullWidth ? double.infinity : 0, h),
+              padding: md
+                  ? const EdgeInsets.symmetric(horizontal: 20)
+                  : null,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(borderRadius),
               ),
@@ -121,10 +141,10 @@ class GradientButton extends StatelessWidget {
                     child: child),
               ),
               child: busy
-                  ? const SizedBox(
-                      key: ValueKey('busy'),
-                      width: 22, height: 22,
-                      child: CircularProgressIndicator(
+                  ? SizedBox(
+                      key: const ValueKey('busy'),
+                      width: md ? 18 : 22, height: md ? 18 : 22,
+                      child: const CircularProgressIndicator(
                           strokeWidth: 2.4, color: Colors.white))
                   : Row(
                       key: const ValueKey('label'),
@@ -134,9 +154,9 @@ class GradientButton extends StatelessWidget {
                         if (icon != null) ...[icon!, const SizedBox(width: 8)],
                         Text(label,
                             style: !disabled
-                                ? AppTextStyles.btn
+                                ? labelStyle
                                 // Идэвхгүй товч бүдэг label-тай — disabled гэдэг нь илт
-                                : AppTextStyles.btn.copyWith(
+                                : labelStyle.copyWith(
                                     color: AppColors.dynTextTertiary)),
                         if (trailing != null) ...[
                           const SizedBox(width: 8), trailing!],

@@ -385,7 +385,9 @@ class _CreatorScreenState extends State<CreatorScreen> {
                             ),
                             ),
                           );
-                        }, childCount: _posts.length),
+                        // Builder нь shown[i]-г уншдаг тул тоо нь ч shown-оос
+                        // (Reels таб дээр _posts.length бол хоосон нүд/алдаа)
+                        }, childCount: shown.length),
                         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                           crossAxisCount: 3, mainAxisSpacing: 2, crossAxisSpacing: 2),
                       )),

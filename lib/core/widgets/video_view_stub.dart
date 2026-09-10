@@ -13,6 +13,10 @@ class VideoView extends StatelessWidget {
   final bool active;
   final ValueNotifier<double>? progress;
 
+  /// Веб хувилбартай ижил гарын үсэг — native контрол харуулах эсэх
+  /// (энэ fallback дээр жинхэнэ плейер байхгүй тул зөвхөн API-гийн нэгдэл).
+  final bool showControls;
+
   const VideoView({
     super.key,
     required this.url,
@@ -22,6 +26,7 @@ class VideoView extends StatelessWidget {
     this.showPosterIcon = true,
     this.active = true,
     this.progress,
+    this.showControls = false,
   });
 
   @override
@@ -34,7 +39,7 @@ class VideoView extends StatelessWidget {
         height: posterOnly ? null : mediaHeight,
         constraints: posterOnly ? const BoxConstraints(minHeight: 220) : null,
         decoration: BoxDecoration(
-          gradient: LinearGradient(
+          gradient: const LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
@@ -48,7 +53,7 @@ class VideoView extends StatelessWidget {
         child: Stack(
           fit: StackFit.expand,
           children: [
-            Positioned.fill(
+            const Positioned.fill(
               child: DecoratedBox(
                 decoration: BoxDecoration(
                   gradient: AppColors.accentGradientSoft,

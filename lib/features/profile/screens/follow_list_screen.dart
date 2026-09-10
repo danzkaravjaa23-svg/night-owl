@@ -241,7 +241,7 @@ class _FollowListScreenState extends State<FollowListScreen> {
         ],
       );
 
-  // Цэвэр template мөр — карт хүрээгүй: avatar 52 + нэр + pill товч
+  // Цэвэр template мөр — карт хүрээгүй: avatar 44 + нэр + pill товч
   Widget _row(Map<String, dynamic> p) {
     final id = p['id'] as String? ?? '';
     final username = p['username'] as String? ?? 'user';
@@ -262,7 +262,7 @@ class _FollowListScreenState extends State<FollowListScreen> {
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 8),
         child: Row(children: [
-          AppAvatar(imageUrl: avatar, initial: initial, size: 52),
+          AppAvatar(imageUrl: avatar, initial: initial, size: 44),
           const SizedBox(width: 14),
           Expanded(
             child: Column(
@@ -274,7 +274,7 @@ class _FollowListScreenState extends State<FollowListScreen> {
                     child: Text(username,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: AppTextStyles.labelMd.copyWith(
+                        style: AppTextStyles.labelLg.copyWith(
                             color: AppColors.textPrimary,
                             fontWeight: FontWeight.w700,
                             letterSpacing: 0)),
@@ -290,7 +290,7 @@ class _FollowListScreenState extends State<FollowListScreen> {
                   Text(fullName,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: AppTextStyles.bodyXs
+                      style: AppTextStyles.bodySm
                           .copyWith(color: AppColors.textSecondary)),
                 ],
               ],
@@ -341,7 +341,7 @@ class _RowSkeleton extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 8),
         child: Row(children: [
           Container(
-            width: 52, height: 52,
+            width: 44, height: 44,
             decoration: const BoxDecoration(
               shape: BoxShape.circle, color: AppColors.bgSurface)),
           const SizedBox(width: 14),

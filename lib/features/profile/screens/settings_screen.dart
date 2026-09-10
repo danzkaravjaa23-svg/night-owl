@@ -5,7 +5,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
-import '../../../core/theme/theme_provider.dart';
 import '../../../core/router/app_router.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../../models/user_profile.dart';
@@ -50,6 +49,17 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   void _toast(String msg) => ScaffoldMessenger.of(context).showSnackBar(
     SnackBar(content: Text(msg), duration: const Duration(seconds: 2)));
+
+  // Switch-үүдийг мөр дарахад ч, switch дарахад ч ижил замаар солино
+  void _setNotifLikes(bool v) {
+    setState(() => _notifLikes = v);
+    _setPref(_kNotif, v);
+  }
+
+  void _setActivityStatus(bool v) {
+    setState(() => _activityStatus = v);
+    _setPref(_kActivity, v);
+  }
 
   Future<void> _deleteAccount() async {
     final ok = await showDialog<bool>(
@@ -112,8 +122,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final mode = ref.watch(themeModeProvider);
-    final isDark = mode != ThemeMode.light;
     final profileAsync = ref.watch(currentProfileProvider);
 
     return Scaffold(
@@ -199,27 +207,18 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       // ─── ТОХИРГОО ───
                       const _SectionLabel('Тохиргоо'),
                       const SizedBox(height: 10),
+                      // 'Харанхуй горим' сонголтыг түр хассан: апп даяар
+                      // харанхуй өнгөний токенууд шууд бичигдсэн тул гэрэл
+                      // горим эвдэрсэн харагдана. dyn* өнгөний шилжилт
+                      // (migration) дуустал энэ мөрийг буцааж нэмэхгүй.
                       _GlassCard(children: [
-                        _SettingRow(
-                          icon: Icons.dark_mode_outlined,
-                          label: 'Харанхуй горим',
-                          trailing: _NeonSwitch(
-                            value: isDark,
-                            onChanged: (v) => ref
-                                .read(themeModeProvider.notifier)
-                                .setMode(v ? ThemeMode.dark : ThemeMode.light),
-                          ),
-                        ),
-                        const _RowDivider(),
                         _SettingRow(
                           icon: Icons.notifications_none,
                           label: 'Мэдэгдэл',
+                          onTap: () => _setNotifLikes(!_notifLikes),
                           trailing: _NeonSwitch(
                             value: _notifLikes,
-                            onChanged: (v) {
-                              setState(() => _notifLikes = v);
-                              _setPref(_kNotif, v);
-                            },
+                            onChanged: _setNotifLikes,
                           ),
                         ),
                       ]),
@@ -243,12 +242,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                           icon: Icons.radar_outlined,
                           label: 'Идэвхтэй төлөв',
                           sub: 'Найзууд таныг шөнө олох боломжтой',
+                          onTap: () => _setActivityStatus(!_activityStatus),
                           trailing: _NeonSwitch(
                             value: _activityStatus,
-                            onChanged: (v) {
-                              setState(() => _activityStatus = v);
-                              _setPref(_kActivity, v);
-                            },
+                            onChanged: _setActivityStatus,
                           ),
                         ),
                       ]),
@@ -310,8 +307,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       const SizedBox(height: 32),
 
                       // ─── Actions ───
-                      _DangerButton(
+                      // 'Гарах' нь буцаах боломжтой үйлдэл тул саармаг товч
+                      _NeutralButton(
                         label: 'Гарах',
+                        icon: Icons.logout,
                         onTap: () async {
                           await Supabase.instance.client.auth.signOut();
                           if (context.mounted) {
@@ -320,21 +319,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         },
                       ),
                       const SizedBox(height: 18),
-                      // Устгах мөр — error өнгө (destructive)
-                      Center(
-                        child: TextButton(
-                          onPressed: _deleteAccount,
-                          style: TextButton.styleFrom(
-                            foregroundColor: AppColors.error,
-                          ),
-                          child: Text(
-                            'Бүртгэл устгах',
-                            style: AppTextStyles.bodySm.copyWith(
-                              color: AppColors.error.withValues(alpha: 0.8),
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
+                      // 'Бүртгэл устгах' нь эргэшгүй тул жинхэнэ destructive товч
+                      _DangerButton(
+                        label: 'Бүртгэл устгах',
+                        icon: Icons.delete_forever_outlined,
+                        onTap: _deleteAccount,
                       ),
                       const SizedBox(height: 24),
                     ],
@@ -717,10 +706,15 @@ class _NeonSwitch extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Дүрс нь 46×28 хэвээр, харин дарах талбайг 44px өндөр болгов
     return MouseRegion(
       cursor: SystemMouseCursors.click,
       child: GestureDetector(
       onTap: () => onChanged(!value),
+      behavior: HitTestBehavior.opaque,
+      child: SizedBox(
+        height: 44,
+        child: Center(
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
         curve: Curves.easeOut,
@@ -755,18 +749,25 @@ class _NeonSwitch extends StatelessWidget {
           ),
         ),
       ),
+        ),
+      ),
       ),
     );
   }
 }
 
 // ─────────────────────────────────────────────────────────────
-//  Danger (Sign out) button
+//  Neutral (secondary) button — буцаах боломжтой үйлдэлд
 // ─────────────────────────────────────────────────────────────
-class _DangerButton extends StatelessWidget {
+class _NeutralButton extends StatelessWidget {
   final String label;
+  final IconData icon;
   final VoidCallback onTap;
-  const _DangerButton({required this.label, required this.onTap});
+  const _NeutralButton({
+    required this.label,
+    required this.icon,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -774,18 +775,64 @@ class _DangerButton extends StatelessWidget {
       cursor: SystemMouseCursors.click,
       child: GestureDetector(
       onTap: onTap,
+      behavior: HitTestBehavior.opaque,
       child: Container(
         height: 52,
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: AppColors.error.withValues(alpha: 0.10),
+          color: AppColors.bgSurface.withValues(alpha: 0.7),
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.error.withValues(alpha: 0.30)),
+          border: Border.all(color: AppColors.hairline2),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.logout, size: 18, color: AppColors.error),
+            Icon(icon, size: 18, color: AppColors.textSecondary),
+            const SizedBox(width: 8),
+            Text(
+              label,
+              style: AppTextStyles.btn.copyWith(color: AppColors.textPrimary),
+            ),
+          ],
+        ),
+      ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+//  Danger button — эргэшгүй (destructive) үйлдэлд
+// ─────────────────────────────────────────────────────────────
+class _DangerButton extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final VoidCallback onTap;
+  const _DangerButton({
+    required this.label,
+    required this.icon,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        height: 52,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: AppColors.error.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.error.withValues(alpha: 0.45)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 18, color: AppColors.error),
             const SizedBox(width: 8),
             Text(
               label,

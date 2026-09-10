@@ -4,8 +4,13 @@ import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/widgets/app_avatar.dart';
+import '../../../core/widgets/empty_state.dart';
+import '../../../core/widgets/glass_icon_button.dart';
+import '../../../core/widgets/gradient_button.dart';
 import '../../../core/services/supabase_service.dart';
 import '../providers/group_provider.dart';
+import '../widgets/chat_tokens.dart';
+import '../widgets/search_field.dart';
 
 /// Групп чатын дэлгэц — realtime мессеж + гишүүд
 class GroupThreadScreen extends StatefulWidget {
@@ -20,6 +25,9 @@ class GroupThreadScreen extends StatefulWidget {
 class _GroupThreadScreenState extends State<GroupThreadScreen> {
   final _ctrl = TextEditingController();
   final _scroll = ScrollController();
+  /// Илгээх товчны идэвх — товчлуур бүрт мессежийн жагсаалтыг дахин зурахгүйн
+  /// тулд зөвхөн send FAB энэ notifier-ийг сонсоно.
+  final _canSend = ValueNotifier<bool>(false);
   List<Map<String, dynamic>> _msgs = [];
   Map<String, Map<String, dynamic>> _profiles = {}; // sender_id → profile
   bool _loading = true;
@@ -35,9 +43,13 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
     super.initState();
     _name = widget.groupName;
     if (_name == null || _name!.isEmpty) _fetchName();
+    _ctrl.addListener(_syncCanSend);
     _loadMembers();
     _subscribe();
   }
+
+  // Composer хоосон эсэхээс илгээх товчны төлөв хамаарна
+  void _syncCanSend() => _canSend.value = _ctrl.text.trim().isNotEmpty;
 
   // Deep-link / reload үед name query байхгүй тул DB-ээс авна
   Future<void> _fetchName() async {
@@ -229,7 +241,9 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
   @override
   void dispose() {
     _sub?.cancel();
+    _ctrl.removeListener(_syncCanSend);
     _ctrl.dispose();
+    _canSend.dispose();
     _scroll.dispose();
     super.dispose();
   }
@@ -255,15 +269,11 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
             : _streamError
               ? _GroupErrorState(onRetry: _retrySubscribe)
               : _msgs.isEmpty
-                ? Center(child: Column(mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.groups_rounded,
-                          color: AppColors.textTertiary, size: 56),
-                      const SizedBox(height: 14),
-                      Text('Группийн яриа эхлүүлээрэй!',
-                          style: AppTextStyles.bodyMd.copyWith(
-                              color: AppColors.textSecondary)),
-                    ]))
+                // Хоосон төлөв — апп даяарх нэгдсэн EmptyState (icon хувилбар)
+                ? const EmptyState(
+                    icon: Icons.groups_rounded,
+                    title: 'Мессеж алга байна',
+                    subtitle: 'Группийн яриа эхлүүлээрэй!')
                 : ListView.builder(
                     controller: _scroll,
                     // Glass app bar-ын доороос эхэлж, гүйлгэхэд арын шилээр орно
@@ -350,22 +360,42 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
                     const SizedBox(width: 14),
                   ]))),
                 const SizedBox(width: 10),
-                // SEND — gradient circle FAB 44 + glow
-                _ScaleTap(
-                  onTap: _send,
-                  child: Container(
-                    width: 44, height: 44,
-                    decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        gradient: AppColors.accentGradient,
-                        boxShadow: AppColors.glowShadow(AppColors.accentStart,
-                            alpha: 0.45, blur: 18, offset: const Offset(0, 8))),
-                    child: _sending
-                        ? const Padding(padding: EdgeInsets.all(12),
-                            child: CircularProgressIndicator(
-                                color: Colors.white, strokeWidth: 2))
-                        : const Icon(Icons.send_rounded,
-                            color: Colors.white, size: 19))),
+                // SEND — gradient circle FAB 44 + glow.
+                // Composer хоосон үед: glow-гүй, бүдэг дүүргэлт, дарагдахгүй.
+                ValueListenableBuilder<bool>(
+                  valueListenable: _canSend,
+                  builder: (_, canSend, __) {
+                    final lit = canSend || _sending;
+                    return _ScaleTap(
+                      onTap: (canSend && !_sending) ? _send : null,
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 180),
+                        curve: Curves.easeOut,
+                        width: 44, height: 44,
+                        decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            gradient: lit ? AppColors.accentGradient : null,
+                            color: lit
+                                ? null
+                                : AppColors.bgSurface.withValues(alpha: 0.7),
+                            border: lit
+                                ? null
+                                : Border.all(color: AppColors.hairline),
+                            boxShadow: lit
+                                ? AppColors.glowShadow(AppColors.accentStart,
+                                    alpha: 0.45, blur: 18,
+                                    offset: const Offset(0, 8))
+                                : null),
+                        child: _sending
+                            ? const Padding(padding: EdgeInsets.all(12),
+                                child: CircularProgressIndicator(
+                                    color: Colors.white, strokeWidth: 2))
+                            : Icon(Icons.send_rounded,
+                                color: lit
+                                    ? Colors.white : AppColors.textTertiary,
+                                size: 19)),
+                    );
+                  }),
               ])))),
         ]),
       ]),
@@ -437,7 +467,7 @@ class _GroupBubble extends StatelessWidget {
     final bubble = Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       constraints: BoxConstraints(
-          maxWidth: MediaQuery.of(context).size.width * 0.68),
+          maxWidth: MediaQuery.of(context).size.width * kBubbleMaxWidthFactor),
       decoration: BoxDecoration(
         gradient: isMe ? AppColors.accentGradient.scale(0.9) : null,
         color: isMe ? null : AppColors.bgElevated.withValues(alpha: 0.8),
@@ -490,7 +520,8 @@ class _GroupBubble extends StatelessWidget {
             Padding(
               padding: EdgeInsets.only(
                   top: 3, left: isMe ? 0 : 42, right: isMe ? 6 : 0),
-              child: Text(time, style: AppTextStyles.monoSm)),
+              child: Text(time, style: AppTextStyles.bodyXs.copyWith(
+                  color: AppColors.textSecondary))),
         ]),
     );
   }
@@ -541,9 +572,11 @@ class _GroupGlassAppBar extends StatelessWidget implements PreferredSizeWidget {
           border: const Border(
               bottom: BorderSide(color: AppColors.hairline2))),
         child: Row(children: [
-          _GlassCircleBtn(
-              icon: Icons.chevron_left_rounded, iconSize: 24, onTap: onBack),
-          const SizedBox(width: 10),
+          // Буцах — апп даяар нэг л хэлбэр (GlassIconButton)
+          GlassIconButton(
+              icon: Icons.chevron_left_rounded, iconSize: 24,
+              tooltip: 'Буцах', onTap: onBack),
+          const SizedBox(width: 6),
           Expanded(child: _HeaderTap(
             onTap: onTapHeader,
             child: Row(children: [
@@ -572,37 +605,11 @@ class _GroupGlassAppBar extends StatelessWidget implements PreferredSizeWidget {
                           fontWeight: FontWeight.w600)),
                 ])),
             ]))),
-          const SizedBox(width: 8),
-          _GlassCircleBtn(
+          const SizedBox(width: 4),
+          GlassIconButton(
               icon: Icons.people_alt_outlined, iconSize: 19,
-              onTap: onTapHeader),
+              tooltip: 'Гишүүд', onTap: onTapHeader),
         ])),
-    );
-  }
-}
-
-// ── Шилэн дугуй icon товч (app bar) ──
-class _GlassCircleBtn extends StatelessWidget {
-  final IconData icon;
-  final double iconSize;
-  final VoidCallback? onTap;
-  const _GlassCircleBtn({required this.icon, this.iconSize = 20, this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return MouseRegion(
-      cursor: onTap != null ? SystemMouseCursors.click : MouseCursor.defer,
-      child: GestureDetector(
-        onTap: onTap,
-        behavior: HitTestBehavior.opaque,
-        child: Container(
-          width: 40, height: 40,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: AppColors.bgSurface.withValues(alpha: 0.6),
-            border: Border.all(color: AppColors.hairline2)),
-          child: Icon(icon, size: iconSize, color: AppColors.textPrimary)),
-      ),
     );
   }
 }
@@ -734,15 +741,12 @@ class _GroupErrorState extends StatelessWidget {
       Text('Мессеж ачаалж чадсангүй', style: AppTextStyles.bodyMd.copyWith(
         color: AppColors.textSecondary)),
       const SizedBox(height: 16),
-      _ScaleTap(
-        onTap: onRetry,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 11),
-          decoration: BoxDecoration(
-            gradient: AppColors.accentGradient,
-            borderRadius: BorderRadius.circular(14)),
-          child: Text('Дахин оролдох', style: AppTextStyles.btn.copyWith(
-            color: Colors.white)))),
+      // Нэгдсэн primary CTA — GradientButton (md)
+      GradientButton(
+        label: 'Дахин оролдох',
+        onPressed: onRetry,
+        size: GradientButtonSize.md,
+        fullWidth: false),
     ]));
 }
 
@@ -814,17 +818,13 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
           const SizedBox(height: 14),
           Text('Гишүүн нэмэх', style: AppTextStyles.h2),
           const SizedBox(height: 12),
+          // Хайлт — апп даяарх нэгдсэн шилэн pill талбар (48)
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 4, 20, 4),
-            child: TextField(
-              controller: _searchCtrl, onChanged: _onChanged,
-              style: AppTextStyles.bodyMd.copyWith(color: AppColors.textPrimary),
-              decoration: InputDecoration(
-                hintText: 'Хэрэглэгч хайх...',
-                prefixIcon: const Icon(Icons.search,
-                  color: AppColors.textTertiary, size: 20),
-                hintStyle: AppTextStyles.bodyMd.copyWith(
-                  color: AppColors.textTertiary)))),
+            child: SearchField(
+              controller: _searchCtrl,
+              onChanged: _onChanged,
+              hint: 'Хэрэглэгч хайх...')),
           Expanded(child: _loading && _results.isEmpty
             ? const Center(child: CircularProgressIndicator(
                 color: AppColors.accentStart, strokeWidth: 2))

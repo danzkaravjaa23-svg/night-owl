@@ -495,7 +495,7 @@ class _StoryViewerScreenState extends State<StoryViewerScreen>
               opacity: _bigHeart ? 1 : 0,
               duration: const Duration(milliseconds: 180),
               child: const Icon(Icons.favorite,
-                color: Color(0xFFFF3B5C), size: 96,
+                color: AppColors.like, size: 96,
                 shadows: [Shadow(color: Colors.black45, blurRadius: 18)]),
             )))),
 
@@ -617,7 +617,7 @@ class _StoryViewerScreenState extends State<StoryViewerScreen>
                               (_likedMap[story.id] ?? false)
                                   ? Icons.favorite : Icons.favorite_border,
                               color: (_likedMap[story.id] ?? false)
-                                  ? const Color(0xFFFF3B5C) : Colors.white,
+                                  ? AppColors.like : Colors.white,
                               size: 24)),
                         )),
                       const SizedBox(width: 8),

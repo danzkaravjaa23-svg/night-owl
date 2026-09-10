@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'app_colors.dart';
+import 'app_radii.dart';
+import 'app_text_styles.dart';
 
 class AppTheme {
   static ThemeData get dark => _buildTheme(isDark: true);
@@ -14,6 +16,9 @@ class AppTheme {
     final textPri  = isDark ? AppColors.textPrimary : AppColors.textPrimaryLight;
     final textSec  = isDark ? AppColors.textSecondary : AppColors.textSecondaryLight;
     final hairline = isDark ? AppColors.hairline    : AppColors.hairlineLight;
+    final hairline2 = isDark ? AppColors.hairline2  : AppColors.hairline2Light;
+    // Цайвар дэвсгэр дээр neonCyan бүдэг тул light горимд гүн cyan.
+    final accentLink = isDark ? AppColors.neonCyan  : AppColors.steel;
 
     return ThemeData(
       useMaterial3: true,
@@ -30,12 +35,25 @@ class AppTheme {
         surface:   surface,
         onSurface: textPri,
       ),
+      // AppTextStyles токенуудыг Material-ийн textTheme рүү буулгав —
+      // ингэснээр загварлаагүй Material widget-үүд ч апп-ын хэмжээст ордог.
+      // Өнгийг тухайн горимын дагуу шууд өгнө (dyn* getter build үеийн
+      // горимоос хамаардаг тул энд найдвартай биш).
       textTheme: GoogleFonts.interTextTheme(
         isDark ? ThemeData.dark().textTheme : ThemeData.light().textTheme,
       ).copyWith(
-        bodyLarge:  TextStyle(color: textPri, fontSize: 16),
-        bodyMedium: TextStyle(color: textPri, fontSize: 14),
-        bodySmall:  TextStyle(color: textSec, fontSize: 12),
+        displayLarge:  AppTextStyles.displayLg.copyWith(color: textPri),
+        displayMedium: AppTextStyles.displayMd.copyWith(color: textPri),
+        displaySmall:  AppTextStyles.displaySm.copyWith(color: textPri),
+        headlineSmall: AppTextStyles.h1.copyWith(color: textPri),
+        titleLarge:    AppTextStyles.h2.copyWith(color: textPri),
+        titleMedium:   AppTextStyles.h3.copyWith(color: textPri),
+        bodyLarge:     AppTextStyles.bodyLg.copyWith(color: textPri),
+        bodyMedium:    AppTextStyles.bodyMd.copyWith(color: textPri),
+        bodySmall:     AppTextStyles.bodySm.copyWith(color: textSec),
+        labelLarge:    AppTextStyles.labelLg.copyWith(color: textPri),
+        labelMedium:   AppTextStyles.labelMd.copyWith(color: textPri),
+        labelSmall:    AppTextStyles.labelSm.copyWith(color: textSec),
       ),
       appBarTheme: AppBarTheme(
         backgroundColor: bg,
@@ -64,7 +82,7 @@ class AppTheme {
         margin: EdgeInsets.zero,
         clipBehavior: Clip.antiAlias,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: AppRadii.lgR,
           side: BorderSide(color: hairline, width: 1),
         ),
       ),
@@ -73,24 +91,24 @@ class AppTheme {
         // Шилэн талбар — dark горимд бага зэрэг тунгалаг
         fillColor: isDark ? surface.withValues(alpha: 0.72) : surface,
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: AppRadii.mdR,
           borderSide: BorderSide(color: hairline),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: AppRadii.mdR,
           borderSide: BorderSide(color: hairline),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: AppRadii.mdR,
           borderSide: const BorderSide(color: AppColors.neonCyan, width: 1.4),
         ),
         errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: AppRadii.mdR,
           borderSide: BorderSide(
               color: AppColors.error.withValues(alpha: 0.6)),
         ),
         focusedErrorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: AppRadii.mdR,
           borderSide: const BorderSide(color: AppColors.error, width: 1.4),
         ),
         hintStyle: TextStyle(color: textSec.withValues(alpha: 0.8), fontSize: 14),
@@ -118,7 +136,7 @@ class AppTheme {
           ),
           shape: WidgetStatePropertyAll(
             RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: AppRadii.mdR,
             ),
           ),
           elevation: const WidgetStatePropertyAll(0),
@@ -138,7 +156,7 @@ class AppTheme {
           ),
           shape: WidgetStatePropertyAll(
             RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: AppRadii.mdR,
             ),
           ),
           textStyle: WidgetStatePropertyAll(
@@ -162,10 +180,48 @@ class AppTheme {
         elevation: 0,
         insetPadding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: AppRadii.mdR,
           side: BorderSide(color: isDark ? AppColors.hairline : hairline),
         ),
         behavior: SnackBarBehavior.floating,
+      ),
+      // ─── Доод sheet — 23 дуудалт гар аргаар өнгө/радиус дамжуулж
+      // (заримд 28, заримд 20) байсныг энд нэг мөр болгов.
+      bottomSheetTheme: BottomSheetThemeData(
+        backgroundColor: elevated,
+        modalBackgroundColor: elevated,
+        surfaceTintColor: Colors.transparent,
+        showDragHandle: true,
+        dragHandleColor: hairline2,
+        dragHandleSize: const Size(36, 4),
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(
+            top: Radius.circular(AppRadii.xl),
+          ),
+        ),
+      ),
+      // ─── Диалог — 12 AlertDialog гар аргаар өнгө/хэлбэр өгдөг байсан ───
+      dialogTheme: DialogThemeData(
+        backgroundColor: elevated,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: AppRadii.lgR,
+          side: BorderSide(color: hairline, width: 1),
+        ),
+        titleTextStyle: AppTextStyles.h2.copyWith(color: textPri),
+        contentTextStyle: AppTextStyles.bodyMd.copyWith(color: textSec),
+      ),
+      // ─── TextButton — 36-аас 33 нь загваргүй байсан тул M3-ийн ягаан
+      // өнгө, 40px өндөртэй унадаг байв. Одоо cyan + 44px хүрэлцэхүйц.
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(
+          foregroundColor: accentLink,
+          minimumSize: const Size(48, 44),
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          textStyle: AppTextStyles.btn,
+          shape: RoundedRectangleBorder(borderRadius: AppRadii.mdR),
+        ),
       ),
     );
   }

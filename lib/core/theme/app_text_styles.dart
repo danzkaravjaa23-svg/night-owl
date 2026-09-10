@@ -69,8 +69,9 @@ abstract class AppTextStyles {
     color: AppColors.dynTextPrimary, letterSpacing: 0.2,
   );
 
+  // 11px — Material/HIG-ийн уншигдах доод хязгаар.
   static TextStyle get labelSm => GoogleFonts.inter(
-    fontSize: 10, fontWeight: FontWeight.w600,
+    fontSize: 11, fontWeight: FontWeight.w600,
     color: AppColors.dynTextSecondary,
     letterSpacing: 0.8, height: 1.2,
   );
@@ -89,7 +90,7 @@ abstract class AppTextStyles {
   );
 
   static TextStyle get monoSm => GoogleFonts.jetBrainsMono(
-    fontSize: 9, fontWeight: FontWeight.w400,
+    fontSize: 10, fontWeight: FontWeight.w400,
     color: AppColors.dynTextTertiary, letterSpacing: 1.4,
   );
 

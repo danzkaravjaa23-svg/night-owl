@@ -20,6 +20,9 @@ class SetupScreen extends StatefulWidget {
 class _SetupScreenState extends State<SetupScreen> {
   final _usernameCtrl = TextEditingController();
   final _bioCtrl      = TextEditingController();
+  final _formKey      = GlobalKey<FormState>();
+  // Гар дээрх "Дараах" товч хэрэглэгчийн нэрээс танилцуулга руу шилжүүлнэ
+  final _bioFocus     = FocusNode();
   Uint8List? _avatarBytes;
   String? _avatarUrl; // одоо байгаа аватар (edit mode-д харуулна)
   List<String> _interests = [];
@@ -78,6 +81,7 @@ class _SetupScreenState extends State<SetupScreen> {
   void dispose() {
     _usernameCtrl.dispose();
     _bioCtrl.dispose();
+    _bioFocus.dispose();
     super.dispose();
   }
 
@@ -112,8 +116,9 @@ class _SetupScreenState extends State<SetupScreen> {
     });
   }
 
-  // Хэрэглэгчийн нэрийн шалгалт — Supabase рүү илгээхээс өмнө
-  String? _validateUsername(String username) {
+  // Хэрэглэгчийн нэрийн шалгалт — талбарын доор шууд харагдана (TextFormField)
+  String? _validateUsername(String? value) {
+    final username = value?.trim() ?? '';
     if (username.isEmpty) return 'Хэрэглэгчийн нэр заавал хэрэгтэй';
     if (username.length < 3) return 'Хамгийн багадаа 3 тэмдэгт';
     if (username.length > 20) return 'Хамгийн ихдээ 20 тэмдэгт';
@@ -124,12 +129,11 @@ class _SetupScreenState extends State<SetupScreen> {
   }
 
   Future<void> _save() async {
+    // Enter дарж давхар илгээхээс сэргийлнэ
+    if (_loading) return;
+    // Хэрэглэгчийн нэрийн алдаа талбарын доор inline харагдана
+    if (_formKey.currentState?.validate() != true) return;
     final username = _usernameCtrl.text.trim();
-    final validation = _validateUsername(username);
-    if (validation != null) {
-      setState(() => _error = validation);
-      return;
-    }
 
     final user = Supabase.instance.client.auth.currentUser;
     if (user == null) {
@@ -249,185 +253,194 @@ class _SetupScreenState extends State<SetupScreen> {
   Widget _formView() => SingleChildScrollView(
     key: const ValueKey('form'),
     padding: const EdgeInsets.fromLTRB(20, 24, 20, 20),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Профайл ачаалж чадаагүй анхааруулга + retry
-        if (_loadFailed) ...[
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: AppColors.amber.withValues(alpha: 0.10),
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: AppColors.amber.withValues(alpha: 0.3)),
-            ),
-            child: Row(children: [
-              const Icon(Icons.wifi_off_rounded, color: AppColors.amber, size: 16),
-              const SizedBox(width: 8),
-              Expanded(child: Text('Профайл ачаалж чадсангүй',
-                style: AppTextStyles.bodySm.copyWith(color: AppColors.amber))),
-              TapScale(
-                onTap: _loadExistingProfile,
-                child: Text('Дахин оролдох',
-                  style: AppTextStyles.labelSm.copyWith(
-                    color: AppColors.neonCyan, letterSpacing: 0)),
+    child: Form(
+      key: _formKey,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Профайл ачаалж чадаагүй анхааруулга + retry
+          if (_loadFailed) ...[
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppColors.amber.withValues(alpha: 0.10),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: AppColors.amber.withValues(alpha: 0.3)),
               ),
-            ]),
-          ),
-          const SizedBox(height: 20),
-        ],
+              child: Row(children: [
+                const Icon(Icons.wifi_off_rounded, color: AppColors.amber, size: 16),
+                const SizedBox(width: 8),
+                Expanded(child: Text('Профайл ачаалж чадсангүй',
+                  style: AppTextStyles.bodySm.copyWith(color: AppColors.amber))),
+                TapScale(
+                  onTap: _loadExistingProfile,
+                  child: Text('Дахин оролдох',
+                    style: AppTextStyles.labelSm.copyWith(
+                      color: AppColors.neonCyan, letterSpacing: 0)),
+                ),
+              ]),
+            ),
+            const SizedBox(height: 20),
+          ],
 
-        // ── Avatar hero — 96, story-ring хүрээ + gradient edit badge ──
-        Center(
-          child: TapScale(
-            onTap: _pickAvatar,
-            child: Stack(
-              clipBehavior: Clip.none,
-              children: [
-                // Story-ring gradient хүрээ
-                Container(
-                  width: 96, height: 96,
-                  padding: const EdgeInsets.all(3),
-                  decoration: const BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: AppColors.storyRingGradient,
-                  ),
-                  child: Container(
-                    padding: const EdgeInsets.all(2.5),
+          // ── Avatar hero — 96, story-ring хүрээ + gradient edit badge ──
+          Center(
+            child: TapScale(
+              onTap: _pickAvatar,
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  // Story-ring gradient хүрээ
+                  Container(
+                    width: 96, height: 96,
+                    padding: const EdgeInsets.all(3),
                     decoration: const BoxDecoration(
                       shape: BoxShape.circle,
-                      color: AppColors.bgBase,
+                      gradient: AppColors.storyRingGradient,
                     ),
                     child: Container(
+                      padding: const EdgeInsets.all(2.5),
+                      decoration: const BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: AppColors.bgBase,
+                      ),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: (_avatarBytes == null && _avatarUrl == null)
+                              ? AppColors.accentGradientSoft
+                              : null,
+                          image: _avatarBytes != null
+                              ? DecorationImage(
+                                  image: MemoryImage(_avatarBytes!),
+                                  fit: BoxFit.cover)
+                              : (_avatarUrl != null
+                                  ? DecorationImage(
+                                      image: NetworkImage(_avatarUrl!),
+                                      fit: BoxFit.cover)
+                                  : null),
+                        ),
+                        child: (_avatarBytes == null && _avatarUrl == null)
+                            ? const Icon(Icons.person,
+                                color: AppColors.textTertiary, size: 40)
+                            : null,
+                      ),
+                    ),
+                  ),
+                  // Gradient edit badge — glow-той, bgBase cutout хүрээ
+                  Positioned(
+                    bottom: -2, right: -2,
+                    child: Container(
+                      width: 32, height: 32,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        gradient: (_avatarBytes == null && _avatarUrl == null)
-                            ? AppColors.accentGradientSoft
-                            : null,
-                        image: _avatarBytes != null
-                            ? DecorationImage(
-                                image: MemoryImage(_avatarBytes!),
-                                fit: BoxFit.cover)
-                            : (_avatarUrl != null
-                                ? DecorationImage(
-                                    image: NetworkImage(_avatarUrl!),
-                                    fit: BoxFit.cover)
-                                : null),
+                        gradient: AppColors.accentGradient,
+                        border: Border.all(color: AppColors.bgBase, width: 2.5),
+                        boxShadow: AppColors.glowShadow(AppColors.accentStart),
                       ),
-                      child: (_avatarBytes == null && _avatarUrl == null)
-                          ? const Icon(Icons.person,
-                              color: AppColors.textTertiary, size: 40)
-                          : null,
+                      child: const Icon(Icons.camera_alt,
+                        color: Colors.white, size: 15),
                     ),
                   ),
-                ),
-                // Gradient edit badge — glow-той, bgBase cutout хүрээ
-                Positioned(
-                  bottom: -2, right: -2,
-                  child: Container(
-                    width: 32, height: 32,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: AppColors.accentGradient,
-                      border: Border.all(color: AppColors.bgBase, width: 2.5),
-                      boxShadow: AppColors.glowShadow(AppColors.accentStart),
-                    ),
-                    child: const Icon(Icons.camera_alt,
-                      color: Colors.white, size: 15),
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
-        ),
-        const SizedBox(height: 28),
+          const SizedBox(height: 28),
 
-        // Username
-        const FieldLabel('Хэрэглэгчийн нэр'),
-        const SizedBox(height: 8),
-        TextFormField(
-          controller: _usernameCtrl,
-          style: const TextStyle(color: AppColors.textPrimary),
-          decoration: authInputDec(
-            hint: '@username',
-            icon: Icons.alternate_email_rounded),
-        ),
-        const SizedBox(height: 18),
+          // Username
+          const FieldLabel('Хэрэглэгчийн нэр'),
+          const SizedBox(height: 8),
+          TextFormField(
+            controller: _usernameCtrl,
+            style: authFieldStyle,
+            textInputAction: TextInputAction.next,
+            onFieldSubmitted: (_) => _bioFocus.requestFocus(),
+            decoration: authInputDec(
+              hint: '@username',
+              icon: Icons.alternate_email_rounded),
+            validator: _validateUsername,
+          ),
+          const SizedBox(height: 18),
 
-        // Bio
-        const FieldLabel('Танилцуулга'),
-        const SizedBox(height: 8),
-        TextFormField(
-          controller: _bioCtrl,
-          maxLines: 3,
-          style: const TextStyle(color: AppColors.textPrimary),
-          decoration: authInputDec(
-            hint: 'Шөнийн амьдралд дуртай...',
-            icon: Icons.edit_note_rounded),
-        ),
-        const SizedBox(height: 24),
+          // Bio
+          const FieldLabel('Танилцуулга'),
+          const SizedBox(height: 8),
+          TextFormField(
+            controller: _bioCtrl,
+            focusNode: _bioFocus,
+            maxLines: 3,
+            style: authFieldStyle,
+            // Олон мөрт талбар — Enter нь шинэ мөр (илгээхгүй)
+            textInputAction: TextInputAction.newline,
+            decoration: authInputDec(
+              hint: 'Шөнийн амьдралд дуртай...',
+              icon: Icons.edit_note_rounded),
+          ),
+          const SizedBox(height: 24),
 
-        // Interests
-        Text('СОНИРХОЛ', style: AppTextStyles.sectionLabel),
-        const SizedBox(height: 4),
-        Text('Хамгийн ихдээ 6-г сонгоно',
-          style: AppTextStyles.bodyXs.copyWith(
-            color: AppColors.textTertiary)),
-        const SizedBox(height: 12),
-        Wrap(
-          spacing: 8, runSpacing: 8,
-          children: AppConstants.interestOptions.map((tag) {
-            final active = _interests.contains(tag);
-            return TapScale(
-              onTap: () => _toggleInterest(tag),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 150),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 14, vertical: 8),
-                decoration: BoxDecoration(
-                  color: active
-                      ? AppColors.accentStart.withValues(alpha: 0.18)
-                      : AppColors.bgSurface,
-                  borderRadius: BorderRadius.circular(999),
-                  border: Border.all(
+          // Interests
+          Text('СОНИРХОЛ', style: AppTextStyles.sectionLabel),
+          const SizedBox(height: 4),
+          Text('Хамгийн ихдээ 6-г сонгоно',
+            style: AppTextStyles.bodyXs.copyWith(
+              color: AppColors.textTertiary)),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8, runSpacing: 8,
+            children: AppConstants.interestOptions.map((tag) {
+              final active = _interests.contains(tag);
+              return TapScale(
+                onTap: () => _toggleInterest(tag),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 150),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14, vertical: 8),
+                  decoration: BoxDecoration(
                     color: active
-                        ? AppColors.accentStart
-                        : AppColors.hairline,
-                    width: active ? 1.5 : 1,
+                        ? AppColors.accentStart.withValues(alpha: 0.18)
+                        : AppColors.bgSurface,
+                    borderRadius: BorderRadius.circular(999),
+                    border: Border.all(
+                      color: active
+                          ? AppColors.accentStart
+                          : AppColors.hairline,
+                      width: active ? 1.5 : 1,
+                    ),
+                    boxShadow: active
+                        ? AppColors.glowShadow(AppColors.accentStart,
+                            alpha: 0.22, blur: 14)
+                        : null,
                   ),
-                  boxShadow: active
-                      ? AppColors.glowShadow(AppColors.accentStart,
-                          alpha: 0.22, blur: 14)
-                      : null,
+                  child: Text(tag,
+                    style: AppTextStyles.labelSm.copyWith(
+                      color: active
+                          ? AppColors.accentStart
+                          : AppColors.textSecondary,
+                      letterSpacing: 0.2,
+                    )),
                 ),
-                child: Text(tag,
-                  style: AppTextStyles.labelSm.copyWith(
-                    color: active
-                        ? AppColors.accentStart
-                        : AppColors.textSecondary,
-                    letterSpacing: 0.2,
-                  )),
-              ),
-            );
-          }).toList(),
-        ),
+              );
+            }).toList(),
+          ),
 
-        if (_error != null) ...[
-          const SizedBox(height: 20),
-          AuthErrorBox(_error!),
+          if (_error != null) ...[
+            const SizedBox(height: 20),
+            AuthErrorBox(_error!),
+          ],
+
+          const SizedBox(height: 32),
+          GradientButton(
+            label: _loading
+                ? 'Хадгалж байна...'
+                : (_isEditMode ? 'Хадгалах' : 'Эхлэх'),
+            onPressed: _loading ? null : _save,
+            borderRadius: 999,
+            trailing: _loading ? const BtnSpinner() : null,
+          ),
+          const SizedBox(height: 8),
         ],
-
-        const SizedBox(height: 32),
-        GradientButton(
-          label: _loading
-              ? 'Хадгалж байна...'
-              : (_isEditMode ? 'Хадгалах' : 'Эхлэх'),
-          onPressed: _loading ? null : _save,
-          borderRadius: 999,
-          trailing: _loading ? const BtnSpinner() : null,
-        ),
-        const SizedBox(height: 8),
-      ],
+      ),
     ),
   );
 }

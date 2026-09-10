@@ -4,9 +4,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_radii.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/router/app_router.dart';
+import '../../../core/widgets/glass_icon_button.dart';
 import '../../../models/venue.dart';
 import '../widgets/google_map_view.dart';
 import '../widgets/map_controller.dart';
@@ -54,16 +56,17 @@ class _MapScreenState extends ConsumerState<MapScreen> {
         Padding(
           padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
           child: Row(children: [
-            _glassCircle(
-              child: const Icon(Icons.chevron_left_rounded,
-                  color: AppColors.textPrimary, size: 26),
+            // Буцах — апп даяарх нэгдсэн шилэн icon товч (44px хүрэх талбар)
+            GlassIconButton(
+              icon: Icons.chevron_left_rounded,
+              tooltip: 'Буцах',
               onTap: () => context.canPop()
                   ? context.pop() : context.go(AppRoutes.explore),
             ),
-            const SizedBox(width: 10),
+            const SizedBox(width: 6),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-              decoration: _glassDeco(radius: 22),
+              decoration: _glassDeco(),
               child: Row(mainAxisSize: MainAxisSize.min, children: [
                 const Icon(Icons.map_rounded,
                     color: AppColors.neonCyan, size: 17),
@@ -77,7 +80,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
             if (!loading && !failed)
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                decoration: _glassDeco(radius: 20,
+                decoration: _glassDeco(
                     borderColor: AppColors.neonCyan.withValues(alpha: 0.4)),
                 child: Row(mainAxisSize: MainAxisSize.min, children: [
                   Container(width: 7, height: 7, decoration: BoxDecoration(
@@ -100,7 +103,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 10),
             child: ClipRRect(
-              borderRadius: BorderRadius.circular(18),
+              borderRadius: AppRadii.lgR,
               child: failed
                   ? _MapError(onRetry: () => ref.invalidate(venuesProvider))
                   : loading
@@ -146,25 +149,8 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     );
   }
 
-  // Шилэн дугуй товч — жигд glass + зөөлөн доош унасан сүүдэр
-  Widget _glassCircle({required Widget child, required VoidCallback onTap}) =>
-      _Tap(
-        onTap: onTap,
-        child: Container(
-          width: 42, height: 42,
-          decoration: BoxDecoration(
-            color: AppColors.bgElevated.withValues(alpha: 0.78),
-            shape: BoxShape.circle,
-            border: Border.all(color: AppColors.hairline2),
-            boxShadow: [BoxShadow(
-                color: Colors.black.withValues(alpha: 0.4),
-                blurRadius: 14, offset: const Offset(0, 4))],
-          ),
-          child: child,
-        ),
-      );
-
-  BoxDecoration _glassDeco({double radius = 20, Color? borderColor}) =>
+  // Шилэн шошго — жигд glass + зөөлөн доош унасан сүүдэр
+  BoxDecoration _glassDeco({double radius = AppRadii.lg, Color? borderColor}) =>
       BoxDecoration(
         color: AppColors.bgElevated.withValues(alpha: 0.78),
         borderRadius: BorderRadius.circular(radius),
@@ -266,7 +252,7 @@ class _VenueMapCard extends StatelessWidget {
         width: 240,
         decoration: BoxDecoration(
           color: AppColors.bgElevated.withValues(alpha: 0.92),
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: AppRadii.lgR,
           border: Border.all(
             color: selected
                 ? AppColors.neonCyan.withValues(alpha: 0.8)
@@ -282,7 +268,7 @@ class _VenueMapCard extends StatelessWidget {
           ],
         ),
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: AppRadii.lgR,
           child: Row(children: [
             // Зураг
             SizedBox(

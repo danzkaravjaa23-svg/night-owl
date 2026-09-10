@@ -418,6 +418,23 @@ class _PressState extends State<_Press> {
   );
 }
 
+// ─── 44px доод хүрэлтийн талбай — жижиг текст/icon товчийг тэлнэ ──────────────
+// Текстийн хэмжээ өөрчлөгдөхгүй, зөвхөн эргэн тойрны дарах талбай томордог.
+class _TapTarget extends StatelessWidget {
+  final Widget child;
+  const _TapTarget({required this.child});
+
+  @override
+  Widget build(BuildContext context) => ConstrainedBox(
+    constraints: const BoxConstraints(minHeight: 44, minWidth: 44),
+    child: Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+      // widthFactor/heightFactor — мөрийг сунгахгүй, контентоороо багтана
+      child: Center(widthFactor: 1, heightFactor: 1, child: child),
+    ),
+  );
+}
+
 // ─── Хөвөгч glass дугуй товч (back / more) ────────────────────────────────────
 class _GlassCircleButton extends StatelessWidget {
   final IconData icon;
@@ -710,7 +727,7 @@ class _PostHeaderState extends ConsumerState<_PostHeader> {
               Icon(
                 post.isLikedByMe ? Icons.favorite : Icons.favorite_border,
                 color: post.isLikedByMe
-                    ? AppColors.accentStart
+                    ? AppColors.like
                     : AppColors.textSecondary,
                 size: 24,
               ),
@@ -726,7 +743,7 @@ class _PostHeaderState extends ConsumerState<_PostHeader> {
             onTap: widget.onComment,
             child: Row(children: [
               const Icon(Icons.chat_bubble_outline,
-                  color: AppColors.textSecondary, size: 22),
+                  color: AppColors.textSecondary, size: 24),
               const SizedBox(width: 6),
               Text(_fmt(widget.commentCount ?? post.commentsCount),
                   style: AppTextStyles.labelSm.copyWith(
@@ -738,7 +755,7 @@ class _PostHeaderState extends ConsumerState<_PostHeader> {
             scale: 0.85,
             onTap: _share,
             child: const Icon(Icons.send_outlined,
-                color: AppColors.textSecondary, size: 22),
+                color: AppColors.textSecondary, size: 24),
           ),
           const SizedBox(width: 18),
           _Press(
@@ -746,8 +763,8 @@ class _PostHeaderState extends ConsumerState<_PostHeader> {
             onTap: _toggleSave,
             child: Icon(_saved ? Icons.bookmark : Icons.bookmark_border,
                 color: _saved
-                    ? AppColors.accentStart : AppColors.textSecondary,
-                size: 22),
+                    ? AppColors.saved : AppColors.textSecondary,
+                size: 24),
           ),
         ]),
       ),
@@ -854,38 +871,44 @@ class _CommentTileState extends State<_CommentTile> {
             const SizedBox(height: 3),
             Text(comment.body,
                 style: AppTextStyles.bodyMd.copyWith(height: 1.4)),
-            const SizedBox(height: 4),
+            // Үйлдлийн мөр — текст 11px хэвээр, харин хүрэлтийн талбай 44px
             Row(children: [
               _Press(
                 scale: 0.95,
                 onTap: widget.onReply,
-                child: Text('Хариулах',
-                    style: AppTextStyles.bodyXs.copyWith(
-                        color: AppColors.textSecondary,
-                        fontWeight: FontWeight.w600)),
+                child: _TapTarget(
+                  child: Text('Хариулах',
+                      style: AppTextStyles.bodyXs.copyWith(
+                          color: AppColors.textSecondary,
+                          fontWeight: FontWeight.w600)),
+                ),
               ),
               if (widget.isOwn) ...[
-                const SizedBox(width: 16),
+                const SizedBox(width: 8),
                 _Press(
                   scale: 0.95,
                   onTap: () => _confirmDelete(context),
-                  child: Text('Устгах',
-                      style: AppTextStyles.bodyXs.copyWith(
-                          color: AppColors.textTertiary)),
+                  child: _TapTarget(
+                    child: Text('Устгах',
+                        style: AppTextStyles.bodyXs.copyWith(
+                            color: AppColors.textTertiary)),
+                  ),
                 ),
               ],
             ]),
           ]),
         ),
-        // Like
+        // Like — icon 16px хэвээр, гэхдээ 44×44 хүрэлтийн талбайтай
         _Press(
           scale: 0.8,
           onTap: _toggleLike,
-          child: Padding(
-            padding: const EdgeInsets.only(left: 8, top: 2),
-            child: Column(children: [
+          child: SizedBox(
+            width: 44,
+            height: 44,
+            child: Column(mainAxisAlignment: MainAxisAlignment.center,
+                children: [
               Icon(_liked ? Icons.favorite : Icons.favorite_border,
-                  color: _liked ? AppColors.accentStart : AppColors.textTertiary,
+                  color: _liked ? AppColors.like : AppColors.textTertiary,
                   size: 16),
               if (_likes > 0) ...[
                 const SizedBox(height: 2),
@@ -972,12 +995,15 @@ class _CommentInput extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Шилэн input bar — translucent дэвсгэр + дээшээ зөөлөн сүүдэр
+    final mq = MediaQuery.of(context);
+    // Шилэн input bar — translucent дэвсгэр + дээшээ зөөлөн сүүдэр.
+    // Системийн доод зай (home indicator) БАРНЫ ДОТОР — тунгалаг дэвсгэр
+    // болон дээд hairline нь индикаторын доогуур үргэлжилнэ.
     return Container(
       padding: EdgeInsets.only(
         left: 16, right: 8,
         top: replyingTo != null ? 0 : 10,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 10,
+        bottom: mq.viewInsets.bottom + mq.padding.bottom + 10,
       ),
       decoration: BoxDecoration(
         color: AppColors.bgElevated.withValues(alpha: 0.92),
@@ -1014,8 +1040,11 @@ class _CommentInput extends StatelessWidget {
         ),
         const SizedBox(width: 10),
         Expanded(
+          // Талбарын доод өндөр 48 — хуруугаар оногдоход тухтай
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+            constraints: const BoxConstraints(minHeight: 48),
+            alignment: Alignment.center,
+            padding: const EdgeInsets.symmetric(horizontal: 14),
             decoration: BoxDecoration(
               color: AppColors.bgSurface.withValues(alpha: 0.65),
               borderRadius: BorderRadius.circular(999),
@@ -1034,7 +1063,7 @@ class _CommentInput extends StatelessWidget {
                 border:       InputBorder.none,
                 counterText:  '',
                 isDense:      true,
-                contentPadding: EdgeInsets.zero,
+                contentPadding: const EdgeInsets.symmetric(vertical: 12),
               ),
             ),
           ),
@@ -1045,7 +1074,7 @@ class _CommentInput extends StatelessWidget {
           onTap: sending ? null : onSend,
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 200),
-            width: 38, height: 38,
+            width: 44, height: 44,
             // Primary CTA — неон glow сүүдэр
             decoration: BoxDecoration(
               gradient: sending ? null : AppColors.accentGradient,
@@ -1059,11 +1088,11 @@ class _CommentInput extends StatelessWidget {
             ),
             child: sending
                 ? const Padding(
-                    padding: EdgeInsets.all(10),
+                    padding: EdgeInsets.all(13),
                     child: CircularProgressIndicator(
                         color: AppColors.accentStart, strokeWidth: 2))
                 : const Icon(Icons.send_rounded,
-                    color: Colors.white, size: 18),
+                    color: Colors.white, size: 20),
           ),
         ),
       ]),

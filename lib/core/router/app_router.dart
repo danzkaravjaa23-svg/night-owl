@@ -15,6 +15,9 @@ import '../../features/auth/screens/forgot_password_screen.dart';
 import '../../features/auth/screens/reset_password_screen.dart';
 import '../services/supabase_service.dart' show pendingPasswordRecovery;
 import '../../features/shell/main_shell.dart';
+import '../theme/app_colors.dart';
+import '../widgets/empty_state.dart';
+import '../widgets/gradient_button.dart';
 import '../../features/feed/screens/feed_screen.dart';
 import '../../features/feed/screens/post_detail_screen.dart';
 import '../../features/feed/screens/creator_screen.dart';
@@ -201,7 +204,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
 
     routes: [
       // ── Onboarding ──
-      GoRoute(path: AppRoutes.splash,       builder: (_, __) => const SplashScreen()),
+      GoRoute(path: AppRoutes.splash,
+        pageBuilder: (_, s) => _fadePage(s, const SplashScreen())),
       GoRoute(path: AppRoutes.langSelect,
         pageBuilder: (_, s) => _fadePage(s, const LangSelectScreen())),
       GoRoute(
@@ -212,9 +216,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         },
       ),
       GoRoute(path: AppRoutes.permLocation,
-        builder: (_, __) => const PermissionScreen(kind: PermissionKind.location)),
+        pageBuilder: (_, s) => _fadePage(s,
+          const PermissionScreen(kind: PermissionKind.location))),
       GoRoute(path: AppRoutes.permNotif,
-        builder: (_, __) => const PermissionScreen(kind: PermissionKind.notification)),
+        pageBuilder: (_, s) => _fadePage(s,
+          const PermissionScreen(kind: PermissionKind.notification))),
 
       // ── Auth ──
       GoRoute(path: AppRoutes.authLanding,
@@ -239,8 +245,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             pageBuilder: (_, s) => _fadePage(s, const FeedScreen())),
           GoRoute(path: AppRoutes.explore,
             pageBuilder: (_, s) => _fadePage(s, const ExploreScreen())),
-          GoRoute(path: AppRoutes.notifications,
-            pageBuilder: (_, s) => _fadePage(s, const NotificationsScreen())),
           GoRoute(path: AppRoutes.reels,
             pageBuilder: (_, s) => _fadePage(s, const ReelsScreen())),
           GoRoute(path: AppRoutes.profile,
@@ -249,6 +253,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
 
       // ── Full-screen overlays ──
+      // Мэдэгдэл — feed-ийн хонхноос push хийдэг тул shell-ийн ГАДНА:
+      // доод док харагдахгүй, буцах сум бүхий энгийн дэлгэц болно
+      GoRoute(path: AppRoutes.notifications,
+        pageBuilder: (_, s) => _fadePage(s, const NotificationsScreen())),
       GoRoute(path: AppRoutes.map,
         // iframe (Leaflet) нь route transition-ий transform-ыг дагадаггүй тул
         // шилжилтгүй нээнэ — эс бөгөөс зураг байрлалаасаа гулсаж хар харагдана
@@ -318,8 +326,22 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         pageBuilder: (_, s) => _slidePage(s, const AdminUsersScreen())),
     ],
 
-    errorBuilder: (_, state) => Scaffold(
-      body: Center(child: Text('Page not found: ${state.uri}')),
+    // ── 404 — аппын өнгө/хэлбэрт нийцсэн хоосон төлөв ──
+    errorBuilder: (context, state) => Scaffold(
+      backgroundColor: AppColors.bgBase,
+      body: SafeArea(
+        child: EmptyState(
+          icon: Icons.explore_off_rounded,
+          title: 'Хуудас олдсонгүй',
+          subtitle: 'Хайсан хуудас устсан эсвэл холбоос буруу байна.',
+          action: GradientButton(
+            label: 'Нүүр рүү буцах',
+            size: GradientButtonSize.md,
+            fullWidth: false,
+            onPressed: () => context.go(AppRoutes.feed),
+          ),
+        ),
+      ),
     ),
   );
 });
