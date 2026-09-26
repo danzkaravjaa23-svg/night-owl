@@ -140,7 +140,7 @@ class _ClearBtnState extends State<_ClearBtn> {
         scale: _down ? 0.9 : 1,
         duration: const Duration(milliseconds: 120),
         curve: Curves.easeOut,
-        child: const SizedBox(width: 44, height: 44,
+        child: SizedBox(width: 44, height: 44,
           child: Center(child: Icon(Icons.close,
             size: 16, color: AppColors.textTertiary))),
       ),

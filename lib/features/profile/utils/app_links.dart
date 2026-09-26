@@ -3,8 +3,8 @@
 /// веб дээр Uri.base-ээс жинхэнэ deploy хаягийг (Netlify г.м.) авна.
 library;
 
-/// Одоогийн deploy origin (ж: https://night-owl-ub.netlify.app).
-/// Веб биш орчинд (тест) fallback хаяг буцаана.
+/// Одоогийн deploy origin (ж: https://nightowl-ub.netlify.app).
+/// Веб биш орчинд (native апп, тест) fallback хаяг буцаана.
 String appOrigin() {
   try {
     final o = Uri.base.origin;

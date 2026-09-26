@@ -1,4 +1,8 @@
 // Веб бус fallback (энэ апп веб дээр ажилладаг) — юу ч хийхгүй.
+import 'dart:typed_data';
+
+import 'package:flutter/painting.dart';
+import 'package:video_player/video_player.dart';
 
 /// Сонгосон медиа файл — веб дээр html.File wrap хийнэ
 class PickedMediaFile {
@@ -35,3 +39,11 @@ Future<void> uploadBlobWithProgress({
   required String mime,
   void Function(double progress)? onProgress,
 }) async {}
+
+/// Preview зураг
+ImageProvider previewImageProvider(PickedMediaFile m) =>
+    MemoryImage(Uint8List(0));
+
+/// Preview видео
+VideoPlayerController previewVideoController(PickedMediaFile m) =>
+    VideoPlayerController.networkUrl(Uri.parse(m.previewUrl));

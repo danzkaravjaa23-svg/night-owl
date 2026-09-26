@@ -6,6 +6,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/router/app_router.dart';
+import '../../../core/widgets/theme_toggle_button.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../../models/user_profile.dart';
 import '../widgets/invite_sheet.dart';
@@ -49,6 +50,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   void _toast(String msg) => ScaffoldMessenger.of(context).showSnackBar(
     SnackBar(content: Text(msg), duration: const Duration(seconds: 2)));
+
+  /// Профайл засах — тусгай editProfile route (/auth/setup биш: router
+  /// бүртгэл дууссан хэрэглэгчийг feed руу буцаадаг). Буцаж ирэхэд шинэчилнэ.
+  Future<void> _openEditProfile() async {
+    await context.push(AppRoutes.editProfile);
+    if (mounted) ref.invalidate(currentProfileProvider);
+  }
 
   // Switch-үүдийг мөр дарахад ч, switch дарахад ч ижил замаар солино
   void _setNotifLikes(bool v) {
@@ -158,7 +166,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           SafeArea(
             child: Column(
               children: [
-                _Header(onBack: () => context.pop()),
+                // Reload/deep link үед stack хоосон байж болно — profile руу fallback
+                _Header(onBack: () => context.canPop()
+                    ? context.pop()
+                    : context.go(AppRoutes.profile)),
                 Expanded(
                   child: ListView(
                     padding: const EdgeInsets.fromLTRB(20, 8, 20, 48),
@@ -167,12 +178,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       profileAsync.when(
                         data: (p) => _ProfileCard(
                           profile: p,
-                          onTap: () => context.push(AppRoutes.setup),
+                          onTap: _openEditProfile,
                         ),
                         loading: () => const _ProfileCardSkeleton(),
                         error: (_, __) => _ProfileCard(
                           profile: null,
-                          onTap: () => context.push(AppRoutes.setup),
+                          onTap: _openEditProfile,
                         ),
                       ),
 
@@ -185,7 +196,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         _SettingRow(
                           icon: Icons.person_outline,
                           label: 'Профайл засах',
-                          onTap: () => context.push(AppRoutes.setup),
+                          onTap: _openEditProfile,
                         ),
                         const _RowDivider(),
                         _SettingRow(
@@ -207,11 +218,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       // ─── ТОХИРГОО ───
                       const _SectionLabel('Тохиргоо'),
                       const SizedBox(height: 10),
-                      // 'Харанхуй горим' сонголтыг түр хассан: апп даяар
-                      // харанхуй өнгөний токенууд шууд бичигдсэн тул гэрэл
-                      // горим эвдэрсэн харагдана. dyn* өнгөний шилжилт
-                      // (migration) дуустал энэ мөрийг буцааж нэмэхгүй.
                       _GlassCard(children: [
+                        // Feed-ийн баруун дээд буланд байгаатай ижил toggle
+                        const _SettingRow(
+                          icon: Icons.dark_mode_outlined,
+                          label: 'Харанхуй горим',
+                          trailing: ThemeToggleButton(width: 52, height: 26),
+                        ),
+                        const _RowDivider(),
                         _SettingRow(
                           icon: Icons.notifications_none,
                           label: 'Мэдэгдэл',
@@ -362,7 +376,7 @@ class _Header extends StatelessWidget {
                   shape: BoxShape.circle,
                   border: Border.all(color: AppColors.hairline2),
                 ),
-                child: const Icon(Icons.chevron_left,
+                child: Icon(Icons.chevron_left,
                     color: AppColors.textPrimary, size: 22),
               ),
             ),
@@ -428,7 +442,7 @@ class _ProfileCard extends StatelessWidget {
             Container(
               width: 64, height: 64,
               padding: const EdgeInsets.all(2.5),
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 gradient: LinearGradient(
                   begin: Alignment.topLeft,
@@ -437,7 +451,7 @@ class _ProfileCard extends StatelessWidget {
                 ),
               ),
               child: Container(
-                decoration: const BoxDecoration(
+                decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: AppColors.bgBase,
                 ),
@@ -482,7 +496,7 @@ class _ProfileCard extends StatelessWidget {
             const SizedBox(width: 10),
             // 'LIVE' pill байсан нь худал (жинхэнэ live төлөвтэй холбоогүй) —
             // "Профайл засах" гэдгийг илэрхийлсэн саармаг chevron-оор солив.
-            const Icon(Icons.chevron_right,
+            Icon(Icons.chevron_right,
                 color: AppColors.textTertiary, size: 20),
           ],
         ),
@@ -516,7 +530,7 @@ class _ProfileCardSkeleton extends StatelessWidget {
         children: [
           Container(
             width: 64, height: 64,
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: AppColors.bgSurface,
             ),
@@ -590,8 +604,8 @@ class _GlassCard extends StatelessWidget {
 class _RowDivider extends StatelessWidget {
   const _RowDivider();
   @override
-  Widget build(BuildContext context) => const Padding(
-        padding: EdgeInsets.only(left: 56, right: 12),
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.only(left: 56, right: 12),
         child: Divider(height: 1, thickness: 1, color: AppColors.hairline),
       );
 }
@@ -673,7 +687,7 @@ class _SettingRow extends StatelessWidget {
             trailing!,
           ] else if (onTap != null && !disabled) ...[
             const SizedBox(width: 4),
-            const Icon(Icons.chevron_right,
+            Icon(Icons.chevron_right,
                 size: 18, color: AppColors.textTertiary),
           ],
         ],

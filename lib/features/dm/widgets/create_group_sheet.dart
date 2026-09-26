@@ -224,10 +224,12 @@ class _CreateGroupSheetState extends State<_CreateGroupSheet> {
                       ? AppColors.glowShadow(AppColors.accentStart)
                       : null),
                 alignment: Alignment.center,
+                // _busy үед canCreate=false тул дэвсгэр нь bgSurface —
+                // spinner сэдвийн текст өнгөтэй (цайвар горимд харагдана)
                 child: _busy
-                    ? const SizedBox(width: 22, height: 22,
+                    ? SizedBox(width: 22, height: 22,
                         child: CircularProgressIndicator(
-                            color: Colors.white, strokeWidth: 2))
+                            color: AppColors.textPrimary, strokeWidth: 2))
                     : Text(
                         _selected.isEmpty
                             ? 'Гишүүн сонгоно уу'
@@ -296,7 +298,7 @@ class _RemoveBtnState extends State<_RemoveBtn> {
         scale: _down ? 0.9 : 1,
         duration: const Duration(milliseconds: 120),
         curve: Curves.easeOut,
-        child: const SizedBox(width: 44, height: 44,
+        child: SizedBox(width: 44, height: 44,
           child: Center(child: Icon(Icons.close,
               size: 14, color: AppColors.textTertiary))),
       ),

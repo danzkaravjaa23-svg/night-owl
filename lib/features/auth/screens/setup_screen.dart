@@ -11,7 +11,10 @@ import '../../../core/router/app_router.dart';
 import '../widgets/auth_ui.dart';
 
 class SetupScreen extends StatefulWidget {
-  const SetupScreen({super.key});
+  /// Профайлаас "Профайл засах" дарж нээсэн — хадгалсны дараа буцна
+  /// (шинэ хэрэглэгчийн анхны setup бол false — хадгалаад Нүүр рүү).
+  final bool forceEdit;
+  const SetupScreen({super.key, this.forceEdit = false});
 
   @override
   State<SetupScreen> createState() => _SetupScreenState();
@@ -35,6 +38,7 @@ class _SetupScreenState extends State<SetupScreen> {
   @override
   void initState() {
     super.initState();
+    _isEditMode = widget.forceEdit;
     _loadExistingProfile();
   }
 
@@ -57,7 +61,8 @@ class _SetupScreenState extends State<SetupScreen> {
         setState(() {
           // setup_complete metadata = профайлаа дуусгасан → засах горим.
           // Байхгүй бол ШИНЭ хэрэглэгч → "үүсгэх" горим (буцах товчгүй).
-          _isEditMode = Supabase.instance.client.auth.currentUser
+          _isEditMode = widget.forceEdit ||
+              Supabase.instance.client.auth.currentUser
                   ?.userMetadata?['setup_complete'] == true;
           _usernameCtrl.text = username;
           _bioCtrl.text      = data['bio'] as String? ?? '';
@@ -176,7 +181,14 @@ class _SetupScreenState extends State<SetupScreen> {
       } catch (_) {/* metadata тавьж чадсангүй ч feed рүү явуулна */}
       authGate.refresh();
       if (!mounted) return;
-      context.go(AppRoutes.feed);
+      if (widget.forceEdit) {
+        // Засах горим — ирсэн газраа буцна (профайл/тохиргоо)
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Профайл хадгалагдлаа')));
+        context.canPop() ? context.pop() : context.go(AppRoutes.profile);
+      } else {
+        context.go(AppRoutes.feed);
+      }
     } on PostgrestException catch (e) {
       if (!mounted) return;
       setState(() => _error = e.code == '23505'
@@ -250,6 +262,10 @@ class _SetupScreenState extends State<SetupScreen> {
     );
   }
 
+  // Цайвар дэвсгэр дээр amber текст уншигдахгүй тул бараан amber
+  Color get _amberInk =>
+      AppColors.isDarkMode ? AppColors.amber : const Color(0xFF8A5A00);
+
   Widget _formView() => SingleChildScrollView(
     key: const ValueKey('form'),
     padding: const EdgeInsets.fromLTRB(20, 24, 20, 20),
@@ -268,10 +284,10 @@ class _SetupScreenState extends State<SetupScreen> {
                 border: Border.all(color: AppColors.amber.withValues(alpha: 0.3)),
               ),
               child: Row(children: [
-                const Icon(Icons.wifi_off_rounded, color: AppColors.amber, size: 16),
+                Icon(Icons.wifi_off_rounded, color: _amberInk, size: 16),
                 const SizedBox(width: 8),
                 Expanded(child: Text('Профайл ачаалж чадсангүй',
-                  style: AppTextStyles.bodySm.copyWith(color: AppColors.amber))),
+                  style: AppTextStyles.bodySm.copyWith(color: _amberInk))),
                 TapScale(
                   onTap: _loadExistingProfile,
                   child: Text('Дахин оролдох',
@@ -300,9 +316,11 @@ class _SetupScreenState extends State<SetupScreen> {
                     ),
                     child: Container(
                       padding: const EdgeInsets.all(2.5),
-                      decoration: const BoxDecoration(
+                      // Cutout — цайвар горимд sheet-ийн цагаан өнгөтэй нийлнэ
+                      decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: AppColors.bgBase,
+                        color: AppColors.isDarkMode
+                            ? AppColors.bgBase : AppColors.bgElevated,
                       ),
                       child: Container(
                         decoration: BoxDecoration(
@@ -321,7 +339,7 @@ class _SetupScreenState extends State<SetupScreen> {
                                   : null),
                         ),
                         child: (_avatarBytes == null && _avatarUrl == null)
-                            ? const Icon(Icons.person,
+                            ? Icon(Icons.person,
                                 color: AppColors.textTertiary, size: 40)
                             : null,
                       ),
@@ -335,7 +353,10 @@ class _SetupScreenState extends State<SetupScreen> {
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         gradient: AppColors.accentGradient,
-                        border: Border.all(color: AppColors.bgBase, width: 2.5),
+                        border: Border.all(
+                          color: AppColors.isDarkMode
+                              ? AppColors.bgBase : AppColors.bgElevated,
+                          width: 2.5),
                         boxShadow: AppColors.glowShadow(AppColors.accentStart),
                       ),
                       child: const Icon(Icons.camera_alt,
@@ -452,6 +473,11 @@ class _GlassSheet extends StatelessWidget {
   final Widget child;
   const _GlassSheet({required this.child});
 
+  static const List<BoxShadow> _lightShadow = [
+    BoxShadow(color: Color(0x1F1A0B2E), blurRadius: 30, offset: Offset(0, 12)),
+    BoxShadow(color: Color(0x0F1A0B2E), blurRadius: 8, offset: Offset(0, 3)),
+  ];
+
   @override
   Widget build(BuildContext context) => Container(
     width: double.infinity,
@@ -459,7 +485,8 @@ class _GlassSheet extends StatelessWidget {
       color: AppColors.bgElevated.withValues(alpha: 0.85),
       borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
       border: Border.all(color: AppColors.hairline2),
-      boxShadow: AppColors.shadowDock,
+      // Цайвар горимд хар 55% сүүдэр бохир харагдах тул зөөлөн ягаан сүүдэр
+      boxShadow: AppColors.isDarkMode ? AppColors.shadowDock : _lightShadow,
     ),
     child: ClipRRect(
       borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),

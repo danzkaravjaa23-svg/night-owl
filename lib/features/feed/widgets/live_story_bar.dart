@@ -12,12 +12,19 @@ import '../screens/story_viewer_screen.dart';
 
 // ─── Рингийн градиентууд ───
 // Үзсэн story — бүдэг саарал (идэвхгүй төлөв тод ялгарна)
-const _seenRing = LinearGradient(
+const _seenRingDark = LinearGradient(
   begin: Alignment.topLeft, end: Alignment.bottomRight,
   colors: [Color(0xFF3A3A44), Color(0xFF26262E)],
 );
+// Цайвар дэвсгэр дээр бараан саарал ринг хэт тод харагдана — hairline өнгөөр бүдэг
+const _seenRingLight = LinearGradient(
+  begin: Alignment.topLeft, end: Alignment.bottomRight,
+  colors: [AppColors.hairline2Light, AppColors.hairlineLight],
+);
+LinearGradient get _seenRing =>
+    AppColors.isDarkMode ? _seenRingDark : _seenRingLight;
 // Live — lime (зөвхөн live/success-д)
-const _liveRing = LinearGradient(
+LinearGradient get _liveRing => LinearGradient(
   begin: Alignment.topLeft, end: Alignment.bottomRight,
   colors: [AppColors.lime, AppColors.neonCyan],
 );
@@ -79,7 +86,8 @@ class LiveStoryBar extends ConsumerWidget {
               // Viewer хаагдмагц үзсэн/үзээгүй рингийн төлөвийг сэргээнэ
               // (StoryService.markViewed story_views руу бичсэн ч provider
               //  дахин ачаалахгүй бол gradient ринг худал асаалттай үлддэг).
-              await Navigator.of(context).push(PageRouteBuilder(
+              // Root navigator — dock/FAB viewer-ийн дээгүүр зурагдахгүй
+              await Navigator.of(context, rootNavigator: true).push(PageRouteBuilder(
                 opaque: false,
                 pageBuilder: (_, __, ___) =>
                     StoryViewerScreen(rings: rings, initialRingIndex: idx),
@@ -134,7 +142,7 @@ class _RingItem extends StatelessWidget {
               ),
               child: Container(
                 padding: const EdgeInsets.all(2),
-                decoration: const BoxDecoration(
+                decoration: BoxDecoration(
                   shape: BoxShape.circle, color: AppColors.bgBase),
                 child: AppAvatar(imageUrl: avatarUrl, initial: initial, size: 52),
               ),
@@ -187,7 +195,7 @@ class _LivePulseBadgeState extends State<_LivePulseBadge>
       ),
       child: child,
     ),
-    child: Text(widget.text, style: const TextStyle(
+    child: Text(widget.text, style: TextStyle(
       color: AppColors.bgBase, fontSize: 8,
       fontWeight: FontWeight.w900, letterSpacing: 0.4)),
   );

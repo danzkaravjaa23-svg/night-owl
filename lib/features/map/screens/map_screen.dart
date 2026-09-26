@@ -68,7 +68,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
               decoration: _glassDeco(),
               child: Row(mainAxisSize: MainAxisSize.min, children: [
-                const Icon(Icons.map_rounded,
+                Icon(Icons.map_rounded,
                     color: AppColors.neonCyan, size: 17),
                 const SizedBox(width: 7),
                 Text('Газрын зураг', style: AppTextStyles.labelMd.copyWith(
@@ -201,7 +201,7 @@ class _MapLoading extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     color: AppColors.bgBase,
     child: Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-      const CircularProgressIndicator(
+      CircularProgressIndicator(
           color: AppColors.neonCyan, strokeWidth: 2),
       const SizedBox(height: 16),
       Text('Газрын зураг ачааллаж байна…',
@@ -219,7 +219,7 @@ class _MapError extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     color: AppColors.bgBase,
     child: Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-      const Icon(Icons.wifi_off_outlined,
+      Icon(Icons.wifi_off_outlined,
           color: AppColors.textTertiary, size: 44),
       const SizedBox(height: 14),
       Text('Газрууд ачаалж чадсангүй', style: AppTextStyles.h3),
@@ -313,7 +313,7 @@ class _VenueMapCard extends StatelessWidget {
                       const SizedBox(width: 8),
                     ],
                     if (venue.checkinCount > 0) ...[
-                      const Icon(Icons.people_alt_rounded,
+                      Icon(Icons.people_alt_rounded,
                           size: 12, color: AppColors.neonCyan),
                       const SizedBox(width: 3),
                       Text('${venue.checkinCount}',
@@ -338,7 +338,7 @@ class _VenueMapCard extends StatelessWidget {
                     color: AppColors.neonCyan.withValues(alpha: 0.14),
                     border: Border.all(
                         color: AppColors.neonCyan.withValues(alpha: 0.5))),
-                  child: const Icon(Icons.arrow_forward_ios_rounded,
+                  child: Icon(Icons.arrow_forward_ios_rounded,
                       color: AppColors.neonCyan, size: 12)),
               ),
             ),
@@ -350,7 +350,7 @@ class _VenueMapCard extends StatelessWidget {
 
   Widget _imgFallback() => Container(
     color: AppColors.bgSurface,
-    child: const Center(child: Icon(Icons.local_bar_outlined,
+    child: Center(child: Icon(Icons.local_bar_outlined,
         color: AppColors.textTertiary, size: 26)),
   );
 }

@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:ui';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -47,12 +48,39 @@ class _MainShellState extends State<MainShell> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    final shell = Scaffold(
       backgroundColor: AppColors.bgBase,
       extendBody: true, // floating bar контентын дээгүүр хөвнө
       body: widget.child,
       bottomNavigationBar: _BottomNav(),
     );
+    if (kIsWeb) return shell; // web-д browser back history-гоор явна
+    final atFeed = _atFeed;
+    return BackButtonListener(
+      onBackButtonPressed: _onBack,
+      // Feed биш tab дээр predictive back-ийг систем биш Flutter хүлээж авна
+      child: PopScope(
+        canPop: atFeed,
+        child: NotificationListener<NavigationNotification>(
+          // Shell navigator-ийн "pop боломжгүй" мэдэгдэл PopScope-ийг дарахгүй байх
+          onNotification: (n) {
+            if (atFeed || n.canHandlePop) return false;
+            const NavigationNotification(canHandlePop: true).dispatch(context);
+            return true;
+          },
+          child: shell,
+        ),
+      ),
+    );
+  }
+
+  bool get _atFeed => GoRouterState.of(context).uri.path == AppRoutes.feed;
+
+  // Feed биш tab дээр pop хийх зүйлгүй бол back → Feed (аппаас гарахгүй)
+  Future<bool> _onBack() async {
+    if (_atFeed || GoRouter.of(context).canPop()) return false;
+    context.go(AppRoutes.feed);
+    return true;
   }
 }
 
@@ -67,6 +95,11 @@ class _BottomNav extends ConsumerWidget {
   // Доод ирмэгээс хөвөх зай — токеноос ухаж авна (92 - 62 - 16 = 14)
   static const double _dockMargin =
       AppSpacing.dockClearance - _dockHeight - _fabLift;
+  // Цайвар горимын док сүүдэр — shadowDock-той ижил хэлбэр, бүдэг нил ягаан өнгө
+  static const List<BoxShadow> _shadowDockLight = [
+    BoxShadow(color: Color(0x261A0B2E), blurRadius: 30, offset: Offset(0, 12)),
+    BoxShadow(color: Color(0x141A0B2E), blurRadius: 8, offset: Offset(0, 3)),
+  ];
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -91,7 +124,10 @@ class _BottomNav extends ConsumerWidget {
               child: DecoratedBox(
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(31),
-                  boxShadow: AppColors.shadowDock,
+                  // Цайвар горимд хар сүүдэр цөцгий дэвсгэр дээр бохир харагдана — зөөлөн хувилбар
+                  boxShadow: AppColors.isDarkMode
+                      ? AppColors.shadowDock
+                      : _shadowDockLight,
                 ),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(31),
@@ -532,7 +568,7 @@ class _CreateOption extends StatelessWidget {
             Text(subtitle, style: AppTextStyles.bodyXs.copyWith(
                 color: AppColors.textSecondary)),
           ])),
-          const Icon(Icons.chevron_right, color: AppColors.textTertiary),
+          Icon(Icons.chevron_right, color: AppColors.textTertiary),
         ]),
       ),
     ),

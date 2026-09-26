@@ -4,6 +4,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart' show SystemUiOverlayStyle;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -246,6 +247,8 @@ class _CreateStoryScreenState extends ConsumerState<CreateStoryScreen> {
         _videoDurationSecs = (secs ?? 5).clamp(3, 60).round();
         _videoPreviewUrl = createBlobUrl(v.bytes, mime);
       });
+    } on VideoTooLargeException catch (e) {
+      if (mounted) _toast('Видео хэт том байна (дээд тал нь ${e.limitMb} MB)');
     } catch (e) {
       if (mounted) _toast('Видео сонгоход алдаа гарлаа');
     }
@@ -273,6 +276,8 @@ class _CreateStoryScreenState extends ConsumerState<CreateStoryScreen> {
 
   Future<void> _editText() async {
     final ctrl = TextEditingController(text: _text);
+    // Диалог/sheet нь энгийн UI гадаргуу — theme-ийг дагана
+    // (зөвхөн story канвас өөрөө үргэлж харанхуй)
     final res = await showDialog<String>(
       context: context,
       builder: (_) => AlertDialog(
@@ -280,9 +285,9 @@ class _CreateStoryScreenState extends ConsumerState<CreateStoryScreen> {
         title: Text('Текст', style: AppTextStyles.labelLg),
         content: TextField(
           controller: ctrl, autofocus: true, maxLines: 3,
-          style: const TextStyle(color: Colors.white),
-          decoration: const InputDecoration(hintText: 'Текст бичих...',
-            hintStyle: TextStyle(color: Colors.white38)),
+          style: TextStyle(color: AppColors.textPrimary),
+          decoration: InputDecoration(hintText: 'Текст бичих...',
+            hintStyle: TextStyle(color: AppColors.textTertiary)),
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context),
@@ -497,8 +502,12 @@ class _CreateStoryScreenState extends ConsumerState<CreateStoryScreen> {
         }
         // 500к scale — story зургийг JPEG болгож багасгана (PNG bake том байдаг)
         out = await compressToJpeg(out);
+        // Native дээр compress байхгүй — PNG bake хэвээр ирвэл PNG гэж хадгална
+        final isPng = out.length >= 4 && out[0] == 0x89 && out[1] == 0x50
+            && out[2] == 0x4E && out[3] == 0x47;
         url = await ImageUploader.uploadStory(out,
-            ext: 'jpg', contentType: 'image/jpeg')
+            ext: isPng ? 'png' : 'jpg',
+            contentType: isPng ? 'image/png' : 'image/jpeg')
             .timeout(const Duration(seconds: 60));
       }
 
@@ -831,6 +840,8 @@ class _CreateStoryScreenState extends ConsumerState<CreateStoryScreen> {
     backgroundColor: Colors.black,
     appBar: AppBar(
       backgroundColor: Colors.black, elevation: 0,
+      // Үргэлж харанхуй — light горимд ч статус бар цайвар дүрстэй
+      systemOverlayStyle: SystemUiOverlayStyle.light,
       leading: IconButton(onPressed: () {
         if (context.canPop()) { context.pop(); } else { context.go('/feed'); }
       },
@@ -854,7 +865,7 @@ class _CreateStoryScreenState extends ConsumerState<CreateStoryScreen> {
       _Pressable(onTap: onTap, child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
         decoration: BoxDecoration(
-          color: AppColors.bgSurface, borderRadius: BorderRadius.circular(14)),
+          color: AppColors.bgSurfaceDark, borderRadius: BorderRadius.circular(14)),
         child: Column(mainAxisSize: MainAxisSize.min, children: [
           Icon(icon, color: Colors.white, size: 26),
           const SizedBox(height: 6),
@@ -1004,7 +1015,7 @@ class _PickerSheetState extends State<_PickerSheet> {
           onChanged: _onQueryChanged,
           decoration: InputDecoration(
             hintText: isVenue ? 'Газар хайх...' : '@ хэрэглэгч хайх...',
-            prefixIcon: const Icon(Icons.search, color: AppColors.textTertiary),
+            prefixIcon: Icon(Icons.search, color: AppColors.textTertiary),
             filled: true, fillColor: AppColors.bgSurface, isDense: true,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none)),
@@ -1046,7 +1057,7 @@ class _PickerSheetState extends State<_PickerSheet> {
                             ? NetworkImage(r['avatar_url'] as String) : null,
                         child: r['avatar_url'] == null
                             ? Text(uname.isNotEmpty ? uname[0].toUpperCase() : '?',
-                                style: const TextStyle(color: Colors.white)) : null),
+                                style: TextStyle(color: AppColors.textPrimary)) : null),
                       title: Text('@$uname',
                           style: AppTextStyles.bodyMd.copyWith(color: AppColors.textPrimary)),
                       onTap: () => Navigator.pop(context, r),

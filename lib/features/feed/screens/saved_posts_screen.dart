@@ -70,7 +70,7 @@ class _SavedPostsScreenState extends State<SavedPostsScreen> {
                       shape: BoxShape.circle,
                       color: AppColors.bgElevated.withValues(alpha: 0.72),
                       border: Border.all(color: AppColors.hairline)),
-                    child: const Icon(Icons.arrow_back_ios_new,
+                    child: Icon(Icons.arrow_back_ios_new,
                         size: 16, color: AppColors.textPrimary)))),
               const SizedBox(width: 14),
               Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -87,7 +87,7 @@ class _SavedPostsScreenState extends State<SavedPostsScreen> {
             ? const _SkeletonMasonry()
             : _error
               ? Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-                  const Icon(Icons.wifi_off_outlined, size: 48, color: AppColors.textTertiary),
+                  Icon(Icons.wifi_off_outlined, size: 48, color: AppColors.textTertiary),
                   const SizedBox(height: 12),
                   Text('Алдаа гарлаа', style: AppTextStyles.h2),
                   const SizedBox(height: 6),
@@ -97,7 +97,7 @@ class _SavedPostsScreenState extends State<SavedPostsScreen> {
                   OutlinedButton(
                     onPressed: () { setState(() => _loading = true); _load(); },
                     style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: AppColors.hairline),
+                      side: BorderSide(color: AppColors.hairline),
                       foregroundColor: AppColors.accentStart),
                     child: const Text('Дахин оролдох'),
                   ),
@@ -174,7 +174,7 @@ class _SavedPostsScreenState extends State<SavedPostsScreen> {
                     fadeInDuration: const Duration(milliseconds: 150),
                     placeholder: (_, __) => Container(color: AppColors.bgSurface),
                     errorWidget: (_, __, ___) => Container(color: AppColors.bgSurface,
-                      child: const Icon(Icons.image_not_supported_outlined,
+                      child: Icon(Icons.image_not_supported_outlined,
                         color: AppColors.textTertiary)))
                 else if (isVideo && url != null)
                   // Видеоны эхний кадрыг cover болгож харуулна (+ play icon)

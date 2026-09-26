@@ -91,6 +91,10 @@ class AuthNotifier extends StateNotifier<AsyncValue<UserProfile?>> {
   }
 }
 
+/// Хэрэглэгч пост/reel нийтэлсэн бүрт нэмэгдэнэ — профайлын grid, тоо
+/// энийг watch хийж өөрсдийгөө шинэчилнэ (ProfileScreen доор нь mounted хэвээр).
+final postsVersionProvider = StateProvider<int>((ref) => 0);
+
 final authNotifierProvider =
     StateNotifierProvider<AuthNotifier, AsyncValue<UserProfile?>>(
         (_) => AuthNotifier());

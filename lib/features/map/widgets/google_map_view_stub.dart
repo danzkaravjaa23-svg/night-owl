@@ -25,7 +25,7 @@ class GoogleMapView extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Center(
     child: Column(mainAxisSize: MainAxisSize.min, children: [
-      const Icon(Icons.map_outlined, size: 64, color: AppColors.textTertiary),
+      Icon(Icons.map_outlined, size: 64, color: AppColors.textTertiary),
       const SizedBox(height: 16),
       Text('Газрын зураг', style: AppTextStyles.h2),
       const SizedBox(height: 16),

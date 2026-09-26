@@ -258,7 +258,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 color: AppColors.success.withValues(alpha: 0.25),
                 blurRadius: 36, spreadRadius: -6)],
             ),
-            child: const Icon(Icons.mark_email_read_outlined,
+            child: Icon(Icons.mark_email_read_outlined,
               color: AppColors.success, size: 40),
           ),
           const SizedBox(height: 24),
@@ -388,7 +388,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           : [],
                     ),
                     child: _agreedTos
-                        ? const Icon(Icons.check_rounded, size: 15, color: AppColors.bgBase)
+                        ? Icon(Icons.check_rounded, size: 15, color: AppColors.bgBase)
                         : null,
                   ),
                   const SizedBox(width: 11),
@@ -448,7 +448,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   ? 'Түр хүлээнэ үү...'
                   : 'Google-ээр үргэлжлүүлэх',
               leading: _gLoading
-                  ? const SizedBox(width: 16, height: 16,
+                  ? SizedBox(width: 16, height: 16,
                       child: CircularProgressIndicator(
                         strokeWidth: 2, color: AppColors.textSecondary))
                   : const GoogleMark(),
@@ -469,6 +469,11 @@ class _GlassSheet extends StatelessWidget {
   final Widget child;
   const _GlassSheet({required this.child});
 
+  static const List<BoxShadow> _lightShadow = [
+    BoxShadow(color: Color(0x1F1A0B2E), blurRadius: 30, offset: Offset(0, 12)),
+    BoxShadow(color: Color(0x0F1A0B2E), blurRadius: 8, offset: Offset(0, 3)),
+  ];
+
   @override
   Widget build(BuildContext context) => Container(
     width: double.infinity,
@@ -476,7 +481,8 @@ class _GlassSheet extends StatelessWidget {
       color: AppColors.bgElevated.withValues(alpha: 0.85),
       borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
       border: Border.all(color: AppColors.hairline2),
-      boxShadow: AppColors.shadowDock,
+      // Цайвар горимд хар 55% сүүдэр бохир харагдах тул зөөлөн ягаан сүүдэр
+      boxShadow: AppColors.isDarkMode ? AppColors.shadowDock : _lightShadow,
     ),
     child: ClipRRect(
       borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),

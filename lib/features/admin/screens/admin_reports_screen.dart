@@ -99,7 +99,7 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen> {
 
   Future<void> _banUser(String userId, String reportId) async {
     final okConfirm = await _confirm('Хэрэглэгчийг хориглох уу?',
-        'Энэ хэрэглэгч аппд нэвтрэх боломжгүй болно.', 'Хориглох');
+        'Энэ хэрэглэгч пост, сэтгэгдэл бичих боломжгүй болж, постууд нь feed-ээс нуугдана.', 'Хориглох');
     if (!okConfirm) return;
     if (!mounted) return;
     setState(() => _busy = '$reportId:ban');
@@ -168,7 +168,7 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen> {
         actions: [
           if (isAdmin)
             IconButton(onPressed: _load,
-              icon: const Icon(Icons.refresh, color: AppColors.textPrimary)),
+              icon: Icon(Icons.refresh, color: AppColors.textPrimary)),
         ],
       ),
       body: profileAsync.isLoading
@@ -177,7 +177,7 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen> {
           : !isAdmin
               // URL-ээр шууд орж ирэхээс хамгаална — зөвхөн админ
               ? Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-                  const Icon(Icons.lock_outline, size: 56, color: AppColors.textTertiary),
+                  Icon(Icons.lock_outline, size: 56, color: AppColors.textTertiary),
                   const SizedBox(height: 12),
                   Text('Хандах эрхгүй', style: AppTextStyles.h2),
                   const SizedBox(height: 6),
@@ -258,7 +258,7 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen> {
             label: const Text('Үзэх'),
             style: OutlinedButton.styleFrom(
               foregroundColor: AppColors.textPrimary,
-              side: const BorderSide(color: AppColors.hairline2),
+              side: BorderSide(color: AppColors.hairline2),
               minimumSize: const Size(0, 40)),
           )),
           const SizedBox(width: 8),
@@ -288,7 +288,7 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen> {
               foregroundColor: AppColors.textSecondary,
               minimumSize: const Size(0, 40)),
             child: _busy == '$reportId:resolve'
-              ? const SizedBox(width: 16, height: 16,
+              ? SizedBox(width: 16, height: 16,
                   child: CircularProgressIndicator(
                     strokeWidth: 2, color: AppColors.textSecondary))
               : const Text('Шийдсэн'),
@@ -326,7 +326,9 @@ class _SkeletonCardsState extends State<_SkeletonCards>
       itemBuilder: (_, __) => Container(
         height: 108,
         decoration: BoxDecoration(
-          color: AppColors.bgElevated,
+          // Цайвар горимд цагаан skeleton цөцгий дэвсгэр дээр үл харагдана — surface
+          color: AppColors.isDarkMode
+              ? AppColors.bgElevated : AppColors.bgSurface,
           borderRadius: BorderRadius.circular(14)),
       ),
     ),

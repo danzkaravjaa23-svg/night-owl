@@ -1,14 +1,21 @@
 import 'dart:async';
 import 'dart:convert';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show SystemUiOverlayStyle;
 import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_avatar.dart';
 import '../../../core/services/supabase_service.dart';
 import '../utils/live_unload.dart';
 import '../widgets/tap_scale.dart';
+
+/// Live дэлгэц горимоос үл хамааран ҮРГЭЛЖ харанхуй — Material-ийн анхдагч
+/// өнгө (SnackBar текст г.м) dark theme-ээс авна. Dark горимд өөрчлөлтгүй.
+final ThemeData _alwaysDarkTheme = AppTheme.dark;
 
 class LiveViewerScreen extends StatefulWidget {
   final String liveId;
@@ -35,13 +42,20 @@ class _LiveViewerScreenState extends State<LiveViewerScreen> {
   bool _loadError = false;
   bool _counted = false;     // increment оролдсон эсэх
   bool _incremented = false; // increment амжилттай болсон эсэх
+  bool _incrementing = false; // increment хүсэлт явж байгаа эсэх
+  bool _hidden = false;       // апп background-д орсон эсэх (native)
   bool _disposed = false;
+  AppLifecycleListener? _lifecycle;
 
   String get _myId => SupabaseService.currentUser?.id ?? '';
 
   @override
   void initState() {
     super.initState();
+    // Native: background-оос апп хаагдвал dispose ажиллахгүй тул нуугдахад хасна
+    if (!kIsWeb) {
+      _lifecycle = AppLifecycleListener(onHide: _onHide, onShow: _onShow);
+    }
     _load();
     _subscribeComments();
     _subscribeStream();
@@ -82,19 +96,42 @@ class _LiveViewerScreenState extends State<LiveViewerScreen> {
       // Viewer count +1 (нэг л удаа, амжилттай болсон үед л буцааж хасна)
       if (!_counted && s['is_live'] == true) {
         _counted = true;
-        SupabaseService.client.rpc('increment_viewer',
-            params: {'p_stream': widget.liveId}).then((_) {
-          if (_disposed) {
-            // Дэлгэц аль хэдийн хаагдчихсан — шууд буцааж хасна
-            _decrement();
-          } else {
-            _incremented = true;
-            _registerUnloadDecrement();
-          }
-        }).catchError((_) {});
+        _increment();
       }
     } catch (_) {
       if (mounted) setState(() { _loading = false; _loadError = true; });
+    }
+  }
+
+  void _increment() {
+    _incrementing = true;
+    SupabaseService.client.rpc('increment_viewer',
+        params: {'p_stream': widget.liveId}).then((_) {
+      _incrementing = false;
+      if (_disposed || _hidden) {
+        // Дэлгэц хаагдсан/апп нуугдсан — шууд буцааж хасна
+        _decrement();
+      } else {
+        _incremented = true;
+        _registerUnloadDecrement();
+      }
+    }).catchError((_) {
+      _incrementing = false;
+    });
+  }
+
+  void _onHide() {
+    _hidden = true;
+    if (_incremented) {
+      _incremented = false;
+      _decrement();
+    }
+  }
+
+  void _onShow() {
+    _hidden = false;
+    if (_counted && !_incremented && !_incrementing && !_ended && mounted) {
+      _increment();
     }
   }
 
@@ -220,6 +257,7 @@ class _LiveViewerScreenState extends State<LiveViewerScreen> {
   @override
   void dispose() {
     _disposed = true;
+    _lifecycle?.dispose();
     if (_incremented) _decrement();
     unregisterUnloadRequest('live-viewer-${widget.liveId}');
     _commentSub?.cancel();
@@ -243,7 +281,7 @@ class _LiveViewerScreenState extends State<LiveViewerScreen> {
         ? username.replaceAll('@', '')[0].toUpperCase() : '?';
     final showError = _loadError && _stream == null;
 
-    return Scaffold(
+    final page = Theme(data: _alwaysDarkTheme, child: Scaffold(
       backgroundColor: Colors.black,
       body: Stack(children: [
         // ── Видео талбай (LiveKit залгах хүртэл placeholder) ──
@@ -264,7 +302,7 @@ class _LiveViewerScreenState extends State<LiveViewerScreen> {
                     const SizedBox(height: 14),
                     Text('Мэдээлэл ачаалж чадсангүй',
                       style: AppTextStyles.bodyMd.copyWith(
-                        color: AppColors.textSecondary)),
+                        color: AppColors.textSecondaryDark)),
                     const SizedBox(height: 14),
                     TapScale(
                       onTap: _load,
@@ -282,16 +320,16 @@ class _LiveViewerScreenState extends State<LiveViewerScreen> {
                     mainAxisSize: MainAxisSize.min, children: [
                     _ended
                         ? AppAvatar(imageUrl: avatarUrl, initial: initial,
-                            size: 96, showRing: true)
+                            size: 96, showRing: true, onDark: true)
                         : _PulseAvatar(avatarUrl: avatarUrl, initial: initial),
                     const SizedBox(height: 18),
                     if (_ended)
-                      Text('Live дууслаа', style: AppTextStyles.h2)
+                      Text('Live дууслаа', style: AppTextStyles.h2.onDark)
                     else ...[
-                      Text(username.replaceAll('@', ''), style: AppTextStyles.h2),
+                      Text(username.replaceAll('@', ''), style: AppTextStyles.h2.onDark),
                       const SizedBox(height: 6),
                       Text('🔴 Шууд дамжуулж байна',
-                        style: AppTextStyles.bodyMd.copyWith(color: AppColors.textSecondary)),
+                        style: AppTextStyles.bodyMd.copyWith(color: AppColors.textSecondaryDark)),
                       const SizedBox(height: 6),
                       // Видео дамжуулалт (WebRTC) хараахан залгагдаагүй тул
                       // хэрэглэгчид чат горимд байгааг илэн далангүй мэдэгдэнэ
@@ -300,7 +338,7 @@ class _LiveViewerScreenState extends State<LiveViewerScreen> {
                         child: Text(
                           'Одоохондоо чат горимд — сэтгэгдэл бичээд оролцоорой',
                           textAlign: TextAlign.center,
-                          style: AppTextStyles.bodyXs.copyWith(color: AppColors.textTertiary))),
+                          style: AppTextStyles.bodyXs.copyWith(color: AppColors.textTertiaryDark))),
                     ],
                   ]),
           )),
@@ -318,8 +356,8 @@ class _LiveViewerScreenState extends State<LiveViewerScreen> {
                 margin: const EdgeInsets.only(right: 8),
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: AppColors.bgElevated.withValues(alpha: 0.72),
-                  border: Border.all(color: AppColors.hairline2)),
+                  color: AppColors.bgElevatedDark.withValues(alpha: 0.72),
+                  border: Border.all(color: AppColors.hairline2Dark)),
                 alignment: Alignment.center,
                 child: const Icon(Icons.arrow_back_ios_new,
                   color: Colors.white, size: 18))),
@@ -340,12 +378,12 @@ class _LiveViewerScreenState extends State<LiveViewerScreen> {
                 child: Container(
                   padding: const EdgeInsets.fromLTRB(4, 4, 14, 4),
                   decoration: BoxDecoration(
-                    color: AppColors.bgElevated.withValues(alpha: 0.72),
+                    color: AppColors.bgElevatedDark.withValues(alpha: 0.72),
                     borderRadius: BorderRadius.circular(999),
-                    border: Border.all(color: AppColors.hairline2),
+                    border: Border.all(color: AppColors.hairline2Dark),
                     boxShadow: AppColors.shadowCard),
                   child: Row(mainAxisSize: MainAxisSize.min, children: [
-                    AppAvatar(imageUrl: avatarUrl, initial: initial, size: 34),
+                    AppAvatar(imageUrl: avatarUrl, initial: initial, size: 34, onDark: true),
                     const SizedBox(width: 8),
                     Flexible(child: Column(
                       mainAxisSize: MainAxisSize.min,
@@ -370,9 +408,9 @@ class _LiveViewerScreenState extends State<LiveViewerScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                 decoration: BoxDecoration(
-                  color: AppColors.bgElevated.withValues(alpha: 0.72),
+                  color: AppColors.bgElevatedDark.withValues(alpha: 0.72),
                   borderRadius: BorderRadius.circular(999),
-                  border: Border.all(color: AppColors.hairline2)),
+                  border: Border.all(color: AppColors.hairline2Dark)),
                 child: Row(mainAxisSize: MainAxisSize.min, children: [
                   const Icon(Icons.visibility_rounded, color: Colors.white, size: 13),
                   const SizedBox(width: 4),
@@ -444,13 +482,13 @@ class _LiveViewerScreenState extends State<LiveViewerScreen> {
                       contentPadding: const EdgeInsets.symmetric(
                         horizontal: 18, vertical: 12),
                       filled: true,
-                      fillColor: AppColors.bgElevated.withValues(alpha: 0.72),
+                      fillColor: AppColors.bgElevatedDark.withValues(alpha: 0.72),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(999),
-                        borderSide: const BorderSide(color: AppColors.hairline2)),
+                        borderSide: const BorderSide(color: AppColors.hairline2Dark)),
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(999),
-                        borderSide: const BorderSide(color: AppColors.hairline2)),
+                        borderSide: const BorderSide(color: AppColors.hairline2Dark)),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(999),
                         borderSide: const BorderSide(color: Colors.white70))))),
@@ -477,13 +515,20 @@ class _LiveViewerScreenState extends State<LiveViewerScreen> {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 26, vertical: 12),
                 decoration: BoxDecoration(
-                  color: AppColors.bgSurface,
+                  color: AppColors.bgSurfaceDark,
                   borderRadius: BorderRadius.circular(24),
-                  border: Border.all(color: AppColors.hairline)),
+                  border: Border.all(color: AppColors.hairlineDark)),
                 child: Text('Буцах', style: AppTextStyles.btn.copyWith(
-                  color: AppColors.textPrimary)))))),
+                  color: AppColors.textPrimaryDark)))))),
       ]),
-    );
+    ));
+    if (kIsWeb) return page;
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.light.copyWith(
+        statusBarColor: Colors.transparent,
+        systemNavigationBarColor: Colors.transparent,
+        systemNavigationBarContrastEnforced: false),
+      child: page);
   }
 }
 
@@ -575,7 +620,7 @@ class _PulseAvatarState extends State<_PulseAvatar>
                 width: 2)));
         }),
       AppAvatar(imageUrl: widget.avatarUrl, initial: widget.initial,
-        size: 96, showRing: true),
+        size: 96, showRing: true, onDark: true),
     ]));
 }
 

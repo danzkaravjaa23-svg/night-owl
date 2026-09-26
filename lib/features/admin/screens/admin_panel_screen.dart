@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/services/supabase_service.dart';
+import '../../../core/router/app_router.dart';
 import '../../auth/providers/auth_provider.dart';
 
 /// Админ панел — зөвхөн is_admin хэрэглэгч. Статистик + удирдлагын хэсгүүд.
@@ -54,26 +55,47 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final profile = ref.watch(currentProfileProvider).value;
-    final isAdmin = profile?.isAdmin ?? false;
+    final profAsync = ref.watch(currentProfileProvider);
+    // Cold load (web reload/deep link) — профайл ачаалж дуустал 'Хандах эрхгүй'
+    // гэж анивчуулахгүй, spinner харуулна
+    if (profAsync.isLoading && !profAsync.hasValue) {
+      return Scaffold(
+        backgroundColor: AppColors.bgBase,
+        // Ачаалал гацсан ч гарах зам үлдэнэ
+        appBar: AppBar(
+          backgroundColor: AppColors.bgBase,
+          leading: IconButton(
+            onPressed: () => context.canPop()
+                ? context.pop()
+                : context.go(AppRoutes.profile),
+            icon: const Icon(Icons.arrow_back_ios_new, size: 20)),
+        ),
+        body: const Center(child: CircularProgressIndicator(
+            color: AppColors.accentStart, strokeWidth: 2)),
+      );
+    }
+    final isAdmin = profAsync.value?.isAdmin ?? false;
 
     return Scaffold(
       backgroundColor: AppColors.bgBase,
       appBar: AppBar(
         backgroundColor: AppColors.bgBase,
+        // Reload/deep link үед stack хоосон байж болно — profile руу fallback
         leading: IconButton(
-          onPressed: () => context.pop(),
+          onPressed: () => context.canPop()
+              ? context.pop()
+              : context.go(AppRoutes.profile),
           icon: const Icon(Icons.arrow_back_ios_new, size: 20)),
         title: Text('Админ панел', style: AppTextStyles.h2),
         actions: [
           if (isAdmin)
             IconButton(onPressed: () { setState(() => _loading = true); _loadStats(); },
-              icon: const Icon(Icons.refresh, color: AppColors.textPrimary)),
+              icon: Icon(Icons.refresh, color: AppColors.textPrimary)),
         ],
       ),
       body: !isAdmin
           ? Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-              const Icon(Icons.lock_outline, size: 56, color: AppColors.textTertiary),
+              Icon(Icons.lock_outline, size: 56, color: AppColors.textTertiary),
               const SizedBox(height: 12),
               Text('Хандах эрхгүй', style: AppTextStyles.h2),
               const SizedBox(height: 6),
@@ -100,10 +122,10 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
               const SizedBox(height: 8),
               _tile(Icons.flag_outlined, 'Мэдээллүүд',
                   'Хэрэглэгчдийн мэдээлсэн контент',
-                  () => context.push('/admin/reports')),
+                  () => context.push(AppRoutes.adminReports)),
               _tile(Icons.people_outline, 'Хэрэглэгчид',
                   'Хайх, хориглох / сэргээх',
-                  () => context.push('/admin/users')),
+                  () => context.push(AppRoutes.adminUsers)),
             ]),
     );
   }
@@ -127,25 +149,30 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
     ),
   );
 
-  Widget _tile(IconData icon, String title, String sub, VoidCallback onTap) => GestureDetector(
-    onTap: onTap,
-    child: Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppColors.bgElevated,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.hairline),
+  // Web дээр pointer cursor — аппын бусад товчтой адил MouseRegion-оор ороосон
+  Widget _tile(IconData icon, String title, String sub, VoidCallback onTap) => MouseRegion(
+    cursor: SystemMouseCursors.click,
+    child: GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 10),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: AppColors.bgElevated,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: AppColors.hairline),
+        ),
+        child: Row(children: [
+          Icon(icon, color: AppColors.accentStart, size: 22),
+          const SizedBox(width: 12),
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(title, style: AppTextStyles.labelMd.copyWith(color: AppColors.textPrimary)),
+            Text(sub, style: AppTextStyles.bodyXs.copyWith(color: AppColors.textSecondary)),
+          ])),
+          Icon(Icons.chevron_right, color: AppColors.textTertiary),
+        ]),
       ),
-      child: Row(children: [
-        Icon(icon, color: AppColors.accentStart, size: 22),
-        const SizedBox(width: 12),
-        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(title, style: AppTextStyles.labelMd.copyWith(color: AppColors.textPrimary)),
-          Text(sub, style: AppTextStyles.bodyXs.copyWith(color: AppColors.textSecondary)),
-        ])),
-        const Icon(Icons.chevron_right, color: AppColors.textTertiary),
-      ]),
     ),
   );
 }

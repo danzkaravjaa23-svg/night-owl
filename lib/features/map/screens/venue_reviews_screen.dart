@@ -197,12 +197,16 @@ class _VenueDetailScreenState extends ConsumerState<VenueDetailScreen> {
                       ? CachedNetworkImage(imageUrl: cover, fit: BoxFit.cover,
                           errorWidget: (_, __, ___) => _coverFallback(type))
                       : _coverFallback(type),
-                    // Доод scrim — хөвөгч карт руу зөөлөн уусна
-                    const DecoratedBox(decoration: BoxDecoration(
+                    // Доод scrim — хөвөгч карт руу зөөлөн уусна.
+                    // Хуудасны дэвсгэр рүү уусдаг тул цайвар горимд cream өнгө рүү.
+                    DecoratedBox(decoration: BoxDecoration(
                       gradient: LinearGradient(
                         begin: Alignment.topCenter, end: Alignment.bottomCenter,
-                        stops: [0.4, 1.0],
-                        colors: [Colors.transparent, Color(0xE6050505)]))),
+                        stops: const [0.4, 1.0],
+                        colors: AppColors.isDarkMode
+                          ? const [Colors.transparent, Color(0xE6050505)]
+                          : [AppColors.bgBaseLight.withValues(alpha: 0),
+                             AppColors.bgBaseLight.withValues(alpha: 0.9)]))),
                   ]))),
               // ── Контент — 240-с эхэлж info card hero дээр 40px давхарлана ──
               Padding(
@@ -273,7 +277,7 @@ class _VenueDetailScreenState extends ConsumerState<VenueDetailScreen> {
         if (_venue?['open_time'] != null && (_venue!['open_time'] as String).isNotEmpty) ...[
           const SizedBox(height: 10),
           Row(children: [
-            const Icon(Icons.schedule, size: 15, color: AppColors.textSecondary),
+            Icon(Icons.schedule, size: 15, color: AppColors.textSecondary),
             const SizedBox(width: 6),
             Text('${_venue!['open_time']} - ${_venue?['close_time'] ?? ''}',
               style: AppTextStyles.bodySm.copyWith(color: AppColors.textPrimary)),
@@ -331,13 +335,13 @@ class _VenueDetailScreenState extends ConsumerState<VenueDetailScreen> {
               borderRadius: AppRadii.lgR,
               border: Border.all(color: AppColors.hairline)),
             child: Row(children: [
-              const Icon(Icons.rate_review_outlined,
+              Icon(Icons.rate_review_outlined,
                 color: AppColors.textTertiary, size: 22),
               const SizedBox(width: 12),
               Expanded(child: Text('Сэтгэгдэл байхгүй — анхных нь бай!',
                 style: AppTextStyles.bodySm.copyWith(
                   color: AppColors.textSecondary))),
-              const Icon(Icons.arrow_forward_ios_rounded,
+              Icon(Icons.arrow_forward_ios_rounded,
                 color: AppColors.neonCyan, size: 14),
             ]),
           ),
@@ -380,9 +384,9 @@ class _VenueDetailScreenState extends ConsumerState<VenueDetailScreen> {
   );
 
   // ── Ачаалж байх үеийн skeleton — шинэ layout-ын хэлбэрээр ──
-  Widget _skeleton() => const Scaffold(
+  Widget _skeleton() => Scaffold(
     backgroundColor: AppColors.bgBase,
-    body: SingleChildScrollView(
+    body: const SingleChildScrollView(
       physics: NeverScrollableScrollPhysics(),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         _SkelBox(height: 240, radius: 0), // hero

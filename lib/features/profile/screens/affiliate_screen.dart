@@ -95,7 +95,7 @@ class _AffiliateScreenState extends State<AffiliateScreen> {
           if (_unlocked && widget.unlockMode) ...[
             const SizedBox(height: 16),
             Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-              const Icon(Icons.check_circle,
+              Icon(Icons.check_circle,
                 color: AppColors.success, size: 18),
               const SizedBox(width: 6),
               Text('Идэвхтэй ✓', style: AppTextStyles.labelMd.copyWith(

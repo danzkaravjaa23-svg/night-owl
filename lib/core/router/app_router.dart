@@ -42,7 +42,8 @@ import '../../features/admin/screens/admin_reports_screen.dart';
 import '../../features/admin/screens/admin_panel_screen.dart';
 import '../../features/admin/screens/admin_users_screen.dart';
 import '../../features/profile/screens/affiliate_screen.dart';
-import '../../features/live/screens/go_live_screen.dart';
+import '../../features/live/screens/go_live_entry.dart';
+import '../widgets/dark_system_ui.dart';
 import '../../features/live/screens/live_viewer_screen.dart';
 import '../../features/feed/screens/create_story_screen.dart';
 import '../../features/feed/screens/reels_screen.dart';
@@ -60,6 +61,9 @@ abstract class AppRoutes {
   static const login           = '/auth/login';
   static const register        = '/auth/register';
   static const setup           = '/auth/setup';
+  // Бүртгэлтэй хэрэглэгч профайлаа засах — /auth/setup-г router бүрэн
+  // хэрэглэгчдэд feed рүү буцаадаг тул тусдаа зам хэрэгтэй.
+  static const editProfile     = '/profile/edit';
   static const forgotPassword  = '/auth/forgot-password';
   static const resetPassword   = '/auth/reset';
   static const feed            = '/feed';
@@ -205,7 +209,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     routes: [
       // ── Onboarding ──
       GoRoute(path: AppRoutes.splash,
-        pageBuilder: (_, s) => _fadePage(s, const SplashScreen())),
+        pageBuilder: (_, s) => _fadePage(s, const DarkSystemUi(child: SplashScreen()))),
       GoRoute(path: AppRoutes.langSelect,
         pageBuilder: (_, s) => _fadePage(s, const LangSelectScreen())),
       GoRoute(
@@ -231,6 +235,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         pageBuilder: (_, s) => _slidePage(s, const RegisterScreen())),
       GoRoute(path: AppRoutes.setup,
         pageBuilder: (_, s) => _slidePage(s, const SetupScreen())),
+      GoRoute(path: AppRoutes.editProfile,
+        pageBuilder: (_, s) => _slidePage(s, const SetupScreen(forceEdit: true))),
       GoRoute(path: AppRoutes.forgotPassword,
         pageBuilder: (_, s) => _slidePage(s, const ForgotPasswordScreen())),
       GoRoute(path: AppRoutes.resetPassword,
@@ -304,9 +310,9 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         pageBuilder: (_, s) => NoTransitionPage(key: s.pageKey,
           child: LiveViewerScreen(liveId: s.pathParameters['id'] ?? ''))),
       GoRoute(path: AppRoutes.createStory,
-        pageBuilder: (_, s) => _sheetPage(s, const CreateStoryScreen())),
+        pageBuilder: (_, s) => _sheetPage(s, const DarkSystemUi(child: CreateStoryScreen()))),
       GoRoute(path: AppRoutes.createReel,
-        pageBuilder: (_, s) => _sheetPage(s, const CreateReelScreen())),
+        pageBuilder: (_, s) => _sheetPage(s, const DarkSystemUi(child: CreateReelScreen()))),
       GoRoute(path: AppRoutes.createEvent,
         pageBuilder: (_, s) => _sheetPage(s, const CreateEventScreen())),
       GoRoute(path: AppRoutes.venueEdit,

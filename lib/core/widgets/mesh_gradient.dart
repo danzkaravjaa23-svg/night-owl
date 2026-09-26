@@ -47,7 +47,9 @@ class OwlLogoMark extends StatelessWidget {
 /// баялаг хар, гүн шөнийн ягаан, неон violet өнгөтэй.
 class MeshGradientBackground extends StatefulWidget {
   final Widget? child;
-  const MeshGradientBackground({super.key, this.child});
+  /// Үргэлж харанхуй дэлгэц (нүүр хуудас) — горимоос үл хамааран шөнийн дэвсгэр.
+  final bool forceDark;
+  const MeshGradientBackground({super.key, this.child, this.forceDark = false});
   @override
   State<MeshGradientBackground> createState() => _MeshGradientBackgroundState();
 }
@@ -68,7 +70,7 @@ class _MeshGradientBackgroundState extends State<MeshGradientBackground>
   Widget build(BuildContext context) {
     return RepaintBoundary(
       child: CustomPaint(
-        painter: _MeshPainter(_c),
+        painter: _MeshPainter(_c, forceDark: widget.forceDark),
         isComplex: true,
         child: widget.child,
       ),
@@ -78,7 +80,8 @@ class _MeshGradientBackgroundState extends State<MeshGradientBackground>
 
 class _MeshPainter extends CustomPainter {
   final Animation<double> t;
-  _MeshPainter(this.t) : super(repaint: t);
+  final bool forceDark;
+  _MeshPainter(this.t, {this.forceDark = false}) : super(repaint: t);
 
   // (баазын байрлал x,y фракц, өнгө, радиус фракц, фаз) — chrome/steel ертөнц
   static const _blobs = [
@@ -91,9 +94,12 @@ class _MeshPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    // Баялаг хар суурь
+    // Баялаг хар суурь (цайвар горимд cream — bgBase адаптив)
     canvas.drawRect(Offset.zero & size,
-        Paint()..color = AppColors.bgBase);
+        Paint()..color = forceDark ? AppColors.bgBaseDark : AppColors.bgBase);
+    // Цайвар горимд бараан steel бөмбөлгүүд cream дээр бохир саарал толбо
+    // болохоос сэргийлж зөөлрүүлнэ. Харанхуй горимд 1.0 — өөрчлөлтгүй.
+    final k = (forceDark || AppColors.isDarkMode) ? 1.0 : 0.35;
     final v = t.value * 2 * math.pi;
     for (final b in _blobs) {
       final baseX = b[0] as double, baseY = b[1] as double;
@@ -108,8 +114,8 @@ class _MeshPainter extends CustomPainter {
       // гэхдээ frame бүрт 5 фулл-скрин Gaussian blur хийхгүй (сул төхөөрөмжид чухал)
       canvas.drawCircle(c, rad, Paint()
         ..shader = RadialGradient(colors: [
-          color.withValues(alpha: 0.30),
-          color.withValues(alpha: 0.18),
+          color.withValues(alpha: 0.30 * k),
+          color.withValues(alpha: 0.18 * k),
           color.withValues(alpha: 0.0),
         ], stops: const [0.0, 0.55, 1.0])
             .createShader(Rect.fromCircle(center: c, radius: rad)));

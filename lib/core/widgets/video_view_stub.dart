@@ -4,6 +4,7 @@ import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 
 /// Вэб бус платформын fallback (одоо зөвхөн web дээр ажиллаж байгаа).
+/// Медиа гадаргуу тул горимоос үл хамааран ҮРГЭЛЖ харанхуй (*Dark const).
 class VideoView extends StatelessWidget {
   final String url;
   final bool posterOnly;
@@ -16,6 +17,9 @@ class VideoView extends StatelessWidget {
   /// Веб хувилбартай ижил гарын үсэг — native контрол харуулах эсэх
   /// (энэ fallback дээр жинхэнэ плейер байхгүй тул зөвхөн API-гийн нэгдэл).
   final bool showControls;
+  /// Хүрээг дүүргэж тайрах (IG feed шиг 4:5 хайрцагт хар зурвасгүй).
+  /// false бол бүтэн видео харагдана (contain) — пост дэлгэрэнгүйд.
+  final bool cover;
 
   const VideoView({
     super.key,
@@ -27,6 +31,7 @@ class VideoView extends StatelessWidget {
     this.active = true,
     this.progress,
     this.showControls = false,
+    this.cover = false,
   });
 
   @override
@@ -43,11 +48,11 @@ class VideoView extends StatelessWidget {
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              AppColors.bgElevated,
-              AppColors.bgSurface,
+              AppColors.bgElevatedDark,
+              AppColors.bgSurfaceDark,
             ],
           ),
-          border: Border.all(color: AppColors.hairline),
+          border: Border.all(color: AppColors.hairlineDark),
           boxShadow: AppColors.shadowCard,
         ),
         child: Stack(
@@ -108,16 +113,16 @@ class VideoView extends StatelessWidget {
                           vertical: 6,
                         ),
                         decoration: BoxDecoration(
-                          color: AppColors.success.withValues(alpha: 0.18),
+                          color: AppColors.successDark.withValues(alpha: 0.18),
                           borderRadius: BorderRadius.circular(999),
                           border: Border.all(
-                            color: AppColors.success.withValues(alpha: 0.4),
+                            color: AppColors.successDark.withValues(alpha: 0.4),
                           ),
                         ),
                         child: Text(
                           autoplay ? 'LIVE' : 'VIDEO',
                           style: AppTextStyles.labelSm.copyWith(
-                            color: AppColors.success,
+                            color: AppColors.successDark,
                             letterSpacing: 1.1,
                           ),
                         ),
@@ -138,7 +143,7 @@ class VideoView extends StatelessWidget {
                     minHeight: 3,
                     backgroundColor: Colors.white.withValues(alpha: 0.15),
                     valueColor: const AlwaysStoppedAnimation<Color>(
-                      AppColors.neonCyan,
+                      AppColors.neonCyanDark,
                     ),
                   ),
                 ),

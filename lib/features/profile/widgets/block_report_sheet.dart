@@ -108,7 +108,7 @@ Future<void> showUserOptionsSheet(
             },
           ),
           ListTile(
-            leading: const Icon(Icons.flag_outlined, color: AppColors.textSecondary),
+            leading: Icon(Icons.flag_outlined, color: AppColors.textSecondary),
             title: Text('Мэдээлэх', style: AppTextStyles.bodyMd),
             onTap: () {
               Navigator.of(sheetCtx).pop();
@@ -156,7 +156,7 @@ Future<void> showPostOptionsSheet(
           if (isOwn) ...[
             if (onEditCaption != null)
               ListTile(
-                leading: const Icon(Icons.edit_outlined, color: AppColors.textSecondary),
+                leading: Icon(Icons.edit_outlined, color: AppColors.textSecondary),
                 title: Text('Тайлбар засах', style: AppTextStyles.bodyMd),
                 onTap: () async {
                   Navigator.of(sheetCtx).pop();
@@ -179,7 +179,7 @@ Future<void> showPostOptionsSheet(
             const SizedBox(height: 12),
           ] else ...[
           ListTile(
-            leading: const Icon(Icons.flag_outlined, color: AppColors.textSecondary),
+            leading: Icon(Icons.flag_outlined, color: AppColors.textSecondary),
             title: Text('Постыг мэдээлэх', style: AppTextStyles.bodyMd),
             onTap: () {
               Navigator.of(sheetCtx).pop();
@@ -307,7 +307,7 @@ Future<bool?> _confirmBlock(BuildContext context, String username) {
       backgroundColor: AppColors.bgElevated,
       title: Text('@$username-г блоклох уу?', style: AppTextStyles.h3),
       content: Text(
-        'Блоклосон хүн таны пост, профайлыг харахаа болино. Та хоёр бие биенээ хайж олохгүй.',
+        'Түүний постууд таны feed-д харагдахгүй болно.',
         style: AppTextStyles.bodySm.copyWith(
           color: AppColors.textSecondary, height: 1.5)),
       actions: [

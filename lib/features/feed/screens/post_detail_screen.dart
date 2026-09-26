@@ -8,12 +8,15 @@ import '../../../core/theme/app_text_styles.dart';
 import '../../../core/widgets/app_avatar.dart';
 import '../../../core/widgets/network_video.dart';
 import '../../../core/services/supabase_service.dart';
+import '../../../core/router/app_router.dart' show AppRoutes;
 import '../../../models/post.dart';
 import '../../../models/comment.dart';
+import '../../auth/providers/auth_provider.dart';
 import '../providers/comment_provider.dart';
 import '../providers/feed_provider.dart';
 import '../providers/saved_provider.dart';
 import '../../profile/widgets/block_report_sheet.dart';
+import '../../profile/utils/app_links.dart' show appOrigin;
 
 /// Сэтгэгдлийн input-д харуулах өөрийн mini профайл (avatar + username)
 final _myMiniProfileProvider =
@@ -243,7 +246,11 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
             .deletePost(_post!.id);
         if (!mounted || !context.mounted) return;
         if (ok) {
-          context.pop();
+          // Профайлын ПОСТ тоо + grid шинэчлэгдэнэ (posts_count trigger ажилласан)
+          ref.read(postsVersionProvider.notifier).state++;
+          ref.invalidate(currentProfileProvider);
+          // Линкээр/reload-оор нээгдсэн бол доор нь хуудас байхгүй — профайл руу
+          context.canPop() ? context.pop() : context.go(AppRoutes.profile);
         } else {
           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
             content: Text('Устгаж чадсангүй. Дахин оролдоно уу.'),
@@ -367,7 +374,9 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
           child: Row(children: [
             _GlassCircleButton(
               icon: Icons.arrow_back_ios_new,
-              onTap: () => context.pop(),
+              // Линк/reload-оор нээгдсэн бол pop хийх хуудас байхгүй
+              onTap: () => context.canPop()
+                  ? context.pop() : context.go(AppRoutes.feed),
             ),
             const Spacer(),
             // Өөрийн пост (live бичлэг ч мөн адил)-ыг засах/устгах
@@ -450,7 +459,8 @@ class _GlassCircleButton extends StatelessWidget {
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         color: Colors.black.withValues(alpha: 0.45),
-        border: Border.all(color: AppColors.hairline2),
+        // Медиа дээгүүр хөвдөг тул горимоос үл хамааран харанхуй glass хүрээ
+        border: Border.all(color: AppColors.hairline2Dark),
         boxShadow: AppColors.shadowCard,
       ),
       child: Icon(icon, size: 17, color: Colors.white),
@@ -479,7 +489,7 @@ class _PostHeaderSkeleton extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
         child: Row(children: [
           Container(width: 44, height: 44,
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                   color: AppColors.bgSurface, shape: BoxShape.circle)),
           const SizedBox(width: 12),
           Container(width: 120, height: 12,
@@ -509,7 +519,7 @@ class _PostErrorBox extends StatelessWidget {
     height: 240,
     child: Center(
       child: Column(mainAxisSize: MainAxisSize.min, children: [
-        const Icon(Icons.wifi_off_outlined,
+        Icon(Icons.wifi_off_outlined,
             color: AppColors.textTertiary, size: 40),
         const SizedBox(height: 12),
         Text('Алдаа гарлаа', style: AppTextStyles.labelLg),
@@ -521,7 +531,7 @@ class _PostErrorBox extends StatelessWidget {
         OutlinedButton(
           onPressed: onRetry,
           style: OutlinedButton.styleFrom(
-            side: const BorderSide(color: AppColors.hairline),
+            side: BorderSide(color: AppColors.hairline),
             foregroundColor: AppColors.accentStart),
           child: const Text('Дахин оролдох'),
         ),
@@ -537,9 +547,9 @@ class _SheetCap extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Container(
     height: 28,
-    decoration: const BoxDecoration(
+    decoration: BoxDecoration(
       color: AppColors.bgBase,
-      borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
     ),
     child: Center(
       child: Container(width: 44, height: 4,
@@ -594,7 +604,7 @@ class _PostHeaderState extends ConsumerState<_PostHeader> {
   }
 
   Future<void> _share() async {
-    final link = '${Uri.base.origin}/post/${widget.post.id}';
+    final link = '${appOrigin()}/#/post/${widget.post.id}';
     await Clipboard.setData(ClipboardData(text: link));
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
@@ -742,7 +752,7 @@ class _PostHeaderState extends ConsumerState<_PostHeader> {
             scale: 0.88,
             onTap: widget.onComment,
             child: Row(children: [
-              const Icon(Icons.chat_bubble_outline,
+              Icon(Icons.chat_bubble_outline,
                   color: AppColors.textSecondary, size: 24),
               const SizedBox(width: 6),
               Text(_fmt(widget.commentCount ?? post.commentsCount),
@@ -754,7 +764,7 @@ class _PostHeaderState extends ConsumerState<_PostHeader> {
           _Press(
             scale: 0.85,
             onTap: _share,
-            child: const Icon(Icons.send_outlined,
+            child: Icon(Icons.send_outlined,
                 color: AppColors.textSecondary, size: 24),
           ),
           const SizedBox(width: 18),
@@ -785,7 +795,7 @@ class _PostHeaderState extends ConsumerState<_PostHeader> {
       else
         const SizedBox(height: 14),
 
-      const Divider(color: AppColors.hairline, height: 1),
+      Divider(color: AppColors.hairline, height: 1),
     ]);
   }
 }
@@ -951,7 +961,7 @@ class _CommentTileState extends State<_CommentTile> {
                 child: OutlinedButton(
                   onPressed: () => Navigator.pop(ctx),
                   style: OutlinedButton.styleFrom(
-                    side: const BorderSide(color: AppColors.hairline)),
+                    side: BorderSide(color: AppColors.hairline)),
                   child: const Text('Болих'),
                 ),
               ),
@@ -1007,7 +1017,7 @@ class _CommentInput extends StatelessWidget {
       ),
       decoration: BoxDecoration(
         color: AppColors.bgElevated.withValues(alpha: 0.92),
-        border: const Border(top: BorderSide(color: AppColors.hairline)),
+        border: Border(top: BorderSide(color: AppColors.hairline)),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.4),
@@ -1021,14 +1031,14 @@ class _CommentInput extends StatelessWidget {
         Padding(
           padding: const EdgeInsets.only(right: 8, top: 8, bottom: 6),
           child: Row(children: [
-            const Icon(Icons.reply, size: 14, color: AppColors.textSecondary),
+            Icon(Icons.reply, size: 14, color: AppColors.textSecondary),
             const SizedBox(width: 6),
             Expanded(child: Text('@$replyingTo-д хариулж байна',
                 style: AppTextStyles.bodyXs.copyWith(
                     color: AppColors.textSecondary))),
             _Press(
               onTap: onCancelReply,
-              child: const Icon(Icons.close,
+              child: Icon(Icons.close,
                   size: 16, color: AppColors.textTertiary)),
           ]),
         ),

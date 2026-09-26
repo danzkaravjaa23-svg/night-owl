@@ -1,9 +1,11 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/services/supabase_service.dart';
+import '../../../core/utils/web_share.dart';
 import '../utils/app_links.dart';
 
 /// Найзаа урих — урилгын холбоос хуваалцах/хуулах bottom sheet
@@ -50,7 +52,7 @@ Future<void> showInviteSheet(BuildContext context) async {
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(color: AppColors.hairline)),
               child: Row(children: [
-                const Icon(Icons.link,
+                Icon(Icons.link,
                     size: 18, color: AppColors.textSecondary),
                 const SizedBox(width: 10),
                 Expanded(
@@ -68,16 +70,35 @@ Future<void> showInviteSheet(BuildContext context) async {
                 cursor: SystemMouseCursors.click,
                 child: GestureDetector(
                   onTap: () async {
+                    // Tap gesture дотор синхрон шалгана (web share-д шаардлагатай)
+                    final supported = !kIsWeb || webShareSupported();
                     Navigator.of(sheetCtx).pop();
+                    Future<void> copyLink() async {
+                      try {
+                        await Clipboard.setData(ClipboardData(text: link));
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                  content: Text('Холбоос хуулагдлаа 🔗')));
+                        }
+                      } catch (_) {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                              content: Text('Хуулж чадсангүй — $link')));
+                        }
+                      }
+                    }
+
+                    // Web Share API-гүй browser (desktop Firefox г.м) —
+                    // share_plus mailto: нээхээс сэргийлж шууд хуулна
+                    if (!supported) {
+                      await copyLink();
+                      return;
+                    }
                     try {
                       await Share.share('$msg\n$link', subject: 'Night Owl UB');
                     } catch (_) {
-                      await Clipboard.setData(ClipboardData(text: link));
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                                content: Text('Холбоос хуулагдлаа 🔗')));
-                      }
+                      await copyLink();
                     }
                   },
                   child: Container(

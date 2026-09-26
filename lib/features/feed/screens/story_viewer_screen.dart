@@ -2,10 +2,10 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:go_router/go_router.dart';
 import '../../../core/utils/web_audio.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/app_avatar.dart';
+import '../../../core/widgets/dark_system_ui.dart';
 import '../../../core/widgets/network_video.dart' show isVideoUrl;
 import '../../../core/services/supabase_service.dart';
 import '../../../models/story.dart';
@@ -52,6 +52,17 @@ class _StoryViewerScreenState extends State<StoryViewerScreen>
   // Доош чирж хаах
   double _dragY = 0;
   bool _dragging = false;
+
+  // Viewer-ийг root navigator дээр pageless route-оор push хийдэг тул
+  // GoRouter-ийн context.pop() биш яг энэ navigator-оос хаана.
+  // Давхар дуудагдвал (чирэлт + progress дуусах) доорх хуудсыг pop хийхгүй.
+  bool _closed = false;
+  void _close() {
+    if (_closed || !mounted) return;
+    _closed = true;
+    _progressCtrl.stop();
+    Navigator.of(context).pop();
+  }
 
   String get _myId => SupabaseService.currentUser?.id ?? '';
 
@@ -255,12 +266,15 @@ class _StoryViewerScreenState extends State<StoryViewerScreen>
       setState(() { _ringIndex++; _storyIndex = 0; });
       _startProgress();
     } else {
-      context.pop();
+      _close();
     }
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) =>
+      DarkSystemUi(child: _buildPage(context));
+
+  Widget _buildPage(BuildContext context) {
     final story  = _currentStory;
     final author = _currentRing.author;
     final isVideo = _isVideoStory;
@@ -307,7 +321,7 @@ class _StoryViewerScreenState extends State<StoryViewerScreen>
             _dragY = (_dragY + d.delta.dy).clamp(0.0, 600.0)),
         onVerticalDragEnd: (_) {
           if (_dragY > 120) {
-            context.pop();
+            _close();
           } else {
             setState(() { _dragY = 0; _dragging = false; });
             _resume();
@@ -409,7 +423,7 @@ class _StoryViewerScreenState extends State<StoryViewerScreen>
               AppAvatar(
                 imageUrl: author.avatarUrl,
                 initial:  author.initial,
-                size: 36, showRing: true,
+                size: 36, showRing: true, onDark: true,
               ),
               const SizedBox(width: 10),
               Expanded(child: Column(
@@ -442,7 +456,7 @@ class _StoryViewerScreenState extends State<StoryViewerScreen>
                   )),
               // Хаах 32 — 40px+ хүрэлтийн талбай
               _Pressable(
-                onTap: () => context.pop(),
+                onTap: _close,
                 child: const Padding(
                   padding: EdgeInsets.all(8),
                   child: Icon(Icons.close, color: Colors.white, size: 32)),
@@ -458,9 +472,9 @@ class _StoryViewerScreenState extends State<StoryViewerScreen>
               child: Container(
                 padding: const EdgeInsets.fromLTRB(5, 5, 14, 5),
                 decoration: BoxDecoration(
-                  color: AppColors.bgElevated.withValues(alpha: 0.72),
+                  color: AppColors.bgElevatedDark.withValues(alpha: 0.72),
                   borderRadius: BorderRadius.circular(999),
-                  border: Border.all(color: AppColors.hairline2),
+                  border: Border.all(color: AppColors.hairline2Dark),
                   boxShadow: AppColors.shadowCard),
                 child: Row(mainAxisSize: MainAxisSize.min, children: [
                   // Градиент нот диск — аудио мөрийн дохио
@@ -570,11 +584,11 @@ class _StoryViewerScreenState extends State<StoryViewerScreen>
                         builder: (_, __) => AnimatedContainer(
                           duration: const Duration(milliseconds: 180),
                           decoration: BoxDecoration(
-                            color: AppColors.bgElevated.withValues(alpha: 0.72),
+                            color: AppColors.bgElevatedDark.withValues(alpha: 0.72),
                             borderRadius: BorderRadius.circular(999),
                             border: Border.all(
                               color: _replyFocus.hasFocus
-                                  ? Colors.white70 : AppColors.hairline2),
+                                  ? Colors.white70 : AppColors.hairline2Dark),
                             boxShadow: AppColors.shadowCard),
                           child: TextField(
                             controller: _replyCtrl,
@@ -602,8 +616,8 @@ class _StoryViewerScreenState extends State<StoryViewerScreen>
                           width: 44, height: 44,
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
-                            color: AppColors.bgElevated.withValues(alpha: 0.72),
-                            border: Border.all(color: AppColors.hairline2)),
+                            color: AppColors.bgElevatedDark.withValues(alpha: 0.72),
+                            border: Border.all(color: AppColors.hairline2Dark)),
                           alignment: Alignment.center,
                           child: TweenAnimationBuilder<double>(
                             key: ValueKey(
@@ -647,12 +661,12 @@ class _StoryViewerScreenState extends State<StoryViewerScreen>
   Widget _storyPill(IconData icon, String text) => Container(
     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
     decoration: BoxDecoration(
-      color: AppColors.bgElevated.withValues(alpha: 0.72),
+      color: AppColors.bgElevatedDark.withValues(alpha: 0.72),
       borderRadius: BorderRadius.circular(999),
-      border: Border.all(color: AppColors.hairline2),
+      border: Border.all(color: AppColors.hairline2Dark),
       boxShadow: AppColors.shadowCard),
     child: Row(mainAxisSize: MainAxisSize.min, children: [
-      Icon(icon, color: AppColors.neonCyan, size: 13),
+      Icon(icon, color: AppColors.neonCyanDark, size: 13),
       const SizedBox(width: 5),
       Text(text, style: const TextStyle(
         color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600)),

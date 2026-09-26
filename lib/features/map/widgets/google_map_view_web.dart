@@ -3,6 +3,7 @@ import 'dart:html' as html;
 import 'dart:ui_web' as ui_web;
 import 'package:flutter/material.dart';
 import '../../../core/constants/app_constants.dart';
+import '../../../core/theme/app_colors.dart';
 import 'map_controller.dart';
 
 int _mapCounter = 0;
@@ -31,17 +32,40 @@ class GoogleMapView extends StatefulWidget {
 }
 
 class _GoogleMapViewState extends State<GoogleMapView> {
-  late final String _viewType;
+  // View type-д горим шингэсэн — горим солигдоход шинэ iframe үүсгэнэ
+  String? _viewType;
+  bool? _viewDark;
   html.IFrameElement? _iframe;
 
-  // Leaflet + CARTO dark_all дэвсгэр зураг (2026/08-аас түлхүүр шаардана)
+  // Leaflet + CARTO дэвсгэр зураг: харанхуй горимд dark_all, цайвар горимд
+  // light_all (2026/08-аас түлхүүр шаардана)
   /// CARTO дэвсгэр зургийн түлхүүр — тохируулаагүй бол хоосон (ус тэмдэгтэй).
   static String get _cartoKeyParam {
     const k = AppConstants.cartoBasemapKey;
     return k.isEmpty ? '' : '?key=$k';
   }
 
-  String _buildHtml() => '''
+  // Цайвар горимын CSS — харанхуй неон дүрмүүдийн ДАРАА дарж бичнэ
+  // (харанхуй горимд хоосон тул хуучин HTML яг хэвээр).
+  static const _lightCss = '''
+  html,body{background:#FAF6EE}
+  .vt{background:rgba(255,255,255,.95);border:1px solid rgba(11,122,138,.45);color:#13031F;
+      box-shadow:0 2px 10px rgba(26,11,46,.16)}
+  #loc{border:1px solid rgba(11,122,138,.5);background:rgba(255,255,255,.92);color:#0B7A8A;
+    box-shadow:0 0 14px rgba(11,122,138,.18), 0 4px 12px rgba(26,11,46,.14)}
+  .leaflet-control-zoom a{background:rgba(255,255,255,.92)!important;color:#13031F!important;
+    border:1px solid rgba(26,11,46,.14)!important}
+  .leaflet-control-attribution{background:rgba(255,255,255,.7)!important;color:#6F6390!important}
+  .leaflet-control-attribution a{color:#5C4A82!important}
+  .vpin{box-shadow:0 0 14px rgba(255,59,123,.45), 0 2px 8px rgba(26,11,46,.3)}
+  #toast{background:rgba(255,255,255,.96);color:#13031F;box-shadow:0 4px 14px rgba(26,11,46,.18)}
+''';
+
+  String _buildHtml(bool dark) {
+    final tiles = dark ? 'dark_all' : 'light_all';
+    final extraCss = dark ? '' : _lightCss;
+    final meFill = dark ? '#00E5FF' : '#0B7A8A'; // миний байршлын цэг
+    return '''
 <!DOCTYPE html><html><head>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
@@ -89,7 +113,7 @@ class _GoogleMapViewState extends State<GoogleMapView> {
     font:600 12px Inter,sans-serif;padding:8px 14px;border-radius:12px;
     border:1px solid rgba(255,69,102,.5);box-shadow:0 4px 14px rgba(0,0,0,.5);
     opacity:0;pointer-events:none;transition:opacity .25s}
-</style></head><body><div id="map"></div>
+$extraCss</style></head><body><div id="map"></div>
 <button id="loc" title="Миний байршил">📍</button>
 <div id="toast"></div>
 <script>
@@ -121,7 +145,7 @@ class _GoogleMapViewState extends State<GoogleMapView> {
   // Эхний 6 секундэд хагас секунд тутам шалгана (iframe хожуу байрлах үед)
   var fixN = 0;
   var fixIv = setInterval(function(){ fixSize(); if(++fixN > 12) clearInterval(fixIv); }, 500);
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png$_cartoKeyParam',
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/$tiles/{z}/{x}/{y}{r}.png$_cartoKeyParam',
     {maxZoom:19, keepBuffer:5, updateWhenIdle:false, subdomains:'abcd',
      attribution:'© OpenStreetMap, © CARTO'}).addTo(map);
   var venues = ${widget.markersJson.replaceAll('<', r'\u003c')};
@@ -181,29 +205,18 @@ class _GoogleMapViewState extends State<GoogleMapView> {
       map.setView(ll, 15);
       if(meMarker) map.removeLayer(meMarker);
       meMarker = L.circleMarker(ll, {radius:7, color:'#fff', weight:2,
-        fillColor:'#00E5FF', fillOpacity:1}).addTo(map).bindTooltip('Та энд',
+        fillColor:'$meFill', fillOpacity:1}).addTo(map).bindTooltip('Та энд',
         {permanent:false, direction:'top', className:'vt'});
     }, function(){ toast('Байршил идэвхгүй байна'); });
   };
 </script></body></html>''';
+  }
 
   StreamSubscription? _msgSub;
 
   @override
   void initState() {
     super.initState();
-    _viewType = 'leaflet-map-${_mapCounter++}';
-    ui_web.platformViewRegistry.registerViewFactory(_viewType, (int _) {
-      final iframe = html.IFrameElement()
-        ..srcdoc = _buildHtml()
-        ..allow = 'geolocation'
-        ..style.border = 'none'
-        ..style.width = '100%'
-        ..style.height = '100%';
-      _iframe = iframe;
-      return iframe;
-    });
-
     // Гаднаас center() дуудахад iframe доторх Leaflet руу мессеж илгээнэ
     widget.controller?.centerImpl = (lat, lng, {int zoom = 15}) {
       _iframe?.contentWindow?.postMessage('center:$lat,$lng,$zoom', '*');
@@ -234,6 +247,33 @@ class _GoogleMapViewState extends State<GoogleMapView> {
     super.dispose();
   }
 
+  // Одоогийн горимд тохирох view type-ийг бүртгэнэ. Горим солигдвол (бүх мод
+  // дахин build хийгдэхэд) шинэ түлхүүрээр шинэ iframe үүсгэж, дэвсгэр зураг +
+  // CSS-ээ шинэ горимоор ачаална.
+  String _ensureViewType() {
+    final dark = AppColors.isDarkMode;
+    final current = _viewType;
+    if (current != null && _viewDark == dark) return current;
+    final viewType =
+        'leaflet-map-${dark ? 'dark' : 'light'}-${_mapCounter++}';
+    ui_web.platformViewRegistry.registerViewFactory(viewType, (int _) {
+      final iframe = html.IFrameElement()
+        ..srcdoc = _buildHtml(dark)
+        ..allow = 'geolocation'
+        ..style.border = 'none'
+        ..style.width = '100%'
+        ..style.height = '100%';
+      _iframe = iframe;
+      return iframe;
+    });
+    _viewType = viewType;
+    _viewDark = dark;
+    return viewType;
+  }
+
   @override
-  Widget build(BuildContext context) => HtmlElementView(viewType: _viewType);
+  Widget build(BuildContext context) {
+    final viewType = _ensureViewType();
+    return HtmlElementView(key: ValueKey(viewType), viewType: viewType);
+  }
 }

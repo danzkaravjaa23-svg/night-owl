@@ -105,3 +105,9 @@ abstract class AppTextStyles {
     color: AppColors.dynTextPrimary,
   );
 }
+
+/// Үргэлж харанхуй гадаргуу (reels, story, live, видео, splash) дээрх текст.
+/// `AppTextStyles.bodyMd.onDark` — гэрэл горимд ч цайвар текст хэвээр үлдэнэ.
+extension TextStyleOnDark on TextStyle {
+  TextStyle get onDark => copyWith(color: AppColors.toDark(color));
+}

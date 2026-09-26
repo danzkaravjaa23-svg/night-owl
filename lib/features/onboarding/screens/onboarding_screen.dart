@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
@@ -53,7 +54,8 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool('onboarded', true);
       if (!mounted) return;
-      context.go(AppRoutes.permLocation);
+      // Native дээр permission дэлгэц OS prompt дууддаггүй (web-only) — алгасна
+      context.go(kIsWeb ? AppRoutes.permLocation : AppRoutes.authLanding);
     }
   }
 
@@ -82,6 +84,9 @@ class _OnboardingScreenState extends State<OnboardingScreen>
         title: s.onb3Title, sub: s.onb3Sub, color: AppColors.accentEnd),
     ];
     final data = slides[widget.slide - 1];
+    // Гэрэлтэлтэд үргэлж тод неон өнгө — цайвар горимд бараан cyan бохир
+    // уур болохоос сэргийлнэ (харанхуй горимд өөрчлөлтгүй)
+    final glow = AppColors.toDark(data.color)!;
 
     return Scaffold(
       backgroundColor: AppColors.bgBase,
@@ -90,7 +95,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
           // Удаан хөдөлдөг mesh gradient дэвсгэр
           const Positioned.fill(child: MeshGradientBackground()),
           // Слайд бүрд зөөлөн шилждэг неон aura (гүн + өнгөт уур амьсгал)
-          _OnboardAura(accent: data.color),
+          _OnboardAura(accent: glow),
           SafeArea(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -121,7 +126,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                       child: Center(
                         child: _GlassIconMedallion(
                           illustration: data.illustration,
-                          glow: data.color, size: 210),
+                          glow: glow, size: 210),
                       ),
                     ),
                   ),
@@ -138,10 +143,14 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           // Слайдын дугаар — mono eyebrow
+                          // (цайвар горимд уншигдахуйц бараан бэх — accent-ийг textPrimary руу холино)
                           Text('0${widget.slide} — 03',
                             style: AppTextStyles.monoSm.copyWith(
                               letterSpacing: 2,
-                              color: data.color.withValues(alpha: 0.85))),
+                              color: AppColors.isDarkMode
+                                  ? data.color.withValues(alpha: 0.85)
+                                  : Color.lerp(data.color,
+                                      AppColors.textPrimaryLight, 0.35))),
                           const SizedBox(height: 10),
                           Text(data.title,
                             style: AppTextStyles.displayMd.copyWith(height: 1.12)),
@@ -258,7 +267,7 @@ class _OnboardAura extends StatelessWidget {
             ),
             Positioned(
               top: 60, left: -120,
-              child: _blob(260, AppColors.neonCyan.withValues(alpha: 0.12)),
+              child: _blob(260, AppColors.neonCyanDark.withValues(alpha: 0.12)),
             ),
             Positioned(
               bottom: -130, left: 10,
@@ -326,18 +335,28 @@ class _GlassIconMedallionState extends State<_GlassIconMedallion>
                   BoxShadow(color: widget.glow.withValues(alpha: 0.35 + 0.25 * t),
                     blurRadius: 50 + 30 * t, spreadRadius: 6 + 8 * t),
                 ])),
-            // Шилэн медальон — blur-гүй gradient glass (web perf)
+            // Шилэн медальон — blur-гүй gradient glass (web perf).
+            // Цайвар горимд неон SVG уншигдахуйц байхаар шөнийн бараан шил.
             Container(
               width: sz * 0.82, height: sz * 0.82,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 gradient: LinearGradient(
                   begin: Alignment.topLeft, end: Alignment.bottomRight,
-                  colors: [
-                    Colors.white.withValues(alpha: 0.16),
-                    widget.glow.withValues(alpha: 0.10),
-                    Colors.white.withValues(alpha: 0.04),
-                  ]),
+                  colors: AppColors.isDarkMode
+                      ? [
+                          Colors.white.withValues(alpha: 0.16),
+                          widget.glow.withValues(alpha: 0.10),
+                          Colors.white.withValues(alpha: 0.04),
+                        ]
+                      : [
+                          AppColors.bgSurfaceDark.withValues(alpha: 0.90),
+                          Color.alphaBlend(
+                            widget.glow.withValues(alpha: 0.18),
+                            AppColors.bgElevatedDark,
+                          ).withValues(alpha: 0.92),
+                          AppColors.bgBaseDark.withValues(alpha: 0.94),
+                        ]),
                 border: Border.all(
                   color: Colors.white.withValues(alpha: 0.22), width: 1.4),
               ),

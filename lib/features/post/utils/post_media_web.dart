@@ -3,6 +3,9 @@
 import 'dart:async';
 import 'dart:html' as html;
 
+import 'package:flutter/painting.dart';
+import 'package:video_player/video_player.dart';
+
 /// Сонгосон медиа файл — html.File + preview object URL
 class PickedMediaFile {
   final html.File file;
@@ -130,3 +133,11 @@ Future<void> uploadBlobWithProgress({
   xhr.send(blob as html.Blob);
   await completer.future;
 }
+
+/// Preview зураг — object URL
+ImageProvider previewImageProvider(PickedMediaFile m) =>
+    NetworkImage(m.previewUrl);
+
+/// Preview видео — object URL
+VideoPlayerController previewVideoController(PickedMediaFile m) =>
+    VideoPlayerController.networkUrl(Uri.parse(m.previewUrl));

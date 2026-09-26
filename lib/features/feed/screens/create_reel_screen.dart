@@ -1,11 +1,14 @@
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show SystemUiOverlayStyle;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_radii.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/services/supabase_service.dart';
 import '../../../core/utils/image_uploader.dart';
+import '../../auth/providers/auth_provider.dart';
 import '../providers/feed_provider.dart';
 import '../widgets/story_video.dart';
 import '../../map/providers/venue_provider.dart' show isVenueOwnerProvider;
@@ -36,15 +39,28 @@ class _CreateReelScreenState extends ConsumerState<CreateReelScreen> {
     if (_previewUrl != null) { revokeBlobUrl(_previewUrl!); _previewUrl = null; }
   }
 
+  void _toast(String m) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(m), behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 2)));
+  }
+
   Future<void> _pick() async {
-    final v = await ImageUploader.pickVideo();
-    if (v != null && mounted) {
-      setState(() {
-        _clearPreview();
-        _bytes = v.bytes; _ext = v.ext;
-        // Веб дээр сонгосон клипээ шууд харна (буруу файл сонгосныг илрүүлнэ)
-        _previewUrl = createBlobUrl(v.bytes, _contentType(v.ext));
-      });
+    try {
+      final v = await ImageUploader.pickVideo();
+      if (v != null && mounted) {
+        setState(() {
+          _clearPreview();
+          _bytes = v.bytes; _ext = v.ext;
+          // Веб дээр сонгосон клипээ шууд харна (буруу файл сонгосныг илрүүлнэ)
+          _previewUrl = createBlobUrl(v.bytes, _contentType(v.ext));
+        });
+      }
+    } on VideoTooLargeException catch (e) {
+      _toast('Видео хэт том байна (дээд тал нь ${e.limitMb} MB)');
+    } catch (_) {
+      _toast('Видео сонгоход алдаа гарлаа');
     }
   }
 
@@ -53,6 +69,7 @@ class _CreateReelScreenState extends ConsumerState<CreateReelScreen> {
     final user = SupabaseService.currentUser;
     if (user == null) return;
     setState(() { _busy = true; _error = null; });
+    final container = ProviderScope.containerOf(context, listen: false);
     try {
       final ts = DateTime.now().millisecondsSinceEpoch;
       final url = await ImageUploader.uploadBytes(
@@ -73,8 +90,12 @@ class _CreateReelScreenState extends ConsumerState<CreateReelScreen> {
         'media_url': url,
         'media_type': 'video',
       });
+      // Пост аль хэдийн орсон — дэлгэц хаагдсан ч feed, профайлын grid,
+      // ПОСТ тоо (posts_count trigger) шинэчлэгдэх ёстой
+      container.read(feedProvider.notifier).loadFeed(refresh: true);
+      container.read(postsVersionProvider.notifier).state++;
+      container.invalidate(currentProfileProvider);
       if (!mounted) return;
-      ref.read(feedProvider.notifier).loadFeed(refresh: true);
       context.go('/reels');
     } catch (_) {
       // Supabase/Postgres-ийн англи алдааг харуулахгүй — Монгол мессеж
@@ -97,7 +118,11 @@ class _CreateReelScreenState extends ConsumerState<CreateReelScreen> {
       backgroundColor: Colors.black,
       appBar: AppBar(
         backgroundColor: Colors.black, elevation: 0,
-        leading: IconButton(onPressed: () => context.pop(),
+        // Үргэлж харанхуй — light горимд ч статус бар цайвар дүрстэй
+        systemOverlayStyle: SystemUiOverlayStyle.light,
+        // Линк/reload-оор нээгдсэн бол pop хийх хуудас байхгүй
+        leading: IconButton(onPressed: () => context.canPop()
+            ? context.pop() : context.go('/reels'),
           icon: const Icon(Icons.close, color: Colors.white)),
         title: Text('Шинэ Discovery', style: AppTextStyles.labelLg.copyWith(color: Colors.white)),
       ),
@@ -137,17 +162,18 @@ class _CreateReelScreenState extends ConsumerState<CreateReelScreen> {
                     style: AppTextStyles.btn.copyWith(color: Colors.white))),
               ]))
           // Сонгосон клипээ шууд харна — muted/loop preview
-          : Stack(alignment: Alignment.bottomCenter, children: [
+          // SizedBox.expand: үгүй бол Stack товчны хэмжээтэй болно
+          : SizedBox.expand(child: Stack(alignment: Alignment.bottomCenter, children: [
               _previewUrl != null
                 ? Positioned.fill(child: StoryVideoView(
                     url: _previewUrl!, loop: true))
-                : Column(mainAxisSize: MainAxisSize.min, children: [
+                : Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
                     const Icon(Icons.movie_creation_rounded,
                         color: Colors.white70, size: 64),
                     const SizedBox(height: 12),
                     Text('Видео бэлэн',
                         style: AppTextStyles.bodyMd.copyWith(color: Colors.white70)),
-                  ]),
+                  ])),
               Padding(
                 padding: const EdgeInsets.only(bottom: 16),
                 child: _Pressable(
@@ -161,11 +187,14 @@ class _CreateReelScreenState extends ConsumerState<CreateReelScreen> {
                     child: Text('Өөр видео сонгох',
                       style: AppTextStyles.bodySm.copyWith(color: Colors.white)))),
               ),
-            ]))),
+            ])))),
         if (_bytes != null)
           Container(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-            color: AppColors.bgElevated,
+            // Edge-to-edge: Android nav bar-ын доор товч орохгүй
+            padding: EdgeInsets.fromLTRB(
+                16, 12, 16, 8 + MediaQuery.paddingOf(context).bottom),
+            // Үргэлж харанхуй самбар — theme-ээс үл хамаарна
+            color: AppColors.bgElevatedDark,
             child: Column(children: [
               TextField(
                 controller: _captionCtrl,
@@ -175,7 +204,16 @@ class _CreateReelScreenState extends ConsumerState<CreateReelScreen> {
                   hintStyle: const TextStyle(color: Colors.white38),
                   filled: true, fillColor: Colors.white10, isDense: true,
                   border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none)),
+                    borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                  // Theme-ийн хүрээг dark утгаар нь тогтооно (light горимд
+                  // hairline нь харанхуй дэвсгэр дээр алга болдог байсан)
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: AppRadii.mdR,
+                    borderSide: const BorderSide(color: AppColors.hairlineDark)),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: AppRadii.mdR,
+                    borderSide: const BorderSide(
+                      color: AppColors.neonCyanDark, width: 1.4))),
               ),
               if (_error != null) ...[
                 const SizedBox(height: 8),

@@ -10,11 +10,17 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../../core/services/supabase_service.dart';
 import '../../../core/widgets/app_avatar.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../utils/live_unload.dart';
 import '../widgets/tap_scale.dart';
+
+/// Камерын дэлгэц горимоос үл хамааран ҮРГЭЛЖ харанхуй — Material-ийн
+/// анхдагч өнгө (TextField дүүргэлт/хүрээ, SnackBar/диалогийн товч) dark
+/// theme-ээс авна. Dark горимд апп-ын theme-тэй яг ижил тул өөрчлөлтгүй.
+final ThemeData _alwaysDarkTheme = AppTheme.dark;
 
 class GoLiveScreen extends ConsumerStatefulWidget {
   const GoLiveScreen({super.key});
@@ -274,8 +280,8 @@ class _GoLiveScreenState extends ConsumerState<GoLiveScreen> {
   Future<void> _confirmEnd() async {
     final ok = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.bgSurface,
+      builder: (ctx) => Theme(data: _alwaysDarkTheme, child: AlertDialog(
+        backgroundColor: AppColors.bgSurfaceDark,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Text('Live дуусгах уу?',
           style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.w700)),
@@ -287,7 +293,7 @@ class _GoLiveScreenState extends ConsumerState<GoLiveScreen> {
           TextButton(onPressed: () => Navigator.pop(ctx, true),
             child: const Text('Дуусгах',
               style: TextStyle(color: AppColors.error, fontWeight: FontWeight.w700))),
-        ]));
+        ])));
     if (ok == true && mounted) _endLive();
   }
 
@@ -451,7 +457,7 @@ class _GoLiveScreenState extends ConsumerState<GoLiveScreen> {
       onPopInvokedWithResult: (didPop, _) {
         if (!didPop && _isLive) _confirmEnd();
       },
-      child: Scaffold(
+      child: Theme(data: _alwaysDarkTheme, child: Scaffold(
         backgroundColor: Colors.black,
         resizeToAvoidBottomInset: false,
         body: SizedBox(
@@ -526,7 +532,7 @@ class _GoLiveScreenState extends ConsumerState<GoLiveScreen> {
                         onGo: _cameraReady ? _goLive : null)))),
           ]),
         ),
-      ),
+      )),
     );
   }
 }
@@ -581,7 +587,7 @@ class _ProfileChip extends StatelessWidget {
     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
     decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.circular(20)),
     child: Row(mainAxisSize: MainAxisSize.min, children: [
-      AppAvatar(initial: profile?.initial ?? '?', imageUrl: profile?.avatarUrl, size: 22),
+      AppAvatar(initial: profile?.initial ?? '?', imageUrl: profile?.avatarUrl, size: 22, onDark: true),
       const SizedBox(width: 6),
       Text(profile?.username ?? '',
         style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13)),

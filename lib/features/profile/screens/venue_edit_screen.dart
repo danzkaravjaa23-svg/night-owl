@@ -8,6 +8,7 @@ import '../../../core/services/supabase_service.dart';
 import '../../../core/utils/image_uploader.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/widgets/gradient_button.dart';
+import '../../../core/router/app_router.dart';
 import '../../map/providers/venue_provider.dart';
 
 /// Газрын төрөл — түлхүүр нь өгөгдлийн санд (venue_type) хэвээр англиар
@@ -134,7 +135,12 @@ class _VenueEditScreenState extends ConsumerState<VenueEditScreen> {
       ref.invalidate(venuesProvider);
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
         content: Text('Хадгалагдлаа ✓'), behavior: SnackBarBehavior.floating));
-      context.pop();
+      // Reload/deep link үед stack хоосон байж болно — бизнес самбар руу fallback
+      if (context.canPop()) {
+        context.pop();
+      } else {
+        context.go(AppRoutes.business);
+      }
     } catch (_) {
       if (mounted) {
         setState(() { _busy = false; _error = 'Хадгалж чадсангүй. Дахин оролдоно уу'; });
@@ -156,7 +162,10 @@ class _VenueEditScreenState extends ConsumerState<VenueEditScreen> {
       backgroundColor: AppColors.bgBase,
       appBar: AppBar(
         backgroundColor: AppColors.bgBase, elevation: 0,
-        leading: IconButton(onPressed: () => context.pop(),
+        leading: IconButton(
+          onPressed: () => context.canPop()
+              ? context.pop()
+              : context.go(AppRoutes.business),
           icon: const Icon(Icons.arrow_back_ios_new, size: 20)),
         title: Text(_venueId != null ? 'Газар засах' : 'Газар үүсгэх',
           style: AppTextStyles.h2),
@@ -166,7 +175,8 @@ class _VenueEditScreenState extends ConsumerState<VenueEditScreen> {
             color: AppColors.accentStart, strokeWidth: 2))
         : _loadFailed
         ? _loadError()
-        : ListView(padding: const EdgeInsets.all(20), children: [
+        : ListView(padding: EdgeInsets.fromLTRB(20, 20, 20,
+              20 + MediaQuery.paddingOf(context).bottom), children: [
             // Cover
             GestureDetector(
               onTap: _pickCover,
@@ -181,9 +191,9 @@ class _VenueEditScreenState extends ConsumerState<VenueEditScreen> {
                         ? DecorationImage(image: NetworkImage(_coverUrl!), fit: BoxFit.cover)
                         : null)),
                 child: (_coverBytes == null && _coverUrl == null)
-                  ? const Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
+                  ? Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
                       Icon(Icons.add_photo_alternate_outlined, color: AppColors.textTertiary, size: 36),
-                      SizedBox(height: 6),
+                      const SizedBox(height: 6),
                       Text('Cover зураг', style: TextStyle(color: AppColors.textTertiary)),
                     ]))
                   : null),
@@ -244,7 +254,7 @@ class _VenueEditScreenState extends ConsumerState<VenueEditScreen> {
   // Ачаалал бүтэлгүйтсэн үед — форм харуулахгүй (давхар venue үүсэхээс сэргийлнэ)
   Widget _loadError() => Center(
     child: Column(mainAxisSize: MainAxisSize.min, children: [
-      const Icon(Icons.cloud_off_outlined,
+      Icon(Icons.cloud_off_outlined,
         color: AppColors.textTertiary, size: 48),
       const SizedBox(height: 14),
       Text('Ачаалж чадсангүй', style: AppTextStyles.h3),

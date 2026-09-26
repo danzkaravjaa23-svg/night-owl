@@ -287,8 +287,8 @@ class _SectionCard extends StatelessWidget {
   Widget build(BuildContext context) => Column(children: [
     for (var i = 0; i < children.length; i++) ...[
       if (i > 0)
-        const Padding(
-          padding: EdgeInsets.only(left: 88),
+        Padding(
+          padding: const EdgeInsets.only(left: 88),
           child: Divider(height: 1, thickness: 1, color: AppColors.hairline)),
       children[i],
     ],
@@ -507,7 +507,7 @@ class _ErrorState extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Center(child: Column(
     mainAxisSize: MainAxisSize.min, children: [
-      const Icon(Icons.wifi_off_rounded, color: AppColors.textTertiary, size: 44),
+      Icon(Icons.wifi_off_rounded, color: AppColors.textTertiary, size: 44),
       const SizedBox(height: 12),
       Text('Ачаалж чадсангүй', style: AppTextStyles.bodyMd.copyWith(
         color: AppColors.textSecondary)),
@@ -537,7 +537,7 @@ class _SkeletonTile extends StatelessWidget {
   Widget build(BuildContext context) => Padding(
     padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
     child: Row(children: [
-      Container(width: 52, height: 52, decoration: const BoxDecoration(
+      Container(width: 52, height: 52, decoration: BoxDecoration(
         shape: BoxShape.circle, color: AppColors.bgSurface)),
       const SizedBox(width: 12),
       Expanded(child: Column(
@@ -597,7 +597,7 @@ class _GroupTile extends StatelessWidget {
                     shape: BoxShape.circle,
                     color: AppColors.bgSurface,
                     border: Border.all(color: AppColors.hairline2)),
-                  child: const Icon(Icons.person,
+                  child: Icon(Icons.person,
                       size: 17, color: AppColors.textTertiary))),
               Positioned(bottom: 0, left: 0,
                 child: Container(
@@ -624,7 +624,7 @@ class _GroupTile extends StatelessWidget {
                       color: AppColors.textSecondary)),
             ])),
           const SizedBox(width: 10),
-          const Icon(Icons.chevron_right,
+          Icon(Icons.chevron_right,
               color: AppColors.textTertiary, size: 20),
         ]),
       ),

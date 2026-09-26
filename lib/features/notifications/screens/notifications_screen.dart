@@ -236,7 +236,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
             ],
             IconButton(
               onPressed: _load,
-              icon: const Icon(Icons.refresh_rounded, size: 20,
+              icon: Icon(Icons.refresh_rounded, size: 20,
                 color: AppColors.textSecondary),
               padding: const EdgeInsets.all(8)),
           ]),
@@ -265,7 +265,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                               child: Row(children: [
                                 Text(e, style: AppTextStyles.sectionLabel),
                                 const SizedBox(width: 12),
-                                const Expanded(child: Divider(
+                                Expanded(child: Divider(
                                   color: AppColors.hairline, height: 1)),
                               ]),
                             );
@@ -486,7 +486,7 @@ class _ErrorState extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Center(
     child: Column(mainAxisSize: MainAxisSize.min, children: [
-      const Icon(Icons.wifi_off_rounded, size: 48, color: AppColors.textTertiary),
+      Icon(Icons.wifi_off_rounded, size: 48, color: AppColors.textTertiary),
       const SizedBox(height: 12),
       Text('Алдаа гарлаа — дахин оролдоно уу',
         style: AppTextStyles.bodyMd.copyWith(color: AppColors.textSecondary)),
@@ -517,6 +517,10 @@ class _SkeletonListState extends State<_SkeletonList>
   @override
   void dispose() { _c.dispose(); super.dispose(); }
 
+  // Цайвар горимд цагаан skeleton цөцгий дэвсгэр дээр үл харагдана — surface
+  Color get _skel =>
+      AppColors.isDarkMode ? AppColors.bgElevated : AppColors.bgSurface;
+
   @override
   Widget build(BuildContext context) => FadeTransition(
     opacity: _c,
@@ -527,27 +531,27 @@ class _SkeletonListState extends State<_SkeletonList>
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
         child: Row(children: [
           Container(width: 44, height: 44,
-            decoration: const BoxDecoration(
-              shape: BoxShape.circle, color: AppColors.bgElevated)),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle, color: _skel)),
           const SizedBox(width: 14),
           Expanded(child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(height: 12, width: double.infinity,
                 decoration: BoxDecoration(
-                  color: AppColors.bgElevated,
+                  color: _skel,
                   borderRadius: BorderRadius.circular(6))),
               const SizedBox(height: 8),
               Container(height: 10, width: 90,
                 decoration: BoxDecoration(
-                  color: AppColors.bgElevated,
+                  color: _skel,
                   borderRadius: BorderRadius.circular(5))),
             ])),
           const SizedBox(width: 14),
           // Баруун талын пост tile placeholder
           Container(width: 44, height: 44,
             decoration: BoxDecoration(
-              color: AppColors.bgElevated,
+              color: _skel,
               borderRadius: BorderRadius.circular(10))),
         ]),
       ),

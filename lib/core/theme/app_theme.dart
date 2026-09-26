@@ -10,15 +10,16 @@ class AppTheme {
   static ThemeData get light => _buildTheme(isDark: false);
 
   static ThemeData _buildTheme({required bool isDark}) {
-    final bg       = isDark ? AppColors.bgBase      : AppColors.bgBaseLight;
-    final elevated = isDark ? AppColors.bgElevated  : AppColors.bgElevatedLight;
-    final surface  = isDark ? AppColors.bgSurface   : AppColors.bgSurfaceLight;
-    final textPri  = isDark ? AppColors.textPrimary : AppColors.textPrimaryLight;
-    final textSec  = isDark ? AppColors.textSecondary : AppColors.textSecondaryLight;
-    final hairline = isDark ? AppColors.hairline    : AppColors.hairlineLight;
-    final hairline2 = isDark ? AppColors.hairline2  : AppColors.hairline2Light;
+    final bg       = isDark ? AppColors.bgBaseDark      : AppColors.bgBaseLight;
+    final elevated = isDark ? AppColors.bgElevatedDark  : AppColors.bgElevatedLight;
+    final surface  = isDark ? AppColors.bgSurfaceDark   : AppColors.bgSurfaceLight;
+    final textPri  = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
+    final textSec  = isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
+    final hairline = isDark ? AppColors.hairlineDark    : AppColors.hairlineLight;
+    final hairline2 = isDark ? AppColors.hairline2Dark  : AppColors.hairline2Light;
     // Цайвар дэвсгэр дээр neonCyan бүдэг тул light горимд гүн cyan.
-    final accentLink = isDark ? AppColors.neonCyan  : AppColors.steel;
+    final accentLink = isDark ? AppColors.neonCyanDark  : AppColors.steel;
+    final textTer  = isDark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight;
 
     return ThemeData(
       useMaterial3: true,
@@ -70,7 +71,7 @@ class AppTheme {
       ),
       bottomNavigationBarTheme: BottomNavigationBarThemeData(
         backgroundColor: elevated,
-        selectedItemColor: AppColors.neonCyan,
+        selectedItemColor: accentLink,
         unselectedItemColor: textSec,
         type: BottomNavigationBarType.fixed,
         elevation: 0,
@@ -100,7 +101,7 @@ class AppTheme {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: AppRadii.mdR,
-          borderSide: const BorderSide(color: AppColors.neonCyan, width: 1.4),
+          borderSide: BorderSide(color: accentLink, width: 1.4),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: AppRadii.mdR,
@@ -122,7 +123,7 @@ class AppTheme {
         style: ButtonStyle(
           backgroundColor: WidgetStateProperty.resolveWith((states) {
             if (states.contains(WidgetState.disabled)) {
-              return AppColors.textTertiary.withValues(alpha: 0.35);
+              return textTer.withValues(alpha: 0.35);
             }
             return AppColors.accentStart;
           }),
@@ -174,14 +175,14 @@ class AppTheme {
         // Glass dark — хөвөгч, hairline хүрээтэй, радиус 14
         backgroundColor: isDark ? const Color(0xF0121218) : elevated,
         contentTextStyle: GoogleFonts.inter(
-            color: isDark ? AppColors.textPrimary : textPri,
+            color: textPri,
             fontSize: 14, fontWeight: FontWeight.w500),
-        actionTextColor: AppColors.neonCyan,
+        actionTextColor: accentLink,
         elevation: 0,
         insetPadding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
         shape: RoundedRectangleBorder(
           borderRadius: AppRadii.mdR,
-          side: BorderSide(color: isDark ? AppColors.hairline : hairline),
+          side: BorderSide(color: hairline),
         ),
         behavior: SnackBarBehavior.floating,
       ),

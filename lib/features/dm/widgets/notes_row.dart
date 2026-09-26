@@ -121,7 +121,7 @@ class NotesRowState extends State<NotesRow> {
       context: context, backgroundColor: AppColors.bgElevated,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
-      builder: (sheetCtx) => Padding(
+      builder: (sheetCtx) => SafeArea(top: false, child: Padding(
         padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
         child: Column(mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -179,7 +179,7 @@ class NotesRowState extends State<NotesRow> {
                 child: Text('Note-д хариулах', style: AppTextStyles.btn.copyWith(color: Colors.white))),
             ),
           ]),
-      ),
+      )),
     );
   }
 
@@ -268,7 +268,12 @@ class _NoteBubble extends StatelessWidget {
                   height: 1.15)),
               if (venueName != null)
                 Text('📍${venueName!}', maxLines: 1, overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(color: AppColors.amber, fontSize: 9)),
+                  // Шар өнгө цайвар бөмбөлөг дээр уншигдахгүй тул гэрэл горимд
+                  // бараан алтан; 9px → 11px (уншигдах доод хэмжээ).
+                  style: AppTextStyles.bodyXs.copyWith(
+                    color: AppColors.isDarkMode
+                        ? AppColors.amber : const Color(0xFF8A5A00),
+                    fontSize: 11)),
             ]),
           ),
           const SizedBox(height: 2),
@@ -283,7 +288,7 @@ class _NoteBubble extends StatelessWidget {
                   gradient: AppColors.accentGradientSoft),
                 child: Container(
                   padding: const EdgeInsets.all(2),
-                  decoration: const BoxDecoration(
+                  decoration: BoxDecoration(
                     shape: BoxShape.circle, color: AppColors.bgBase),
                   child: AppAvatar(
                       imageUrl: avatarUrl, initial: initial, size: 56)))
@@ -308,7 +313,7 @@ class _NoteBubble extends StatelessWidget {
             style: AppTextStyles.bodyXs.copyWith(color: AppColors.textSecondary))),
           if (hasNote && _noteTimeAgo(createdAt).isNotEmpty)
             Text(_noteTimeAgo(createdAt), textAlign: TextAlign.center,
-              style: const TextStyle(color: AppColors.textTertiary, fontSize: 9)),
+              style: TextStyle(color: AppColors.textTertiary, fontSize: 9)),
         ])),
       ),
     );
@@ -406,7 +411,7 @@ class _NoteComposerState extends State<_NoteComposer> {
       padding: EdgeInsets.only(
         bottom: MediaQuery.of(context).viewInsets.bottom + 16,
         left: 16, right: 16, top: 16),
-      child: Column(mainAxisSize: MainAxisSize.min, children: [
+      child: SafeArea(top: false, child: Column(mainAxisSize: MainAxisSize.min, children: [
         Container(width: 40, height: 4, decoration: BoxDecoration(
           color: AppColors.hairline, borderRadius: BorderRadius.circular(2))),
         const SizedBox(height: 14),
@@ -446,7 +451,7 @@ class _NoteComposerState extends State<_NoteComposer> {
               if (_venueName != null)
                 _Pressable(
                   onTap: () => setState(() { _venueId = null; _venueName = null; }),
-                  child: const Icon(Icons.close, size: 16, color: AppColors.textTertiary)),
+                  child: Icon(Icons.close, size: 16, color: AppColors.textTertiary)),
             ]),
           ),
         ),
@@ -478,7 +483,7 @@ class _NoteComposerState extends State<_NoteComposer> {
                     CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
                 : Text('Хуваалцах', style: AppTextStyles.btn.copyWith(color: Colors.white))))),
         ]),
-      ]),
+      ])),
     );
   }
 }
@@ -513,7 +518,7 @@ class _VenueSearchSheetState extends State<_VenueSearchSheet> {
     return Padding(
       padding: EdgeInsets.only(
         bottom: MediaQuery.of(context).viewInsets.bottom, left: 16, right: 16, top: 16),
-      child: Column(mainAxisSize: MainAxisSize.min, children: [
+      child: SafeArea(top: false, child: Column(mainAxisSize: MainAxisSize.min, children: [
         Container(width: 40, height: 4, decoration: BoxDecoration(
           color: AppColors.hairline, borderRadius: BorderRadius.circular(2))),
         const SizedBox(height: 12),
@@ -524,7 +529,7 @@ class _VenueSearchSheetState extends State<_VenueSearchSheet> {
           style: AppTextStyles.bodyMd.copyWith(color: AppColors.textPrimary),
           decoration: InputDecoration(
             hintText: 'Газар хайх...',
-            prefixIcon: const Icon(Icons.search, color: AppColors.textTertiary),
+            prefixIcon: Icon(Icons.search, color: AppColors.textTertiary),
             filled: true, fillColor: AppColors.bgSurface, isDense: true,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none)),
@@ -550,7 +555,7 @@ class _VenueSearchSheetState extends State<_VenueSearchSheet> {
                 );
               })),
         const SizedBox(height: 12),
-      ]),
+      ])),
     );
   }
 }
@@ -632,7 +637,7 @@ class _NoteSkeletonCell extends StatelessWidget {
       Container(height: 40, width: 104, decoration: BoxDecoration(
         color: AppColors.bgSurface, borderRadius: BorderRadius.circular(12))),
       const SizedBox(height: 6),
-      Container(width: 64, height: 64, decoration: const BoxDecoration(
+      Container(width: 64, height: 64, decoration: BoxDecoration(
         shape: BoxShape.circle, color: AppColors.bgSurface)),
       const SizedBox(height: 8),
       Container(height: 9, width: 60, decoration: BoxDecoration(

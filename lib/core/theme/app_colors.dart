@@ -5,33 +5,47 @@ import 'package:flutter/material.dart';
 /// ⚠️ Token НЭРС хэвээр (бүх дэлгэц эдгээрийг уншдаг) — зөвхөн УТГА нь neon болсон.
 abstract class AppColors {
   // ─── Deep void (dark theme, default) ───
-  static const Color bgBase      = Color(0xFF050505); // void black
-  static const Color bgElevated  = Color(0xFF0D0D12);
-  static const Color bgSurface   = Color(0xFF15151C);
+  static const Color bgBaseDark = Color(0xFF050505); // void black
+  static Color get bgBase => isDarkMode ? bgBaseDark : bgBaseLight;
+  static const Color bgElevatedDark = Color(0xFF0D0D12);
+  static Color get bgElevated => isDarkMode ? bgElevatedDark : bgElevatedLight;
+  static const Color bgSurfaceDark = Color(0xFF15151C);
+  static Color get bgSurface => isDarkMode ? bgSurfaceDark : bgSurfaceLight;
   static const Color bgOverlay   = Color(0xC0050505); // rgba(5,5,5,0.75)
 
   // Borders — ultra-thin glass hairline
-  static const Color hairline    = Color(0x1FFFFFFF); // rgba(255,255,255,0.12)
-  static const Color hairline2   = Color(0x26FFFFFF); // rgba(255,255,255,0.15)
+  static const Color hairlineDark = Color(0x1FFFFFFF); // rgba(255,255,255,0.12)
+  static Color get hairline => isDarkMode ? hairlineDark : hairlineLight;
+  static const Color hairline2Dark = Color(0x26FFFFFF); // rgba(255,255,255,0.15)
+  static Color get hairline2 => isDarkMode ? hairline2Dark : hairline2Light;
 
   // Text — cool white / steel
-  static const Color textPrimary   = Color(0xFFF4F6FA);
-  static const Color textSecondary = Color(0xFFA7ADBA);
+  static const Color textPrimaryDark = Color(0xFFF4F6FA);
+  static Color get textPrimary => isDarkMode ? textPrimaryDark : textPrimaryLight;
+  static const Color textSecondaryDark = Color(0xFFA7ADBA);
+  static Color get textSecondary => isDarkMode ? textSecondaryDark : textSecondaryLight;
   // WCAG AA (4.5:1) хангахаар цайруулсан — 10–11px жижиг шошгонд уншигдана.
-  static const Color textTertiary  = Color(0xFF7E8494);
-  static const Color textMono      = Color(0xFF9FB6C2);
+  static const Color textTertiaryDark = Color(0xFF7E8494);
+  static Color get textTertiary => isDarkMode ? textTertiaryDark : textTertiaryLight;
+  static const Color textMonoDark = Color(0xFF9FB6C2);
+  static Color get textMono => isDarkMode ? textMonoDark : textSecondaryLight;
 
   // ─── Electric cyan (active / selected / focus — "silver" нэрээр) ───
   // Хуучин "silver" токенуудыг neon cyan болгосон тул nav-active, брэнд гялбаа cyan болно.
-  static const Color silver      = Color(0xFF22E7FF); // neon cyan (active)
+  static const Color silverNeon = Color(0xFF22E7FF); // neon cyan (active)
+  static Color get silver => isDarkMode ? silverNeon : neonCyanLight;
   static const Color silverLight = Color(0xFFBDF6FF);
   static const Color silverDark  = Color(0xFF15C2DA);
   static const Color steel       = Color(0xFF0E7F90); // deep cyan
 
   // Дөт хандалт (шинэ alias — нэмэлт, аюулгүй)
-  static const Color neonCyan = Color(0xFF22E7FF);
+  static const Color neonCyanDark  = Color(0xFF22E7FF);
+  static const Color neonCyanLight = Color(0xFF0B7A8A); // цайвар дэвсгэр дээр AA
+  static Color get neonCyan => isDarkMode ? neonCyanDark : neonCyanLight;
   static const Color magenta  = Color(0xFFE935C8);
-  static const Color lime     = Color(0xFFB4FF2E);
+  static const Color limeDark  = Color(0xFFB4FF2E);
+  static const Color limeLight = Color(0xFF3F8F00); // цайвар дэвсгэр дээр AA
+  static Color get lime => isDarkMode ? limeDark : limeLight;
   static const Color amber    = Color(0xFFFFB020);
   static const Color orange   = Color(0xFFFF6A2B);
 
@@ -48,7 +62,9 @@ abstract class AppColors {
   static const Color saved = accentStart;  // хадгалсан тэмдэг
 
   // Status
-  static const Color success = Color(0xFFB4FF2E); // glowing lime (live/active)
+  static const Color successDark  = Color(0xFFB4FF2E); // glowing lime (live/active)
+  static const Color successLight = Color(0xFF3F8F00); // цайвар дэвсгэр дээр AA
+  static Color get success => isDarkMode ? successDark : successLight;
   static const Color error   = Color(0xFFFF4566);
   static const Color warning = Color(0xFFFFB020); // amber
 
@@ -68,17 +84,38 @@ abstract class AppColors {
   // ─── Theme-aware (динамик) резолюц ───
   // ThemeModeNotifier горим солигдоход энэ флагийг шинэчилдэг;
   // MaterialApp бүх мод-оо дахин build хийдэг тул getter-ууд шинэ утга буцаана.
-  // const токенууд хэвээр (дээрх) — эдгээр нь НЭМЭЛТ, light горимд зөв өнгө өгнө.
+  // Саармаг токенууд (bg*, hairline*, text*) болон neonCyan/silver/lime/success
+  // одоо өөрсдөө адаптив getter. dyn* нь хуучин кодын alias.
+  // Горимоос үл хамааран ҮРГЭЛЖ харанхуй байх гадаргуу (reels, story, live,
+  // видео/зураг дээрх overlay) *Dark const-уудыг ашиглана.
   static bool isDarkMode = true;
-  static Color get dynBgBase        => isDarkMode ? bgBase        : bgBaseLight;
-  static Color get dynBgElevated    => isDarkMode ? bgElevated    : bgElevatedLight;
-  static Color get dynBgSurface     => isDarkMode ? bgSurface     : bgSurfaceLight;
-  static Color get dynHairline      => isDarkMode ? hairline      : hairlineLight;
-  static Color get dynHairline2     => isDarkMode ? hairline2     : hairline2Light;
-  static Color get dynTextPrimary   => isDarkMode ? textPrimary   : textPrimaryLight;
-  static Color get dynTextSecondary => isDarkMode ? textSecondary : textSecondaryLight;
-  static Color get dynTextTertiary  => isDarkMode ? textTertiary  : textTertiaryLight;
-  static Color get dynTextMono      => isDarkMode ? textMono      : textSecondaryLight;
+  static Color get dynBgBase => bgBase;
+  static Color get dynBgElevated => bgElevated;
+  static Color get dynBgSurface => bgSurface;
+  static Color get dynHairline => hairline;
+  static Color get dynHairline2 => hairline2;
+  static Color get dynTextPrimary => textPrimary;
+  static Color get dynTextSecondary => textSecondary;
+  static Color get dynTextTertiary => textTertiary;
+  static Color get dynTextMono => textMono;
+
+  /// Үргэлж харанхуй гадаргуу (reels, story, live, видео, splash) дээр
+  /// адаптив өнгийг харанхуй хувилбараар нь солино. Бусад өнгө хэвээр.
+  /// Харанхуй горимд аль хэдийн харанхуй утгатай тул өөрчлөлтгүй.
+  static Color? toDark(Color? c) => c == null ? null : (_toDarkMap[c] ?? c);
+
+  static final Map<Color, Color> _toDarkMap = {
+    bgBaseLight: bgBaseDark,
+    bgElevatedLight: bgElevatedDark,
+    bgSurfaceLight: bgSurfaceDark,
+    hairlineLight: hairlineDark,
+    hairline2Light: hairline2Dark,
+    textPrimaryLight: textPrimaryDark,
+    textSecondaryLight: textSecondaryDark,
+    textTertiaryLight: textTertiaryDark,
+    neonCyanLight: neonCyanDark,
+    limeLight: limeDark,
+  };
 
   // ─── Primary action gradient — magenta → purple → pink ───
   static const LinearGradient accentGradient = LinearGradient(
@@ -104,7 +141,7 @@ abstract class AppColors {
   static const LinearGradient chromeGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [silverLight, silver, steel, silver],
+    colors: [silverLight, silverNeon, steel, silverNeon],
     stops: [0.0, 0.35, 0.7, 1.0],
   );
 
@@ -125,7 +162,7 @@ abstract class AppColors {
   // Эхлэл/төгсгөл ижил өнгө тул эргэлт залгаасгүй, тасралтгүй харагдана.
   static const SweepGradient storyRingGradient = SweepGradient(
     transform: GradientRotation(-1.5708), // дээд цэгээс эхэлнэ
-    colors: [magenta, accentEnd, Color(0xFFFF6FB3), neonCyan, accentPurple, magenta],
+    colors: [magenta, accentEnd, Color(0xFFFF6FB3), neonCyanDark, accentPurple, magenta],
     stops: [0.0, 0.25, 0.45, 0.65, 0.85, 1.0],
   );
 

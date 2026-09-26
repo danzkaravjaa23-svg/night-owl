@@ -115,10 +115,11 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
       appBar: AppBar(
         backgroundColor: AppColors.bgBase, elevation: 0,
         leading: IconButton(onPressed: _close,
-          icon: const Icon(Icons.close, color: AppColors.textPrimary)),
+          icon: Icon(Icons.close, color: AppColors.textPrimary)),
         title: Text('Эвент нэмэх', style: AppTextStyles.h2),
       ),
-      body: ListView(padding: const EdgeInsets.all(20), children: [
+      body: ListView(padding: EdgeInsets.fromLTRB(20, 20, 20,
+          20 + MediaQuery.paddingOf(context).bottom), children: [
         // Cover
         _Tap(
           onTap: _pickCover,
@@ -130,9 +131,9 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
               image: _cover != null
                 ? DecorationImage(image: MemoryImage(_cover!), fit: BoxFit.cover) : null),
             child: _cover == null
-              ? const Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
+              ? Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
                   Icon(Icons.add_photo_alternate_outlined, color: AppColors.textTertiary, size: 36),
-                  SizedBox(height: 6),
+                  const SizedBox(height: 6),
                   Text('Cover зураг', style: TextStyle(color: AppColors.textTertiary)),
                 ]))
               : null),
@@ -186,7 +187,7 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
         const SizedBox(width: 10),
         Expanded(child: Text(label,
           style: AppTextStyles.bodyMd.copyWith(color: AppColors.textPrimary))),
-        const Icon(Icons.chevron_right, color: AppColors.textTertiary, size: 18),
+        Icon(Icons.chevron_right, color: AppColors.textTertiary, size: 18),
       ])));
 }
 
@@ -270,13 +271,13 @@ class _VenuePickState extends State<_VenuePick> {
   Widget build(BuildContext context) => Padding(
     padding: EdgeInsets.only(
       bottom: MediaQuery.of(context).viewInsets.bottom, left: 16, right: 16, top: 16),
-    child: Column(mainAxisSize: MainAxisSize.min, children: [
+    child: SafeArea(top: false, child: Column(mainAxisSize: MainAxisSize.min, children: [
       Text('Газар сонгох', style: AppTextStyles.labelLg),
       const SizedBox(height: 12),
       TextField(autofocus: true, onChanged: _search,
         style: AppTextStyles.bodyMd.copyWith(color: AppColors.textPrimary),
         decoration: InputDecoration(hintText: 'Хайх...',
-          prefixIcon: const Icon(Icons.search, color: AppColors.textTertiary),
+          prefixIcon: Icon(Icons.search, color: AppColors.textTertiary),
           filled: true, fillColor: AppColors.bgSurface, isDense: true,
           border: OutlineInputBorder(
             borderRadius: AppRadii.mdR, borderSide: BorderSide.none))),
@@ -286,7 +287,7 @@ class _VenuePickState extends State<_VenuePick> {
             color: AppColors.accentStart, strokeWidth: 2))
         : _failed
           ? Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-              const Icon(Icons.wifi_off_outlined,
+              Icon(Icons.wifi_off_outlined,
                 color: AppColors.textTertiary, size: 36),
               const SizedBox(height: 10),
               Text('Алдаа гарлаа — дахин оролдоно уу',
@@ -307,5 +308,5 @@ class _VenuePickState extends State<_VenuePick> {
                 style: AppTextStyles.bodyMd.copyWith(color: AppColors.textPrimary)),
               onTap: () => Navigator.pop(context, _r[i])))),
       const SizedBox(height: 12),
-    ]));
+    ])));
 }

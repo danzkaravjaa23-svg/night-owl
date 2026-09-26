@@ -61,7 +61,8 @@ class QPayScreen extends StatelessWidget {
         title: Text('QPAY · ТӨЛБӨР', style: AppTextStyles.mono),
       ),
       body: Padding(
-        padding: const EdgeInsets.all(32),
+        padding: EdgeInsets.fromLTRB(
+            32, 32, 32, 32 + MediaQuery.paddingOf(context).bottom),
         child: Column(
           children: [
             const Spacer(),
@@ -72,7 +73,7 @@ class QPayScreen extends StatelessWidget {
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(color: AppColors.hairline),
               ),
-              child: const Center(child: Text('QR', style: TextStyle(
+              child: Center(child: Text('QR', style: TextStyle(
                 color: AppColors.textTertiary, fontSize: 28, fontWeight: FontWeight.w800))),
             ),
             const SizedBox(height: 24),
@@ -88,7 +89,7 @@ class QPayScreen extends StatelessWidget {
               style: AppTextStyles.bodyMd.copyWith(color: AppColors.textSecondary),
               textAlign: TextAlign.center),
             const SizedBox(height: 40),
-            const Divider(color: AppColors.hairline),
+            Divider(color: AppColors.hairline),
             const SizedBox(height: 20),
             Text('ЭСВЭЛ БАНКАА СОНГО', style: AppTextStyles.labelSm),
             const SizedBox(height: 16),

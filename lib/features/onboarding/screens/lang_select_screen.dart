@@ -131,12 +131,14 @@ class _OwlHero extends StatelessWidget {
           shape: BoxShape.circle,
           gradient: AppColors.chromeGradient,
         ),
+        // Мөнгөлөг шар шувуу харанхуй дэвсгэрт зориулж зурагдсан тул медаль
+        // нь хоёр горимд ХАРАНХУЙ (onboarding-ийн коктейлийн медаль шиг).
         child: Container(
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: AppColors.bgElevated.withValues(alpha: 0.85),
+            color: AppColors.bgElevatedDark.withValues(alpha: 0.92),
             border: Border.all(
-              color: AppColors.neonCyan.withValues(alpha: 0.35),
+              color: AppColors.neonCyanDark.withValues(alpha: 0.35),
               width: 1,
             ),
           ),
@@ -146,7 +148,7 @@ class _OwlHero extends StatelessWidget {
             width: 92,
             height: 92,
             fit: BoxFit.contain,
-            errorBuilder: (context, error, stackTrace) => const Icon(
+            errorBuilder: (context, error, stackTrace) => Icon(
               Icons.nightlight_round,
               color: AppColors.neonCyan,
               size: 46,
@@ -304,7 +306,7 @@ class _LangTileState extends State<_LangTile> {
                           ),
                         ],
                       ),
-                      child: const Icon(Icons.check,
+                      child: Icon(Icons.check,
                           size: 15, color: AppColors.bgBase),
                     ),
                 ],
@@ -326,7 +328,7 @@ class _LangAura extends StatelessWidget {
             Positioned(
               top: -120,
               left: -110,
-              child: _blob(280, AppColors.neonCyan.withValues(alpha: 0.18)),
+              child: _blob(280, AppColors.neonCyanDark.withValues(alpha: 0.18)),
             ),
             Positioned(
               top: -90,

@@ -27,8 +27,9 @@ dependencies:
   # firebase_messaging: ^14.9.4
   # flutter_local_notifications: ^17.2.1
 
-  # Maps (хожим нэмнэ)
-  # google_maps_flutter: ^2.6.0
+  # Maps — вэб дээр Leaflet (iframe), Android/iOS дээр flutter_map
+  flutter_map: ^8.3.2
+  latlong2: ^0.10.1
   # geolocator: ^11.0.0
 
   # Media

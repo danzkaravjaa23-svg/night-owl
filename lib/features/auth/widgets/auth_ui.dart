@@ -12,11 +12,12 @@ import '../../../core/theme/app_text_styles.dart';
 // ── Нууц үгийн доод урт — бүх auth дэлгэцэд нэг стандарт ──
 const int kPasswordMinLength = 8;
 
-// ── Google OAuth — жинхэнэ нэвтрэлт (web: одоогийн origin руу буцна) ──
+// ── Google OAuth — жинхэнэ нэвтрэлт (web: одоогийн origin, native: deep link руу буцна) ──
 Future<void> signInWithGoogle() async {
   await Supabase.instance.client.auth.signInWithOAuth(
     OAuthProvider.google,
-    redirectTo: kIsWeb ? Uri.base.origin : null,
+    // AndroidManifest-ийн intent-filter-тэй тохирно; Supabase Redirect URLs-д бүртгэнэ
+    redirectTo: kIsWeb ? Uri.base.origin : 'com.nightowl.ub://login-callback',
   );
 }
 
@@ -71,12 +72,16 @@ class AuthEntrance extends StatelessWidget {
 }
 
 // ── Ачаалж буй товчны spinner (GradientButton-ы trailing) ──
+// Ачаалах үед onPressed=null тул товч идэвхгүй (bgSurface дэвсгэр) —
+// цайвар горимд цагаан spinner алга болохоос сэргийлж textSecondary.
 class BtnSpinner extends StatelessWidget {
   const BtnSpinner({super.key});
   @override
-  Widget build(BuildContext context) => const SizedBox(
+  Widget build(BuildContext context) => SizedBox(
     width: 16, height: 16,
-    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+    child: CircularProgressIndicator(
+      strokeWidth: 2,
+      color: AppColors.isDarkMode ? Colors.white : AppColors.textSecondary),
   );
 }
 
@@ -137,7 +142,7 @@ class GlassBack extends StatelessWidget {
         shape: BoxShape.circle,
         border: Border.all(color: AppColors.hairline2),
       ),
-      child: const Icon(Icons.chevron_left_rounded,
+      child: Icon(Icons.chevron_left_rounded,
         color: AppColors.textPrimary, size: 24),
     ),
   );
@@ -169,16 +174,22 @@ class AuthGlyph extends StatelessWidget {
 }
 
 class OrDivider extends StatelessWidget {
-  const OrDivider({super.key});
+  /// Үргэлж харанхуй дэлгэц (нүүр хуудас) дээр.
+  final bool onDark;
+  const OrDivider({super.key, this.onDark = false});
   @override
-  Widget build(BuildContext context) => Row(children: [
-    const Expanded(child: Divider(color: AppColors.hairline)),
-    Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Text('ЭСВЭЛ', style: AppTextStyles.monoSm.copyWith(letterSpacing: 2)),
-    ),
-    const Expanded(child: Divider(color: AppColors.hairline)),
-  ]);
+  Widget build(BuildContext context) {
+    final line = onDark ? AppColors.hairlineDark : AppColors.hairline;
+    final label = AppTextStyles.monoSm.copyWith(letterSpacing: 2);
+    return Row(children: [
+      Expanded(child: Divider(color: line)),
+      Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: Text('ЭСВЭЛ', style: onDark ? label.onDark : label),
+      ),
+      Expanded(child: Divider(color: line)),
+    ]);
+  }
 }
 
 class GoogleMark extends StatelessWidget {
@@ -229,7 +240,7 @@ class AuthAura extends StatelessWidget {
         ),
         Positioned(
           top: 40, left: -120,
-          child: _blob(260, AppColors.neonCyan.withValues(alpha: 0.16)),
+          child: _blob(260, AppColors.neonCyanDark.withValues(alpha: 0.16)),
         ),
         Positioned(
           bottom: -120, left: 20,

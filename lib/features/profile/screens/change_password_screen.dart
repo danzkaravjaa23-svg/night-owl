@@ -94,7 +94,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
         const SizedBox(height: 8),
         TextField(controller: _newCtrl, obscureText: true,
           onChanged: (_) { if (_error != null) setState(() => _error = null); },
-          style: const TextStyle(color: AppColors.textPrimary),
+          style: TextStyle(color: AppColors.textPrimary),
           decoration: const InputDecoration(hintText: '••••••••')),
         const SizedBox(height: 20),
         Text('Нууц үг баталгаажуулах', style: AppTextStyles.labelMd.copyWith(
@@ -102,7 +102,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
         const SizedBox(height: 8),
         TextField(controller: _confirmCtrl, obscureText: true,
           onChanged: (_) { if (_error != null) setState(() => _error = null); },
-          style: const TextStyle(color: AppColors.textPrimary),
+          style: TextStyle(color: AppColors.textPrimary),
           decoration: const InputDecoration(hintText: '••••••••')),
         // ── Алдааны мессеж (талбарын доор) ──
         AnimatedSize(

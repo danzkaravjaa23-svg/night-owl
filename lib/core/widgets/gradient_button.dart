@@ -70,7 +70,10 @@ class GradientButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final md = size == GradientButtonSize.md;
     final h = height ?? (md ? 40.0 : 52.0);
-    final labelStyle = md ? AppTextStyles.btnSm : AppTextStyles.btn;
+    // Magenta gradient дээрх label — горимоос үл хамааран цагаан (харанхуй
+    // горимын textPrimary-тай яг ижил утга тул dark горимд өөрчлөлтгүй).
+    final labelStyle = (md ? AppTextStyles.btnSm : AppTextStyles.btn)
+        .copyWith(color: AppColors.textPrimaryDark);
     // busy үед gradient хэвээр (ажиллаж буй мэдрэмж), зөвхөн disabled үед бүдгэрнэ
     final disabled = onPressed == null;
     final effective = (busy || disabled) ? null : onPressed;

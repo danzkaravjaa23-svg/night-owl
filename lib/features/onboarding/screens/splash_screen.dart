@@ -141,7 +141,7 @@ class _SplashScreenState extends State<SplashScreen>
                     const SizedBox(height: 28),
                     // Хром shimmer — лого текст дээгүүр шүргэн өнгөрөх гялбаа
                     _ChromeShimmer(pulse: _pulse,
-                      child: const NightOwlLogoText(fontSize: 38)),
+                      child: const NightOwlLogoText(fontSize: 38, onDark: true)),
                     const SizedBox(height: 8),
                     Text('UB · ШӨНИЙН НИЙГЭМ',
                       style: AppTextStyles.mono.copyWith(
@@ -213,7 +213,7 @@ class _VoidGlow extends StatelessWidget {
       Positioned(top: -140, left: -120,
         child: _blob(320, AppColors.accentStart.withValues(alpha: 0.10))),
       Positioned(bottom: -150, right: -110,
-        child: _blob(340, AppColors.neonCyan.withValues(alpha: 0.08))),
+        child: _blob(340, AppColors.neonCyanDark.withValues(alpha: 0.08))),
     ]),
   );
 

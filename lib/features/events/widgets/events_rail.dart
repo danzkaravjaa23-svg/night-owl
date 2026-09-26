@@ -217,7 +217,8 @@ class _EventCard extends StatelessWidget {
               decoration: BoxDecoration(
                 color: Colors.black.withValues(alpha: 0.45),
                 borderRadius: AppRadii.mdR,
-                border: Border.all(color: AppColors.hairline2, width: 1)),
+                // Зурган дээрх шилэн chip — горимоос үл хамааран харанхуй хэв
+                border: Border.all(color: AppColors.hairline2Dark, width: 1)),
               // Огноо — токен хэмжээс (өмнө нь сарын шошго 8px, уншигдахгүй байв)
               child: Column(mainAxisSize: MainAxisSize.min, children: [
                 Text(d.day.toString().padLeft(2, '0'),
@@ -235,10 +236,10 @@ class _EventCard extends StatelessWidget {
               decoration: BoxDecoration(
                 color: Colors.black.withValues(alpha: 0.45),
                 borderRadius: AppRadii.pillR,
-                border: Border.all(color: AppColors.hairline2, width: 1)),
+                border: Border.all(color: AppColors.hairline2Dark, width: 1)),
               child: Text(event.price == 0 ? 'Үнэгүй' : _fmtPrice(event.price),
                 style: AppTextStyles.labelSm.copyWith(
-                  color: event.price == 0 ? AppColors.lime : Colors.white,
+                  color: event.price == 0 ? AppColors.limeDark : Colors.white,
                   letterSpacing: 0, fontWeight: FontWeight.w800)),
             )),
 
@@ -320,7 +321,7 @@ class _AttendeeStack extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.black.withValues(alpha: 0.5),
           borderRadius: AppRadii.pillR,
-          border: Border.all(color: AppColors.hairline2, width: 1)),
+          border: Border.all(color: AppColors.hairline2Dark, width: 1)),
         child: Text('+${_fmtCount(count)}',
           style: AppTextStyles.labelSm.copyWith(color: Colors.white,
             letterSpacing: 0, fontWeight: FontWeight.w800)),
@@ -396,8 +397,10 @@ class _EventDetailSheetState extends State<_EventDetailSheet> {
   @override
   Widget build(BuildContext context) {
     final e = widget.event;
-    final maxH = MediaQuery.of(context).size.height * 0.85;
-    return Padding(
+    // SafeArea-ийн доод зайг (док/nav bar) хасна — урт sheet дэлгэцийн оройд тулахгүй
+    final maxH = (MediaQuery.of(context).size.height * 0.85 -
+        MediaQuery.paddingOf(context).bottom).clamp(0.0, double.infinity);
+    return SafeArea(top: false, child: Padding(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
       child: ConstrainedBox(
         constraints: BoxConstraints(maxHeight: maxH),
@@ -444,7 +447,7 @@ class _EventDetailSheetState extends State<_EventDetailSheet> {
                 style: AppTextStyles.bodyXs.copyWith(color: AppColors.textTertiary)),
           ]),
       ),
-    );
+    ));
   }
 
   Widget _rsvpBtn({

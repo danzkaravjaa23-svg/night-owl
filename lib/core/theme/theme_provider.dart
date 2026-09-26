@@ -25,7 +25,10 @@ class ThemeModeNotifier extends StateNotifier<ThemeMode>
   /// шинэ утгыг уншина; манай global флаг хоцрохгүй байх нь чухал.)
   @override
   void didChangePlatformBrightness() {
-    if (state == ThemeMode.system) _applyBrightness(state);
+    if (state == ThemeMode.system) {
+      _applyBrightness(state);
+      _rebuildAll();
+    }
   }
 
   @override
@@ -35,8 +38,7 @@ class ThemeModeNotifier extends StateNotifier<ThemeMode>
   }
 
   /// AppColors-ийн динамик (dyn*) getter-уудад идэвхтэй горимыг мэдэгдэнэ.
-  /// State солигдоход MaterialApp бүх мод-оо rebuild хийдэг тул
-  /// getter-ууд build бүрт зөв утга буцаана.
+  /// Флаг солигдсоны дараа [_rebuildAll] бүх элементийг дахин зурна.
   static void _applyBrightness(ThemeMode mode) {
     AppColors.isDarkMode = switch (mode) {
       ThemeMode.dark  => true,
@@ -50,28 +52,44 @@ class ThemeModeNotifier extends StateNotifier<ThemeMode>
   Future<void> _load() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      state = _parse(prefs.getString(_key));
-      _applyBrightness(state);
+      final saved = _parse(prefs.getString(_key));
+      _applyBrightness(saved);
+      state = saved;
+      _rebuildAll();
     } catch (_) {/* default dark */}
   }
 
   Future<void> setMode(ThemeMode mode) async {
     _applyBrightness(mode);
     state = mode;
+    _rebuildAll();
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(_key, mode.name);
     } catch (_) {}
   }
 
-  // Гэрэл горим түр хаалттай: features дотор AppColors.dyn* getter-ууд хараахан
-  // ашиглагдаагүй (≈950 газар харанхуй өнгө хатуу бичигдсэн) тул light горимд
-  // хагас эвдэрсэн дэлгэц гарна. Тохиргооны унтраалгыг нь авсан; энд хадгалагдсан
-  // хуучин сонголтыг ч мөн харанхуй руу татна — эс бөгөөс өмнө нь асаасан
-  // хэрэглэгч гарц олдохгүй гацна. dyn* нүүлгэлт дуусахад буцааж нээнэ.
   static ThemeMode _parse(String? v) => switch (v) {
-        'light'  => ThemeMode.dark, // TODO(dyn-colors): => ThemeMode.light
+        'light'  => ThemeMode.light,
         'system' => ThemeMode.system,
         _        => ThemeMode.dark,
       };
+
+  /// Өнгөний токенууд (AppColors.bg*, text* …) нь `isDarkMode` глобал
+  /// флагаас уншдаг static getter. Theme-ээс хамааралгүй widget-ууд
+  /// горим солигдоход өөрөө rebuild хийгдэхгүй тул дараагийн фрэймд
+  /// БҮХ элементийг дахин build хийлгэнэ. State (scroll, input, навигаци)
+  /// хадгалагдана — зөвхөн дахин зурна.
+  static void _rebuildAll() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final root = WidgetsBinding.instance.rootElement;
+      if (root == null) return;
+      void visit(Element e) {
+        e.markNeedsBuild();
+        e.visitChildren(visit);
+      }
+      root.visitChildren(visit);
+    });
+    WidgetsBinding.instance.ensureVisualUpdate();
+  }
 }

@@ -191,7 +191,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
             controller: _searchCtrl,
             focusNode: _searchFocus,
             onChanged: (v) => setState(() => _query = v),
-            style: const TextStyle(color: AppColors.textPrimary),
+            style: TextStyle(color: AppColors.textPrimary),
             decoration: InputDecoration(
               hintText: 'Газар, бар, клуб хайх…',
               hintStyle: AppTextStyles.bodyMd.copyWith(color: AppColors.textTertiary),
@@ -210,7 +210,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
                 _searchCtrl.clear(); // харагдах текстийг мөн цэвэрлэнэ
                 setState(() => _query = '');
               },
-              child: const SizedBox(width: 44, height: 44,
+              child: SizedBox(width: 44, height: 44,
                 child: Icon(Icons.close, color: AppColors.textTertiary, size: 18))),
             const SizedBox(width: 4),
           ],
@@ -227,7 +227,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
             borderRadius: AppRadii.mdR,
             border: Border.all(color: AppColors.neonCyan.withValues(alpha: 0.4)),
             boxShadow: AppColors.glowShadow(AppColors.neonCyan, alpha: 0.2)),
-          child: const Icon(Icons.map_rounded,
+          child: Icon(Icons.map_rounded,
             color: AppColors.neonCyan, size: 24)),
       ),
     ]),
@@ -315,7 +315,8 @@ class _TapState extends State<_Tap> {
 ({String label, Color color}) _statusFor(int checkins) {
   if (checkins >= 15) return (label: 'Дүүрэн', color: AppColors.orange);
   if (checkins >= 5)  return (label: 'Хөгжөөнтэй', color: AppColors.amber);
-  return (label: 'Тайван', color: AppColors.lime);
+  // Pill үргэлж зурган дээр байрладаг тул неон lime-ийн харанхуй хувилбар
+  return (label: 'Тайван', color: AppColors.limeDark);
 }
 
 class _StatusPill extends StatelessWidget {
@@ -356,7 +357,7 @@ class _VenueImage extends StatelessWidget {
     final fallback = Container(
       height: height,
       decoration: const BoxDecoration(gradient: AppColors.accentGradientSoft),
-      child: const Center(child: Icon(Icons.local_bar_outlined,
+      child: Center(child: Icon(Icons.local_bar_outlined,
         color: AppColors.textTertiary, size: 34)),
     );
     if (url == null) return fallback;
@@ -499,22 +500,23 @@ class _HotCard extends StatelessWidget {
             colors: [Colors.transparent, Colors.black.withValues(alpha: 0.78)]))),
           Positioned(top: 12, left: 12, child: _StatusPill(checkins: venue.checkinCount)),
           Positioned(top: 12, right: 12, child: _RatingChip(rating: venue.rating)),
+          // Зураг + хар scrim дээрх текст — горимоос үл хамааран цайвар
           Positioned(left: 14, right: 14, bottom: 12,
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text(venue.name,
                 maxLines: 1, overflow: TextOverflow.ellipsis,
-                style: AppTextStyles.h3.copyWith(fontWeight: FontWeight.w800)),
+                style: AppTextStyles.h3.copyWith(fontWeight: FontWeight.w800).onDark),
               const SizedBox(height: 3),
               Row(children: [
                 const Icon(Icons.place_outlined,
-                  color: AppColors.textSecondary, size: 13),
+                  color: AppColors.textSecondaryDark, size: 13),
                 const SizedBox(width: 3),
                 Flexible(child: Text(venue.district ?? venue.typeLabel,
                   maxLines: 1, overflow: TextOverflow.ellipsis,
                   style: AppTextStyles.labelSm.copyWith(
-                    color: AppColors.textSecondary, letterSpacing: 0))),
+                    color: AppColors.textSecondaryDark, letterSpacing: 0))),
               ]),
             ])),
         ]),
@@ -672,7 +674,7 @@ class _ErrorView extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Center(
     child: Column(mainAxisSize: MainAxisSize.min, children: [
-      const Icon(Icons.wifi_off_outlined, color: AppColors.textTertiary, size: 44),
+      Icon(Icons.wifi_off_outlined, color: AppColors.textTertiary, size: 44),
       const SizedBox(height: 14),
       Text('Газрууд ачаалж чадсангүй', style: AppTextStyles.h3),
       const SizedBox(height: 16),
@@ -688,7 +690,7 @@ class _EmptyView extends StatelessWidget {
     child: Padding(
       padding: const EdgeInsets.all(40),
       child: Column(mainAxisSize: MainAxisSize.min, children: [
-        const Icon(Icons.search_off_rounded, color: AppColors.textTertiary, size: 44),
+        Icon(Icons.search_off_rounded, color: AppColors.textTertiary, size: 44),
         const SizedBox(height: 14),
         Text('Газар олдсонгүй', style: AppTextStyles.h3),
         const SizedBox(height: 6),

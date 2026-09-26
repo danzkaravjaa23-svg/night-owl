@@ -191,7 +191,7 @@ class _FollowListScreenState extends State<FollowListScreen> {
         padding: const EdgeInsets.only(top: 120),
         children: [
           Column(mainAxisSize: MainAxisSize.min, children: [
-            const Icon(Icons.cloud_off_outlined,
+            Icon(Icons.cloud_off_outlined,
                 color: AppColors.textTertiary, size: 48),
             const SizedBox(height: 12),
             Text('Ачаалж чадсангүй',
@@ -281,7 +281,7 @@ class _FollowListScreenState extends State<FollowListScreen> {
                   ),
                   if (verified) ...[
                     const SizedBox(width: 4),
-                    const Icon(Icons.verified_rounded,
+                    Icon(Icons.verified_rounded,
                         color: AppColors.neonCyan, size: 15),
                   ],
                 ]),
@@ -326,7 +326,7 @@ class _GlassBackBtn extends StatelessWidget {
               color: AppColors.bgElevated.withValues(alpha: 0.72),
               border: Border.all(color: AppColors.hairline2),
             ),
-            child: const Icon(Icons.arrow_back_ios_new,
+            child: Icon(Icons.arrow_back_ios_new,
                 color: AppColors.textPrimary, size: 17),
           ),
         ),
@@ -342,7 +342,7 @@ class _RowSkeleton extends StatelessWidget {
         child: Row(children: [
           Container(
             width: 44, height: 44,
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               shape: BoxShape.circle, color: AppColors.bgSurface)),
           const SizedBox(width: 14),
           Expanded(

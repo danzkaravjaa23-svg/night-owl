@@ -10,6 +10,9 @@ class AppAvatar extends StatelessWidget {
   final double size;
   final bool showRing;       // gradient ring
   final bool showOnlineDot;
+  /// Үргэлж харанхуй гадаргуу (story, reels, live) дээр — гэрэл горимд ч
+  /// цагирагны завсар, эхний үсэг харанхуй палитраар зурагдана.
+  final bool onDark;
 
   const AppAvatar({
     super.key,
@@ -18,6 +21,7 @@ class AppAvatar extends StatelessWidget {
     this.size = 40,
     this.showRing = false,
     this.showOnlineDot = false,
+    this.onDark = false,
   });
 
   @override
@@ -57,7 +61,7 @@ class AppAvatar extends StatelessWidget {
         child: Container(
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: AppColors.dynBgBase,
+            color: onDark ? AppColors.bgBaseDark : AppColors.bgBase,
           ),
           padding: const EdgeInsets.all(1.5),
           child: avatar,
@@ -78,7 +82,9 @@ class AppAvatar extends StatelessWidget {
                 color: AppColors.success,
                 shape: BoxShape.circle,
                 // Хүрээ нь идэвхтэй theme-ийн суурьтай нийлнэ (light дээр цайвар)
-                border: Border.all(color: AppColors.dynBgBase, width: 1.5),
+                border: Border.all(
+                    color: onDark ? AppColors.bgBaseDark : AppColors.bgBase,
+                    width: 1.5),
                 // Online — lime неон гэрэлтэлт
                 boxShadow: [
                   BoxShadow(
@@ -107,7 +113,7 @@ class AppAvatar extends StatelessWidget {
         (initial ?? '?').toUpperCase(),
         style: AppTextStyles.labelLg.copyWith(
           fontSize: sz * 0.38,
-          color: AppColors.textPrimary,
+          color: onDark ? AppColors.textPrimaryDark : AppColors.textPrimary,
           fontWeight: FontWeight.w700,
         ),
       ),

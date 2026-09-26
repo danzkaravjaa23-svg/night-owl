@@ -189,6 +189,21 @@ class FeedNotifier extends StateNotifier<AsyncValue<List<Post>>> {
   }
 
   // ── Delete own post ─────────────────────────────────────────────────────────
+  /// Блоклосон хэрэглэгчийн бүх постыг feed-ээс шууд арилгана
+  /// (бүтэн feed дахин татахгүй).
+  void removeAuthor(String userId) {
+    final cur = state.value;
+    if (cur == null) return;
+    state = AsyncValue.data(cur.where((p) => p.userId != userId).toList());
+  }
+
+  /// Өөр газар (профайлын grid) устгасан постыг feed-ээс арилгана.
+  void removeLocal(String postId) {
+    final cur = state.value;
+    if (cur == null) return;
+    state = AsyncValue.data(cur.where((p) => p.id != postId).toList());
+  }
+
   Future<bool> deletePost(String postId) async {
     final user = SupabaseService.currentUser;
     if (user == null) return false;

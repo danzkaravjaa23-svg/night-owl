@@ -72,7 +72,7 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
         builder: (ctx) => AlertDialog(
           backgroundColor: AppColors.bgElevated,
           title: Text('@$uname-г хориглох уу?', style: AppTextStyles.h2),
-          content: Text('Энэ хэрэглэгч аппд нэвтрэх боломжгүй болно.',
+          content: Text('Энэ хэрэглэгч пост, сэтгэгдэл бичих боломжгүй болж, постууд нь feed-ээс нуугдана.',
             style: AppTextStyles.bodyMd.copyWith(color: AppColors.textSecondary)),
           actions: [
             TextButton(
@@ -132,7 +132,7 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
           : !isAdmin
               // URL-ээр шууд орж ирэхээс хамгаална — зөвхөн админ
               ? Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-                  const Icon(Icons.lock_outline, size: 56, color: AppColors.textTertiary),
+                  Icon(Icons.lock_outline, size: 56, color: AppColors.textTertiary),
                   const SizedBox(height: 12),
                   Text('Хандах эрхгүй', style: AppTextStyles.h2),
                   const SizedBox(height: 6),
@@ -150,7 +150,7 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
               border: Border.all(color: AppColors.hairline)),
             child: Row(children: [
               const SizedBox(width: 12),
-              const Icon(Icons.search, color: AppColors.textTertiary, size: 18),
+              Icon(Icons.search, color: AppColors.textTertiary, size: 18),
               const SizedBox(width: 8),
               Expanded(child: TextField(
                 controller: _ctrl,
@@ -176,7 +176,7 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
               ? const _SkeletonRows()
               : _users.isEmpty
                   ? Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-                      const Icon(Icons.person_search_rounded, size: 44,
+                      Icon(Icons.person_search_rounded, size: 44,
                         color: AppColors.textTertiary),
                       const SizedBox(height: 10),
                       Text('Хэрэглэгч олдсонгүй',
@@ -234,7 +234,7 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
           : TextButton(
               onPressed: busy ? null : () => _toggleBan(u),
               child: busy
-                  ? const SizedBox(width: 16, height: 16,
+                  ? SizedBox(width: 16, height: 16,
                       child: CircularProgressIndicator(
                         strokeWidth: 2, color: AppColors.textSecondary))
                   : Text(banned ? 'Сэргээх' : 'Хориглох',
@@ -261,6 +261,10 @@ class _SkeletonRowsState extends State<_SkeletonRows>
   @override
   void dispose() { _c.dispose(); super.dispose(); }
 
+  // Цайвар горимд цагаан skeleton цөцгий дэвсгэр дээр үл харагдана — surface
+  Color get _skel =>
+      AppColors.isDarkMode ? AppColors.bgElevated : AppColors.bgSurface;
+
   @override
   Widget build(BuildContext context) => FadeTransition(
     opacity: _c,
@@ -271,20 +275,20 @@ class _SkeletonRowsState extends State<_SkeletonRows>
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         child: Row(children: [
           Container(width: 40, height: 40,
-            decoration: const BoxDecoration(
-              shape: BoxShape.circle, color: AppColors.bgElevated)),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle, color: _skel)),
           const SizedBox(width: 12),
           Expanded(child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(height: 12, width: 140,
                 decoration: BoxDecoration(
-                  color: AppColors.bgElevated,
+                  color: _skel,
                   borderRadius: BorderRadius.circular(6))),
               const SizedBox(height: 7),
               Container(height: 10, width: 90,
                 decoration: BoxDecoration(
-                  color: AppColors.bgElevated,
+                  color: _skel,
                   borderRadius: BorderRadius.circular(5))),
             ])),
         ]),

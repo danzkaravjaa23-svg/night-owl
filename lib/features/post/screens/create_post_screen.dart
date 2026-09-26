@@ -8,6 +8,8 @@ import '../../../core/theme/app_text_styles.dart';
 import '../../../core/widgets/gradient_button.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/services/supabase_service.dart';
+import '../../../core/router/app_router.dart' show AppRoutes;
+import '../../auth/providers/auth_provider.dart';
 import '../../feed/providers/feed_provider.dart';
 import '../utils/post_media.dart';
 
@@ -84,11 +86,15 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
         _uploadProgress = null;
         _videoPlaying = false;
       });
-      final ctrl = VideoPlayerController.networkUrl(Uri.parse(f.previewUrl));
+      final ctrl = previewVideoController(f);
       try {
         await ctrl.initialize();
-        if (mounted) setState(() => _videoCtrl = ctrl);
+        if (mounted && _media.contains(f)) {
+          setState(() => _videoCtrl = ctrl);
+          return;
+        }
       } catch (_) {}
+      ctrl.dispose();
       return;
     }
 
@@ -133,6 +139,8 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
       return;
     }
     setState(() { _loading = true; _error = null; _uploadProgress = 0; _uploadIndex = 0; });
+    // Upload удаан — энэ хооронд дэлгэц хаагдсан ч provider-уудыг шинэчилж чадна
+    final container = ProviderScope.containerOf(context, listen: false);
 
     try {
       final user = SupabaseService.currentUser;
@@ -188,9 +196,14 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
         if (_venueName != null) 'venue_name': _venueName,
       });
 
-      ref.read(feedProvider.notifier).loadFeed(refresh: true);
+      container.read(feedProvider.notifier).loadFeed(refresh: true);
+      // Профайлын grid + ПОСТ тоо шинэчлэгдэнэ (posts_count trigger ажилласан).
+      // ProfileScreen доор нь mounted хэвээр тул өөрөө дахин уншихгүй.
+      container.read(postsVersionProvider.notifier).state++;
+      container.invalidate(currentProfileProvider);
       if (!mounted) return;
-      context.pop();
+      // Линк/reload-оор нээгдсэн бол pop хийх хуудас байхгүй
+      context.canPop() ? context.pop() : context.go(AppRoutes.feed);
     } catch (e) {
       if (!mounted) return;
       setState(() => _error = e.toString().replaceAll('Exception: ', ''));
@@ -217,7 +230,8 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
     appBar: AppBar(
       backgroundColor: AppColors.bgBase,
       leading: IconButton(
-        onPressed: _loading ? null : () => context.pop(),
+        onPressed: _loading ? null : () => context.canPop()
+            ? context.pop() : context.go(AppRoutes.feed),
         icon: const Icon(Icons.close)),
       title: Text('Шинэ пост', style: AppTextStyles.h2),
       actions: [
@@ -287,7 +301,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
             children: [
               for (var i = 0; i < _media.length; i++)
                 _Thumb(
-                  url: _media[i].previewUrl,
+                  image: previewImageProvider(_media[i]),
                   selected: i == _page,
                   onTap: () {
                     setState(() => _page = i);
@@ -308,7 +322,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                       borderRadius: BorderRadius.circular(10),
                       border: Border.all(color: AppColors.hairline),
                     ),
-                    child: const Icon(Icons.add,
+                    child: Icon(Icons.add,
                         color: AppColors.textSecondary, size: 24),
                   ),
                 ),
@@ -364,10 +378,10 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
             if (_venueName != null)
               _Press(
                 onTap: () => setState(() => _venueName = null),
-                child: const Icon(Icons.close,
+                child: Icon(Icons.close,
                     color: AppColors.textTertiary, size: 18))
             else
-              const Icon(Icons.chevron_right, color: AppColors.textTertiary),
+              Icon(Icons.chevron_right, color: AppColors.textTertiary),
           ]),
         ),
       ),
@@ -421,7 +435,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                 return Container(color: Colors.black87, child: const Center(
                   child: Icon(Icons.videocam_rounded, color: Colors.white54, size: 64)));
               }
-              return Image.network(m.previewUrl,
+              return Image(image: previewImageProvider(m),
                 fit: BoxFit.cover, width: double.infinity, height: double.infinity);
             },
           ),
@@ -544,11 +558,11 @@ class _PressState extends State<_Press> {
 
 // ─── Thumbnail ───
 class _Thumb extends StatelessWidget {
-  final String url;
+  final ImageProvider image;
   final bool selected;
   final VoidCallback onTap;
   final VoidCallback? onRemove;
-  const _Thumb({required this.url, required this.selected,
+  const _Thumb({required this.image, required this.selected,
     required this.onTap, this.onRemove});
 
   @override
@@ -566,7 +580,7 @@ class _Thumb extends StatelessWidget {
       ),
       clipBehavior: Clip.antiAlias,
       child: Stack(fit: StackFit.expand, children: [
-        Image.network(url, fit: BoxFit.cover),
+        Image(image: image, fit: BoxFit.cover),
         if (onRemove != null)
           Positioned(top: 2, right: 2, child: _Press(
             scale: 0.8,
@@ -638,9 +652,9 @@ class _VenuePickerState extends State<_VenuePicker> {
   Widget build(BuildContext context) {
     return Container(
       height: MediaQuery.of(context).size.height * 0.75,
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: AppColors.bgElevated,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
       ),
       child: Column(children: [
         const SizedBox(height: 12),
@@ -656,7 +670,7 @@ class _VenuePickerState extends State<_VenuePicker> {
             const Spacer(),
             IconButton(
               onPressed: () => Navigator.pop(context),
-              icon: const Icon(Icons.close, color: AppColors.textSecondary, size: 20),
+              icon: Icon(Icons.close, color: AppColors.textSecondary, size: 20),
               padding: EdgeInsets.zero,
             ),
           ]),
@@ -673,7 +687,7 @@ class _VenuePickerState extends State<_VenuePicker> {
             ),
             child: Row(children: [
               const SizedBox(width: 12),
-              const Icon(Icons.search, color: AppColors.textTertiary, size: 18),
+              Icon(Icons.search, color: AppColors.textTertiary, size: 18),
               const SizedBox(width: 8),
               Expanded(
                 child: TextField(
@@ -694,7 +708,7 @@ class _VenuePickerState extends State<_VenuePicker> {
           ),
         ),
         const SizedBox(height: 8),
-        const Divider(color: AppColors.hairline),
+        Divider(color: AppColors.hairline),
         Expanded(
           child: _filtered.isEmpty
               ? Center(child: Text('Газар олдсонгүй',
@@ -722,7 +736,7 @@ class _VenuePickerState extends State<_VenuePicker> {
                         '${v['district']} · ${v['type']}',
                         style: AppTextStyles.bodyXs.copyWith(
                             color: AppColors.textSecondary)),
-                      trailing: const Icon(Icons.chevron_right,
+                      trailing: Icon(Icons.chevron_right,
                           color: AppColors.textTertiary, size: 18),
                       onTap: () {
                         widget.onSelect(v['name']!);

@@ -206,7 +206,7 @@ class _DmThreadScreenState extends State<DmThreadScreen> {
               Text(username, style: AppTextStyles.labelLg)])),
           const SizedBox(height: 8),
           ListTile(
-            leading: const Icon(Icons.person_outline,
+            leading: Icon(Icons.person_outline,
               color: AppColors.textSecondary, size: 22),
             title: Text('Профайл харах', style: AppTextStyles.bodyMd.copyWith(
               color: AppColors.textPrimary)),
@@ -215,7 +215,7 @@ class _DmThreadScreenState extends State<DmThreadScreen> {
               context.push('/creator/${widget.threadId}');
             }),
           ListTile(
-            leading: const Icon(Icons.mark_chat_unread_outlined,
+            leading: Icon(Icons.mark_chat_unread_outlined,
               color: AppColors.textSecondary, size: 22),
             title: Text('Уншаагүй болгох', style: AppTextStyles.bodyMd.copyWith(
               color: AppColors.textPrimary)),
@@ -376,7 +376,7 @@ class _DmThreadScreenState extends State<DmThreadScreen> {
                               child: Row(
                                 mainAxisAlignment: MainAxisAlignment.end,
                                 children: [
-                                  const Icon(Icons.done_all_rounded,
+                                  Icon(Icons.done_all_rounded,
                                     size: 14, color: AppColors.neonCyan),
                                   const SizedBox(width: 4),
                                   Text('Үзсэн', style: AppTextStyles.bodyXs.copyWith(
@@ -391,7 +391,7 @@ class _DmThreadScreenState extends State<DmThreadScreen> {
             decoration: BoxDecoration(
               color: AppColors.bgElevated.withValues(alpha: 0.9),
               borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-              border: const Border(top: BorderSide(color: AppColors.hairline2)),
+              border: Border(top: BorderSide(color: AppColors.hairline2)),
               boxShadow: AppColors.shadowDock),
             child: SafeArea(top: false, child: Column(mainAxisSize: MainAxisSize.min, children: [
             const SizedBox(height: 10),
@@ -420,7 +420,7 @@ class _DmThreadScreenState extends State<DmThreadScreen> {
                     ])),
                   GestureDetector(
                     onTap: () => setState(() => _pendingNote = null),
-                    child: const Icon(Icons.close, size: 18,
+                    child: Icon(Icons.close, size: 18,
                       color: AppColors.textTertiary)),
                 ]),
               ),
@@ -564,7 +564,7 @@ class _DmThreadScreenState extends State<DmThreadScreen> {
           _emojiTabBtn('sticker', 'Sticker'),
           _emojiTabBtn('owl',     '🦉 Owl'),
         ]),
-        const Divider(height: 1, color: AppColors.hairline),
+        Divider(height: 1, color: AppColors.hairline),
         Expanded(child: isOwl
           ? SingleChildScrollView(
               padding: const EdgeInsets.all(10),
@@ -638,9 +638,9 @@ class _GlassAppBar extends StatelessWidget implements PreferredSizeWidget {
   Size get preferredSize => const Size.fromHeight(64);
 
   void _soon(BuildContext context) {
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-      content: Text('Тун удахгүй'),
-      duration: Duration(milliseconds: 1400),
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: const Text('Тун удахгүй'),
+      duration: const Duration(milliseconds: 1400),
       backgroundColor: AppColors.bgElevated));
   }
 
@@ -654,7 +654,7 @@ class _GlassAppBar extends StatelessWidget implements PreferredSizeWidget {
           padding: EdgeInsets.fromLTRB(12, topPad + 6, 10, 8),
           decoration: BoxDecoration(
             color: AppColors.bgElevated.withValues(alpha: 0.92),
-            border: const Border(
+            border: Border(
               bottom: BorderSide(color: AppColors.hairline2)),
           ),
           child: Row(children: [
@@ -689,7 +689,7 @@ class _GlassAppBar extends StatelessWidget implements PreferredSizeWidget {
                   Row(children: [
                     if (online) ...[
                       Container(width: 6, height: 6,
-                        decoration: const BoxDecoration(
+                        decoration: BoxDecoration(
                           color: AppColors.lime, shape: BoxShape.circle)),
                       const SizedBox(width: 6),
                     ],
@@ -799,7 +799,7 @@ class _ThreadErrorState extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Center(child: Column(
     mainAxisSize: MainAxisSize.min, children: [
-      const Icon(Icons.wifi_off_rounded, color: AppColors.textTertiary, size: 44),
+      Icon(Icons.wifi_off_rounded, color: AppColors.textTertiary, size: 44),
       const SizedBox(height: 12),
       Text('Мессеж ачаалж чадсангүй', style: AppTextStyles.bodyMd.copyWith(
         color: AppColors.textSecondary)),
@@ -819,7 +819,7 @@ class _AuroraBackdrop extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return DecoratedBox(
-      decoration: const BoxDecoration(color: AppColors.bgBase),
+      decoration: BoxDecoration(color: AppColors.bgBase),
       child: Stack(children: [
         Positioned(
           top: -40, right: -30,
@@ -989,7 +989,7 @@ class _Bubble extends StatelessWidget {
             decoration: BoxDecoration(
               color: AppColors.bgSurface.withValues(alpha: 0.8),
               borderRadius: BorderRadius.circular(14),
-              border: const Border(left: BorderSide(
+              border: Border(left: BorderSide(
                 color: AppColors.neonCyan, width: 3))),
             child: Text(noteText!, maxLines: 3, overflow: TextOverflow.ellipsis,
               style: AppTextStyles.bodyXs.copyWith(
@@ -1019,7 +1019,7 @@ class _Bubble extends StatelessWidget {
                 child: Image.network(storyMediaUrl!, fit: BoxFit.cover,
                   errorBuilder: (_, __, ___) => Container(
                     color: AppColors.bgSurface,
-                    child: const Icon(Icons.auto_stories,
+                    child: Icon(Icons.auto_stories,
                         size: 16, color: AppColors.textTertiary)))),
             ),
             const SizedBox(width: 6),

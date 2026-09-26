@@ -150,7 +150,7 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
               for (final m in _profiles.values)
                 _memberTile(m),
             ])),
-          const Divider(height: 1, color: AppColors.hairline),
+          Divider(height: 1, color: AppColors.hairline),
           ListTile(
             leading: const Icon(Icons.person_add_alt_1_outlined,
               color: AppColors.accentStart, size: 22),
@@ -198,8 +198,8 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
     if (!mounted) return;
     if (ok) {
       _loadMembers();
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('Гишүүн нэмэгдлээ'),
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: const Text('Гишүүн нэмэгдлээ'),
         backgroundColor: AppColors.bgElevated));
     } else {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
@@ -324,7 +324,7 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
           decoration: BoxDecoration(
             color: AppColors.bgElevated.withValues(alpha: 0.9),
             borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-            border: const Border(top: BorderSide(color: AppColors.hairline2)),
+            border: Border(top: BorderSide(color: AppColors.hairline2)),
             boxShadow: AppColors.shadowDock),
           child: SafeArea(top: false, child: Padding(
             padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
@@ -569,7 +569,7 @@ class _GroupGlassAppBar extends StatelessWidget implements PreferredSizeWidget {
         padding: EdgeInsets.fromLTRB(12, topPad + 6, 10, 8),
         decoration: BoxDecoration(
           color: AppColors.bgElevated.withValues(alpha: 0.92),
-          border: const Border(
+          border: Border(
               bottom: BorderSide(color: AppColors.hairline2))),
         child: Row(children: [
           // Буцах — апп даяар нэг л хэлбэр (GlassIconButton)
@@ -620,7 +620,7 @@ class _AuroraBackdrop extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return DecoratedBox(
-      decoration: const BoxDecoration(color: AppColors.bgBase),
+      decoration: BoxDecoration(color: AppColors.bgBase),
       child: Stack(children: [
         Positioned(
           top: -40, right: -30,
@@ -736,7 +736,7 @@ class _GroupErrorState extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Center(child: Column(
     mainAxisSize: MainAxisSize.min, children: [
-      const Icon(Icons.wifi_off_rounded, color: AppColors.textTertiary, size: 44),
+      Icon(Icons.wifi_off_rounded, color: AppColors.textTertiary, size: 44),
       const SizedBox(height: 12),
       Text('Мессеж ачаалж чадсангүй', style: AppTextStyles.bodyMd.copyWith(
         color: AppColors.textSecondary)),

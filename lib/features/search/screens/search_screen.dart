@@ -196,7 +196,7 @@ class _SearchScreenState extends State<SearchScreen> {
     }
     if (_searchError) {
       return Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-        const Icon(Icons.wifi_off_rounded, size: 44, color: AppColors.textTertiary),
+        Icon(Icons.wifi_off_rounded, size: 44, color: AppColors.textTertiary),
         const SizedBox(height: 10),
         Text('Алдаа гарлаа — дахин оролдоно уу',
           style: AppTextStyles.bodyMd.copyWith(color: AppColors.textSecondary)),
@@ -242,7 +242,7 @@ class _SearchScreenState extends State<SearchScreen> {
     child: Row(children: [
       Text(t, style: AppTextStyles.sectionLabel),
       const SizedBox(width: 12),
-      const Expanded(child: Divider(color: AppColors.hairline, height: 1)),
+      Expanded(child: Divider(color: AppColors.hairline, height: 1)),
     ]));
 
   // Мөрүүд — DM жагсаалтын мөртэй ижил хэмнэлтэй (20/12, avatar 46)
@@ -267,7 +267,7 @@ class _SearchScreenState extends State<SearchScreen> {
                     color: AppColors.textPrimary, fontWeight: FontWeight.w700))),
                 if (u['is_verified'] == true) ...[
                   const SizedBox(width: 4),
-                  const Icon(Icons.verified, color: AppColors.neonCyan, size: 14),
+                  Icon(Icons.verified, color: AppColors.neonCyan, size: 14),
                 ],
               ]),
               if ((u['full_name'] as String?)?.isNotEmpty == true) ...[
@@ -278,7 +278,7 @@ class _SearchScreenState extends State<SearchScreen> {
                     color: AppColors.textSecondary)),
               ],
             ])),
-          const Icon(Icons.chevron_right,
+          Icon(Icons.chevron_right,
             color: AppColors.textTertiary, size: 18),
         ]),
       ),
@@ -315,7 +315,7 @@ class _SearchScreenState extends State<SearchScreen> {
                   color: AppColors.textSecondary)),
             ],
           ])),
-        const Icon(Icons.chevron_right,
+        Icon(Icons.chevron_right,
           color: AppColors.textTertiary, size: 18),
       ]),
     ),
@@ -328,7 +328,7 @@ class _SearchScreenState extends State<SearchScreen> {
     }
     if (_exploreError) {
       return Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-        const Icon(Icons.wifi_off_rounded, size: 44, color: AppColors.textTertiary),
+        Icon(Icons.wifi_off_rounded, size: 44, color: AppColors.textTertiary),
         const SizedBox(height: 10),
         Text('Алдаа гарлаа — дахин оролдоно уу',
           style: AppTextStyles.bodyMd.copyWith(color: AppColors.textSecondary)),
@@ -369,7 +369,7 @@ class _SearchScreenState extends State<SearchScreen> {
                   fadeInDuration: const Duration(milliseconds: 150),
                   placeholder: (_, __) => Container(color: AppColors.bgSurface),
                   errorWidget: (_, __, ___) => Container(color: AppColors.bgSurface,
-                    child: const Icon(Icons.image_not_supported_outlined,
+                    child: Icon(Icons.image_not_supported_outlined,
                       color: AppColors.textTertiary)))
               else if (isVideo && url != null)
                 // Видеоны эхний кадрыг cover болгож харуулна (+ play icon)
@@ -457,7 +457,9 @@ class _SkeletonGridState extends State<_SkeletonGrid>
       itemCount: 12,
       itemBuilder: (_, __) => Container(
         decoration: BoxDecoration(
-          color: AppColors.bgElevated,
+          // Цайвар горимд цагаан skeleton цөцгий дэвсгэр дээр үл харагдана — surface
+          color: AppColors.isDarkMode
+              ? AppColors.bgElevated : AppColors.bgSurface,
           borderRadius: BorderRadius.circular(14))),
     ),
   );

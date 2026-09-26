@@ -11,10 +11,12 @@ class BlockReportService {
     if (me == null) return 'Нэвтэрнэ үү';
     if (me == userId) return 'Өөрийгөө блоклож болохгүй';
     try {
+      // ignoreDuplicates — давхар блоклоход ON CONFLICT DO NOTHING болно
+      // (UPDATE policy байхгүй тул DO UPDATE нь RLS 42501 алдаа өгдөг)
       await _c.from('blocks').upsert({
         'blocker_id': me,
         'blocked_id': userId,
-      }, onConflict: 'blocker_id,blocked_id');
+      }, onConflict: 'blocker_id,blocked_id', ignoreDuplicates: true);
       return null;
     } catch (e) {
       return e.toString();

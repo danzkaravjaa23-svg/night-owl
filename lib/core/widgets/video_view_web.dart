@@ -27,6 +27,9 @@ class VideoView extends StatefulWidget {
   /// картын дотор эвгүй харагдаад зогсохгүй, картын товшилтыг ч залгидаг.
   /// Оронд нь медиа дээрх Flutter давхарга товшилтоор play/pause хийнэ.
   final bool showControls;
+  /// Хүрээг дүүргэж тайрах (IG feed шиг 4:5 хайрцагт хар зурвасгүй).
+  /// false бол бүтэн видео харагдана (contain) — пост дэлгэрэнгүйд.
+  final bool cover;
   const VideoView({
     super.key,
     required this.url,
@@ -37,6 +40,7 @@ class VideoView extends StatefulWidget {
     this.active = true,
     this.progress,
     this.showControls = false,
+    this.cover = false,
   });
 
   @override
@@ -70,7 +74,7 @@ class _VideoViewState extends State<VideoView> {
         ..loop = widget.autoplay
         ..muted = widget.posterOnly || reelMuted;
       v.style.objectFit =
-          (widget.posterOnly || widget.autoplay) ? 'cover' : 'contain';
+          (widget.posterOnly || widget.autoplay || widget.cover) ? 'cover' : 'contain';
       // Контролгүй үед DOM элемент товшилт залгихгүй — Flutter давхарга авна
       v.style.pointerEvents = widget.showControls ? 'auto' : 'none';
       _playing = false; // шинэ url — build аль хэдийн явж байгаа тул setState-гүй
@@ -133,7 +137,7 @@ class _VideoViewState extends State<VideoView> {
     v.style
       ..width = '100%'
       ..height = '100%'
-      ..objectFit = (widget.posterOnly || widget.autoplay) ? 'cover' : 'contain'
+      ..objectFit = (widget.posterOnly || widget.autoplay || widget.cover) ? 'cover' : 'contain'
       ..backgroundColor = 'black'
       ..border = 'none';
     // Native контрол хэрэглэхгүй бол товшилтыг Flutter overlay руу

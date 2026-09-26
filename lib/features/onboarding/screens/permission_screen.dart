@@ -110,10 +110,15 @@ class _PermissionScreenState extends State<PermissionScreen> {
                     label: s.btnAllow,
                     borderRadius: AppRadii.md,
                     onPressed: _requesting ? null : () => _allow(context),
+                    // _requesting үед товч идэвхгүй (bgSurface дэвсгэр) тул
+                    // цайвар горимд spinner-ийг бараан болгоно
                     trailing: _requesting
-                        ? const SizedBox(width: 16, height: 16,
+                        ? SizedBox(width: 16, height: 16,
                             child: CircularProgressIndicator(
-                              strokeWidth: 2, color: Colors.white))
+                              strokeWidth: 2,
+                              color: AppColors.isDarkMode
+                                  ? Colors.white
+                                  : AppColors.textSecondary))
                         : const Icon(Icons.check_rounded,
                             color: Colors.white, size: 19),
                   ),
@@ -159,8 +164,10 @@ class _PermGlyph extends StatelessWidget {
       child: BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
         child: Container(
+          // Неон SVG бараан шил дээр л уншигдана — цайвар горимд илүү битүү
           decoration: BoxDecoration(
-            color: const Color(0x99151515),
+            color: AppColors.isDarkMode
+                ? const Color(0x99151515) : const Color(0xEB151515),
             shape: BoxShape.circle,
             border: Border.all(color: glow.withValues(alpha: 0.30)),
           ),
@@ -188,7 +195,7 @@ class _PermAura extends StatelessWidget {
         ),
         Positioned(
           top: 60, left: -130,
-          child: _blob(260, AppColors.neonCyan.withValues(alpha: 0.14)),
+          child: _blob(260, AppColors.neonCyanDark.withValues(alpha: 0.14)),
         ),
         Positioned(
           bottom: -130, left: 0,

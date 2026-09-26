@@ -16,7 +16,8 @@ class EmptyState extends StatelessWidget {
   final String? subtitle;
   final Widget? action;
   final double size;
-  final Color glow;
+  /// null бол [AppColors.neonCyan] (горимд тохирсон адаптив өнгө).
+  final Color? glow;
 
   const EmptyState({
     super.key,
@@ -26,7 +27,7 @@ class EmptyState extends StatelessWidget {
     this.subtitle,
     this.action,
     this.size = 96,
-    this.glow = AppColors.neonCyan,
+    this.glow,
   }) : assert(icon != null || illustration != null,
             'EmptyState-д illustration эсвэл icon-ын аль нэгийг өгнө үү');
 
@@ -58,7 +59,8 @@ class EmptyState extends StatelessWidget {
                 // Зөөлөн неон гэрэлтэлт — glow өнгө + magenta давхарга
                 boxShadow: [
                   BoxShadow(
-                      color: glow.withValues(alpha: 0.22),
+                      color: (glow ?? AppColors.neonCyan)
+                          .withValues(alpha: 0.22),
                       blurRadius: 34, spreadRadius: -4),
                   BoxShadow(
                       color: AppColors.accentStart.withValues(alpha: 0.10),

@@ -53,11 +53,16 @@ class _BusinessScreenState extends ConsumerState<BusinessScreen> {
       backgroundColor: AppColors.bgBase,
       appBar: AppBar(
         backgroundColor: AppColors.bgBase,
-        leading: IconButton(onPressed: () => context.pop(),
+        // Reload/deep link үед stack хоосон байж болно — profile руу fallback
+        leading: IconButton(
+          onPressed: () => context.canPop()
+              ? context.pop()
+              : context.go(AppRoutes.profile),
           icon: const Icon(Icons.arrow_back_ios_new, size: 20)),
         title: Text('Бизнес самбар', style: AppTextStyles.h2),
       ),
-      body: ListView(padding: const EdgeInsets.all(20), children: [
+      body: ListView(padding: EdgeInsets.fromLTRB(20, 20, 20,
+          20 + MediaQuery.paddingOf(context).bottom), children: [
         // ── Бизнес болох / идэвхтэй төлөв ──
         _BecomeBusinessCard(
           isBusiness: isBusiness,
@@ -81,15 +86,7 @@ class _BusinessScreenState extends ConsumerState<BusinessScreen> {
         Row(children: [
           Text('СТАТИСТИК', style: AppTextStyles.labelSm),
           const SizedBox(width: 8),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-            decoration: BoxDecoration(
-              color: AppColors.textTertiary.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(6),
-            ),
-            child: Text('Жишээ дата', style: AppTextStyles.bodyXs.copyWith(
-              color: AppColors.textTertiary, fontSize: 10)),
-          ),
+          const _SampleDataChip(),
         ]),
         const SizedBox(height: 12),
         const Row(children: [
@@ -100,7 +97,11 @@ class _BusinessScreenState extends ConsumerState<BusinessScreen> {
           _StatCard(label: 'Үнэлгээ', value: '4.7', delta: '★'),
         ]),
         const SizedBox(height: 24),
-        Text('ҮЗЭЛТ · 7 ХОНОГ', style: AppTextStyles.labelSm),
+        Row(children: [
+          Text('ҮЗЭЛТ · 7 ХОНОГ', style: AppTextStyles.labelSm),
+          const SizedBox(width: 8),
+          const _SampleDataChip(),
+        ]),
         const SizedBox(height: 12),
         // Simple bar chart (жишээ)
         SizedBox(height: 80,
@@ -130,7 +131,7 @@ class _BusinessScreenState extends ConsumerState<BusinessScreen> {
         ].map((r) => ListTile(
           leading: Icon(r.$2, color: AppColors.textSecondary),
           title: Text(r.$1, style: AppTextStyles.bodyMd),
-          trailing: const Icon(Icons.chevron_right, color: AppColors.textTertiary),
+          trailing: Icon(Icons.chevron_right, color: AppColors.textTertiary),
           onTap: () => context.push(AppRoutes.venueEdit),
         )),
         const SizedBox(height: 24),
@@ -168,9 +169,10 @@ class _BecomeBusinessCard extends StatelessWidget {
               Text(isBusiness ? 'Бизнес аккаунт' : 'Бизнес аккаунт болох',
                 style: AppTextStyles.labelLg.copyWith(color: Colors.white)),
               const SizedBox(height: 2),
+              // Тэмдэглэгээ л өөрчлөгдөнө — доорх хэрэгслүүд бүгдэд нээлттэй
               Text(isBusiness
-                  ? 'Live хийх, эвент зарлах боломжтой'
-                  : 'Live хийх, эвент зарлах, дагуулагч цуглуулах',
+                  ? 'Аккаунт тань бизнес гэж тэмдэглэгдсэн'
+                  : 'Аккаунтаа бизнес гэж тэмдэглэх · Live, эвент бүх хэрэглэгчид нээлттэй',
                 style: AppTextStyles.bodyXs.copyWith(color: Colors.white70)),
             ])),
             if (busy)
@@ -191,6 +193,21 @@ class _BecomeBusinessCard extends StatelessWidget {
       ),
     );
   }
+}
+
+/// 'Жишээ дата' шошго — жинхэнэ аналитик эх сурвалж хараахан алга
+class _SampleDataChip extends StatelessWidget {
+  const _SampleDataChip();
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+    decoration: BoxDecoration(
+      color: AppColors.textTertiary.withValues(alpha: 0.12),
+      borderRadius: BorderRadius.circular(6),
+    ),
+    child: Text('Жишээ дата', style: AppTextStyles.bodyXs.copyWith(
+      color: AppColors.textTertiary, fontSize: 10)),
+  );
 }
 
 class _StatCard extends StatelessWidget {

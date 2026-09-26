@@ -1,11 +1,11 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_radii.dart';
-import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/widgets/app_avatar.dart';
 import '../../../core/widgets/gradient_button.dart';
@@ -13,6 +13,7 @@ import '../../../core/widgets/network_video.dart' show isVideoUrl;
 import '../../../core/services/supabase_service.dart';
 import '../providers/saved_provider.dart';
 import '../widgets/story_video.dart';
+import '../../profile/utils/app_links.dart' show appOrigin;
 
 class ReelsScreen extends ConsumerStatefulWidget {
   const ReelsScreen({super.key});
@@ -194,7 +195,7 @@ class _ReelsScreenState extends ConsumerState<ReelsScreen> {
   }
 
   Future<void> _shareReel(Map<String, dynamic> reel) async {
-    final link = '${Uri.base.origin}/#/post/${reel['id']}';
+    final link = '${appOrigin()}/#/post/${reel['id']}';
     await Clipboard.setData(ClipboardData(text: link));
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
@@ -203,19 +204,21 @@ class _ReelsScreenState extends ConsumerState<ReelsScreen> {
     }
   }
 
+  // Sheet/диалог нь энгийн UI гадаргуу — theme-ийг дагана
+  // (зөвхөн reels канвас өөрөө үргэлж харанхуй, *Dark const-ууд)
   void _moreSheet(Map<String, dynamic> reel) {
     showModalBottomSheet(
       context: context, backgroundColor: AppColors.bgElevated,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (s) => SafeArea(child: Column(mainAxisSize: MainAxisSize.min,
+      builder: (s) => _themedNavBar(s, SafeArea(child: Column(mainAxisSize: MainAxisSize.min,
         children: [
           const SizedBox(height: 10),
           Container(width: 40, height: 4, decoration: BoxDecoration(
             color: AppColors.hairline2, borderRadius: BorderRadius.circular(2))),
           const SizedBox(height: 6),
           ListTile(
-            leading: const Icon(Icons.link_rounded, color: Colors.white70),
+            leading: Icon(Icons.link_rounded, color: AppColors.textSecondary),
             title: Text('Линк хуулах', style: AppTextStyles.bodyMd.copyWith(
                 color: AppColors.textPrimary)),
             onTap: () { Navigator.pop(s); _shareReel(reel); }),
@@ -230,8 +233,21 @@ class _ReelsScreenState extends ConsumerState<ReelsScreen> {
                 behavior: SnackBarBehavior.floating));
             }),
           const SizedBox(height: 8),
-        ])),
+        ]))),
     );
+  }
+
+  // Sheet theme-ийг дагадаг тул доод системийн дүрс ч дагана (reels region-ийг дарна)
+  Widget _themedNavBar(BuildContext c, Widget child) {
+    if (kIsWeb) return child;
+    final dark = Theme.of(c).brightness == Brightness.dark;
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: (dark ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark).copyWith(
+        statusBarColor: Colors.transparent,
+        systemNavigationBarColor: Colors.transparent,
+        systemNavigationBarIconBrightness: dark ? Brightness.light : Brightness.dark,
+        systemNavigationBarContrastEnforced: false),
+      child: child);
   }
 
   Future<void> _deleteReel(Map<String, dynamic> reel) async {
@@ -273,7 +289,7 @@ class _ReelsScreenState extends ConsumerState<ReelsScreen> {
   @override
   Widget build(BuildContext context) {
     final visible = _visible;
-    return Scaffold(
+    final page = Scaffold(
       backgroundColor: Colors.black,
       body: Stack(children: [
         if (_loading)
@@ -348,6 +364,14 @@ class _ReelsScreenState extends ConsumerState<ReelsScreen> {
           ))),
       ]),
     );
+    if (kIsWeb) return page;
+    // Үргэлж харанхуй канвас — light горимд ч системийн дүрс цайвар
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.light.copyWith(
+        statusBarColor: Colors.transparent,
+        systemNavigationBarColor: Colors.transparent,
+        systemNavigationBarContrastEnforced: false),
+      child: page);
   }
 
   Widget _errorView() => Center(child: Column(mainAxisSize: MainAxisSize.min,
@@ -407,7 +431,7 @@ class _ReelsScreenState extends ConsumerState<ReelsScreen> {
           child: Padding(
             padding: const EdgeInsets.all(8),
             child: Text('Дахин ачаалах', style: AppTextStyles.bodySm.copyWith(
-              color: AppColors.neonCyan)))),
+              color: AppColors.neonCyanDark)))),
       ])),
       Align(alignment: Alignment.topLeft, child: Padding(
         padding: const EdgeInsets.all(16),
@@ -463,9 +487,9 @@ class _GlassIconButton extends StatelessWidget {
         width: 40,
         height: 40,
         decoration: BoxDecoration(
-          color: AppColors.bgElevated.withValues(alpha: 0.42),
+          color: AppColors.bgElevatedDark.withValues(alpha: 0.42),
           shape: BoxShape.circle,
-          border: Border.all(color: AppColors.hairline2),
+          border: Border.all(color: AppColors.hairline2Dark),
           boxShadow: [
             BoxShadow(color: Colors.black.withValues(alpha: 0.5), blurRadius: 10),
           ],
@@ -633,10 +657,12 @@ class _ReelPageState extends State<_ReelPage> with SingleTickerProviderStateMixi
     final comments = reel['comments_count'] as int? ?? 0;
     final initial = username.isNotEmpty ? username[0].toUpperCase() : '?';
     final userId = reel['user_id'];
-    // Overlay-ууд док (dockClearance) + системийн доод зайг (home indicator)
-    // хоёуланг нь тооцно — эс бөгөөс индикаторын доогуур орж далдлагдана
-    final bottomInset = MediaQuery.of(context).padding.bottom;
-    final dock = AppSpacing.dockClearance + bottomInset;
+    // Доод зай: MainShell `extendBody: true` тул body-ийн padding.bottom нь
+    // хөвөгч док (92) + системийн доод зай (home indicator)-г АЛЬ ХЭДИЙН
+    // агуулна. Дээр нь дахин dockClearance нэмбэл давхар тоологдож бүх
+    // overlay ~92px хэт дээр гардаг байсан. Shell-ээс гадуур нээгдвэл зөвхөн
+    // системийн зай үлдэж, overlay доод ирмэг рүү буудаг — энэ нь зөв.
+    final dock = MediaQuery.of(context).padding.bottom;
 
     return Stack(fit: StackFit.expand, children: [
       // Видео (autoplay loop) — идэвхтэй reel л тоглоно, явцыг _progress руу
@@ -681,7 +707,7 @@ class _ReelPageState extends State<_ReelPage> with SingleTickerProviderStateMixi
       ))),
 
       // ── Баруун үйлдлийн рейл — TikTok маягийн босоо стек ──
-      Positioned(right: 10, bottom: dock + 66, child: Column(children: [
+      Positioned(right: 10, bottom: dock + 14, child: Column(children: [
         // (1) Зохиогчийн avatar 44 — градиент ring + "+" badge → /creator/:id
         _Pressable(
           onTap: () => widget.onNavigate('/creator/$userId'),
@@ -697,10 +723,10 @@ class _ReelPageState extends State<_ReelPage> with SingleTickerProviderStateMixi
                   shape: BoxShape.circle,
                   gradient: AppColors.accentGradient,
                   boxShadow: [
-                    BoxShadow(color: AppColors.neonCyan.withValues(alpha: 0.2), blurRadius: 10),
+                    BoxShadow(color: AppColors.neonCyanDark.withValues(alpha: 0.2), blurRadius: 10),
                   ],
                 ),
-                child: AppAvatar(imageUrl: avatarUrl, initial: initial, size: 40),
+                child: AppAvatar(imageUrl: avatarUrl, initial: initial, size: 40, onDark: true),
               ),
               // "+" badge — дагаагүй үед л (дарахад шууд дагана)
               if (!widget.following)
@@ -792,14 +818,14 @@ class _ReelPageState extends State<_ReelPage> with SingleTickerProviderStateMixi
               shape: BoxShape.circle,
               gradient: const LinearGradient(
                 begin: Alignment.topLeft, end: Alignment.bottomRight,
-                colors: [AppColors.bgSurface, AppColors.bgBase]),
-              border: Border.all(color: AppColors.hairline2),
+                colors: [AppColors.bgSurfaceDark, AppColors.bgBaseDark]),
+              border: Border.all(color: AppColors.hairline2Dark),
               boxShadow: [
                 BoxShadow(color: Colors.black.withValues(alpha: 0.6), blurRadius: 16),
-                BoxShadow(color: AppColors.neonCyan.withValues(alpha: 0.2), blurRadius: 14),
+                BoxShadow(color: AppColors.neonCyanDark.withValues(alpha: 0.2), blurRadius: 14),
               ],
             ),
-            child: AppAvatar(imageUrl: avatarUrl, initial: initial, size: 34),
+            child: AppAvatar(imageUrl: avatarUrl, initial: initial, size: 34, onDark: true),
           ),
         ),
       ])),
@@ -824,9 +850,9 @@ class _ReelPageState extends State<_ReelPage> with SingleTickerProviderStateMixi
                     padding: const EdgeInsets.symmetric(horizontal: 14),
                     alignment: Alignment.center,
                     decoration: BoxDecoration(
-                      color: AppColors.bgElevated.withValues(alpha: 0.72),
+                      color: AppColors.bgElevatedDark.withValues(alpha: 0.72),
                       borderRadius: BorderRadius.circular(999),
-                      border: Border.all(color: AppColors.hairline2)),
+                      border: Border.all(color: AppColors.hairline2Dark)),
                     child: Text('Дагасан', style: AppTextStyles.labelMd.copyWith(
                       color: Colors.white70, fontWeight: FontWeight.w700)))
                 : _Pressable(
@@ -882,9 +908,9 @@ class _ReelPageState extends State<_ReelPage> with SingleTickerProviderStateMixi
             widthFactor: p <= 0 ? 0.001 : p.clamp(0.0, 1.0),
             child: Container(decoration: BoxDecoration(
               gradient: const LinearGradient(
-                colors: [Color(0x8022E7FF), AppColors.neonCyan]),
+                colors: [Color(0x8022E7FF), AppColors.neonCyanDark]),
               boxShadow: [
-                BoxShadow(color: AppColors.neonCyan.withValues(alpha: 0.7), blurRadius: 8),
+                BoxShadow(color: AppColors.neonCyanDark.withValues(alpha: 0.7), blurRadius: 8),
               ],
             )),
           ),
@@ -1053,14 +1079,16 @@ class _ReelsSkeletonState extends State<_ReelsSkeleton>
               begin: Alignment.topLeft, end: Alignment.bottomRight,
               colors: [Color(0xFF14101f), Color(0xFF1e1630), Color(0xFF14101f)]))),
           // Баруун рейлийн placeholder
-          Positioned(right: 14, bottom: 170, child: Column(children: [
+          Positioned(right: 14, bottom: MediaQuery.of(context).padding.bottom + 14,
+            child: Column(children: [
             for (var i = 0; i < 4; i++) ...[
               _box(34, 34, shape: BoxShape.circle),
               const SizedBox(height: 26),
             ],
           ])),
           // Доод зүүн: текстийн мөрүүд
-          Positioned(left: 14, bottom: 120, child: Column(
+          Positioned(left: 14, bottom: MediaQuery.of(context).padding.bottom + 16,
+            child: Column(
             crossAxisAlignment: CrossAxisAlignment.start, children: [
               _box(120, 14),
               const SizedBox(height: 10),

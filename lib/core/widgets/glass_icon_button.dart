@@ -74,8 +74,9 @@ class _GlassIconButtonState extends State<GlassIconButton> {
                   ? Colors.black.withValues(alpha: 0.45)
                   : AppColors.dynBgElevated.withValues(alpha: 0.72),
               border: Border.all(
+                // Медиа дээр горимоос үл хамааран цагаан шилэн ирмэг
                 color: widget.onMedia
-                    ? AppColors.hairline2
+                    ? AppColors.hairline2Dark
                     : AppColors.dynHairline,
                 width: 1,
               ),

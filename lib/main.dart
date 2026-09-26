@@ -9,6 +9,7 @@ import 'core/theme/theme_provider.dart';
 import 'core/router/app_router.dart';
 import 'core/services/supabase_service.dart';
 import 'core/widgets/mobile_frame.dart';
+import 'core/widgets/theme_reveal.dart';
 import 'features/auth/providers/auth_provider.dart';
 import 'features/feed/providers/feed_provider.dart';
 import 'features/feed/providers/saved_provider.dart';
@@ -31,9 +32,9 @@ Future<void> main() async {
   // Supabase
   await SupabaseService.initialize();
 
-  // Утасны хүрээ дотор preview (зөвхөн debug; release-д унтарна).
+  // Утасны хүрээ дотор preview (зөвхөн веб debug; утас болон release-д унтарна).
   // Унтраах:  flutter run -d chrome --dart-define=DEVICE_PREVIEW=false
-  const usePreview = !kReleaseMode &&
+  const usePreview = kIsWeb && !kReleaseMode &&
       bool.fromEnvironment('DEVICE_PREVIEW', defaultValue: true);
 
   runApp(
@@ -70,13 +71,35 @@ class NightOwlApp extends ConsumerWidget {
       // device_preview — сонгосон утасны хэмжээ/locale-ийг апп-д тусгана
       locale: DevicePreview.locale(context),
       // Веб/desktop дээр утасны өргөнөөр голлуулна (MobileFrame).
-      builder: (context, child) =>
-          MobileFrame(child: DevicePreview.appBuilder(context, child)),
+      // ThemeReveal гадна талд — горим солиход хажуугийн зай ч хамт тэлнэ.
+      builder: (context, child) {
+        final tree = ThemeReveal(
+            child: MobileFrame(child: DevicePreview.appBuilder(context, child)));
+        // Веб дээр statusBarColor нь <meta theme-color>-г солидог тул оролцуулахгүй
+        if (kIsWeb) return tree;
+        final dark = Theme.of(context).brightness == Brightness.dark;
+        return AnnotatedRegion<SystemUiOverlayStyle>(
+          value: (dark ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark)
+              .copyWith(
+            statusBarColor: Colors.transparent,
+            systemNavigationBarColor: Colors.transparent,
+            systemNavigationBarDividerColor: Colors.transparent,
+            systemNavigationBarIconBrightness:
+                dark ? Brightness.light : Brightness.dark,
+            systemNavigationBarContrastEnforced: false,
+          ),
+          child: tree,
+        );
+      },
 
       // Theme
       theme: AppTheme.light,
       darkTheme: AppTheme.dark,
-      themeMode: themeMode, // System / Light / Dark — Settings → Appearance
+      themeMode: themeMode, // System / Light / Dark — хиртэлтийн toggle
+      // Theme-ийн өөрийн 200мс шилжилтийг унтраана: өнгөний токенууд (static
+      // getter) шууд солигддог тул хоёр өөр хурдтай шилжилт зөрөх байсан.
+      // Шилжилтийг ThemeReveal-ийн тойрог дэлгэрэлт хийнэ.
+      themeAnimationDuration: Duration.zero,
 
       // Router
       routerConfig: router,

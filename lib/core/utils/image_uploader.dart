@@ -4,6 +4,16 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../services/supabase_service.dart';
 import '../constants/app_constants.dart';
 
+/// Сонгосон видео 'posts'/'stories' bucket-ийн file_size_limit-ээс (50 MB) том
+class VideoTooLargeException implements Exception {
+  static const maxMb = 50;
+  static const maxBytes = maxMb * 1024 * 1024;
+  final int limitMb;
+  const VideoTooLargeException([this.limitMb = maxMb]);
+  @override
+  String toString() => 'VideoTooLargeException: limit $limitMb MB';
+}
+
 /// Зураг сонгох + Supabase Storage-д upload хийх (web-compatible)
 class ImageUploader {
   static final _picker = ImagePicker();
@@ -34,6 +44,10 @@ class ImageUploader {
   static Future<({Uint8List bytes, String ext})?> pickVideo() async {
     final xFile = await _picker.pickVideo(source: ImageSource.gallery);
     if (xFile == null) return null;
+    // 4K/8K клипийг санах ойд бүтэн уншихаас өмнө хэмжээг нь шалгана
+    if (await xFile.length() > VideoTooLargeException.maxBytes) {
+      throw const VideoTooLargeException();
+    }
     final bytes = await xFile.readAsBytes();
     final name = xFile.name;
     final ext = name.contains('.') ? name.split('.').last.toLowerCase() : 'mp4';
