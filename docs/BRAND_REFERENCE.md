@@ -25,6 +25,14 @@
 - Profile: skyline/cover, голд давхарласан avatar ба нарийн violet ring, username/нэр/био, жижиг edit pill, гурван тэнцүү stat, underline tabs, дөрвөлжин гурван баганатай grid. Нийтлэл/Хадгалсан/Бичлэг нь бодит функц; sample “Tagged” контент эсвэл зохиомол verification badge байхгүй.
 - Footer: бүтэн өргөний хавтгай таван үйлдэл, төвийн violet нийтлэх товч; 72px үндсэн өндөр дээр системийн safe area нэмэгдэнэ. Үйлдлийн нэр харагдана.
 
+## Хэмжээст glyph, товч ба өнгөний горим
+
+Хэрэглэгчийн дараагийн хүсэлтээр action дүрс, glass болон үндсэн товчид хэмжээст мэдрэмж нэмсэн. `SculptedIcon` нь Flutter-ийн vector icon давхарга, gradient shader, гэрэлтэй нүүр ба сүүдэртэй ирмэгээр дүрслэгдэнэ; товч нь gradient, сүүдэр болон дарах хөдөлгөөнтэй. Энэ нь runtime UI rendering бөгөөд 3D model эсвэл шинэ AI artwork биш. Дээрх approved flat owl mark болон icon master-ийг өөрчлөх generation хийгээгүй; хоёр prompt, asset-ийн эх сурвалж хэвээр.
+
+Settings-ийн “Харагдах байдал” хэсэгт Өдөр / Шөнө / Систем сонголт байна. Feed болон Messages дээрх нар/сар товч хурдан солино. Шөнийн navy, өдрийн цайвар гадаргуу нь ижил violet/lavender брэндийг хадгалж, текст ба controls-ийг нийцүүлнэ; профайлын cover болон медиа үйлдлийн дүрс цагаан хэвээр. Map tile-ийн өнгө өдөр/шөнөд нийцэж өөрчлөгдөхөд camera-ийн төв, zoom болон газрын сонголт хадгалагдана. Cover, төв avatar, бодит saved tab, feed болон хавтгай таван үйлдэлтэй footer-ийн өмнөх сонголтыг хадгалсан.
+
+Шөнийн горим анхны сонголт; Систем төхөөрөмжийн brightness-ийг дагана. Төхөөрөмжийн preference хадгалалт дарааллаар хийгдэж, startup-ийн хуучин өгөгдөл болон өмнөх хүсэлтийн алдаа шинэ сонголтыг дарахгүй. Хадгалалт бүтэлгүйтэхэд хамгийн сүүлийн сонголтыг өмнөх хадгалсан утгад буцааж, storage/cache сэргээхийг оролдон тайлбар харуулна; dispose болсон notifier-ийн хожуу үр дүн өнгийг өөрчлөхгүй.
+
 ## Дахин үүсгэх prompts
 
 Доорх хоёр prompt нь тухайн generation хүсэлтийн утгыг үнэнчээр сэргээн бичсэн хувилбар. Tool call-ын literal payload-ын хуулбар гэж үзэхгүй. Эхний prompt-д approved reference, хоёр дахь prompt-д үүссэн isolated owl mark-ыг reference image болгон өгнө.
@@ -55,4 +63,4 @@ Generation тохиргоо: opaque background. Үр дүн: `assets/icons/night
 
 Одоогийн runtime mark болон icon-ыг built-in image generation-ээр сэргээн бүтээсэн. Өмнөх Higgsfield icon job-ыг одоогийн icon-ын generation job гэж тэмдэглэхгүй.
 
-Энэ брэндийн шинэчлэл нь үнэгүй release-ийн хамрах хүрээг өөрчлөхгүй: billing/subscription/premium/IAP идэвхгүй; газрын/эвентийн admission үнэ бол мэдээлэл, RSVP нь тасалбар/төлбөр биш. Apple provider-ийн бодит тохиргоо, native build/signing, шаардлагатай серверийн deployment, төхөөрөмжийн QA болон хэрэгжээгүй Live/calls/push/private боломжийн хязгаар [release тайланд](RELEASE_READINESS.md) хэвээр байна. Бодит газрын координатын эх сурвалж [дизайны тайланд](DESIGN_REVIEW.md#байршлын-шалгалт) бий.
+Энэ брэндийн шинэчлэл нь үнэгүй release-ийн хамрах хүрээг өөрчлөхгүй: billing/subscription/premium/IAP идэвхгүй; газрын/эвентийн admission үнэ бол мэдээлэл, RSVP нь тасалбар/төлбөр биш. Apple provider-ийн бодит тохиргоо, native build/signing, шаардлагатай серверийн deployment, төхөөрөмжийн QA болон хэрэгжээгүй Live/calls/push/private боломжийн хязгаар [release тайланд](RELEASE_READINESS.md) хэвээр байна. Энэ шинэчлэлийн GitHub push болон deployment баталгаажаагүй. Бодит газрын координатын эх сурвалж [дизайны тайланд](DESIGN_REVIEW.md#байршлын-шалгалт) бий.

@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
+import 'sculpted_icon.dart';
 
 /// Шилэн дугуй icon товч — апп даяар НЭГ хувилбар.
 /// (Өмнө нь ижил зорилготой 9 хувийн класс байсан: дүүргэлт нь bgElevated .72 /
@@ -70,23 +71,41 @@ class _GlassIconButtonState extends State<GlassIconButton> {
             height: widget.size,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: widget.onMedia
-                  ? Colors.black.withValues(alpha: 0.45)
-                  : AppColors.dynBgElevated.withValues(alpha: 0.72),
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: widget.onMedia
+                    ? const [Color(0xD9413A55), Color(0xD9171421)]
+                    : Theme.of(context).brightness == Brightness.dark
+                        ? const [Color(0xFF302B46), Color(0xFF151827)]
+                        : const [Color(0xFFFFFFFF), Color(0xFFE5DFF4)],
+              ),
+              boxShadow: [
+                BoxShadow(
+                    color: Colors.black.withValues(
+                        alpha:
+                            widget.onMedia || AppColors.isDarkMode ? .25 : .10),
+                    offset: Offset(0, _down ? 1 : 3),
+                    blurRadius: _down ? 3 : 7),
+              ],
               border: Border.all(
                 // Медиа дээр горимоос үл хамааран цагаан шилэн ирмэг
                 color: widget.onMedia
                     ? AppColors.hairline2Dark
-                    : AppColors.dynHairline,
+                    : AppColors.isDarkMode
+                        ? const Color(0xFF4B435F)
+                        : const Color(0xFFD4CCE6),
                 width: 1,
               ),
             ),
-            child: Icon(
+            child: Center(
+                child: SculptedIcon(
               widget.icon,
               size: widget.iconSize,
               color: widget.iconColor ??
                   (widget.onMedia ? Colors.white : AppColors.dynTextPrimary),
-            ),
+              onDark: widget.onMedia,
+            )),
           ),
         ),
       ),
@@ -104,8 +123,11 @@ class _GlassIconButtonState extends State<GlassIconButton> {
       ),
     );
 
+    button = Semantics(
+        button: true, enabled: _enabled, label: widget.tooltip, child: button);
     if (widget.tooltip != null) {
-      button = Tooltip(message: widget.tooltip!, child: button);
+      button = Tooltip(
+          message: widget.tooltip!, excludeFromSemantics: true, child: button);
     }
     return button;
   }

@@ -1,42 +1,34 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../theme/app_colors.dart';
 import '../theme/theme_provider.dart';
-import 'eclipse_theme_toggle.dart';
-import 'theme_reveal.dart';
+import 'glass_icon_button.dart';
 
-/// Апп-ын горимтой холбогдсон хиртэлтийн toggle.
-/// Дарахад шинэ горим toggle-ийн төвөөс тойрог болон тэлнэ ([ThemeReveal]).
+/// Quick access complements the day/night/system choice in Settings.
 class ThemeToggleButton extends ConsumerWidget {
-  final double width;
-  final double height;
-
-  const ThemeToggleButton({super.key, this.width = 60, this.height = 30});
+  final bool onMedia;
+  const ThemeToggleButton({super.key, this.onMedia = false});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final mode = ref.watch(themeModeProvider);
-    final isDark = mode == ThemeMode.dark ||
-        (mode == ThemeMode.system &&
-            MediaQuery.platformBrightnessOf(context) == Brightness.dark);
-
-    return EclipseThemeToggle(
-      isDark: isDark,
-      width: width,
-      height: height,
-      onChanged: (dark) {
-        final notifier = ref.read(themeModeProvider.notifier);
-        Future<void> apply() =>
-            notifier.setMode(dark ? ThemeMode.dark : ThemeMode.light);
-
-        final box = context.findRenderObject() as RenderBox?;
-        final origin = box != null && box.hasSize
-            ? box.localToGlobal(box.size.center(Offset.zero))
-            : null;
-        final reveal = ThemeReveal.maybeOf(context);
-        if (reveal != null) {
-          reveal.run(origin: origin, apply: apply);
-        } else {
-          apply();
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    return GlassIconButton(
+      icon: dark ? Icons.wb_sunny_rounded : Icons.nightlight_round,
+      iconColor: dark ? const Color(0xFFFFCF78) : AppColors.accentStart,
+      onMedia: onMedia,
+      tooltip: dark ? 'Өдрийн горимд шилжих' : 'Шөнийн горимд шилжих',
+      onTap: () async {
+        try {
+          await ref
+              .read(themeModeProvider.notifier)
+              .setMode(dark ? ThemeMode.light : ThemeMode.dark);
+        } catch (_) {
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+              content:
+                  Text('Өнгөний горим хадгалж чадсангүй. Дахин оролдоно уу.'),
+            ));
+          }
         }
       },
     );

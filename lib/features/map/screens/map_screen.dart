@@ -9,8 +9,10 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/services/supabase_service.dart';
+import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/widgets/night_owl_brand.dart';
+import '../../../core/widgets/sculpted_icon.dart';
 import '../../../models/venue.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../providers/venue_provider.dart';
@@ -86,12 +88,21 @@ class MapScreen extends ConsumerStatefulWidget {
 }
 
 class _MapScreenState extends ConsumerState<MapScreen> {
-  static const _navy = Color(0xFF0B0D17),
-      _light = Color(0xFFF5F5FC),
-      _muted = Color(0xFF8993AE),
+  static const _light = Color(0xFFF5F5FC),
       _violet = Color(0xFF7654D6),
       _sheet = Color(0xFFF3F1FB),
       _ink = Color(0xFF19172B);
+  bool get _dark => Theme.of(context).brightness == Brightness.dark;
+  Color get _background => _dark ? AppColors.bgBaseDark : AppColors.bgBaseLight;
+  Color get _foreground =>
+      _dark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
+  Color get _muted =>
+      _dark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight;
+  Color get _surface =>
+      _dark ? AppColors.bgElevatedDark : AppColors.bgElevatedLight;
+  Color get _control => _dark ? const Color(0xFF161B2B) : Colors.white;
+  Color get _accent => _dark ? AppColors.neonCyanDark : AppColors.neonCyanLight;
+  Color get _line => _dark ? const Color(0xFF272C40) : const Color(0xFFD8D4E8);
   final _map = LeafletMapController();
   final _search = TextEditingController();
   String _query = '';
@@ -213,7 +224,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
         located.where((venue) => venue.id == _selectedId).firstOrNull ??
             (!_dismissedSelection ? located.firstOrNull : null);
     return Scaffold(
-        backgroundColor: _navy,
+        backgroundColor: _background,
         body: SafeArea(
             bottom: !widget.embedded,
             child: Column(children: [
@@ -257,9 +268,9 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                                       if (venue != null) _select(venue);
                                     })),
                             if (state.isLoading && !state.hasValue)
-                              const Center(
+                              Center(
                                   child: CircularProgressIndicator(
-                                      color: Color(0xFFB6A4FF))),
+                                      color: _accent)),
                             if (state.hasError && !state.hasValue)
                               Positioned(
                                   left: 16,
@@ -302,30 +313,34 @@ class _MapScreenState extends ConsumerState<MapScreen> {
           if (!widget.embedded)
             IconButton(
                 tooltip: 'Буцах',
-                color: _light,
+                color: _foreground,
                 onPressed: () => context.canPop()
                     ? context.pop()
                     : context.go(AppRoutes.explore),
-                icon: const Icon(Icons.arrow_back_rounded)),
-          const Expanded(
+                icon: SculptedIcon(Icons.arrow_back_rounded,
+                    color: _foreground, onDark: _dark)),
+          Expanded(
               child: Align(
                   alignment: Alignment.centerLeft,
                   child: FittedBox(
                       fit: BoxFit.scaleDown,
-                      child: NightOwlBrand(size: 28, onDark: true)))),
+                      child: NightOwlBrand(size: 28, onDark: _dark)))),
           IconButton(
               tooltip: _showList
                   ? 'Газрын зураг харах'
                   : 'Бүх газрыг жагсаалтаар харах',
               color: _muted,
               onPressed: () => setState(() => _showList = !_showList),
-              icon: Icon(_showList
-                  ? Icons.map_outlined
-                  : Icons.format_list_bulleted_rounded)),
+              icon: SculptedIcon(
+                  _showList
+                      ? Icons.map_outlined
+                      : Icons.format_list_bulleted_rounded,
+                  color: _muted,
+                  onDark: _dark)),
         ]),
         const SizedBox(height: 8),
         Text('Explore',
-            style: AppTextStyles.h1.copyWith(color: _light, fontSize: 28)),
+            style: AppTextStyles.h1.copyWith(color: _foreground, fontSize: 28)),
         const SizedBox(height: 4),
         Text('Өнөө орой шинэ газруудыг нээ.',
             style: AppTextStyles.bodySm.copyWith(color: _muted)),
@@ -339,18 +354,19 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                 _selectedId = null;
                 _dismissedSelection = false;
               }),
-          style: AppTextStyles.bodyMd.copyWith(color: _light),
-          cursorColor: const Color(0xFFB6A4FF),
+          style: AppTextStyles.bodyMd.copyWith(color: _foreground),
+          cursorColor: _accent,
           decoration: InputDecoration(
             hintText: 'Газар, дүүрэг, хаяг хайх…',
             hintStyle: AppTextStyles.bodyMd.copyWith(color: _muted),
-            prefixIcon:
-                const Icon(Icons.search_rounded, color: _muted, size: 22),
+            prefixIcon: SculptedIcon(Icons.search_rounded,
+                color: _muted, size: 22, onDark: _dark),
             suffixIcon: _query.isEmpty
                 ? null
                 : IconButton(
                     tooltip: 'Хайлт цэвэрлэх',
-                    icon: const Icon(Icons.close, color: _muted, size: 18),
+                    icon: SculptedIcon(Icons.close,
+                        color: _muted, size: 18, onDark: _dark),
                     onPressed: () {
                       _search.clear();
                       setState(() {
@@ -360,7 +376,8 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                       });
                     }),
             filled: true,
-            fillColor: const Color(0xFF202433),
+            fillColor:
+                _dark ? const Color(0xFF202433) : AppColors.bgSurfaceLight,
             contentPadding:
                 const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
             border: OutlineInputBorder(
@@ -371,7 +388,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                 borderSide: BorderSide.none),
             focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(28),
-                borderSide: const BorderSide(color: Color(0xFFB6A4FF))),
+                borderSide: BorderSide(color: _accent)),
           )));
   Widget _filters() => SizedBox(
       height: 52,
@@ -403,11 +420,10 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   Widget _pill(String label, bool selected, VoidCallback onTap,
           {IconData? icon}) =>
       Material(
-          color: selected ? _violet : _navy,
+          color: selected ? _violet : _background,
           shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(24),
-              side: BorderSide(
-                  color: selected ? _violet : const Color(0xFF272C40))),
+              side: BorderSide(color: selected ? _violet : _line)),
           child: InkWell(
               onTap: onTap,
               borderRadius: BorderRadius.circular(24),
@@ -416,7 +432,10 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                       const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
                   child: Row(mainAxisSize: MainAxisSize.min, children: [
                     if (icon != null) ...[
-                      Icon(icon, size: 16, color: selected ? _light : _muted),
+                      SculptedIcon(icon,
+                          size: 16,
+                          color: selected ? _light : _muted,
+                          onDark: selected || _dark),
                       const SizedBox(width: 5)
                     ],
                     Text(label,
@@ -424,29 +443,30 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                             .copyWith(color: selected ? _light : _muted)),
                   ]))));
   Widget _locationButton() => Material(
-      color: const Color(0xFF161B2B),
+      color: _control,
       shape: const CircleBorder(),
       elevation: 4,
       child: IconButton(
           tooltip: 'Миний байршил',
           onPressed: _locating ? null : _locate,
-          color: const Color(0xFFB6A4FF),
+          color: _accent,
           icon: _locating
-              ? const SizedBox(
+              ? SizedBox(
                   width: 20,
                   height: 20,
-                  child: CircularProgressIndicator(
-                      strokeWidth: 2, color: Color(0xFFB6A4FF)))
-              : const Icon(Icons.my_location_rounded, size: 22)));
+                  child:
+                      CircularProgressIndicator(strokeWidth: 2, color: _accent))
+              : SculptedIcon(Icons.my_location_rounded,
+                  size: 22, color: _accent, active: true, onDark: _dark)));
   Widget _notice(String message, {bool retry = false, bool showList = false}) =>
       Material(
-          color: const Color(0xFF161B2B),
+          color: _control,
           borderRadius: BorderRadius.circular(16),
           child: Padding(
               padding: const EdgeInsets.all(14),
               child: Column(mainAxisSize: MainAxisSize.min, children: [
                 Text(message,
-                    style: AppTextStyles.bodySm.copyWith(color: _light)),
+                    style: AppTextStyles.bodySm.copyWith(color: _foreground)),
                 if (retry)
                   TextButton(
                       onPressed: () => ref.invalidate(venuesProvider),
@@ -477,7 +497,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
             padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
             children: [
               Text('${venues.length} газар',
-                  style: AppTextStyles.h3.copyWith(color: _light)),
+                  style: AppTextStyles.h3.copyWith(color: _foreground)),
               const SizedBox(height: 6),
               Text('Байршил нэмэгдээгүй газрууд энд мөн харагдана.',
                   style: AppTextStyles.bodyXs.copyWith(color: _muted)),
@@ -487,7 +507,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                 Padding(
                   padding: const EdgeInsets.only(bottom: 12),
                   child: Material(
-                      color: const Color(0xFF121625),
+                      color: _surface,
                       borderRadius: BorderRadius.circular(18),
                       child: InkWell(
                           onTap: () => _select(venue),
@@ -504,7 +524,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                                         children: [
                                       Text(venue.name,
                                           style: AppTextStyles.h3
-                                              .copyWith(color: _light),
+                                              .copyWith(color: _foreground),
                                           maxLines: 2,
                                           overflow: TextOverflow.ellipsis),
                                       const SizedBox(height: 4),
@@ -522,11 +542,13 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                                         : 'Газар хадгалах',
                                     onPressed:
                                         _saving ? null : () => _save(venue),
-                                    icon: Icon(
+                                    icon: SculptedIcon(
                                         bookmarks.contains(venue.id)
                                             ? Icons.bookmark_rounded
                                             : Icons.bookmark_border_rounded,
-                                        color: const Color(0xFFB6A4FF),
+                                        color: _accent,
+                                        active: bookmarks.contains(venue.id),
+                                        onDark: _dark,
                                         size: 22)),
                               ])))),
                 ),
@@ -538,7 +560,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
         ? venue.coverUrl!
         : venue.photos.where((photo) => photo.trim().isNotEmpty).firstOrNull;
     Widget fallback() => Container(
-        color: const Color(0xFF191B30),
+        color: _dark ? const Color(0xFF191B30) : const Color(0xFFE8E4F4),
         alignment: Alignment.center,
         child: NightOwlMark(size: size * .55));
     return ClipRRect(
@@ -561,7 +583,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
             ? 'Мэдээлэл ачаалж байна…'
             : 'Тайлбар хараахан нэмэгдээгүй.');
     return Material(
-        color: _sheet,
+        color: _dark ? _sheet : Colors.white,
         elevation: 12,
         shadowColor: Colors.black54,
         borderRadius: BorderRadius.circular(24),
@@ -625,7 +647,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                                                   _selectedId = null;
                                                   _dismissedSelection = true;
                                                 }),
-                                            icon: const Icon(
+                                            icon: const SculptedIcon(
                                                 Icons.close_rounded,
                                                 size: 18,
                                                 color: Color(0xFF68677F))),
@@ -648,7 +670,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                                         if (venue.rating.isFinite &&
                                             venue.rating > 0 &&
                                             venue.rating <= 5) ...[
-                                          const Icon(Icons.star_rounded,
+                                          const SculptedIcon(Icons.star_rounded,
                                               size: 16, color: _ink),
                                           Text(venue.rating.toStringAsFixed(1),
                                               style: AppTextStyles.bodySm
@@ -660,8 +682,11 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                                                       color: const Color(
                                                           0xFF68677F))),
                                         if (venue.verified)
-                                          const Icon(Icons.verified_rounded,
-                                              size: 16, color: _violet),
+                                          const SculptedIcon(
+                                              Icons.verified_rounded,
+                                              size: 16,
+                                              color: _violet,
+                                              active: true),
                                       ]),
                                 ])),
                           ]),
@@ -688,7 +713,10 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                                 child: const Row(
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
-                                      Icon(Icons.directions_outlined, size: 20),
+                                      SculptedIcon(Icons.directions_outlined,
+                                          size: 20,
+                                          color: Colors.white,
+                                          onDark: true),
                                       SizedBox(width: 8),
                                       Flexible(
                                           child: Text('Чиглэл авах',
@@ -710,11 +738,13 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                                     height: 18,
                                     child: CircularProgressIndicator(
                                         strokeWidth: 2))
-                                : Icon(
+                                : SculptedIcon(
                                     saved
                                         ? Icons.bookmark_rounded
                                         : Icons.bookmark_border_rounded,
-                                    size: 23)),
+                                    size: 23,
+                                    color: saved ? _violet : _ink,
+                                    active: saved)),
                       ]),
                       if (venue.locationSourceUrl != null)
                         TextButton.icon(
@@ -724,8 +754,8 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                                 foregroundColor: const Color(0xFF6550AD),
                                 padding: EdgeInsets.zero,
                                 visualDensity: VisualDensity.compact),
-                            icon:
-                                const Icon(Icons.open_in_new_rounded, size: 13),
+                            icon: const SculptedIcon(Icons.open_in_new_rounded,
+                                size: 13, color: Color(0xFF6550AD)),
                             label: const Text('Байршлын эх сурвалж'))
                       else
                         Padding(

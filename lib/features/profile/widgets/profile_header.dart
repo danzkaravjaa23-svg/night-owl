@@ -1,6 +1,7 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/widgets/sculpted_icon.dart';
 import '../../../models/user_profile.dart';
 
 /// Profile identity and actions, using the person's actual profile data.
@@ -117,7 +118,8 @@ class ProfileHeader extends StatelessWidget {
                     shape: const StadiumBorder(),
                     textStyle: const TextStyle(
                         fontSize: 14, fontWeight: FontWeight.w600)),
-                icon: const Icon(Icons.edit_outlined, size: 17),
+                icon: const SculptedIcon(Icons.edit_outlined,
+                    size: 17, color: Colors.white, onDark: true),
                 label:
                     const Text('Профайл засах', textAlign: TextAlign.center)),
             const SizedBox(height: 24),
@@ -243,7 +245,7 @@ class _CoverAction extends StatelessWidget {
           backgroundColor: const Color(0x450B0D17),
           foregroundColor: Colors.white,
           minimumSize: const Size(44, 44)),
-      icon: Icon(icon, size: 22));
+      icon: SculptedIcon(icon, size: 22, color: Colors.white, onDark: true));
 }
 
 class _ProfileCover extends StatelessWidget {

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/widgets/sculpted_icon.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/widgets/app_avatar.dart';
 import '../../../core/services/supabase_service.dart';
@@ -17,6 +18,14 @@ String _noteTimeAgo(String? iso) {
   return '${diff.inDays}ө өмнө';
 }
 
+double _notesRailHeight(BuildContext context) {
+  final scaledLabelSize = MediaQuery.textScalerOf(context).scale(11);
+  final extraLabelSize = scaledLabelSize > 11 ? scaledLabelSize - 11 : 0.0;
+  // Reserve the same space while loading, including two note lines, a venue,
+  // username and timestamp when accessibility text is enlarged.
+  return 156 + extraLabelSize * 7;
+}
+
 /// Instagram-маягийн Note мөр — DM жагсаалтын дээр. Note нь 24ц богино статус,
 /// зөвхөн venue тэмдэглэж болно. Өөрийн bubble дарвал бичих/засах composer нээгдэнэ.
 class NotesRow extends StatefulWidget {
@@ -26,8 +35,9 @@ class NotesRow extends StatefulWidget {
 }
 
 class NotesRowState extends State<NotesRow> {
-  List<Map<String, dynamic>> _notes = []; // {user_id, username, avatar_url, text, venue_name}
-  Map<String, dynamic>? _me;              // өөрийн profile
+  List<Map<String, dynamic>> _notes =
+      []; // {user_id, username, avatar_url, text, venue_name}
+  Map<String, dynamic>? _me; // өөрийн profile
   bool _loaded = false;
 
   String get _myId => SupabaseService.currentUser?.id ?? '';
@@ -43,35 +53,51 @@ class NotesRowState extends State<NotesRow> {
       final me = _myId;
       // Өөрийн профайл
       if (me.isNotEmpty) {
-        _me = await SupabaseService.client.from('profiles')
-            .select('id, username, avatar_url').eq('id', me).maybeSingle();
+        _me = await SupabaseService.client
+            .from('profiles')
+            .select('id, username, avatar_url')
+            .eq('id', me)
+            .maybeSingle();
       }
       // Зөвхөн сүүлийн 24 цагийн note (хугацаа дууссаныг харуулахгүй).
       // created_at нь timestamptz (UTC) тул харьцуулалтыг UTC-ээр хийнэ.
-      final cutoff = DateTime.now().toUtc()
-          .subtract(const Duration(hours: 24)).toIso8601String();
-      final data = await SupabaseService.client.from('notes')
+      final cutoff = DateTime.now()
+          .toUtc()
+          .subtract(const Duration(hours: 24))
+          .toIso8601String();
+      final data = await SupabaseService.client
+          .from('notes')
           .select('user_id, text, venue_id, created_at')
           .gt('created_at', cutoff)
-          .order('created_at', ascending: false).limit(50);
+          .order('created_at', ascending: false)
+          .limit(50);
       final rows = (data as List).cast<Map<String, dynamic>>();
 
       final userIds = rows.map((r) => r['user_id'] as String).toSet().toList();
-      final venueIds = rows.map((r) => r['venue_id']).whereType<String>().toSet().toList();
+      final venueIds =
+          rows.map((r) => r['venue_id']).whereType<String>().toSet().toList();
 
       Map<String, Map<String, dynamic>> pmap = {};
       Map<String, String> vmap = {};
       if (userIds.isNotEmpty) {
-        final profs = await SupabaseService.client.from('profiles')
-            .select('id, username, avatar_url').inFilter('id', userIds);
-        pmap = { for (final p in (profs as List).cast<Map<String, dynamic>>())
-          p['id'] as String: p };
+        final profs = await SupabaseService.client
+            .from('profiles')
+            .select('id, username, avatar_url')
+            .inFilter('id', userIds);
+        pmap = {
+          for (final p in (profs as List).cast<Map<String, dynamic>>())
+            p['id'] as String: p
+        };
       }
       if (venueIds.isNotEmpty) {
-        final vs = await SupabaseService.client.from('venues')
-            .select('id, name').inFilter('id', venueIds);
-        vmap = { for (final v in (vs as List).cast<Map<String, dynamic>>())
-          v['id'] as String: v['name'] as String };
+        final vs = await SupabaseService.client
+            .from('venues')
+            .select('id, name')
+            .inFilter('id', venueIds);
+        vmap = {
+          for (final v in (vs as List).cast<Map<String, dynamic>>())
+            v['id'] as String: v['name'] as String
+        };
       }
 
       final list = rows.map((r) {
@@ -87,9 +113,15 @@ class NotesRowState extends State<NotesRow> {
         };
       }).toList();
       // Өөрийн note-г эхэнд
-      list.sort((a, b) => (a['user_id'] == me ? 0 : 1) - (b['user_id'] == me ? 0 : 1));
+      list.sort((a, b) =>
+          (a['user_id'] == me ? 0 : 1) - (b['user_id'] == me ? 0 : 1));
 
-      if (mounted) setState(() { _notes = list; _loaded = true; });
+      if (mounted) {
+        setState(() {
+          _notes = list;
+          _loaded = true;
+        });
+      }
     } catch (_) {
       if (mounted) setState(() => _loaded = true);
     }
@@ -99,16 +131,19 @@ class NotesRowState extends State<NotesRow> {
   void reload() => _load();
 
   Map<String, dynamic>? get _myNote {
-    for (final n in _notes) { if (n['user_id'] == _myId) return n; }
+    for (final n in _notes) {
+      if (n['user_id'] == _myId) return n;
+    }
     return null;
   }
 
   Future<void> _openComposer() async {
     final saved = await showModalBottomSheet<bool>(
-      context: context, backgroundColor: AppColors.bgElevated,
+      context: context,
+      backgroundColor: AppColors.bgElevated,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
       builder: (_) => _NoteComposer(existing: _myNote),
     );
     if (saved == true) _load();
@@ -118,74 +153,102 @@ class NotesRowState extends State<NotesRow> {
   void _showNoteDetail(Map<String, dynamic> n) {
     final username = (n['username'] as String).replaceAll('@', '');
     showModalBottomSheet(
-      context: context, backgroundColor: AppColors.bgElevated,
+      context: context,
+      backgroundColor: AppColors.bgElevated,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
-      builder: (sheetCtx) => SafeArea(top: false, child: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
-        child: Column(mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(
-              color: AppColors.hairline, borderRadius: BorderRadius.circular(2)))),
-            const SizedBox(height: 16),
-            Row(children: [
-              AppAvatar(imageUrl: n['avatar_url'] as String?,
-                initial: username.isNotEmpty ? username[0].toUpperCase() : '?', size: 40),
-              const SizedBox(width: 10),
-              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
+      builder: (sheetCtx) => SafeArea(
+          top: false,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+            child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('@$username', style: AppTextStyles.labelLg),
-                  if (_noteTimeAgo(n['created_at'] as String?).isNotEmpty)
-                    Text(_noteTimeAgo(n['created_at'] as String?),
-                      style: AppTextStyles.bodyXs.copyWith(
-                        color: AppColors.textTertiary)),
-                ])),
-            ]),
-            const SizedBox(height: 14),
-            // Бүрэн текст
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: AppColors.bgSurface, borderRadius: BorderRadius.circular(14)),
-              child: Text(n['text'] as String? ?? '',
-                style: AppTextStyles.bodyLg.copyWith(color: AppColors.textPrimary)),
-            ),
-            if (n['venue_name'] != null) ...[
-              const SizedBox(height: 10),
-              Row(children: [
-                const Icon(Icons.location_on, size: 16, color: AppColors.amber),
-                const SizedBox(width: 6),
-                Expanded(child: Text(n['venue_name'] as String,
-                  style: AppTextStyles.bodyMd.copyWith(color: AppColors.textPrimary))),
-              ]),
-            ],
-            const SizedBox(height: 18),
-            _Pressable(
-              onTap: () {
-                Navigator.pop(sheetCtx);
-                final note = (n['text'] as String? ?? '').trim();
-                final q = note.isEmpty ? '' : '?note=${Uri.encodeComponent(note)}';
-                context.push('/dm/${n['user_id']}$q');
-              },
-              // Primary товч — pill 52 + gradient glow
-              child: Container(
-                height: 52, width: double.infinity,
-                decoration: BoxDecoration(
-                  gradient: AppColors.accentGradient,
-                  borderRadius: BorderRadius.circular(999),
-                  boxShadow: AppColors.glowShadow(AppColors.accentStart)),
-                alignment: Alignment.center,
-                child: Text('Note-д хариулах', style: AppTextStyles.btn.copyWith(color: Colors.white))),
-            ),
-          ]),
-      )),
+                  Center(
+                      child: Container(
+                          width: 40,
+                          height: 4,
+                          decoration: BoxDecoration(
+                              color: AppColors.hairline,
+                              borderRadius: BorderRadius.circular(2)))),
+                  const SizedBox(height: 16),
+                  Row(children: [
+                    AppAvatar(
+                        imageUrl: n['avatar_url'] as String?,
+                        initial: username.isNotEmpty
+                            ? username[0].toUpperCase()
+                            : '?',
+                        size: 40),
+                    const SizedBox(width: 10),
+                    Expanded(
+                        child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                          Text('@$username', style: AppTextStyles.labelLg),
+                          if (_noteTimeAgo(n['created_at'] as String?)
+                              .isNotEmpty)
+                            Text(_noteTimeAgo(n['created_at'] as String?),
+                                style: AppTextStyles.bodyXs
+                                    .copyWith(color: AppColors.textTertiary)),
+                        ])),
+                  ]),
+                  const SizedBox(height: 14),
+                  // Бүрэн текст
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                        color: AppColors.bgSurface,
+                        borderRadius: BorderRadius.circular(14)),
+                    child: Text(n['text'] as String? ?? '',
+                        style: AppTextStyles.bodyLg
+                            .copyWith(color: AppColors.textPrimary)),
+                  ),
+                  if (n['venue_name'] != null) ...[
+                    const SizedBox(height: 10),
+                    Row(children: [
+                      const SculptedIcon(Icons.location_on,
+                          size: 16, color: AppColors.amber),
+                      const SizedBox(width: 6),
+                      Expanded(
+                          child: Text(n['venue_name'] as String,
+                              style: AppTextStyles.bodyMd
+                                  .copyWith(color: AppColors.textPrimary))),
+                    ]),
+                  ],
+                  const SizedBox(height: 18),
+                  _Pressable(
+                    onTap: () {
+                      Navigator.pop(sheetCtx);
+                      final note = (n['text'] as String? ?? '').trim();
+                      final q = note.isEmpty
+                          ? ''
+                          : '?note=${Uri.encodeComponent(note)}';
+                      context.push('/dm/${n['user_id']}$q');
+                    },
+                    // Primary товч — pill 52 + gradient glow
+                    child: Container(
+                        height: 52,
+                        width: double.infinity,
+                        decoration: BoxDecoration(
+                            gradient: AppColors.accentGradient,
+                            borderRadius: BorderRadius.circular(999),
+                            boxShadow:
+                                AppColors.glowShadow(AppColors.accentStart)),
+                        alignment: Alignment.center,
+                        child: Text('Note-д хариулах',
+                            style: AppTextStyles.btn
+                                .copyWith(color: Colors.white))),
+                  ),
+                ]),
+          )),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    // Ачааллаж байх үед мөрийн өндрийг (142px) хадгалж, skeleton харуулна —
+    // Ачааллаж байх үед мөрийн өндрийг хадгалж, skeleton харуулна —
     // ингэснээр search bar / жагсаалт доош "үсрэхгүй".
     if (!_loaded) return const _NotesRowSkeleton();
     final mine = _myNote;
@@ -194,7 +257,7 @@ class NotesRowState extends State<NotesRow> {
     return Container(
       padding: const EdgeInsets.only(top: 4, bottom: 6),
       child: SizedBox(
-        height: 156,
+        height: _notesRailHeight(context),
         child: ListView(
           scrollDirection: Axis.horizontal,
           padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -235,9 +298,13 @@ class _NoteBubble extends StatelessWidget {
   final bool isMine;
   final VoidCallback onTap;
   const _NoteBubble({
-    required this.avatarUrl, required this.username, required this.noteText,
-    required this.venueName, required this.createdAt,
-    required this.isMine, required this.onTap,
+    required this.avatarUrl,
+    required this.username,
+    required this.noteText,
+    required this.venueName,
+    required this.createdAt,
+    required this.isMine,
+    required this.onTap,
   });
 
   @override
@@ -249,72 +316,107 @@ class _NoteBubble extends StatelessWidget {
       onTap: onTap,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 6),
-        child: SizedBox(width: 104, child: Column(children: [
-          // Bubble — glass; "Note үлдээх" үед accent border-той
-          Container(
-            constraints: const BoxConstraints(maxWidth: 104, minWidth: 44),
-            padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
-            decoration: BoxDecoration(
-              color: AppColors.bgElevated.withValues(alpha: 0.75),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: (isMine && !hasNote)
-                  ? AppColors.accentStart.withValues(alpha: 0.45)
-                  : AppColors.hairline)),
-            child: Column(mainAxisSize: MainAxisSize.min, children: [
-              Text(bubbleText, maxLines: 2, overflow: TextOverflow.ellipsis,
-                textAlign: TextAlign.center,
-                style: AppTextStyles.bodyXs.copyWith(
-                  color: hasNote ? AppColors.textPrimary : AppColors.textTertiary,
-                  height: 1.15)),
-              if (venueName != null)
-                Text('📍${venueName!}', maxLines: 1, overflow: TextOverflow.ellipsis,
-                  // Шар өнгө цайвар бөмбөлөг дээр уншигдахгүй тул гэрэл горимд
-                  // бараан алтан; 9px → 11px (уншигдах доод хэмжээ).
-                  style: AppTextStyles.bodyXs.copyWith(
-                    color: AppColors.isDarkMode
-                        ? AppColors.amber : const Color(0xFF8A5A00),
-                    fontSize: 11)),
-            ]),
-          ),
-          const SizedBox(height: 2),
-          // Story-rail 64 avatar — note-той бол storyRingGradient ринг
-          Stack(clipBehavior: Clip.none, children: [
-            if (isMine && !hasNote)
-              // "Note үлдээх" — зөөлөн gradient ринг + "+" badge
+        child: SizedBox(
+            width: 104,
+            child: Column(children: [
+              // Bubble — glass; "Note үлдээх" үед accent border-той
               Container(
-                padding: const EdgeInsets.all(2),
-                decoration: const BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: AppColors.accentGradientSoft),
-                child: Container(
-                  padding: const EdgeInsets.all(2),
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle, color: AppColors.bgBase),
-                  child: AppAvatar(
-                      imageUrl: avatarUrl, initial: initial, size: 56)))
-            else
-              AppAvatar(imageUrl: avatarUrl, initial: initial,
-                  size: 64, showRing: hasNote),
-            if (isMine && !hasNote)
-              Positioned(right: -2, bottom: -2, child: Container(
-                width: 20, height: 20, decoration: BoxDecoration(
-                  shape: BoxShape.circle, gradient: AppColors.accentGradient,
-                  border: Border.all(color: AppColors.bgBase, width: 2),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.accentStart.withValues(alpha: 0.5),
-                      blurRadius: 10, spreadRadius: -1),
-                  ]),
-                child: const Icon(Icons.add, color: Colors.white, size: 12))),
-          ]),
-          const SizedBox(height: 2),
-          SizedBox(width: 100, child: Text(username,
-            maxLines: 1, overflow: TextOverflow.ellipsis, textAlign: TextAlign.center,
-            style: AppTextStyles.bodyXs.copyWith(color: AppColors.textSecondary))),
-          if (hasNote && _noteTimeAgo(createdAt).isNotEmpty)
-            Text(_noteTimeAgo(createdAt), textAlign: TextAlign.center,
-              style: TextStyle(color: AppColors.textTertiary, fontSize: 9)),
-        ])),
+                constraints: const BoxConstraints(maxWidth: 104, minWidth: 44),
+                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
+                decoration: BoxDecoration(
+                    color: AppColors.bgElevated.withValues(alpha: 0.75),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                        color: (isMine && !hasNote)
+                            ? AppColors.accentStart.withValues(alpha: 0.45)
+                            : AppColors.hairline)),
+                child: Column(mainAxisSize: MainAxisSize.min, children: [
+                  Text(bubbleText,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.center,
+                      style: AppTextStyles.bodyXs.copyWith(
+                          color: hasNote
+                              ? AppColors.textPrimary
+                              : AppColors.textTertiary,
+                          height: 1.15)),
+                  if (venueName != null)
+                    Text('📍${venueName!}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        // Шар өнгө цайвар бөмбөлөг дээр уншигдахгүй тул гэрэл горимд
+                        // бараан алтан; 9px → 11px (уншигдах доод хэмжээ).
+                        style: AppTextStyles.bodyXs.copyWith(
+                            color: AppColors.isDarkMode
+                                ? AppColors.amber
+                                : const Color(0xFF8A5A00),
+                            fontSize: 11,
+                            height: 1.2)),
+                ]),
+              ),
+              const SizedBox(height: 2),
+              // Story-rail 64 avatar — note-той бол storyRingGradient ринг
+              Stack(clipBehavior: Clip.none, children: [
+                if (isMine && !hasNote)
+                  // "Note үлдээх" — зөөлөн gradient ринг + "+" badge
+                  Container(
+                      padding: const EdgeInsets.all(2),
+                      decoration: const BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: AppColors.accentGradientSoft),
+                      child: Container(
+                          padding: const EdgeInsets.all(2),
+                          decoration: BoxDecoration(
+                              shape: BoxShape.circle, color: AppColors.bgBase),
+                          child: AppAvatar(
+                              imageUrl: avatarUrl, initial: initial, size: 56)))
+                else
+                  AppAvatar(
+                      imageUrl: avatarUrl,
+                      initial: initial,
+                      size: 64,
+                      showRing: hasNote),
+                if (isMine && !hasNote)
+                  Positioned(
+                      right: -2,
+                      bottom: -2,
+                      child: Container(
+                          width: 20,
+                          height: 20,
+                          decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              gradient: AppColors.accentGradient,
+                              border:
+                                  Border.all(color: AppColors.bgBase, width: 2),
+                              boxShadow: [
+                                BoxShadow(
+                                    color: AppColors.accentStart
+                                        .withValues(alpha: 0.5),
+                                    blurRadius: 10,
+                                    spreadRadius: -1),
+                              ]),
+                          child: const SculptedIcon(Icons.add,
+                              color: Colors.white, size: 12, onDark: true))),
+              ]),
+              const SizedBox(height: 2),
+              SizedBox(
+                  width: 100,
+                  child: Text(username,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.center,
+                      style: AppTextStyles.bodyXs.copyWith(
+                          color: AppColors.textSecondary, height: 1.2))),
+              if (hasNote && _noteTimeAgo(createdAt).isNotEmpty)
+                Text(_noteTimeAgo(createdAt),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                        color: AppColors.textTertiary,
+                        fontSize: 11,
+                        height: 1.2)),
+            ])),
       ),
     );
   }
@@ -337,21 +439,26 @@ class _NoteComposerState extends State<_NoteComposer> {
   @override
   void initState() {
     super.initState();
-    _ctrl = TextEditingController(text: widget.existing?['text'] as String? ?? '');
+    _ctrl =
+        TextEditingController(text: widget.existing?['text'] as String? ?? '');
     _venueName = widget.existing?['venue_name'] as String?;
-    _venueId   = widget.existing?['venue_id'] as String?;
+    _venueId = widget.existing?['venue_id'] as String?;
   }
 
   Future<void> _pickVenue() async {
     final v = await showModalBottomSheet<Map<String, dynamic>>(
-      context: context, backgroundColor: AppColors.bgElevated,
+      context: context,
+      backgroundColor: AppColors.bgElevated,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
       builder: (_) => const _VenueSearchSheet(),
     );
     if (v != null && mounted) {
-      setState(() { _venueId = v['id'] as String; _venueName = v['name'] as String; });
+      setState(() {
+        _venueId = v['id'] as String;
+        _venueName = v['name'] as String;
+      });
     }
   }
 
@@ -368,8 +475,10 @@ class _NoteComposerState extends State<_NoteComposer> {
         'user_id': me,
         'text': text,
         'venue_id': _venueId,
-        'expires_at': DateTime.now().toUtc()
-            .add(const Duration(hours: 24)).toIso8601String(),
+        'expires_at': DateTime.now()
+            .toUtc()
+            .add(const Duration(hours: 24))
+            .toIso8601String(),
         'created_at': DateTime.now().toUtc().toIso8601String(),
       }, onConflict: 'user_id');
       if (mounted) Navigator.pop(context, true);
@@ -377,8 +486,8 @@ class _NoteComposerState extends State<_NoteComposer> {
       if (mounted) {
         setState(() => _busy = false);
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Хадгалж чадсангүй. Дахин оролдоно уу.'),
-          backgroundColor: AppColors.error));
+            content: Text('Хадгалж чадсангүй. Дахин оролдоно уу.'),
+            backgroundColor: AppColors.error));
       }
     }
   }
@@ -395,95 +504,139 @@ class _NoteComposerState extends State<_NoteComposer> {
       if (mounted) {
         setState(() => _busy = false);
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Устгаж чадсангүй. Дахин оролдоно уу.'),
-          backgroundColor: AppColors.error));
+            content: Text('Устгаж чадсангүй. Дахин оролдоно уу.'),
+            backgroundColor: AppColors.error));
       }
     }
   }
 
   @override
-  void dispose() { _ctrl.dispose(); super.dispose(); }
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     final editing = widget.existing != null;
     return Padding(
       padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom + 16,
-        left: 16, right: 16, top: 16),
-      child: SafeArea(top: false, child: Column(mainAxisSize: MainAxisSize.min, children: [
-        Container(width: 40, height: 4, decoration: BoxDecoration(
-          color: AppColors.hairline, borderRadius: BorderRadius.circular(2))),
-        const SizedBox(height: 14),
-        Text('Note үлдээх', style: AppTextStyles.labelLg),
-        const SizedBox(height: 4),
-        Text('Найзууд чинь 24 цаг харна',
-          style: AppTextStyles.bodyXs.copyWith(color: AppColors.textSecondary)),
-        const SizedBox(height: 14),
-        TextField(
-          controller: _ctrl, autofocus: true, maxLength: 100, maxLines: 3,
-          style: AppTextStyles.bodyMd.copyWith(color: AppColors.textPrimary),
-          decoration: InputDecoration(
-            hintText: 'Юу бодож байна?',
-            hintStyle: AppTextStyles.bodyMd.copyWith(color: AppColors.textTertiary),
-            filled: true, fillColor: AppColors.bgSurface,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none)),
-        ),
-        const SizedBox(height: 8),
-        // Зөвхөн venue тэмдэглэх
-        _Pressable(
-          onTap: _pickVenue,
-          child: Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-            decoration: BoxDecoration(
-              color: AppColors.bgSurface, borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: _venueName != null
-                  ? AppColors.accentStart : AppColors.hairline)),
-            child: Row(children: [
-              Icon(Icons.location_on_outlined, size: 18,
-                color: _venueName != null ? AppColors.accentStart : AppColors.textSecondary),
-              const SizedBox(width: 8),
-              Expanded(child: Text(_venueName ?? 'Газар тэмдэглэх (заавал биш)',
-                style: AppTextStyles.bodyMd.copyWith(
-                  color: _venueName != null ? AppColors.textPrimary : AppColors.textSecondary))),
-              if (_venueName != null)
-                _Pressable(
-                  onTap: () => setState(() { _venueId = null; _venueName = null; }),
-                  child: Icon(Icons.close, size: 16, color: AppColors.textTertiary)),
-            ]),
-          ),
-        ),
-        const SizedBox(height: 16),
-        Row(children: [
-          if (editing)
-            Padding(padding: const EdgeInsets.only(right: 10), child: _Pressable(
-              onTap: _busy ? null : _delete,
-              child: Container(
-                height: 52, padding: const EdgeInsets.symmetric(horizontal: 18),
+          bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+          left: 16,
+          right: 16,
+          top: 16),
+      child: SafeArea(
+          top: false,
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            Container(
+                width: 40,
+                height: 4,
                 decoration: BoxDecoration(
-                  color: AppColors.bgSurface,
-                  borderRadius: BorderRadius.circular(999),
-                  border: Border.all(color: AppColors.hairline2)),
-                alignment: Alignment.center,
-                child: const Icon(Icons.delete_outline, color: AppColors.error)))),
-          // Primary товч — pill 52 + gradient glow
-          Expanded(child: _Pressable(
-            onTap: _busy ? null : _save,
-            child: Container(
-              height: 52,
-              decoration: BoxDecoration(
-                gradient: AppColors.accentGradient,
-                borderRadius: BorderRadius.circular(999),
-                boxShadow: AppColors.glowShadow(AppColors.accentStart)),
-              alignment: Alignment.center,
-              child: _busy
-                ? const SizedBox(width: 20, height: 20, child:
-                    CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                : Text('Хуваалцах', style: AppTextStyles.btn.copyWith(color: Colors.white))))),
-        ]),
-      ])),
+                    color: AppColors.hairline,
+                    borderRadius: BorderRadius.circular(2))),
+            const SizedBox(height: 14),
+            Text('Note үлдээх', style: AppTextStyles.labelLg),
+            const SizedBox(height: 4),
+            Text('Найзууд чинь 24 цаг харна',
+                style: AppTextStyles.bodyXs
+                    .copyWith(color: AppColors.textSecondary)),
+            const SizedBox(height: 14),
+            TextField(
+              controller: _ctrl,
+              autofocus: true,
+              maxLength: 100,
+              maxLines: 3,
+              style:
+                  AppTextStyles.bodyMd.copyWith(color: AppColors.textPrimary),
+              decoration: InputDecoration(
+                  hintText: 'Юу бодож байна?',
+                  hintStyle: AppTextStyles.bodyMd
+                      .copyWith(color: AppColors.textTertiary),
+                  filled: true,
+                  fillColor: AppColors.bgSurface,
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: BorderSide.none)),
+            ),
+            const SizedBox(height: 8),
+            // Зөвхөн venue тэмдэглэх
+            _Pressable(
+              onTap: _pickVenue,
+              child: Container(
+                width: double.infinity,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                decoration: BoxDecoration(
+                    color: AppColors.bgSurface,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                        color: _venueName != null
+                            ? AppColors.accentStart
+                            : AppColors.hairline)),
+                child: Row(children: [
+                  SculptedIcon(Icons.location_on_outlined,
+                      size: 18,
+                      color: _venueName != null
+                          ? AppColors.accentStart
+                          : AppColors.textSecondary),
+                  const SizedBox(width: 8),
+                  Expanded(
+                      child: Text(_venueName ?? 'Газар тэмдэглэх (заавал биш)',
+                          style: AppTextStyles.bodyMd.copyWith(
+                              color: _venueName != null
+                                  ? AppColors.textPrimary
+                                  : AppColors.textSecondary))),
+                  if (_venueName != null)
+                    _Pressable(
+                        onTap: () => setState(() {
+                              _venueId = null;
+                              _venueName = null;
+                            }),
+                        child: SculptedIcon(Icons.close,
+                            size: 16, color: AppColors.textTertiary)),
+                ]),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Row(children: [
+              if (editing)
+                Padding(
+                    padding: const EdgeInsets.only(right: 10),
+                    child: _Pressable(
+                        onTap: _busy ? null : _delete,
+                        child: Container(
+                            height: 52,
+                            padding: const EdgeInsets.symmetric(horizontal: 18),
+                            decoration: BoxDecoration(
+                                color: AppColors.bgSurface,
+                                borderRadius: BorderRadius.circular(999),
+                                border: Border.all(color: AppColors.hairline2)),
+                            alignment: Alignment.center,
+                            child: const SculptedIcon(Icons.delete_outline,
+                                color: AppColors.error)))),
+              // Primary товч — pill 52 + gradient glow
+              Expanded(
+                  child: _Pressable(
+                      onTap: _busy ? null : _save,
+                      child: Container(
+                          height: 52,
+                          decoration: BoxDecoration(
+                              gradient: AppColors.accentGradient,
+                              borderRadius: BorderRadius.circular(999),
+                              boxShadow:
+                                  AppColors.glowShadow(AppColors.accentStart)),
+                          alignment: Alignment.center,
+                          child: _busy
+                              ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                      color: Colors.white, strokeWidth: 2))
+                              : Text('Хуваалцах',
+                                  style: AppTextStyles.btn
+                                      .copyWith(color: Colors.white))))),
+            ]),
+          ])),
     );
   }
 }
@@ -500,16 +653,22 @@ class _VenueSearchSheetState extends State<_VenueSearchSheet> {
   bool _loading = false;
 
   @override
-  void initState() { super.initState(); _search(''); }
+  void initState() {
+    super.initState();
+    _search('');
+  }
 
   Future<void> _search(String q) async {
     setState(() => _loading = true);
     try {
-      var query = SupabaseService.client.from('venues').select('id, name, district');
+      var query =
+          SupabaseService.client.from('venues').select('id, name, district');
       if (q.isNotEmpty) query = query.ilike('name', '%$q%');
       final data = await query.limit(30);
       _results = (data as List).cast<Map<String, dynamic>>();
-    } catch (_) { _results = []; }
+    } catch (_) {
+      _results = [];
+    }
     if (mounted) setState(() => _loading = false);
   }
 
@@ -517,45 +676,70 @@ class _VenueSearchSheetState extends State<_VenueSearchSheet> {
   Widget build(BuildContext context) {
     return Padding(
       padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom, left: 16, right: 16, top: 16),
-      child: SafeArea(top: false, child: Column(mainAxisSize: MainAxisSize.min, children: [
-        Container(width: 40, height: 4, decoration: BoxDecoration(
-          color: AppColors.hairline, borderRadius: BorderRadius.circular(2))),
-        const SizedBox(height: 12),
-        Text('Газар сонгох', style: AppTextStyles.labelLg),
-        const SizedBox(height: 12),
-        TextField(
-          autofocus: true, onChanged: _search,
-          style: AppTextStyles.bodyMd.copyWith(color: AppColors.textPrimary),
-          decoration: InputDecoration(
-            hintText: 'Газар хайх...',
-            prefixIcon: Icon(Icons.search, color: AppColors.textTertiary),
-            filled: true, fillColor: AppColors.bgSurface, isDense: true,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none)),
-        ),
-        const SizedBox(height: 8),
-        SizedBox(height: 320, child: _loading
-          ? const Center(child: CircularProgressIndicator(
-              color: AppColors.accentStart, strokeWidth: 2))
-          : _results.isEmpty
-            ? Center(child: Text('Газар олдсонгүй',
-                style: AppTextStyles.bodyMd.copyWith(color: AppColors.textSecondary)))
-            : ListView.builder(itemCount: _results.length, itemBuilder: (_, i) {
-                final r = _results[i];
-                return ListTile(
-                  leading: const Icon(Icons.location_on, color: AppColors.accentStart),
-                  title: Text(r['name'] as String? ?? '',
-                      style: AppTextStyles.bodyMd.copyWith(color: AppColors.textPrimary)),
-                  subtitle: r['district'] != null
-                      ? Text(r['district'] as String,
-                          style: AppTextStyles.bodyXs.copyWith(color: AppColors.textSecondary))
-                      : null,
-                  onTap: () => Navigator.pop(context, r),
-                );
-              })),
-        const SizedBox(height: 12),
-      ])),
+          bottom: MediaQuery.of(context).viewInsets.bottom,
+          left: 16,
+          right: 16,
+          top: 16),
+      child: SafeArea(
+          top: false,
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                    color: AppColors.hairline,
+                    borderRadius: BorderRadius.circular(2))),
+            const SizedBox(height: 12),
+            Text('Газар сонгох', style: AppTextStyles.labelLg),
+            const SizedBox(height: 12),
+            TextField(
+              autofocus: true,
+              onChanged: _search,
+              style:
+                  AppTextStyles.bodyMd.copyWith(color: AppColors.textPrimary),
+              decoration: InputDecoration(
+                  hintText: 'Газар хайх...',
+                  prefixIcon:
+                      SculptedIcon(Icons.search, color: AppColors.textTertiary),
+                  filled: true,
+                  fillColor: AppColors.bgSurface,
+                  isDense: true,
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none)),
+            ),
+            const SizedBox(height: 8),
+            SizedBox(
+                height: 320,
+                child: _loading
+                    ? const Center(
+                        child: CircularProgressIndicator(
+                            color: AppColors.accentStart, strokeWidth: 2))
+                    : _results.isEmpty
+                        ? Center(
+                            child: Text('Газар олдсонгүй',
+                                style: AppTextStyles.bodyMd
+                                    .copyWith(color: AppColors.textSecondary)))
+                        : ListView.builder(
+                            itemCount: _results.length,
+                            itemBuilder: (_, i) {
+                              final r = _results[i];
+                              return ListTile(
+                                leading: const SculptedIcon(Icons.location_on,
+                                    color: AppColors.accentStart),
+                                title: Text(r['name'] as String? ?? '',
+                                    style: AppTextStyles.bodyMd.copyWith(
+                                        color: AppColors.textPrimary)),
+                                subtitle: r['district'] != null
+                                    ? Text(r['district'] as String,
+                                        style: AppTextStyles.bodyXs.copyWith(
+                                            color: AppColors.textSecondary))
+                                    : null,
+                                onTap: () => Navigator.pop(context, r),
+                              );
+                            })),
+            const SizedBox(height: 12),
+          ])),
     );
   }
 }
@@ -594,7 +778,7 @@ class _PressableState extends State<_Pressable> {
   }
 }
 
-/// Notes мөрийн skeleton — 156px өндрийг хадгалж, зөөлөн анивчина
+/// Notes мөрийн skeleton — үсгийн хэмжээнд таарсан өндрийг хадгална.
 class _NotesRowSkeleton extends StatefulWidget {
   const _NotesRowSkeleton();
   @override
@@ -604,16 +788,23 @@ class _NotesRowSkeleton extends StatefulWidget {
 class _NotesRowSkeletonState extends State<_NotesRowSkeleton>
     with SingleTickerProviderStateMixin {
   late final AnimationController _c = AnimationController(
-    vsync: this, duration: const Duration(milliseconds: 700),
-    lowerBound: 0.4, upperBound: 1.0)..repeat(reverse: true);
+      vsync: this,
+      duration: const Duration(milliseconds: 700),
+      lowerBound: 0.4,
+      upperBound: 1.0)
+    ..repeat(reverse: true);
   @override
-  void dispose() { _c.dispose(); super.dispose(); }
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.only(top: 4, bottom: 6),
       child: SizedBox(
-        height: 156,
+        height: _notesRailHeight(context),
         child: FadeTransition(
           opacity: _c,
           child: ListView(
@@ -632,16 +823,29 @@ class _NoteSkeletonCell extends StatelessWidget {
   const _NoteSkeletonCell();
   @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.symmetric(horizontal: 6),
-    child: SizedBox(width: 104, child: Column(children: [
-      Container(height: 40, width: 104, decoration: BoxDecoration(
-        color: AppColors.bgSurface, borderRadius: BorderRadius.circular(12))),
-      const SizedBox(height: 6),
-      Container(width: 64, height: 64, decoration: BoxDecoration(
-        shape: BoxShape.circle, color: AppColors.bgSurface)),
-      const SizedBox(height: 8),
-      Container(height: 9, width: 60, decoration: BoxDecoration(
-        color: AppColors.bgSurface, borderRadius: BorderRadius.circular(5))),
-    ])),
-  );
+        padding: const EdgeInsets.symmetric(horizontal: 6),
+        child: SizedBox(
+            width: 104,
+            child: Column(children: [
+              Container(
+                  height: 40,
+                  width: 104,
+                  decoration: BoxDecoration(
+                      color: AppColors.bgSurface,
+                      borderRadius: BorderRadius.circular(12))),
+              const SizedBox(height: 6),
+              Container(
+                  width: 64,
+                  height: 64,
+                  decoration: BoxDecoration(
+                      shape: BoxShape.circle, color: AppColors.bgSurface)),
+              const SizedBox(height: 8),
+              Container(
+                  height: 9,
+                  width: 60,
+                  decoration: BoxDecoration(
+                      color: AppColors.bgSurface,
+                      borderRadius: BorderRadius.circular(5))),
+            ])),
+      );
 }

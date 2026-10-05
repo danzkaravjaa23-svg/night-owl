@@ -4,8 +4,9 @@ import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../core/theme/theme_provider.dart';
 import '../../../core/router/app_router.dart';
-import '../../../core/widgets/theme_toggle_button.dart';
+import '../../../core/widgets/sculpted_icon.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../../models/user_profile.dart';
 import '../../../core/constants/app_constants.dart';
@@ -20,7 +21,7 @@ class SettingsScreen extends ConsumerStatefulWidget {
 
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   void _toast(String msg) => ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(content: Text(msg), duration: const Duration(seconds: 2)));
+      SnackBar(content: Text(msg), duration: const Duration(seconds: 2)));
 
   /// Профайл засах — тусгай editProfile route (/auth/setup биш: router
   /// бүртгэл дууссан хэрэглэгчийг feed руу буцаадаг). Буцаж ирэхэд шинэчилнэ.
@@ -31,8 +32,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   // Switch-үүдийг мөр дарахад ч, switch дарахад ч ижил замаар солино
   Future<void> _setNotifLikes(bool v) async {
-    try { await ref.read(userSettingsProvider.notifier).setNotifications(v); }
-    catch (_) { if (mounted) _toast('Тохиргоо хадгалж чадсангүй'); }
+    try {
+      await ref.read(userSettingsProvider.notifier).setNotifications(v);
+    } catch (_) {
+      if (mounted) _toast('Тохиргоо хадгалж чадсангүй');
+    }
   }
 
   Future<void> _setActivityStatus(bool value) async {
@@ -43,39 +47,54 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     }
   }
 
+  Future<void> _setThemeMode(ThemeMode mode) async {
+    try {
+      await ref.read(themeModeProvider.notifier).setMode(mode);
+    } catch (_) {
+      if (mounted) {
+        _toast('Өнгөний горим хадгалж чадсангүй. Дахин оролдоно уу.');
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final profileAsync = ref.watch(currentProfileProvider);
     final preferences = ref.watch(userSettingsProvider);
     final notifLikes = preferences.notifications;
     final activityStatus = preferences.activity;
+    final themeMode = ref.watch(themeModeProvider);
 
     return Scaffold(
       backgroundColor: AppColors.bgBase,
       body: Stack(
         children: [
-          // ─── Aurora glow backdrop — magenta зүүн дээд, cyan баруун доод ───
+          // Soft violet accents stay subtle on both daytime and night surfaces.
           Positioned(
-            top: -160, left: -120,
+            top: -160,
+            left: -120,
             child: Container(
-              width: 360, height: 360,
+              width: 360,
+              height: 360,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 gradient: RadialGradient(colors: [
-                  AppColors.magenta.withValues(alpha: 0.12),
+                  AppColors.accentStart.withValues(alpha: 0.08),
                   Colors.transparent,
                 ]),
               ),
             ),
           ),
           Positioned(
-            bottom: -140, right: -100,
+            bottom: -140,
+            right: -100,
             child: Container(
-              width: 320, height: 320,
+              width: 320,
+              height: 320,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 gradient: RadialGradient(colors: [
-                  AppColors.neonCyan.withValues(alpha: 0.08),
+                  AppColors.silver.withValues(alpha: 0.06),
                   Colors.transparent,
                 ]),
               ),
@@ -85,9 +104,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             child: Column(
               children: [
                 // Reload/deep link үед stack хоосон байж болно — profile руу fallback
-                _Header(onBack: () => context.canPop()
-                    ? context.pop()
-                    : context.go(AppRoutes.profile)),
+                _Header(
+                    onBack: () => context.canPop()
+                        ? context.pop()
+                        : context.go(AppRoutes.profile)),
                 Expanded(
                   child: ListView(
                     padding: const EdgeInsets.fromLTRB(20, 8, 20, 48),
@@ -137,12 +157,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       const _SectionLabel('Тохиргоо'),
                       const SizedBox(height: 10),
                       _GlassCard(children: [
-                        // Feed-ийн баруун дээд буланд байгаатай ижил toggle
-                        const _SettingRow(
-                          icon: Icons.dark_mode_outlined,
-                          label: 'Харанхуй горим',
-                          trailing: ThemeToggleButton(width: 52, height: 26),
-                        ),
+                        _AppearanceChooser(
+                            selected: themeMode, onChanged: _setThemeMode),
                         const _RowDivider(),
                         _SettingRow(
                           icon: Icons.notifications_none,
@@ -213,11 +229,17 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                           onTap: () => _toast('Тусламж: osokhe@gmail.com'),
                         ),
                         const _RowDivider(),
-                        _SettingRow(icon: Icons.privacy_tip_outlined, label: 'Нууцлалын бодлого',
-                          onTap: () => launchUrl(Uri.parse('${AppConstants.publicAppUrl}/privacy.html'))),
+                        _SettingRow(
+                            icon: Icons.privacy_tip_outlined,
+                            label: 'Нууцлалын бодлого',
+                            onTap: () => launchUrl(Uri.parse(
+                                '${AppConstants.publicAppUrl}/privacy.html'))),
                         const _RowDivider(),
-                        _SettingRow(icon: Icons.description_outlined, label: 'Үйлчилгээний нөхцөл',
-                          onTap: () => launchUrl(Uri.parse('${AppConstants.publicAppUrl}/terms.html'))),
+                        _SettingRow(
+                            icon: Icons.description_outlined,
+                            label: 'Үйлчилгээний нөхцөл',
+                            onTap: () => launchUrl(Uri.parse(
+                                '${AppConstants.publicAppUrl}/terms.html'))),
                         const _RowDivider(),
                         const _SettingRow(
                           icon: Icons.account_tree_outlined,
@@ -254,6 +276,73 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 }
 
+class _AppearanceChooser extends StatelessWidget {
+  final ThemeMode selected;
+  final ValueChanged<ThemeMode> onChanged;
+  const _AppearanceChooser({required this.selected, required this.onChanged});
+
+  @override
+  Widget build(BuildContext context) => Padding(
+      padding: const EdgeInsets.all(12),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text('Харагдах байдал', style: AppTextStyles.h3),
+        const SizedBox(height: 4),
+        Text('Систем: төхөөрөмжийн өдрийн болон шөнийн горимыг дагана.',
+            style:
+                AppTextStyles.bodyXs.copyWith(color: AppColors.textTertiary)),
+        const SizedBox(height: 14),
+        LayoutBuilder(builder: (context, constraints) {
+          final stacked = MediaQuery.textScalerOf(context).scale(12) > 18;
+          return Wrap(spacing: 8, runSpacing: 8, children: [
+            for (final option in const [
+              (ThemeMode.light, 'Өдөр', Icons.wb_sunny_rounded),
+              (ThemeMode.dark, 'Шөнө', Icons.nightlight_round),
+              (ThemeMode.system, 'Систем', Icons.brightness_auto_rounded),
+            ])
+              SizedBox(
+                  width: stacked
+                      ? constraints.maxWidth
+                      : (constraints.maxWidth - 16) / 3,
+                  child: Semantics(
+                      button: true,
+                      selected: selected == option.$1,
+                      child: Material(
+                          color: selected == option.$1
+                              ? AppColors.accentStart.withValues(alpha: 0.12)
+                              : AppColors.bgSurface,
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                              side: BorderSide(
+                                  color: selected == option.$1
+                                      ? AppColors.silver
+                                      : AppColors.hairline2)),
+                          clipBehavior: Clip.antiAlias,
+                          child: InkWell(
+                              onTap: () => onChanged(option.$1),
+                              child: Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 6, vertical: 12),
+                                  child: Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        SculptedIcon(option.$3,
+                                            size: 22,
+                                            active: selected == option.$1),
+                                        const SizedBox(height: 8),
+                                        Text(option.$2,
+                                            textAlign: TextAlign.center,
+                                            style: TextStyle(
+                                                color: selected == option.$1
+                                                    ? AppColors.silver
+                                                    : AppColors.textSecondary,
+                                                fontSize: 12,
+                                                fontWeight: FontWeight.w600)),
+                                      ])))))),
+          ]);
+        }),
+      ]));
+}
+
 // ─────────────────────────────────────────────────────────────
 //  Header
 // ─────────────────────────────────────────────────────────────
@@ -267,31 +356,25 @@ class _Header extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
       child: Row(
         children: [
-          MouseRegion(
-            cursor: SystemMouseCursors.click,
-            child: GestureDetector(
-              onTap: onBack,
-              child: Container(
-                width: 40, height: 40,
-                decoration: BoxDecoration(
-                  color: AppColors.bgSurface,
-                  shape: BoxShape.circle,
-                  border: Border.all(color: AppColors.hairline2),
-                ),
-                child: Icon(Icons.chevron_left,
-                    color: AppColors.textPrimary, size: 22),
-              ),
-            ),
-          ),
+          IconButton(
+              tooltip: 'Буцах',
+              onPressed: onBack,
+              style: IconButton.styleFrom(
+                  backgroundColor: AppColors.bgSurface,
+                  minimumSize: const Size(44, 44),
+                  side: BorderSide(color: AppColors.hairline2)),
+              icon: SculptedIcon(Icons.chevron_left,
+                  color: AppColors.textPrimary, size: 22)),
           const SizedBox(width: 16),
-          Column(
+          Expanded(
+              child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text('NIGHT OWL', style: AppTextStyles.labelSm),
               const SizedBox(height: 2),
               Text('Тохиргоо', style: AppTextStyles.h1),
             ],
-          ),
+          )),
         ],
       ),
     );
@@ -311,7 +394,7 @@ class _ProfileCard extends StatelessWidget {
     final p = profile;
     final name = (p?.name?.trim().isNotEmpty ?? false)
         ? p!.name!.trim()
-        : (p?.username ?? 'Night Owl');
+        : (p?.username ?? 'Профайл');
     final username = p?.username;
     final bio = (p?.bio?.trim().isNotEmpty ?? false) ? p!.bio!.trim() : null;
     final sub = [
@@ -323,86 +406,87 @@ class _ProfileCard extends StatelessWidget {
     return MouseRegion(
       cursor: SystemMouseCursors.click,
       child: GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: AppColors.bgElevated,
-          borderRadius: BorderRadius.circular(22),
-          border: Border.all(color: AppColors.hairline2),
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.neonCyan.withValues(alpha: 0.06),
-              blurRadius: 28,
-              spreadRadius: -8,
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            // Neon ring avatar
-            Container(
-              width: 64, height: 64,
-              padding: const EdgeInsets.all(2.5),
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [AppColors.lime, AppColors.neonCyan],
-                ),
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: AppColors.bgElevated,
+            borderRadius: BorderRadius.circular(22),
+            border: Border.all(color: AppColors.hairline2),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.accentStart.withValues(alpha: 0.06),
+                blurRadius: 28,
+                spreadRadius: -8,
               ),
-              child: Container(
+            ],
+          ),
+          child: Row(
+            children: [
+              // Keep the person's image inside the reference violet ring.
+              Container(
+                width: 64,
+                height: 64,
+                padding: const EdgeInsets.all(2.5),
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: AppColors.bgBase,
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [AppColors.silver, AppColors.accentStart],
+                  ),
                 ),
-                padding: const EdgeInsets.all(2),
-                child: ClipOval(
-                  child: (avatarUrl != null && avatarUrl.isNotEmpty)
-                      ? Image.network(
-                          avatarUrl,
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) =>
-                              _avatarFallback(p?.initial ?? '?'),
-                        )
-                      : _avatarFallback(p?.initial ?? '?'),
+                child: Container(
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: AppColors.bgBase,
+                  ),
+                  padding: const EdgeInsets.all(2),
+                  child: ClipOval(
+                    child: (avatarUrl != null && avatarUrl.isNotEmpty)
+                        ? Image.network(
+                            avatarUrl,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) =>
+                                _avatarFallback(p?.initial ?? '?'),
+                          )
+                        : _avatarFallback(p?.initial ?? '?'),
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: AppTextStyles.h2,
-                  ),
-                  if (sub.isNotEmpty) ...[
-                    const SizedBox(height: 3),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
                     Text(
-                      sub,
+                      name,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: AppTextStyles.bodySm
-                          .copyWith(color: AppColors.textTertiary),
+                      style: AppTextStyles.h2,
                     ),
+                    if (sub.isNotEmpty) ...[
+                      const SizedBox(height: 3),
+                      Text(
+                        sub,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTextStyles.bodySm
+                            .copyWith(color: AppColors.textTertiary),
+                      ),
+                    ],
                   ],
-                ],
+                ),
               ),
-            ),
-            const SizedBox(width: 10),
-            // 'LIVE' pill байсан нь худал (жинхэнэ live төлөвтэй холбоогүй) —
-            // "Профайл засах" гэдгийг илэрхийлсэн саармаг chevron-оор солив.
-            Icon(Icons.chevron_right,
-                color: AppColors.textTertiary, size: 20),
-          ],
+              const SizedBox(width: 10),
+              // 'LIVE' pill байсан нь худал (жинхэнэ live төлөвтэй холбоогүй) —
+              // "Профайл засах" гэдгийг илэрхийлсэн саармаг chevron-оор солив.
+              SculptedIcon(Icons.chevron_right,
+                  color: AppColors.textTertiary, size: 20),
+            ],
+          ),
         ),
-      ),
       ),
     );
   }
@@ -431,7 +515,8 @@ class _ProfileCardSkeleton extends StatelessWidget {
       child: Row(
         children: [
           Container(
-            width: 64, height: 64,
+            width: 64,
+            height: 64,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: AppColors.bgSurface,
@@ -443,7 +528,8 @@ class _ProfileCardSkeleton extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Container(
-                  height: 14, width: 120,
+                  height: 14,
+                  width: 120,
                   decoration: BoxDecoration(
                     color: AppColors.bgSurface,
                     borderRadius: BorderRadius.circular(6),
@@ -451,7 +537,8 @@ class _ProfileCardSkeleton extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 Container(
-                  height: 11, width: 180,
+                  height: 11,
+                  width: 180,
                   decoration: BoxDecoration(
                     color: AppColors.bgSurface,
                     borderRadius: BorderRadius.circular(6),
@@ -513,7 +600,7 @@ class _RowDivider extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────
-//  Setting row — cyan glass icon tile + label + trailing
+//  Setting row — violet icon tile + label + trailing
 // ─────────────────────────────────────────────────────────────
 class _SettingRow extends StatelessWidget {
   final IconData icon;
@@ -537,64 +624,65 @@ class _SettingRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final iconColor =
-        disabled ? AppColors.textTertiary : AppColors.neonCyan;
+    final iconColor = disabled ? AppColors.textTertiary : AppColors.silver;
     final row = Opacity(
       opacity: disabled ? 0.55 : 1.0,
       child: Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 11),
-      child: Row(
-        children: [
-          // Cyan glass icon tile
-          Container(
-            width: 36, height: 36,
-            decoration: BoxDecoration(
-              color: iconColor.withValues(alpha: 0.10),
-              borderRadius: BorderRadius.circular(11),
-              border: Border.all(color: iconColor.withValues(alpha: 0.22)),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 11),
+        child: Row(
+          children: [
+            // Violet relief icon tile.
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: iconColor.withValues(alpha: 0.10),
+                borderRadius: BorderRadius.circular(11),
+                border: Border.all(color: iconColor.withValues(alpha: 0.22)),
+              ),
+              child:
+                  Center(child: SculptedIcon(icon, size: 18, color: iconColor)),
             ),
-            child: Icon(icon, size: 18, color: iconColor),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(label, style: AppTextStyles.h3),
-                if (sub != null) ...[
-                  const SizedBox(height: 2),
-                  Text(
-                    sub!,
-                    style: AppTextStyles.bodyXs
-                        .copyWith(color: AppColors.textTertiary),
-                  ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(label, style: AppTextStyles.h3),
+                  if (sub != null) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      sub!,
+                      style: AppTextStyles.bodyXs
+                          .copyWith(color: AppColors.textTertiary),
+                    ),
+                  ],
+                  if (trailingValue != null) ...[
+                    const SizedBox(height: 3),
+                    Text(
+                      trailingValue!,
+                      style: mono
+                          ? AppTextStyles.mono.copyWith(
+                              color: AppColors.textTertiary, fontSize: 12)
+                          : AppTextStyles.bodySm
+                              .copyWith(color: AppColors.textTertiary),
+                    ),
+                  ],
                 ],
-              ],
+              ),
             ),
-          ),
-          if (trailingValue != null) ...[
-            const SizedBox(width: 8),
-            Text(
-              trailingValue!,
-              style: mono
-                  ? AppTextStyles.mono
-                      .copyWith(color: AppColors.textTertiary, fontSize: 12)
-                  : AppTextStyles.bodySm
-                      .copyWith(color: AppColors.textTertiary),
-            ),
+            if (trailing != null) ...[
+              const SizedBox(width: 8),
+              trailing!,
+            ] else if (onTap != null && !disabled) ...[
+              const SizedBox(width: 4),
+              SculptedIcon(Icons.chevron_right,
+                  size: 18, color: AppColors.textTertiary),
+            ],
           ],
-          if (trailing != null) ...[
-            const SizedBox(width: 8),
-            trailing!,
-          ] else if (onTap != null && !disabled) ...[
-            const SizedBox(width: 4),
-            Icon(Icons.chevron_right,
-                size: 18, color: AppColors.textTertiary),
-          ],
-        ],
+        ),
       ),
-    ),
     );
 
     if (onTap == null || disabled) return row;
@@ -613,7 +701,7 @@ class _SettingRow extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────
-//  Neon cyan switch
+//  Violet switch
 // ─────────────────────────────────────────────────────────────
 class _NeonSwitch extends StatelessWidget {
   final bool value;
@@ -626,47 +714,49 @@ class _NeonSwitch extends StatelessWidget {
     return MouseRegion(
       cursor: SystemMouseCursors.click,
       child: GestureDetector(
-      onTap: () => onChanged(!value),
-      behavior: HitTestBehavior.opaque,
-      child: SizedBox(
-        height: 44,
-        child: Center(
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        curve: Curves.easeOut,
-        width: 46, height: 28,
-        padding: const EdgeInsets.all(3),
-        alignment: value ? Alignment.centerRight : Alignment.centerLeft,
-        decoration: BoxDecoration(
-          color: value
-              ? AppColors.neonCyan.withValues(alpha: 0.22)
-              : AppColors.bgSurface,
-          borderRadius: BorderRadius.circular(999),
-          border: Border.all(
-            color: value
-                ? AppColors.neonCyan.withValues(alpha: 0.55)
-                : AppColors.hairline2,
+        onTap: () => onChanged(!value),
+        behavior: HitTestBehavior.opaque,
+        child: SizedBox(
+          height: 44,
+          child: Center(
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 180),
+              curve: Curves.easeOut,
+              width: 46,
+              height: 28,
+              padding: const EdgeInsets.all(3),
+              alignment: value ? Alignment.centerRight : Alignment.centerLeft,
+              decoration: BoxDecoration(
+                color: value
+                    ? AppColors.silver.withValues(alpha: 0.22)
+                    : AppColors.bgSurface,
+                borderRadius: BorderRadius.circular(999),
+                border: Border.all(
+                  color: value
+                      ? AppColors.silver.withValues(alpha: 0.55)
+                      : AppColors.hairline2,
+                ),
+                boxShadow: value
+                    ? [
+                        BoxShadow(
+                          color: AppColors.silver.withValues(alpha: 0.30),
+                          blurRadius: 12,
+                          spreadRadius: -2,
+                        ),
+                      ]
+                    : null,
+              ),
+              child: Container(
+                width: 22,
+                height: 22,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: value ? AppColors.silver : AppColors.textTertiary,
+                ),
+              ),
+            ),
           ),
-          boxShadow: value
-              ? [
-                  BoxShadow(
-                    color: AppColors.neonCyan.withValues(alpha: 0.30),
-                    blurRadius: 12,
-                    spreadRadius: -2,
-                  ),
-                ]
-              : null,
         ),
-        child: Container(
-          width: 22, height: 22,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: value ? AppColors.neonCyan : AppColors.textTertiary,
-          ),
-        ),
-      ),
-        ),
-      ),
       ),
     );
   }
@@ -690,28 +780,28 @@ class _NeutralButton extends StatelessWidget {
     return MouseRegion(
       cursor: SystemMouseCursors.click,
       child: GestureDetector(
-      onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: Container(
-        height: 52,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: AppColors.bgSurface.withValues(alpha: 0.7),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.hairline2),
+        onTap: onTap,
+        behavior: HitTestBehavior.opaque,
+        child: Container(
+          height: 52,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: AppColors.bgSurface.withValues(alpha: 0.7),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppColors.hairline2),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SculptedIcon(icon, size: 18, color: AppColors.textSecondary),
+              const SizedBox(width: 8),
+              Text(
+                label,
+                style: AppTextStyles.btn.copyWith(color: AppColors.textPrimary),
+              ),
+            ],
+          ),
         ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 18, color: AppColors.textSecondary),
-            const SizedBox(width: 8),
-            Text(
-              label,
-              style: AppTextStyles.btn.copyWith(color: AppColors.textPrimary),
-            ),
-          ],
-        ),
-      ),
       ),
     );
   }

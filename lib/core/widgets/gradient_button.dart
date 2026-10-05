@@ -1,6 +1,17 @@
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
+import 'sculpted_icon.dart';
+
+Widget _dimensionalButtonIcon(Widget child, {bool primary = false}) {
+  if (child is Icon && child.icon != null) {
+    return SculptedIcon(child.icon!,
+        size: child.size ?? 20,
+        color: primary ? Colors.white : child.color,
+        onDark: primary);
+  }
+  return child;
+}
 
 /// Дарахад зөөлөн агшиж (spring press) премиум мэдрэмж өгөх wrapper —
 /// Gradient/Outline хоёр товч хоёулаа ижил мэдрэмжтэй байхаар нэгтгэсэн.
@@ -45,11 +56,13 @@ class GradientButton extends StatelessWidget {
   final VoidCallback? onPressed;
   final Widget? icon;
   final Widget? trailing;
+
   /// Тодорхой өндөр өгвөл [size]-аас давуу.
   final double? height;
   final double borderRadius;
   final bool busy;
   final GradientButtonSize size;
+
   /// false бол агуулгынхаа өргөнөөр (мөрөнд зэрэгцүүлэхэд).
   final bool fullWidth;
 
@@ -87,9 +100,16 @@ class GradientButton extends StatelessWidget {
           curve: Curves.easeOut,
           decoration: BoxDecoration(
             gradient: !disabled
-                ? AppColors.accentGradient
-                : LinearGradient(colors: [
-                    AppColors.dynBgSurface, AppColors.dynBgSurface]),
+                ? const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                        Color(0xFF8661DC),
+                        Color(0xFF7654D6),
+                        Color(0xFF5D3AAB)
+                      ])
+                : LinearGradient(
+                    colors: [AppColors.dynBgSurface, AppColors.dynBgSurface]),
             borderRadius: BorderRadius.circular(borderRadius),
             // Шилэн ирмэг — дээд гэрлийн нарийн hairline
             border: Border.all(
@@ -99,16 +119,22 @@ class GradientButton extends StatelessWidget {
             // Неон glow — magenta ойрын + pink холын давхар сүүдэр
             boxShadow: !disabled
                 ? [
+                    const BoxShadow(
+                        color: Color(0xFF49307B),
+                        offset: Offset(0, 3),
+                        blurRadius: 0),
                     BoxShadow(
                       color: AppColors.accentStart
                           .withValues(alpha: busy ? 0.10 : 0.16),
-                      blurRadius: 22, spreadRadius: -2,
+                      blurRadius: 22,
+                      spreadRadius: -2,
                       offset: const Offset(0, 8),
                     ),
                     BoxShadow(
                       color: AppColors.accentEnd
                           .withValues(alpha: busy ? 0.06 : 0.08),
-                      blurRadius: 32, spreadRadius: 0,
+                      blurRadius: 32,
+                      spreadRadius: 0,
                       offset: const Offset(0, 4),
                     ),
                   ]
@@ -125,9 +151,7 @@ class GradientButton extends StatelessWidget {
               disabledForegroundColor: Colors.white,
               shadowColor: Colors.transparent,
               minimumSize: Size(fullWidth ? double.infinity : 0, h),
-              padding: md
-                  ? const EdgeInsets.symmetric(horizontal: 20)
-                  : null,
+              padding: md ? const EdgeInsets.symmetric(horizontal: 20) : null,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(borderRadius),
               ),
@@ -146,7 +170,8 @@ class GradientButton extends StatelessWidget {
               child: busy
                   ? SizedBox(
                       key: const ValueKey('busy'),
-                      width: md ? 18 : 22, height: md ? 18 : 22,
+                      width: md ? 18 : 22,
+                      height: md ? 18 : 22,
                       child: const CircularProgressIndicator(
                           strokeWidth: 2.4, color: Colors.white))
                   : Row(
@@ -154,7 +179,10 @@ class GradientButton extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.center,
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        if (icon != null) ...[icon!, const SizedBox(width: 8)],
+                        if (icon != null) ...[
+                          _dimensionalButtonIcon(icon!, primary: true),
+                          const SizedBox(width: 8)
+                        ],
                         Text(label,
                             style: !disabled
                                 ? labelStyle
@@ -162,7 +190,9 @@ class GradientButton extends StatelessWidget {
                                 : labelStyle.copyWith(
                                     color: AppColors.dynTextTertiary)),
                         if (trailing != null) ...[
-                          const SizedBox(width: 8), trailing!],
+                          const SizedBox(width: 8),
+                          trailing!
+                        ],
                       ],
                     ),
             ),
@@ -197,9 +227,19 @@ class OutlineButton extends StatelessWidget {
         height: height,
         child: DecoratedBox(
           decoration: BoxDecoration(
-            color: AppColors.dynBgSurface,
+            gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [AppColors.bgElevated, AppColors.bgSurface]),
             borderRadius: BorderRadius.circular(14),
             border: Border.all(color: AppColors.dynHairline2),
+            boxShadow: [
+              BoxShadow(
+                  color: Colors.black
+                      .withValues(alpha: AppColors.isDarkMode ? .16 : .06),
+                  offset: const Offset(0, 3),
+                  blurRadius: 6)
+            ],
           ),
           child: TextButton(
             onPressed: onPressed,
@@ -213,10 +253,14 @@ class OutlineButton extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.center,
               mainAxisSize: MainAxisSize.min,
               children: [
-                if (icon != null) ...[icon!, const SizedBox(width: 8)],
-                Text(label, style: AppTextStyles.btn.copyWith(
-                  fontWeight: FontWeight.w600,
-                )),
+                if (icon != null) ...[
+                  _dimensionalButtonIcon(icon!),
+                  const SizedBox(width: 8)
+                ],
+                Text(label,
+                    style: AppTextStyles.btn.copyWith(
+                      fontWeight: FontWeight.w600,
+                    )),
               ],
             ),
           ),

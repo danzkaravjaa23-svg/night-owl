@@ -9,6 +9,7 @@ import '../../core/router/app_router.dart';
 import '../../core/services/supabase_service.dart';
 import '../../core/providers/user_settings_provider.dart';
 import '../../core/widgets/night_owl_brand.dart';
+import '../../core/widgets/sculpted_icon.dart';
 
 /// Bottom nav shell — center-FAB template (Instagram/TikTok маягийн док)
 class MainShell extends ConsumerStatefulWidget {
@@ -273,8 +274,9 @@ class _NavItem extends StatelessWidget {
                 shape: const RoundedRectangleBorder(),
               ),
               child: Column(mainAxisSize: MainAxisSize.min, children: [
-                Icon(isActive ? activeIcon : icon, size: 24),
-                const SizedBox(height: 4),
+                SculptedIcon(isActive ? activeIcon : icon,
+                    size: 24, active: isActive),
+                const SizedBox(height: 3),
                 FittedBox(
                     fit: BoxFit.scaleDown,
                     child: Text(label,
@@ -317,12 +319,33 @@ class _CreateFabState extends State<_CreateFab> {
                   child: Container(
                     width: 48,
                     height: 48,
-                    decoration: const BoxDecoration(
-                      gradient: AppColors.accentGradient,
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            Color(0xFF9879EC),
+                            Color(0xFF7654D6),
+                            Color(0xFF503294)
+                          ]),
                       shape: BoxShape.circle,
+                      border: Border.all(
+                          color: const Color(0xFFBCA6F8).withValues(alpha: .5)),
+                      boxShadow: [
+                        const BoxShadow(
+                            color: Color(0xFF493079),
+                            offset: Offset(0, 3),
+                            blurRadius: 0),
+                        BoxShadow(
+                            color: Colors.black.withValues(
+                                alpha: AppColors.isDarkMode ? .32 : .14),
+                            offset: const Offset(0, 5),
+                            blurRadius: 10),
+                      ],
                     ),
-                    child: const Icon(Icons.auto_fix_high_rounded,
-                        color: Colors.white, size: 24),
+                    child: const Center(
+                        child: SculptedIcon(Icons.auto_fix_high_rounded,
+                            color: Colors.white, size: 24, onDark: true)),
                   ),
                 ),
               ),
@@ -364,7 +387,9 @@ class _CreateOption extends StatelessWidget {
                 decoration: BoxDecoration(
                     gradient: gradient,
                     borderRadius: BorderRadius.circular(16)),
-                child: Icon(icon, color: Colors.white, size: 26),
+                child: Center(
+                    child: SculptedIcon(icon,
+                        color: Colors.white, size: 26, onDark: true)),
               ),
               const SizedBox(width: 16),
               Expanded(
@@ -416,7 +441,8 @@ class _DesktopNavigation extends StatelessWidget {
                                 AppColors.silver.withValues(alpha: 0.12),
                             shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(14)),
-                            leading: Icon(destination.$2, size: 22),
+                            leading: SculptedIcon(destination.$2,
+                                size: 22, active: location == destination.$1),
                             title: Text(destination.$3,
                                 style: const TextStyle(fontSize: 13)),
                             contentPadding:
@@ -425,7 +451,8 @@ class _DesktopNavigation extends StatelessWidget {
                   const SizedBox(height: 16),
                   FilledButton.icon(
                       onPressed: () => _BottomNav()._showCreateSheet(context),
-                      icon: const Icon(Icons.add_rounded, size: 18),
+                      icon: const SculptedIcon(Icons.add_rounded,
+                          size: 18, color: Colors.white, onDark: true),
                       label: const Text('Нийтлэх')),
                   const Spacer(),
                   Text('УЛААНБААТАР\nAFTER HOURS',

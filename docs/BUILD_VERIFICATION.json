@@ -2,17 +2,18 @@
   "date": "2026-10-05",
   "flutter": "3.44.0",
   "dart": "3.12.0",
-  "analysis": "passed; no issues",
+  "analysis": "passed; no issues after final theme and DM changes",
   "flutter_tests": {
-    "passed": 78,
+    "passed": 103,
     "failed": 0
   },
   "web": {
     "status": "JavaScript release built",
-    "main_dart_js_sha256": "6a69209208a9544c6056adce04aac9331df2938761d73c9b5d5fadbc14875af5",
-    "archive_sha256": "9b9a8603d14e2c5005a02741f8532e632b962c9bfb5ee14f9996c3cbec85cb57",
+    "main_dart_js_sha256": "9a3cdf1e6aaf70f136c336b8d8af5c89e9a627dced9119da623950c6f3f01280",
+    "archive_sha256": "3c9facc3d79bec24f70e2587cd9429a86200a09ecc87418ce98e0b7ce8895df4",
     "archive": "build/releases/night-owl-free-web-release.zip",
-    "files": 61
+    "files": 61,
+    "archive_bytes": 20492214
   },
   "android": {
     "status": "not built",
@@ -50,7 +51,11 @@
     "real profile Saved empty state and prefilled profile edit form without submission",
     "messages retain footer and center compose showsPost/Story/Reels/Event routes",
     "approved desktop profile at1280x900; viewport restored",
-    "new build browser console error list empty during verification"
+    "new build browser console error list empty during verification",
+    "390x844 day/night feed and dimensional actions",
+    "day mode persists after browser reload",
+    "390x844 natural day OSM map and approved night map with selected venue sheet",
+    "390x844 day/night DM: search retained across theme change and cleared after verification; no message sent"
   ],
   "release_mode": "free",
   "payments": {
@@ -90,7 +95,24 @@
       "docs/visuals/approved-map-mobile.jpg",
       "docs/visuals/approved-feed-mobile.jpg",
       "docs/visuals/approved-profile-mobile.jpg",
-      "docs/visuals/approved-desktop.jpg"
-    ]
-  }
+      "docs/visuals/approved-desktop.jpg",
+      "docs/visuals/theme-night-feed.jpg",
+      "docs/visuals/theme-day-feed.jpg",
+      "docs/visuals/theme-night-map.jpg",
+      "docs/visuals/theme-day-map.jpg"
+    ],
+    "appearance": {
+      "choices": [
+        "light",
+        "dark",
+        "system"
+      ],
+      "quick_toggle": "feed and DM headers",
+      "icons": "vector depth, edge, gradient and shadow; approved owl unchanged",
+      "persistence": "startup race, serialized writes, failed-write rollback and disposal guards tested",
+      "map_camera": "retained across theme change"
+    }
+  },
+  "github_push": "not confirmed",
+  "web_deployment": "not performed; Netlify session requires sign-in"
 }

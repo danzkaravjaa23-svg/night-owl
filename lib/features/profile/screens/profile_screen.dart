@@ -12,6 +12,7 @@ import '../../../core/widgets/app_avatar.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/gradient_button.dart';
 import '../../../core/widgets/network_video.dart';
+import '../../../core/widgets/sculpted_icon.dart';
 import '../../../models/story.dart';
 import '../../../models/user_profile.dart';
 import '../../feed/providers/feed_provider.dart';
@@ -129,7 +130,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             child: CircularProgressIndicator(color: AppColors.accentStart)),
         error: (e, _) => Center(
           child: Column(mainAxisSize: MainAxisSize.min, children: [
-            Icon(Icons.cloud_off_outlined,
+            SculptedIcon(Icons.cloud_off_outlined,
                 color: AppColors.textTertiary, size: 48),
             const SizedBox(height: 14),
             Text('Алдаа гарлаа', style: AppTextStyles.h2),
@@ -147,7 +148,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             final loggedIn = SupabaseService.currentUser != null;
             return Center(
               child: Column(mainAxisSize: MainAxisSize.min, children: [
-                const Text('👤', style: TextStyle(fontSize: 48)),
+                SculptedIcon(Icons.person_outline_rounded,
+                    color: AppColors.textTertiary, size: 48),
                 const SizedBox(height: 16),
                 Text(loggedIn ? 'Профайл олдсонгүй' : 'Нэвтрээгүй байна',
                     style: AppTextStyles.h2),
@@ -252,35 +254,35 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               padding: const EdgeInsets.only(bottom: 12),
               child: Column(mainAxisSize: MainAxisSize.min, children: [
                 ListTile(
-                    leading: const Icon(Icons.ios_share),
+                    leading: const SculptedIcon(Icons.ios_share),
                     title: const Text('Профайл хуваалцах'),
                     onTap: () {
                       Navigator.pop(sheetContext);
                       _shareProfile(context, profile);
                     }),
                 ListTile(
-                    leading: const Icon(Icons.person_add_outlined),
+                    leading: const SculptedIcon(Icons.person_add_outlined),
                     title: const Text('Найзаа урих'),
                     onTap: () {
                       Navigator.pop(sheetContext);
                       showInviteSheet(context);
                     }),
                 ListTile(
-                    leading: const Icon(Icons.chat_bubble_outline),
+                    leading: const SculptedIcon(Icons.chat_bubble_outline),
                     title: const Text('Мессежүүд'),
                     onTap: () {
                       Navigator.pop(sheetContext);
                       context.push(AppRoutes.dmList);
                     }),
                 ListTile(
-                    leading: const Icon(Icons.bookmark_border),
+                    leading: const SculptedIcon(Icons.bookmark_border),
                     title: const Text('Хадгалсан постууд'),
                     onTap: () {
                       Navigator.pop(sheetContext);
                       context.push(AppRoutes.saved);
                     }),
                 ListTile(
-                    leading: const Icon(Icons.storefront_outlined),
+                    leading: const SculptedIcon(Icons.storefront_outlined),
                     title: const Text('Бизнес самбар'),
                     onTap: () {
                       Navigator.pop(sheetContext);
@@ -288,7 +290,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     }),
                 if (profile.isAdmin)
                   ListTile(
-                      leading: const Icon(Icons.shield_outlined),
+                      leading: const SculptedIcon(Icons.shield_outlined),
                       title: const Text('Админ панел'),
                       onTap: () {
                         Navigator.pop(sheetContext);
@@ -673,7 +675,8 @@ class _PostsGridState extends State<_PostsGrid> {
                   size: GradientButtonSize.md,
                   fullWidth: false,
                   borderRadius: 999,
-                  icon: const Icon(Icons.add, color: Colors.white, size: 16),
+                  icon: const SculptedIcon(Icons.add,
+                      color: Colors.white, size: 16, onDark: true),
                   onPressed: () => context.push(AppRoutes.createPost),
                 ),
         ),
@@ -714,7 +717,7 @@ class _PostsGridState extends State<_PostsGrid> {
         padding: const EdgeInsets.all(24),
         child: Center(
           child: Column(mainAxisSize: MainAxisSize.min, children: [
-            Icon(Icons.cloud_off_outlined,
+            SculptedIcon(Icons.cloud_off_outlined,
                 color: AppColors.textTertiary, size: 36),
             const SizedBox(height: 10),
             Text('Ачаалж чадсангүй',
@@ -778,8 +781,9 @@ class _PostsGridState extends State<_PostsGrid> {
                 placeholder: (_, __) => Container(color: AppColors.bgSurface),
                 errorWidget: (_, __, ___) => Container(
                     color: AppColors.bgSurface,
-                    child: Icon(Icons.image_not_supported_outlined,
-                        color: AppColors.textTertiary)),
+                    child: Center(
+                        child: SculptedIcon(Icons.image_not_supported_outlined,
+                            color: AppColors.textTertiary))),
               )
             else if (isVideo)
               // Видеоны эхний кадрыг cover болгож харуулна (icon-гүй — grid өөрөө
@@ -789,8 +793,9 @@ class _PostsGridState extends State<_PostsGrid> {
             else
               Container(
                   color: AppColors.bgSurface,
-                  child: Icon(Icons.image_outlined,
-                      color: AppColors.textTertiary)),
+                  child: Center(
+                      child: SculptedIcon(Icons.image_outlined,
+                          color: AppColors.textTertiary))),
 
             // Видео дээрх badge — медиа дээр тул горимоос үл хамааран харанхуй
             if (isVideo)
@@ -805,8 +810,9 @@ class _PostsGridState extends State<_PostsGrid> {
                     color: AppColors.bgBaseDark.withValues(alpha: 0.5),
                     border: Border.all(color: AppColors.hairline2Dark),
                   ),
-                  child: const Icon(Icons.videocam_rounded,
-                      color: AppColors.neonCyanDark, size: 14),
+                  child: const Center(
+                      child: SculptedIcon(Icons.videocam_rounded,
+                          color: Colors.white, size: 14, onDark: true)),
                 ),
               ),
 
@@ -815,7 +821,8 @@ class _PostsGridState extends State<_PostsGrid> {
                 bottom: 6,
                 left: 6,
                 child: Row(children: [
-                  const Icon(Icons.favorite, color: Colors.white, size: 12),
+                  const SculptedIcon(Icons.favorite,
+                      color: Colors.white, size: 12, onDark: true),
                   const SizedBox(width: 3),
                   Text('$likes',
                       style: const TextStyle(
@@ -905,8 +912,9 @@ class _ProfileStoryAvatar extends ConsumerWidget {
                           color: AppColors.accentStart,
                           border:
                               Border.all(color: AppColors.bgBase, width: 2)),
-                      child: const Icon(Icons.add,
-                          color: Colors.white, size: 17)))),
+                      child: const Center(
+                          child: SculptedIcon(Icons.add,
+                              color: Colors.white, size: 17, onDark: true))))),
         ]));
   }
 }

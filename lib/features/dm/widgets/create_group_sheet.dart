@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/widgets/sculpted_icon.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/widgets/app_avatar.dart';
 import '../../../core/services/supabase_service.dart';
@@ -55,7 +56,8 @@ class _CreateGroupSheetState extends State<_CreateGroupSheet> {
     final seq = ++_reqSeq;
     setState(() => _searching = true);
     try {
-      var query = SupabaseService.client.from('profiles')
+      var query = SupabaseService.client
+          .from('profiles')
           .select('id, username, avatar_url')
           .neq('id', _myId);
       if (q.trim().isNotEmpty) query = query.ilike('username', '%$q%');
@@ -68,7 +70,10 @@ class _CreateGroupSheetState extends State<_CreateGroupSheet> {
       });
     } catch (_) {
       if (!mounted || seq != _reqSeq) return;
-      setState(() { _results = []; _searching = false; });
+      setState(() {
+        _results = [];
+        _searching = false;
+      });
     }
   }
 
@@ -101,144 +106,169 @@ class _CreateGroupSheetState extends State<_CreateGroupSheet> {
     final canCreate =
         _nameCtrl.text.trim().isNotEmpty && _selected.isNotEmpty && !_busy;
     return Padding(
-      padding: EdgeInsets.only(
-          bottom: MediaQuery.of(context).viewInsets.bottom),
+      padding:
+          EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
       child: SizedBox(
         height: MediaQuery.of(context).size.height * 0.78,
         child: Column(children: [
           const SizedBox(height: 12),
-          Container(width: 40, height: 4, decoration: BoxDecoration(
-              color: AppColors.hairline2,
-              borderRadius: BorderRadius.circular(2))),
+          Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                  color: AppColors.hairline2,
+                  borderRadius: BorderRadius.circular(2))),
           const SizedBox(height: 18),
 
           // ── Header — gradient групп badge + гарчиг + micro тайлбар ──
           Container(
-            width: 48, height: 48,
-            decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: AppColors.accentGradient,
-                boxShadow: AppColors.glowShadow(AppColors.accentStart,
-                    blur: 16, offset: const Offset(0, 4))),
-            child: const Icon(Icons.groups_rounded,
-                color: Colors.white, size: 24)),
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: AppColors.accentGradient,
+                  boxShadow: AppColors.glowShadow(AppColors.accentStart,
+                      blur: 16, offset: const Offset(0, 4))),
+              child: const SculptedIcon(Icons.groups_rounded,
+                  color: Colors.white, size: 24, onDark: true)),
           const SizedBox(height: 10),
           Text('Групп чат үүсгэх', style: AppTextStyles.h2),
           const SizedBox(height: 3),
           Text('Найзуудаа нэг чатад цуглуул',
-              style: AppTextStyles.bodyXs.copyWith(
-                  color: AppColors.textSecondary)),
+              style: AppTextStyles.bodyXs
+                  .copyWith(color: AppColors.textSecondary)),
           const SizedBox(height: 16),
 
           // Группийн нэр — шилэн pill талбар
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: SearchField(
-              controller: _nameCtrl,
-              onChanged: (_) => setState(() {}),
-              hint: 'Группийн нэр...',
-              icon: Icons.groups_rounded,
-            )),
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: SearchField(
+                controller: _nameCtrl,
+                onChanged: (_) => setState(() {}),
+                hint: 'Группийн нэр...',
+                icon: Icons.groups_rounded,
+              )),
           const SizedBox(height: 10),
 
           // Сонгосон гишүүд — avatar pill chips
           if (_selected.isNotEmpty)
             SizedBox(
-              height: 48,
-              child: ListView(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                children: [
-                  for (final u in _selected.values)
-                    _MemberChip(
-                      username: (u['username'] as String? ?? '')
-                          .replaceAll('@', ''),
-                      avatarUrl: u['avatar_url'] as String?,
-                      onRemove: () => setState(
-                          () => _selected.remove(u['id'])),
-                    ),
-                ])),
+                height: 48,
+                child: ListView(
+                    scrollDirection: Axis.horizontal,
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    children: [
+                      for (final u in _selected.values)
+                        _MemberChip(
+                          username: (u['username'] as String? ?? '')
+                              .replaceAll('@', ''),
+                          avatarUrl: u['avatar_url'] as String?,
+                          onRemove: () =>
+                              setState(() => _selected.remove(u['id'])),
+                        ),
+                    ])),
 
           // Хайлт — шилэн pill талбар
           Padding(
-            padding: const EdgeInsets.fromLTRB(20, 6, 20, 4),
-            child: SearchField(
-              controller: _searchCtrl,
-              onChanged: _onSearchChanged,
-              hint: 'Гишүүн хайх...',
-            )),
+              padding: const EdgeInsets.fromLTRB(20, 6, 20, 4),
+              child: SearchField(
+                controller: _searchCtrl,
+                onChanged: _onSearchChanged,
+                hint: 'Гишүүн хайх...',
+              )),
 
           // Хэрэглэгчид
-          Expanded(child: _searching && _results.isEmpty
-            ? const Center(child: CircularProgressIndicator(
-                color: AppColors.accentStart, strokeWidth: 2))
-            : _results.isEmpty
-              ? Center(child: Text('Хэрэглэгч олдсонгүй',
-                  style: AppTextStyles.bodyMd.copyWith(
-                    color: AppColors.textSecondary)))
-              : ListView.builder(
-            itemCount: _results.length,
-            itemBuilder: (_, i) {
-              final u = _results[i];
-              final id = u['id'] as String;
-              final uname =
-                  (u['username'] as String? ?? 'user').replaceAll('@', '');
-              final sel = _selected.containsKey(id);
-              return ListTile(
-                onTap: () => setState(() =>
-                    sel ? _selected.remove(id) : _selected[id] = u),
-                leading: AppAvatar(
-                    imageUrl: u['avatar_url'] as String?,
-                    initial: uname.isNotEmpty
-                        ? uname[0].toUpperCase() : '?',
-                    size: 40),
-                title: Text('@$uname', style: AppTextStyles.labelMd.copyWith(
-                    color: AppColors.textPrimary)),
-                trailing: Container(
-                  width: 24, height: 24,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: sel ? AppColors.accentGradient : null,
-                    border: sel ? null
-                        : Border.all(color: AppColors.hairline2, width: 1.5)),
-                  child: sel
-                      ? const Icon(Icons.check, size: 15, color: Colors.white)
-                      : null),
-              );
-            })),
+          Expanded(
+              child: _searching && _results.isEmpty
+                  ? const Center(
+                      child: CircularProgressIndicator(
+                          color: AppColors.accentStart, strokeWidth: 2))
+                  : _results.isEmpty
+                      ? Center(
+                          child: Text('Хэрэглэгч олдсонгүй',
+                              style: AppTextStyles.bodyMd
+                                  .copyWith(color: AppColors.textSecondary)))
+                      : ListView.builder(
+                          itemCount: _results.length,
+                          itemBuilder: (_, i) {
+                            final u = _results[i];
+                            final id = u['id'] as String;
+                            final uname = (u['username'] as String? ?? 'user')
+                                .replaceAll('@', '');
+                            final sel = _selected.containsKey(id);
+                            return ListTile(
+                              onTap: () => setState(() => sel
+                                  ? _selected.remove(id)
+                                  : _selected[id] = u),
+                              leading: AppAvatar(
+                                  imageUrl: u['avatar_url'] as String?,
+                                  initial: uname.isNotEmpty
+                                      ? uname[0].toUpperCase()
+                                      : '?',
+                                  size: 40),
+                              title: Text('@$uname',
+                                  style: AppTextStyles.labelMd
+                                      .copyWith(color: AppColors.textPrimary)),
+                              trailing: Container(
+                                  width: 24,
+                                  height: 24,
+                                  decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      gradient:
+                                          sel ? AppColors.accentGradient : null,
+                                      border: sel
+                                          ? null
+                                          : Border.all(
+                                              color: AppColors.hairline2,
+                                              width: 1.5)),
+                                  child: sel
+                                      ? const SculptedIcon(Icons.check,
+                                          size: 15,
+                                          color: Colors.white,
+                                          onDark: true)
+                                      : null),
+                            );
+                          })),
 
           // Үүсгэх товч
-          SafeArea(top: false, child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 8, 20, 14),
-            child: _CreateBtn(
-              enabled: canCreate,
-              onTap: canCreate ? _create : null,
-              // Primary товч — pill 52 + gradient glow
-              child: Container(
-                height: 52, width: double.infinity,
-                decoration: BoxDecoration(
-                  gradient: canCreate ? AppColors.accentGradient : null,
-                  color: canCreate ? null : AppColors.bgSurface,
-                  borderRadius: BorderRadius.circular(999),
-                  boxShadow: canCreate
-                      ? AppColors.glowShadow(AppColors.accentStart)
-                      : null),
-                alignment: Alignment.center,
-                // _busy үед canCreate=false тул дэвсгэр нь bgSurface —
-                // spinner сэдвийн текст өнгөтэй (цайвар горимд харагдана)
-                child: _busy
-                    ? SizedBox(width: 22, height: 22,
-                        child: CircularProgressIndicator(
-                            color: AppColors.textPrimary, strokeWidth: 2))
-                    : Text(
-                        _selected.isEmpty
-                            ? 'Гишүүн сонгоно уу'
-                            : 'Групп үүсгэх (${_selected.length + 1})',
-                        style: AppTextStyles.btn.copyWith(
-                            color: canCreate
-                                ? Colors.white
-                                : AppColors.textTertiary))),
-            ))),
+          SafeArea(
+              top: false,
+              child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 14),
+                  child: _CreateBtn(
+                    enabled: canCreate,
+                    onTap: canCreate ? _create : null,
+                    // Primary товч — pill 52 + gradient glow
+                    child: Container(
+                        height: 52,
+                        width: double.infinity,
+                        decoration: BoxDecoration(
+                            gradient:
+                                canCreate ? AppColors.accentGradient : null,
+                            color: canCreate ? null : AppColors.bgSurface,
+                            borderRadius: BorderRadius.circular(999),
+                            boxShadow: canCreate
+                                ? AppColors.glowShadow(AppColors.accentStart)
+                                : null),
+                        alignment: Alignment.center,
+                        // _busy үед canCreate=false тул дэвсгэр нь bgSurface —
+                        // spinner сэдвийн текст өнгөтэй (цайвар горимд харагдана)
+                        child: _busy
+                            ? SizedBox(
+                                width: 22,
+                                height: 22,
+                                child: CircularProgressIndicator(
+                                    color: AppColors.textPrimary,
+                                    strokeWidth: 2))
+                            : Text(
+                                _selected.isEmpty
+                                    ? 'Гишүүн сонгоно уу'
+                                    : 'Групп үүсгэх (${_selected.length + 1})',
+                                style: AppTextStyles.btn.copyWith(
+                                    color: canCreate
+                                        ? Colors.white
+                                        : AppColors.textTertiary))),
+                  ))),
         ]),
       ),
     );
@@ -250,29 +280,32 @@ class _MemberChip extends StatelessWidget {
   final String username;
   final String? avatarUrl;
   final VoidCallback onRemove;
-  const _MemberChip({
-    required this.username, required this.avatarUrl, required this.onRemove});
+  const _MemberChip(
+      {required this.username,
+      required this.avatarUrl,
+      required this.onRemove});
 
   @override
   Widget build(BuildContext context) => Container(
-    margin: const EdgeInsets.only(right: 8),
-    // Өндрийг хасах товчны 44×44 хүрэх талбар тодорхойлно (rail 48)
-    padding: const EdgeInsets.only(left: 4),
-    decoration: BoxDecoration(
-      color: AppColors.bgSurface,
-      borderRadius: BorderRadius.circular(999),
-      border: Border.all(color: AppColors.hairline2)),
-    child: Row(mainAxisSize: MainAxisSize.min, children: [
-      AppAvatar(
-          imageUrl: avatarUrl,
-          initial: username.isNotEmpty ? username[0].toUpperCase() : '?',
-          size: 26),
-      const SizedBox(width: 6),
-      Text(username, style: AppTextStyles.bodyXs.copyWith(
-          color: AppColors.textPrimary, fontWeight: FontWeight.w600)),
-      // Хасах — глиф 14 хэвээр, хүрэх талбар 44×44
-      _RemoveBtn(onTap: onRemove),
-    ]));
+      margin: const EdgeInsets.only(right: 8),
+      // Өндрийг хасах товчны 44×44 хүрэх талбар тодорхойлно (rail 48)
+      padding: const EdgeInsets.only(left: 4),
+      decoration: BoxDecoration(
+          color: AppColors.bgSurface,
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(color: AppColors.hairline2)),
+      child: Row(mainAxisSize: MainAxisSize.min, children: [
+        AppAvatar(
+            imageUrl: avatarUrl,
+            initial: username.isNotEmpty ? username[0].toUpperCase() : '?',
+            size: 26),
+        const SizedBox(width: 6),
+        Text(username,
+            style: AppTextStyles.bodyXs.copyWith(
+                color: AppColors.textPrimary, fontWeight: FontWeight.w600)),
+        // Хасах — глиф 14 хэвээр, хүрэх талбар 44×44
+        _RemoveBtn(onTap: onRemove),
+      ]));
 }
 
 /// Гишүүнийг хасах ✕ — 44×44 хүрэх талбар, ripple-гүй агших press идиом
@@ -287,23 +320,26 @@ class _RemoveBtnState extends State<_RemoveBtn> {
   bool _down = false;
   @override
   Widget build(BuildContext context) => MouseRegion(
-    cursor: SystemMouseCursors.click,
-    child: GestureDetector(
-      onTap: widget.onTap,
-      onTapDown: (_) => setState(() => _down = true),
-      onTapUp: (_) => setState(() => _down = false),
-      onTapCancel: () => setState(() => _down = false),
-      behavior: HitTestBehavior.opaque,
-      child: AnimatedScale(
-        scale: _down ? 0.9 : 1,
-        duration: const Duration(milliseconds: 120),
-        curve: Curves.easeOut,
-        child: SizedBox(width: 44, height: 44,
-          child: Center(child: Icon(Icons.close,
-              size: 14, color: AppColors.textTertiary))),
-      ),
-    ),
-  );
+        cursor: SystemMouseCursors.click,
+        child: GestureDetector(
+          onTap: widget.onTap,
+          onTapDown: (_) => setState(() => _down = true),
+          onTapUp: (_) => setState(() => _down = false),
+          onTapCancel: () => setState(() => _down = false),
+          behavior: HitTestBehavior.opaque,
+          child: AnimatedScale(
+            scale: _down ? 0.9 : 1,
+            duration: const Duration(milliseconds: 120),
+            curve: Curves.easeOut,
+            child: SizedBox(
+                width: 44,
+                height: 44,
+                child: Center(
+                    child: SculptedIcon(Icons.close,
+                        size: 14, color: AppColors.textTertiary))),
+          ),
+        ),
+      );
 }
 
 /// Үүсгэх товч — web hover cursor + дарахад агших feedback (локал)
@@ -321,13 +357,14 @@ class _CreateBtnState extends State<_CreateBtn> {
   @override
   Widget build(BuildContext context) {
     return MouseRegion(
-      cursor: widget.enabled
-          ? SystemMouseCursors.click : SystemMouseCursors.basic,
+      cursor:
+          widget.enabled ? SystemMouseCursors.click : SystemMouseCursors.basic,
       child: GestureDetector(
         onTap: widget.onTap,
         onTapDown: widget.enabled ? (_) => setState(() => _down = true) : null,
         onTapUp: widget.enabled ? (_) => setState(() => _down = false) : null,
-        onTapCancel: widget.enabled ? () => setState(() => _down = false) : null,
+        onTapCancel:
+            widget.enabled ? () => setState(() => _down = false) : null,
         behavior: HitTestBehavior.opaque,
         child: AnimatedScale(
           scale: _down ? 0.96 : 1,

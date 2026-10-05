@@ -6,6 +6,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/night_owl_brand.dart';
+import '../../../core/widgets/sculpted_icon.dart';
 import 'map_controller.dart';
 
 class VenueMapMarker {
@@ -164,6 +165,7 @@ class _VenueMapState extends State<GoogleMapView> {
   @override
   Widget build(BuildContext context) {
     final tileGeneration = _tileRetry;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     return Stack(children: [
       FlutterMap(
           mapController: _map,
@@ -172,7 +174,8 @@ class _VenueMapState extends State<GoogleMapView> {
               initialZoom: widget.zoom.toDouble(),
               minZoom: 3,
               maxZoom: 19,
-              backgroundColor: AppColors.bgSurface,
+              backgroundColor:
+                  dark ? AppColors.bgSurfaceDark : AppColors.bgSurfaceLight,
               interactionOptions: const InteractionOptions(
                   flags: InteractiveFlag.all & ~InteractiveFlag.rotate),
               onMapReady: () {
@@ -187,28 +190,30 @@ class _VenueMapState extends State<GoogleMapView> {
               }),
           children: [
             ColorFiltered(
-                colorFilter: const ColorFilter.matrix([
-                  -.1034,
-                  -.3478,
-                  -.0351,
-                  0,
-                  135,
-                  -.1034,
-                  -.3478,
-                  -.0351,
-                  0,
-                  144,
-                  -.1176,
-                  -.3955,
-                  -.0399,
-                  0,
-                  176,
-                  0,
-                  0,
-                  0,
-                  1,
-                  0,
-                ]),
+                colorFilter: dark
+                    ? const ColorFilter.matrix([
+                        -.1034,
+                        -.3478,
+                        -.0351,
+                        0,
+                        135,
+                        -.1034,
+                        -.3478,
+                        -.0351,
+                        0,
+                        144,
+                        -.1176,
+                        -.3955,
+                        -.0399,
+                        0,
+                        176,
+                        0,
+                        0,
+                        0,
+                        1,
+                        0,
+                      ])
+                    : const ColorFilter.mode(Colors.transparent, BlendMode.dst),
                 child: TileLayer(
                     key: ValueKey(_tileRetry),
                     urlTemplate: AppConstants.mapTileUrl,
@@ -245,6 +250,7 @@ class _VenueMapState extends State<GoogleMapView> {
                                 behavior: HitTestBehavior.opaque,
                                 child: CustomPaint(
                                     painter: _OwlPinPainter(
+                                        dark: dark,
                                         selected:
                                             venue.id == widget.selectedId),
                                     child: const Padding(
@@ -285,15 +291,20 @@ class _VenueMapState extends State<GoogleMapView> {
           left: 4,
           bottom: 4,
           child: Container(
-              color: const Color(0xE60B0D17),
+              color: dark
+                  ? const Color(0xE60B0D17)
+                  : Colors.white.withValues(alpha: .94),
               child: InkWell(
                   onTap: () =>
                       launchUrl(Uri.parse(AppConstants.mapAttributionUrl)),
-                  child: const Padding(
-                      padding: EdgeInsets.all(4),
+                  child: Padding(
+                      padding: const EdgeInsets.all(4),
                       child: Text(AppConstants.mapAttribution,
                           style: TextStyle(
-                              fontSize: 10, color: Color(0xFFB9B8CE))))))),
+                              fontSize: 10,
+                              color: dark
+                                  ? const Color(0xFFB9B8CE)
+                                  : AppColors.textSecondaryLight)))))),
       if (_tileError)
         Positioned(
             left: 12,
@@ -314,23 +325,38 @@ class _VenueMapState extends State<GoogleMapView> {
                                 _tileError = false;
                                 _tileRetry++;
                               }),
-                          icon: const Icon(Icons.refresh_rounded, size: 16),
+                          icon: SculptedIcon(Icons.refresh_rounded,
+                              size: 16,
+                              color: dark
+                                  ? AppColors.neonCyanDark
+                                  : AppColors.neonCyanLight,
+                              onDark: dark),
                           label: const Text('Зураг дахин ачаалах')),
                     ])))),
     ]);
   }
 
   Widget _control(IconData icon, String label, VoidCallback onTap) => Material(
-      color: AppColors.bgElevated,
+      color: Theme.of(context).brightness == Brightness.dark
+          ? AppColors.bgElevatedDark
+          : AppColors.bgElevatedLight,
       borderRadius: BorderRadius.circular(14),
       elevation: 2,
       child: IconButton(
-          onPressed: onTap, tooltip: label, icon: Icon(icon, size: 22)));
+          onPressed: onTap,
+          tooltip: label,
+          icon: SculptedIcon(icon,
+              size: 22,
+              color: Theme.of(context).brightness == Brightness.dark
+                  ? AppColors.neonCyanDark
+                  : AppColors.neonCyanLight,
+              onDark: Theme.of(context).brightness == Brightness.dark)));
 }
 
 class _OwlPinPainter extends CustomPainter {
   final bool selected;
-  const _OwlPinPainter({required this.selected});
+  final bool dark;
+  const _OwlPinPainter({required this.selected, required this.dark});
   @override
   void paint(Canvas canvas, Size size) {
     final path = Path()
@@ -342,20 +368,37 @@ class _OwlPinPainter extends CustomPainter {
       ..cubicTo(size.width, size.height * .52, size.width * .7,
           size.height * .7, size.width / 2, size.height)
       ..close();
-    canvas.drawShadow(path, Colors.black, selected ? 8 : 4, true);
+    canvas.drawShadow(path, Colors.black.withValues(alpha: dark ? .8 : .28),
+        selected ? 8 : 4, true);
+    final base =
+        selected && dark ? const Color(0xFFB6A4FF) : const Color(0xFF7654D6);
     canvas.drawPath(
         path,
         Paint()
-          ..color =
-              selected ? const Color(0xFFB6A4FF) : const Color(0xFF7654D6));
+          ..shader = LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Color.lerp(base, Colors.white, .26)!,
+                base,
+                Color.lerp(base, const Color(0xFF25114A), .30)!
+              ],
+              stops: const [
+                0,
+                .46,
+                1
+              ]).createShader(Offset.zero & size));
     canvas.drawPath(
         path,
         Paint()
-          ..color = selected ? const Color(0xFFE5DEFF) : const Color(0xFF9680EA)
+          ..color = selected && dark
+              ? const Color(0xFFE5DEFF)
+              : const Color(0xFF9680EA)
           ..style = PaintingStyle.stroke
           ..strokeWidth = selected ? 2 : 1);
   }
 
   @override
-  bool shouldRepaint(covariant _OwlPinPainter old) => selected != old.selected;
+  bool shouldRepaint(covariant _OwlPinPainter old) =>
+      selected != old.selected || dark != old.dark;
 }

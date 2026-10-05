@@ -15,6 +15,7 @@ import 'package:night_owl_ub/features/feed/providers/stories_provider.dart';
 import 'package:night_owl_ub/features/feed/screens/feed_screen.dart';
 import 'package:night_owl_ub/features/notifications/providers/notification_provider.dart';
 import 'package:night_owl_ub/core/widgets/tonight_card.dart';
+import 'package:night_owl_ub/core/theme/app_colors.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -49,7 +50,10 @@ void main() {
   });
   tearDown(() async => Supabase.instance.dispose());
 
-  Future<GoRouter> render(WidgetTester tester, double width) async {
+  Future<GoRouter> render(WidgetTester tester, double width,
+      {Brightness brightness = Brightness.dark}) async {
+    AppColors.isDarkMode = brightness == Brightness.dark;
+    addTearDown(() => AppColors.isDarkMode = true);
     tester.view.physicalSize = Size(width, 900);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
@@ -74,7 +78,7 @@ void main() {
         ],
         child: MaterialApp.router(
           routerConfig: router,
-          theme: ThemeData(brightness: Brightness.dark),
+          theme: ThemeData(brightness: brightness),
           builder: (context, child) => MediaQuery(
               data: MediaQuery.of(context)
                   .copyWith(textScaler: const TextScaler.linear(1.5)),
@@ -84,32 +88,42 @@ void main() {
     return router;
   }
 
-  for (final width in [320.0, 420.0]) {
-    testWidgets('Social at $width supports following filter with large text',
-        (tester) async {
-      await render(tester, width);
-      expect(tester.takeException(), isNull);
-      expect(find.byType(TonightCard), findsNothing);
-      expect(find.text('Таны story'), findsOneWidget);
-      expect(find.textContaining('fixture caption alpha', findRichText: true),
-          findsWidgets);
-      await tester.tap(find.byTooltip('Нийтлэлийн шүүлтүүр'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Дагаж буй'));
-      await tester.pumpAndSettle();
-      expect(find.textContaining('fixture caption alpha', findRichText: true),
-          findsNothing);
-      expect(find.textContaining('fixture caption beta', findRichText: true),
-          findsWidgets);
-      expect(tester.takeException(), isNull);
-      await tester.tap(find.byTooltip('Нийтлэлийн шүүлтүүр'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Эвентүүд'));
-      await tester.pumpAndSettle();
-      expect(find.text('Удахгүй болох эвент одоогоор алга.'), findsOneWidget);
-      expect(tester.takeException(), isNull);
-      await tester.pumpWidget(const SizedBox());
-    });
+  for (final brightness in Brightness.values) {
+    for (final width in [320.0, 420.0]) {
+      testWidgets(
+          'Social at $width in $brightness supports following filter with large text',
+          (tester) async {
+        await render(tester, width, brightness: brightness);
+        expect(
+            tester
+                .widget<Scaffold>(find.byType(Scaffold).first)
+                .backgroundColor,
+            brightness == Brightness.dark
+                ? AppColors.bgBaseDark
+                : AppColors.bgBaseLight);
+        expect(tester.takeException(), isNull);
+        expect(find.byType(TonightCard), findsNothing);
+        expect(find.text('Таны story'), findsOneWidget);
+        expect(find.textContaining('fixture caption alpha', findRichText: true),
+            findsWidgets);
+        await tester.tap(find.byTooltip('Нийтлэлийн шүүлтүүр'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Дагаж буй'));
+        await tester.pumpAndSettle();
+        expect(find.textContaining('fixture caption alpha', findRichText: true),
+            findsNothing);
+        expect(find.textContaining('fixture caption beta', findRichText: true),
+            findsWidgets);
+        expect(tester.takeException(), isNull);
+        await tester.tap(find.byTooltip('Нийтлэлийн шүүлтүүр'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Эвентүүд'));
+        await tester.pumpAndSettle();
+        expect(find.text('Удахгүй болох эвент одоогоор алга.'), findsOneWidget);
+        expect(tester.takeException(), isNull);
+        await tester.pumpWidget(const SizedBox());
+      });
+    }
   }
 
   testWidgets('Story add, Reels and notifications retain working navigation',

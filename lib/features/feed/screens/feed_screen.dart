@@ -13,6 +13,8 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/widgets/app_avatar.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/night_owl_brand.dart';
+import '../../../core/widgets/sculpted_icon.dart';
+import '../../../core/widgets/theme_toggle_button.dart';
 import '../../../core/widgets/network_video.dart';
 import '../../../core/router/app_router.dart';
 import '../../auth/providers/auth_provider.dart';
@@ -221,7 +223,7 @@ class _FeedToolbar extends StatelessWidget {
           IconButton(
             tooltip: 'Reels',
             onPressed: () => context.push(AppRoutes.reels),
-            icon: Icon(Icons.movie_outlined,
+            icon: SculptedIcon(Icons.movie_rounded,
                 color: AppColors.textSecondary, size: 21),
           ),
           PopupMenuButton<String>(
@@ -349,8 +351,10 @@ class _FeedTopBar extends ConsumerWidget {
             ),
           ),
         ),
+        const ThemeToggleButton(),
+        const SizedBox(width: 4),
         _TopIconBtn(
-          icon: Icon(Icons.notifications_none_rounded,
+          icon: SculptedIcon(Icons.notifications_rounded,
               color: AppColors.textPrimary, size: 22),
           tooltip: 'Мэдэгдэл',
           bare: true,
@@ -361,8 +365,8 @@ class _FeedTopBar extends ConsumerWidget {
         _TopIconBtn(
           tooltip: 'Мессеж',
           bare: true,
-          icon:
-              Icon(Icons.send_outlined, color: AppColors.textPrimary, size: 19),
+          icon: SculptedIcon(Icons.chat_bubble_rounded,
+              color: AppColors.textPrimary, size: 22),
           onTap: () => context.push(AppRoutes.dmList),
         ),
       ]),
@@ -893,7 +897,7 @@ class _PostCardState extends ConsumerState<_PostCard>
                               transitionBuilder: (c, a) => ScaleTransition(
                                   scale: Tween(begin: 0.7, end: 1.0).animate(a),
                                   child: c),
-                              child: Icon(
+                              child: SculptedIcon(
                                   _saved
                                       ? Icons.bookmark_rounded
                                       : Icons.bookmark_border_rounded,
@@ -1172,17 +1176,11 @@ class _ActionBtn extends StatelessWidget {
                   switchInCurve: Curves.easeOutBack,
                   transitionBuilder: (c, a) => ScaleTransition(
                       scale: Tween(begin: 0.7, end: 1.0).animate(a), child: c),
-                  child: Icon(icon,
+                  child: SculptedIcon(icon,
                       key: ValueKey(icon),
                       color: color,
                       size: 24,
-                      shadows: glow && AppColors.isDarkMode
-                          ? [
-                              Shadow(
-                                  color: AppColors.like.withValues(alpha: 0.6),
-                                  blurRadius: 12)
-                            ]
-                          : null),
+                      active: glow),
                 ),
                 // Тоо байхгүй бол дүрс ганцаараа (хоосон зай үлдээхгүй)
                 if (label.isNotEmpty) ...[
