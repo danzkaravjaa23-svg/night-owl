@@ -1,12 +1,14 @@
 # Night Owl — release бэлтгэл
 
-2026-10-05. Үнэгүй аппын шинэ код ба web release build бэлэн. `970f4d2` commit GitHub-д илгээгдэж, Netlify `6ac3eab4452c6d0009f932d7` дээр нийтлэгдсэн. Public JavaScript нь шалгасан локал build-тэй ижил. Native build/signing, App Store/Play Store нийтлэлт болон Apple provider-ийн бодит тохиргоо дараагийн ажлууд хэвээр.
+2026-10-06. Үнэгүй аппын шинэ код ба web release build бэлэн. `7c277c7` commit GitHub-д илгээгдэж, Netlify `6ac415570767e000085a73fd` дээр нийтлэгдсэн. Public JavaScript нь шалгасан локал build-тэй ижил. Native build/signing, App Store/Play Store нийтлэлт болон Apple provider-ийн бодит тохиргоо дараагийн ажлууд хэвээр.
+
+Газрын зураг zoom18–19 үед газар бүрийг тусдаа pin болгож харуулна. Давхцсан pin-үүд зайтай байрлаж, бодит координаттайгаа шугамаар холбогдоно. Pin сонгоход камер/zoom хэвээр; жижигрүүлэхэд бүлэглэл сэргэнэ. Нийт219, газрын зургийн14 тест амжилттай; public апп дээр сонголт, zoom-in/out, алдаагүй ажиллагааг шалгасан.
 
 Апп ашиглах төлбөр, subscription, premium unlock, in-app purchase идэвхтэй биш. QPay хуудас, төлбөрийн түүхийг хассан; хуучин `/qpay/:id` холбоос тухайн постыг нээнэ. Урилга нь үнэгүй хуваалцах холбоос бөгөөд unlock/reward амлахгүй. Paid-content entitlement хүснэгт/түгжээ байхгүй тул төлбөрийн backend migration шаардлагагүй. Төлбөрийн системийг deployment-ийн дараа тусдаа ажлаар шийдэх тул энэ үнэгүй release-ийн blocker биш. Газрын үйлчилгээ эсвэл эвентийн орох үнэ харагдвал энэ нь зохион байгуулагчийн мэдээлэл; апп дотор төлбөр авахгүй, бүх газар/эвент үнэгүй гэсэн утгатай биш. RSVP нь очих сонирхол/оролцоогоо тэмдэглэх үйлдэл бөгөөд тасалбар эсвэл төлбөр биш.
 
 ## 2026-10-05-ны локал UX шинэчлэлт
 
-270 OSM газрын нэмэлт каталог, ойр pin-үүдийн бүлэглэл, эх сурвалж/утас/сайт/цагийн мэдээлэл, Instagram-аас санаа авсан бодит статистиктай профиль, ойлгомжтой эхлэлийн текст, Higgsfield owl emotion болон reduced-motion дэмждэг шилжилт нэмсэн. Google Places API key байхгүй тул Google мэдээлэл татсангүй. Бүтэн 215 тест, static analysis, JavaScript release build амжилттай. Локал preview-ийн хоригийн дараа 2026-10-06-нд нийтлэгдсэн апп дээр эхлэлийн loading, бүлэглэл/zoom, 279 газрын жагсаалт, map/list байрлал хадгалах, profile Saved, өдөр/шөнө болон газрын мэдээллийн цонхыг шалгасан. Browser error хоосон. Шинэ ZIP бэлэн, push/deploy баталгаажсан. PostgreSQL бүрэн export/cutover нууц үг, target host болон үйлчилгээний интеграци хүлээгдсэн хэвээр.
+270 OSM газрын нэмэлт каталог, ойр pin-үүдийн бүлэглэл, эх сурвалж/утас/сайт/цагийн мэдээлэл, Instagram-аас санаа авсан бодит статистиктай профиль, ойлгомжтой эхлэлийн текст, Higgsfield owl emotion болон reduced-motion дэмждэг шилжилт нэмсэн. Google Places API key байхгүй тул Google мэдээлэл татсангүй. Бүтэн 219 тест, static analysis, JavaScript release build амжилттай. Локал preview-ийн хоригийн дараа 2026-10-06-нд нийтлэгдсэн апп дээр эхлэлийн loading, бүлэглэл/zoom, 279 газрын жагсаалт, map/list байрлал хадгалах, profile Saved, өдөр/шөнө болон газрын мэдээллийн цонхыг шалгасан. Browser error хоосон. Шинэ ZIP бэлэн, push/deploy баталгаажсан. PostgreSQL бүрэн export/cutover нууц үг, target host болон үйлчилгээний интеграци хүлээгдсэн хэвээр.
 
 ## 2026-10-06 loading шалгалт
 
@@ -15,7 +17,7 @@
 ## Баталгаажуулалтын төлөв
 
 - Flutter 3.44.0 / Dart 3.12.0; static analysis: no issues.
-- Бүтэн Flutter suite-ийн 215 тест амжилттай. Өмнөх auth/callback/profile metadata, координат/owner засвар, account isolation, feed/filter/navigation, үнэгүй холбоос/урилга, JPEG/video validation болон reference layout-ийн шалгалтууд хадгалагдсан. Шинэ шалгалтууд өдөр/шөнө/System, OS brightness, preference-ийн дараалсан хадгалалт, startup/хожуу үр дүн, `false`/exception rollback ба disposal-ийг хамарна. Profile хоёр горимд 320/1280px ба 1.5x текстээр, Settings 320px ба 2x текстээр; Feed/Messages болон map-ийн горим солих ажиллагааг мөн шалгасан.
+- Бүтэн Flutter suite-ийн 219 тест амжилттай. Өмнөх auth/callback/profile metadata, координат/owner засвар, account isolation, feed/filter/navigation, үнэгүй холбоос/урилга, JPEG/video validation болон reference layout-ийн шалгалтууд хадгалагдсан. Шинэ шалгалтууд өдөр/шөнө/System, OS brightness, preference-ийн дараалсан хадгалалт, startup/хожуу үр дүн, `false`/exception rollback ба disposal-ийг хамарна. Profile хоёр горимд 320/1280px ба 1.5x текстээр, Settings 320px ба 2x текстээр; Feed/Messages болон map-ийн горим солих ажиллагааг мөн шалгасан.
 - JavaScript web release build амжилттай. ZIP: `build/releases/night-owl-web-release.zip`; нарийвчилсан баталгаа `docs/BUILD_VERIFICATION.json`. Wasm release шалгаагүй: одоогийн secure-storage web dependency Wasm-тэй нийцэхгүй.
 - Android build оролдлого: `No Android SDK found` — AAB/APK бүтээгдээгүй. Энэ Mac-д Java runtime мөн байхгүй.
 - iOS build оролдлого: `Application not configured for iOS`. iOS project/bundle ID файлууд байгаа боловч Xcode tooling байхгүй учраас Flutter bundle identifier-ийг build settings-ээс уншиж чадахгүй. Бүтэн Xcode, CocoaPods шаардлагатай; IPA/Runner.app бүтээгдээгүй.

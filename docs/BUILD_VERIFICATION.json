@@ -4,16 +4,16 @@
   "dart": "3.12.0",
   "analysis": "passed; no issues",
   "flutter_tests": {
-    "passed": 215,
+    "passed": 219,
     "failed": 0
   },
   "web": {
     "status": "JavaScript release built with shared validated backend defines; currently hosted backend",
-    "main_dart_js_sha256": "12bcc769f62b7f6bac7fe39c4e3dd4bdaefc8f30acc81224b78a94740b4fef2a",
-    "archive_sha256": "c8d378114ae5e54306c2a4f4783f36b0ce81e15c79ec9f4e8c0455891d5d9274",
+    "main_dart_js_sha256": "152b285a0c3ef3c5342559adc0d02e2511421fae8044773dee99660c0596bd55",
+    "archive_sha256": "4909f84b269ad838dda50495addd5739261729c0cbd1c6797d48d7a16d97da84",
     "archive": "build/releases/night-owl-free-web-release.zip",
     "files": 63,
-    "archive_bytes": 21556910
+    "archive_bytes": 21563213
   },
   "android": {
     "status": "not built",
@@ -117,8 +117,8 @@
       "map_camera": "retained across theme change"
     }
   },
-  "github_push": "Release commit 970f4d26826e6edb269af111883f0eba7605e14a pushed and remote verified on night-owl-features",
-  "web_deployment": "Published on 2026-10-06 Asia/Ulaanbaatar: https://nightowl-ub.netlify.app; Netlify 6ac3eab4452c6d0009f932d7",
+  "github_push": "Release commit 7c277c713d59217da24116f7c227f6ddf4d1c8ba pushed on night-owl-features",
+  "web_deployment": "Published on 2026-10-06 Asia/Ulaanbaatar: https://nightowl-ub.netlify.app; Netlify 6ac415570767e000085a73fd",
   "performance": {
     "map_list_toggle": "map, camera and tiles remain mounted; hidden map painting/tickers paused",
     "icons": "cached gradient glyph drawing replaces per-icon ShaderMask",
@@ -176,7 +176,7 @@
     "higgsfield_job": "6136c2aa-129b-425c-8b6e-f8c75e961117",
     "profile": "compact cover, real statistics, posts/saved/video grid",
     "motion": "bounded route/press transitions; reduced-motion and hidden ticker guards",
-    "map": "deterministic screen-space marker groups, retained camera, attributed venue details and bounded error notice",
+    "map": "Screen-space groups below zoom18; separate collision-free venue pins at18–19 with leader lines to real positions; selection keeps camera and zoom",
     "browser_checks_before_final_build": [
       "390x844 night profile and Saved empty state",
       "279-place list and Hops search",
@@ -210,27 +210,36 @@
     "deployment": "published; public JavaScript hash matches tested local build and immutable deploy"
   },
   "production_verification": {
-    "checked_at": "2026-10-05T18:24:14.527797+00:00",
-    "commit": "970f4d26826e6edb269af111883f0eba7605e14a",
-    "deploy_id": "6ac3eab4452c6d0009f932d7",
+    "checked_at": "2026-10-05T21:26:26.553913+00:00",
+    "commit": "7c277c713d59217da24116f7c227f6ddf4d1c8ba",
+    "deploy_id": "6ac415570767e000085a73fd",
     "url": "https://nightowl-ub.netlify.app",
-    "immutable_url": "https://6ac3eab4452c6d0009f932d7--nightowl-ub.netlify.app",
-    "public_main_sha256": "12bcc769f62b7f6bac7fe39c4e3dd4bdaefc8f30acc81224b78a94740b4fef2a",
-    "immutable_main_sha256": "12bcc769f62b7f6bac7fe39c4e3dd4bdaefc8f30acc81224b78a94740b4fef2a",
+    "immutable_url": "https://6ac415570767e000085a73fd--nightowl-ub.netlify.app",
+    "public_main_sha256": "152b285a0c3ef3c5342559adc0d02e2511421fae8044773dee99660c0596bd55",
+    "immutable_main_sha256": "152b285a0c3ef3c5342559adc0d02e2511421fae8044773dee99660c0596bd55",
     "production_matches_immutable": true,
-    "html_startup": true,
-    "owl_runtime": true,
-    "owl_atlas_matches": true,
-    "catalog_matches": true,
+    "production_matches_local_build": true,
     "browser_checks": [
-      "public startup logo/status shown; first frame removes loading overlay",
-      "authenticated session retained; feed loads",
-      "map clusters zoom into smaller groups",
-      "279-place list; list/map keeps camera",
-      "profile loading then Saved empty state",
-      "day/night theme and venue source details sheet",
+      "close zoom separates count bubbles into individual venue pins",
+      "nearby pins remain distinct and connected to real coordinates",
+      "Gangnam pin opens correct venue card without zooming out",
+      "closing card preserves individual pins; zooming out restores counts; zooming in separates again",
       "browser error log empty"
-    ],
-    "netlify_badge": "Dismissed overlay that intercepted footer taps in this browser"
+    ]
+  },
+  "map_zoom_update": {
+    "date": "2026-10-06",
+    "commit": "7c277c713d59217da24116f7c227f6ddf4d1c8ba",
+    "flutter_tests": 219,
+    "focused_map_tests": 14,
+    "close_zoom_threshold": 18,
+    "coordinates": "Display-only offsets; source coordinates and directions unchanged",
+    "browser_checks": [
+      "close zoom separates count bubbles into individual venue pins",
+      "nearby pins remain distinct and connected to real coordinates",
+      "Gangnam pin opens correct venue card without zooming out",
+      "closing card preserves individual pins; zooming out restores counts; zooming in separates again",
+      "browser error log empty"
+    ]
   }
 }
