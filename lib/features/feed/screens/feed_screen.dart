@@ -15,6 +15,8 @@ import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/night_owl_brand.dart';
 import '../../../core/widgets/sculpted_icon.dart';
 import '../../../core/widgets/theme_toggle_button.dart';
+import '../../../core/widgets/owl_loading.dart';
+import '../../../core/widgets/app_motion.dart';
 import '../../../core/widgets/network_video.dart';
 import '../../../core/router/app_router.dart';
 import '../../auth/providers/auth_provider.dart';
@@ -120,10 +122,17 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
                       },
                     ),
                   ),
-                  if (feedAsync.isLoading && feedAsync.valueOrNull == null)
+                  if (feedAsync.isLoading && feedAsync.valueOrNull == null) ...[
+                    const SliverToBoxAdapter(
+                        child: Padding(
+                      padding: EdgeInsets.symmetric(vertical: 18),
+                      child: OwlLoading(
+                          size: 40, message: 'Нийтлэлүүдийг ачаалж байна'),
+                    )),
                     SliverList.builder(
                         itemCount: 2, itemBuilder: (_, __) => _SkeletonCard())
-                  else if (feedAsync.hasError && feedAsync.valueOrNull == null)
+                  ] else if (feedAsync.hasError &&
+                      feedAsync.valueOrNull == null)
                     SliverToBoxAdapter(
                       child: SizedBox(
                           height: 360,
@@ -137,7 +146,9 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
                         child: Padding(
                       padding: EdgeInsets.all(40),
                       child: Center(
-                          child: CircularProgressIndicator(strokeWidth: 2)),
+                          child: OwlLoading(
+                              size: 40,
+                              message: 'Дагаж буй хүмүүсийг ачаалж байна')),
                     ))
                   else if (_followingOnly && following.hasError)
                     SliverToBoxAdapter(
@@ -184,7 +195,6 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
                         child: _FeedFooter(
                       notifier: notifier,
                       hasPosts: visiblePosts.isNotEmpty,
-                      loadMoreButton: _followingOnly,
                     )),
                   ],
                 ],
@@ -316,7 +326,7 @@ class _Entrance extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (MediaQuery.of(context).disableAnimations) return child;
+    if (AppMotion.reduced(context)) return child;
     final delay = index * 40;
     final total = 220 + delay;
     return TweenAnimationBuilder<double>(
@@ -446,35 +456,22 @@ class _TopIconBtn extends StatelessWidget {
 }
 
 // ─── Дарахад жижигрэх + hover cursor (веб мэдрэмж) ───
-class _Press extends StatefulWidget {
+class _Press extends StatelessWidget {
   final Widget child;
   final VoidCallback? onTap;
   final double scale;
   const _Press({required this.child, this.onTap, this.scale = 0.92});
 
   @override
-  State<_Press> createState() => _PressState();
-}
-
-class _PressState extends State<_Press> {
-  bool _down = false;
-
-  @override
   Widget build(BuildContext context) => MouseRegion(
         cursor: SystemMouseCursors.click,
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTapDown: (_) => setState(() => _down = true),
-          onTapUp: (_) => setState(() => _down = false),
-          onTapCancel: () => setState(() => _down = false),
-          onTap: widget.onTap,
-          child: AnimatedScale(
-            scale: _down ? widget.scale : 1.0,
-            duration: const Duration(milliseconds: 120),
-            curve: Curves.easeOut,
-            child: widget.child,
-          ),
-        ),
+        child: PressFeedback(
+            pressedScale: scale,
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: onTap,
+              child: child,
+            )),
       );
 }
 
@@ -561,6 +558,7 @@ class _PostCardState extends ConsumerState<_PostCard>
   void _doubleTapLike() {
     HapticFeedback.mediumImpact();
     if (!widget.post.isLikedByMe) widget.onLike();
+    if (AppMotion.reduced(context)) return;
     setState(() => _showHeart = true);
     _heartCtrl.forward();
   }
@@ -1172,7 +1170,7 @@ class _ActionBtn extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 220),
+                  duration: AppMotion.duration(context, AppMotion.release),
                   switchInCurve: Curves.easeOutBack,
                   transitionBuilder: (c, a) => ScaleTransition(
                       scale: Tween(begin: 0.7, end: 1.0).animate(a), child: c),
@@ -1202,11 +1200,7 @@ class _ActionBtn extends StatelessWidget {
 class _FeedFooter extends StatelessWidget {
   final FeedNotifier notifier;
   final bool hasPosts;
-  final bool loadMoreButton;
-  const _FeedFooter(
-      {required this.notifier,
-      required this.hasPosts,
-      this.loadMoreButton = false});
+  const _FeedFooter({required this.notifier, required this.hasPosts});
 
   @override
   Widget build(BuildContext context) => ValueListenableBuilder<bool>(
@@ -1216,41 +1210,32 @@ class _FeedFooter extends StatelessWidget {
             // Хуудас ачаалж чадсангүй — retry товч
             return Padding(
               padding: const EdgeInsets.all(20),
-              child: Column(children: [
-                Text('Ачаалж чадсангүй',
-                    style: AppTextStyles.bodySm
-                        .copyWith(color: AppColors.textTertiary)),
-                const SizedBox(height: 10),
-                OutlinedButton(
-                  onPressed: () => notifier.loadFeed(),
-                  style: OutlinedButton.styleFrom(
-                      side: BorderSide(color: AppColors.hairline),
-                      foregroundColor: AppColors.accentStart),
-                  child: const Text('Дахин оролдох'),
-                ),
-              ]),
+              child: OwlLoading(
+                  size: 36,
+                  state: OwlLoadingState.error,
+                  message: 'Нийтлэлүүдийг ачаалж чадсангүй',
+                  onRetry: () => notifier.loadFeed()),
             );
           }
           return ValueListenableBuilder<bool>(
             valueListenable: notifier.hasMore,
             builder: (_, more, __) {
-              if (more && loadMoreButton) {
-                return Padding(
-                  padding: const EdgeInsets.all(20),
-                  child: Center(
-                      child: TextButton.icon(
-                    onPressed: () => notifier.loadFeed(),
-                    icon: const Icon(Icons.expand_more_rounded),
-                    label: const Text('Дараагийн нийтлэлүүдийг ачаалах'),
-                  )),
-                );
-              }
               if (more) {
-                return const Padding(
-                  padding: EdgeInsets.all(24),
-                  child: Center(
-                      child: CircularProgressIndicator(
-                          color: AppColors.accentStart, strokeWidth: 2)),
+                return ValueListenableBuilder<bool>(
+                  valueListenable: notifier.isFetching,
+                  builder: (_, fetching, __) => Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Center(
+                        child: fetching
+                            ? const OwlLoading(
+                                size: 32,
+                                message: 'Дараагийн нийтлэлүүдийг ачаалж байна')
+                            : TextButton.icon(
+                                onPressed: () => notifier.loadFeed(),
+                                icon: const Icon(Icons.expand_more_rounded),
+                                label: const Text(
+                                    'Дараагийн нийтлэлүүдийг ачаалах'))),
+                  ),
                 );
               }
               if (!hasPosts) return const SizedBox.shrink();
@@ -1304,20 +1289,12 @@ class _ErrorView extends StatelessWidget {
   Widget build(BuildContext context) => Center(
         child: Padding(
           padding: const EdgeInsets.all(32),
-          child: Column(mainAxisSize: MainAxisSize.min, children: [
-            Icon(Icons.wifi_off_outlined,
-                color: AppColors.textTertiary, size: 48),
-            const SizedBox(height: 16),
-            Text('Алдаа гарлаа', style: AppTextStyles.h2),
-            const SizedBox(height: 8),
-            Text(message,
-                style: AppTextStyles.bodyXs
-                    .copyWith(color: AppColors.textTertiary),
-                textAlign: TextAlign.center),
-            const SizedBox(height: 24),
-            ElevatedButton(
-                onPressed: onRetry, child: const Text('Дахин оролдох')),
-          ]),
+          child: OwlLoading(
+              size: 56,
+              state: OwlLoadingState.error,
+              message: 'Нийтлэлүүдийг ачаалж чадсангүй',
+              detail: 'Түр хүлээгээд дахин оролдоорой.',
+              onRetry: onRetry),
         ),
       );
 }

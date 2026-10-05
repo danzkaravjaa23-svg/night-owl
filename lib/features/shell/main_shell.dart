@@ -10,6 +10,7 @@ import '../../core/services/supabase_service.dart';
 import '../../core/providers/user_settings_provider.dart';
 import '../../core/widgets/night_owl_brand.dart';
 import '../../core/widgets/sculpted_icon.dart';
+import '../../core/widgets/app_motion.dart';
 
 /// Bottom nav shell — center-FAB template (Instagram/TikTok маягийн док)
 class MainShell extends ConsumerStatefulWidget {
@@ -162,6 +163,11 @@ class _BottomNav extends ConsumerWidget {
       context: context,
       backgroundColor: AppColors.bgElevated,
       isScrollControlled: true, // контентдээ багтаж overflow гарахгүй
+      showDragHandle: false,
+      sheetAnimationStyle: AppMotion.reduced(context)
+          ? AnimationStyle.noAnimation
+          : const AnimationStyle(
+              duration: AppMotion.enter, reverseDuration: AppMotion.exit),
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
       builder: (_) => SafeArea(
@@ -264,26 +270,40 @@ class _NavItem extends StatelessWidget {
   Widget build(BuildContext context) => Expanded(
         child: Semantics(
             selected: isActive,
-            child: TextButton(
-              onPressed: onTap,
-              style: TextButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
-                minimumSize: const Size(48, 64),
-                foregroundColor:
-                    isActive ? AppColors.accentStart : AppColors.textTertiary,
-                shape: const RoundedRectangleBorder(),
-              ),
-              child: Column(mainAxisSize: MainAxisSize.min, children: [
-                SculptedIcon(isActive ? activeIcon : icon,
-                    size: 24, active: isActive),
-                const SizedBox(height: 3),
-                FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: Text(label,
-                        style: const TextStyle(
-                            fontSize: 10.5, fontWeight: FontWeight.w500))),
-              ]),
-            )),
+            child: PressFeedback(
+                pressedScale: .95,
+                child: TextButton(
+                  onPressed: onTap,
+                  style: TextButton.styleFrom(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+                    minimumSize: const Size(48, 64),
+                    foregroundColor: isActive
+                        ? AppColors.accentStart
+                        : AppColors.textTertiary,
+                    shape: const RoundedRectangleBorder(),
+                  ),
+                  child: Column(mainAxisSize: MainAxisSize.min, children: [
+                    AnimatedContainer(
+                        duration:
+                            AppMotion.duration(context, AppMotion.release),
+                        curve: Curves.easeOutCubic,
+                        padding: const EdgeInsets.all(5),
+                        decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: isActive
+                                ? AppColors.accentStart.withValues(alpha: .12)
+                                : Colors.transparent),
+                        child: SculptedIcon(isActive ? activeIcon : icon,
+                            size: 24, active: isActive)),
+                    const SizedBox(height: 3),
+                    FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(label,
+                            style: const TextStyle(
+                                fontSize: 10.5, fontWeight: FontWeight.w500))),
+                  ]),
+                ))),
       );
 }
 
@@ -296,8 +316,6 @@ class _CreateFab extends StatefulWidget {
 }
 
 class _CreateFabState extends State<_CreateFab> {
-  bool _pressed = false;
-
   @override
   Widget build(BuildContext context) {
     return Semantics(
@@ -309,13 +327,8 @@ class _CreateFabState extends State<_CreateFab> {
               cursor: SystemMouseCursors.click,
               child: GestureDetector(
                 onTap: widget.onTap,
-                onTapDown: (_) => setState(() => _pressed = true),
-                onTapUp: (_) => setState(() => _pressed = false),
-                onTapCancel: () => setState(() => _pressed = false),
-                child: AnimatedScale(
-                  scale: _pressed ? 0.90 : 1.0,
-                  duration: const Duration(milliseconds: 110),
-                  curve: Curves.easeOut,
+                child: PressFeedback(
+                  pressedScale: .94,
                   child: Container(
                     width: 48,
                     height: 48,
@@ -373,38 +386,40 @@ class _CreateOption extends StatelessWidget {
         cursor: SystemMouseCursors.click,
         child: GestureDetector(
           onTap: onTap,
-          child: Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: AppColors.bgSurface,
-              borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: AppColors.hairline),
-            ),
-            child: Row(children: [
-              Container(
-                width: 52,
-                height: 52,
+          child: PressFeedback(
+              pressedScale: .985,
+              child: Container(
+                padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                    gradient: gradient,
-                    borderRadius: BorderRadius.circular(16)),
-                child: Center(
-                    child: SculptedIcon(icon,
-                        color: Colors.white, size: 26, onDark: true)),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                  child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                    Text(label, style: AppTextStyles.labelLg),
-                    const SizedBox(height: 3),
-                    Text(subtitle,
-                        style: AppTextStyles.bodyXs
-                            .copyWith(color: AppColors.textSecondary)),
-                  ])),
-              Icon(Icons.chevron_right, color: AppColors.textTertiary),
-            ]),
-          ),
+                  color: AppColors.bgSurface,
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(color: AppColors.hairline),
+                ),
+                child: Row(children: [
+                  Container(
+                    width: 52,
+                    height: 52,
+                    decoration: BoxDecoration(
+                        gradient: gradient,
+                        borderRadius: BorderRadius.circular(16)),
+                    child: Center(
+                        child: SculptedIcon(icon,
+                            color: Colors.white, size: 26, onDark: true)),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                      child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                        Text(label, style: AppTextStyles.labelLg),
+                        const SizedBox(height: 3),
+                        Text(subtitle,
+                            style: AppTextStyles.bodyXs
+                                .copyWith(color: AppColors.textSecondary)),
+                      ])),
+                  Icon(Icons.chevron_right, color: AppColors.textTertiary),
+                ]),
+              )),
         ),
       );
 }

@@ -147,9 +147,9 @@ class _LoginScreenState extends State<LoginScreen> {
                   child: Column(children: [
                     const OwlLogoMark(size: 56),
                     const SizedBox(height: 12),
-                    Text('Тавтай морил 👋', style: AppTextStyles.h1),
+                    Text('Тавтай морил', style: AppTextStyles.h1),
                     const SizedBox(height: 6),
-                    Text('Дахин нэвтрээд party-даа эргэн нэгдээрэй',
+                    Text('Бүртгэлтэй имэйл, нууц үгээрээ нэвтэрнэ үү.',
                       textAlign: TextAlign.center,
                       style: AppTextStyles.bodyMd.copyWith(
                         color: AppColors.textSecondary)),
@@ -284,9 +284,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                             ? 'Түр хүлээнэ үү...'
                                             : 'Google-ээр үргэлжлүүлэх',
                                         leading: _gLoading
-                                            ? SizedBox(width: 16, height: 16,
-                                                child: CircularProgressIndicator(
-                                                  strokeWidth: 2, color: AppColors.textSecondary))
+                                            ? const BtnSpinner()
                                             : const GoogleMark(),
                                         onTap: _gLoading ? null : _googleSignIn,
                                       ),

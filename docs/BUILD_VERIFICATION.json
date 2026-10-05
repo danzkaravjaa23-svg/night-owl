@@ -1,19 +1,19 @@
 {
-  "date": "2026-10-05",
+  "date": "2026-10-06",
   "flutter": "3.44.0",
   "dart": "3.12.0",
-  "analysis": "passed; no issues after final theme and DM changes",
+  "analysis": "passed; no issues",
   "flutter_tests": {
-    "passed": 103,
+    "passed": 215,
     "failed": 0
   },
   "web": {
-    "status": "JavaScript release built",
-    "main_dart_js_sha256": "9a3cdf1e6aaf70f136c336b8d8af5c89e9a627dced9119da623950c6f3f01280",
-    "archive_sha256": "3c9facc3d79bec24f70e2587cd9429a86200a09ecc87418ce98e0b7ce8895df4",
+    "status": "JavaScript release built with shared validated backend defines; currently hosted backend",
+    "main_dart_js_sha256": "12bcc769f62b7f6bac7fe39c4e3dd4bdaefc8f30acc81224b78a94740b4fef2a",
+    "archive_sha256": "c8d378114ae5e54306c2a4f4783f36b0ce81e15c79ec9f4e8c0455891d5d9274",
     "archive": "build/releases/night-owl-free-web-release.zip",
-    "files": 61,
-    "archive_bytes": 20492214
+    "files": 63,
+    "archive_bytes": 21556910
   },
   "android": {
     "status": "not built",
@@ -55,7 +55,11 @@
     "390x844 day/night feed and dimensional actions",
     "day mode persists after browser reload",
     "390x844 natural day OSM map and approved night map with selected venue sheet",
-    "390x844 day/night DM: search retained across theme change and cleared after verification; no message sent"
+    "390x844 day/night DM: search retained across theme change and cleared after verification; no message sent",
+    "390x844 feed",
+    "map/list preserves selection and mounted map",
+    "day/night map and navigation",
+    "browser errors empty"
   ],
   "release_mode": "free",
   "payments": {
@@ -113,6 +117,96 @@
       "map_camera": "retained across theme change"
     }
   },
-  "github_push": "not confirmed",
-  "web_deployment": "not performed; Netlify session requires sign-in"
+  "github_push": "Prior approved 66fbd88 and be0c9a2 confirmed on night-owl-features; current migration/performance/UX changes not pushed",
+  "web_deployment": "Prior be0c9a2 published at nightowl-ub.netlify.app (Netlify deploy 6ac3034521b22f0008a3cef8); current migration/performance/UX build not deployed",
+  "performance": {
+    "map_list_toggle": "map, camera and tiles remain mounted; hidden map painting/tickers paused",
+    "icons": "cached gradient glyph drawing replaces per-icon ShaderMask",
+    "focused_render_comparison": "four day/night LTR/RTL cases; less than 0.45% channels differ by more than 2",
+    "hardware_fps_benchmark": "not measured"
+  },
+  "postgres_migration": {
+    "source_version": "17.6",
+    "local_test_version": "17.11",
+    "source_core_tables": 60,
+    "source_core_rows": 1948,
+    "source_users": 18,
+    "source_venues": 712,
+    "source_media_objects": 96,
+    "source_media_bytes": 229492895,
+    "core_snapshot": "private supplemental JSON snapshot; not complete pg_dump",
+    "public_media_backup": "all96 objects downloaded and independently checksum-verified; private persistent local folder outside repository",
+    "full_database_export": "waiting for private database password",
+    "target_host": "not provided; empty local staging prepared",
+    "client_cutover": false,
+    "providers": "Auth/Storage/Realtime integration required; gateway fails closed",
+    "backend_offline_tests": 13,
+    "migration_offline_tests": 59,
+    "client_generation_tests": 11,
+    "real_postgres_drill": "synthetic snapshot export/restore/row+sequence+large-object verification passed; source unchanged",
+    "caddy_configuration": "official2.11.6 checksum verified; native config validation passed",
+    "docker_startup": "not verified; Docker unavailable",
+    "missing_live_client_rpcs": [
+      "dm_conversations",
+      "create_group",
+      "check_in_venue"
+    ],
+    "target_rpc_patch": {
+      "path": "backend/patches/20261005_missing_client_rpcs.sql",
+      "source_or_reserved_staging_applied": false,
+      "local_postgres_fixture": "17.11 synthetic authorization, rollback, counters, concurrent venue swaps and group/block orderings passed",
+      "independent_review": "no additional SQL defect found after race fixes; direct-table RLS/ACL and signed HTTP integration remain required",
+      "mutation_isolation": "READ COMMITTED enforced"
+    },
+    "client_rpc_boundaries": {
+      "managed_tests_passed": 38,
+      "postgres_tests_passed": 37,
+      "postgres_managed_only_test_skipped": 1,
+      "behavior": "independent mode never falls back; managed mode allows only an explicit named missing-function PGRST202; rejected/network/malformed RPC results cause no fallback"
+    }
+  },
+  "ux_update": {
+    "date": "2026-10-05",
+    "catalog_places": 270,
+    "source": "OpenStreetMap; partial central Ulaanbaatar coverage",
+    "observed_merged_places": 279,
+    "google_places_import": "not performed; API credential unavailable",
+    "venue_tool_offline_tests_passed": 24,
+    "higgsfield_asset": "assets/images/owl_emotions.png",
+    "higgsfield_job": "6136c2aa-129b-425c-8b6e-f8c75e961117",
+    "profile": "compact cover, real statistics, posts/saved/video grid",
+    "motion": "bounded route/press transitions; reduced-motion and hidden ticker guards",
+    "map": "deterministic screen-space marker groups, retained camera, attributed venue details and bounded error notice",
+    "browser_checks_before_final_build": [
+      "390x844 night profile and Saved empty state",
+      "279-place list and Hops search",
+      "venue contact/hours/source sheet",
+      "day theme and navigation",
+      "390x844 auth landing"
+    ],
+    "final_build_browser_check": "blocked by browser security policy while selecting localhost tab; final grouping verified by automated tests, not visually reverified",
+    "native_phone_fps": "not measured"
+  },
+  "motion_loading_audit": {
+    "date": "2026-10-06",
+    "production_before_update_sha256": "8742f4d5d8c67b9edc823cc12c15ddaf5fac2214ba1a8e43572befcaff7e04cb",
+    "production_contains_owl_emotion_asset": false,
+    "production_release": "be0c9a2",
+    "core_motion_tests": "passed",
+    "extra_coverage": [
+      "initial web boot and error/retry",
+      "search and discovery",
+      "creator and post detail",
+      "notifications",
+      "followers/following",
+      "business dashboard",
+      "auth button loading and reduced-motion entrance/press"
+    ],
+    "web_startup_node_tests_passed": 7,
+    "full_flutter_tests_passed": 215,
+    "analysis": "no issues",
+    "web_build": "passed",
+    "browser_verification": "Local preview selection rejected by browser URL security policy; not reverified visually",
+    "deployment": "not performed"
+  }
 }

@@ -14,7 +14,7 @@
     flutter --version && \
     flutter config --enable-web && \
     flutter pub get && \
-    flutter build web --release --dart-define=DEVICE_PREVIEW=false
+    sh tools/deployment/build_web.sh
   """
 
 # SPA — go_router-ийн бүх зам index.html руу (шууд /profile гэх мэт хаяг руу орж болно)

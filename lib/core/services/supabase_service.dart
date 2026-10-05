@@ -1,6 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../constants/app_constants.dart';
+import '../config/backend_config.dart';
+import 'scoped_pkce_storage.dart';
 import '../utils/auth_callback.dart';
 import '../utils/auth_callback_location.dart';
 
@@ -21,14 +23,33 @@ class SupabaseService {
   static Object? _lastAuthStreamError;
 
   static Future<void> initialize() async {
+    if (AppConstants.backendMode == 'postgres' &&
+        (!const bool.hasEnvironment('BACKEND_URL') ||
+            !const bool.hasEnvironment('BACKEND_PUBLIC_KEY'))) {
+      throw const FormatException(
+          'PostgreSQL mode requires explicit BACKEND_URL and BACKEND_PUBLIC_KEY.');
+    }
+    final backend = BackendConfig.parse(
+      mode: AppConstants.backendMode,
+      url: AppConstants.backendUrl,
+      publicKey: AppConstants.backendPublicKey,
+      allowLocalHttp: !kReleaseMode,
+    );
     await Supabase.initialize(
-      url: AppConstants.supabaseUrl,
-      anonKey: AppConstants.supabaseAnonKey,
+      url: backend.url.toString(),
+      anonKey: backend.publicKey,
       // Exchange a web callback once here. Native deep links remain handled
       // by the SDK while the app is running or resumed from the browser.
-      authOptions: const FlutterAuthClientOptions(
+      authOptions: FlutterAuthClientOptions(
         authFlowType: AuthFlowType.pkce,
         detectSessionInUri: !kIsWeb,
+        localStorage: SharedPreferencesLocalStorage(
+          persistSessionKey: backend.sessionStorageKey,
+        ),
+        pkceAsyncStorage: backend.mode == BackendMode.postgres
+            ? ScopedPkceStorage(backend.sessionStorageKey,
+                SharedPreferencesGotrueAsyncStorage())
+            : null,
       ),
     );
 
@@ -59,7 +80,8 @@ class SupabaseService {
     if (hasOAuthCallback(uri)) {
       consumedCallback = true;
       try {
-        final response = await Supabase.instance.client.auth.getSessionFromUrl(uri);
+        final response =
+            await Supabase.instance.client.auth.getSessionFromUrl(uri);
         if (response.redirectType == AuthChangeEvent.passwordRecovery.name) {
           pendingPasswordRecovery = true;
         }
@@ -90,8 +112,8 @@ class SupabaseService {
 
   // Native OAuth failures are emitted as stream errors by the SDK. Handle
   // them once, without discarding a valid session or exposing raw payloads.
-  static Stream<AuthState> get authStream => _authStream ??=
-      client.auth.onAuthStateChange.handleError((Object error) {
+  static Stream<AuthState> get authStream =>
+      _authStream ??= client.auth.onAuthStateChange.handleError((Object error) {
         if (identical(error, _lastAuthStreamError)) return;
         _lastAuthStreamError = error;
         authCallbackError.value = oauthCallbackErrorMessage(

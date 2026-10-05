@@ -186,9 +186,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   child: Column(children: [
                     const _RegisterGlyph(),
                     const SizedBox(height: 12),
-                    Text('Шөнийн багт нэгдээрэй ✨', style: AppTextStyles.h1),
+                    Text('Night Owl-д нэгдээрэй', style: AppTextStyles.h1),
                     const SizedBox(height: 6),
-                    Text('UB-гийн шилдэг party-нуудад VIP эрх нээ',
+                    Text('Үнэгүй бүртгэлээ үүсгээд,\nгазраа олж, мөчөө хуваалц.',
                       textAlign: TextAlign.center,
                       style: AppTextStyles.bodyMd.copyWith(
                         color: AppColors.textSecondary)),
@@ -448,9 +448,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   ? 'Түр хүлээнэ үү...'
                   : 'Google-ээр үргэлжлүүлэх',
               leading: _gLoading
-                  ? SizedBox(width: 16, height: 16,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2, color: AppColors.textSecondary))
+                  ? const BtnSpinner()
                   : const GoogleMark(),
               onTap: _gLoading ? null : _googleSignIn,
             ),

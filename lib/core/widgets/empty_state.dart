@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
+import 'app_motion.dart';
 
 /// Nightscape хоосон төлвийн нэгдсэн widget — template хэлбэр.
 /// neon illustration (SVG) → glass medallion 96 (glow-г энд өгнө,
@@ -16,6 +17,7 @@ class EmptyState extends StatelessWidget {
   final String? subtitle;
   final Widget? action;
   final double size;
+
   /// null бол [AppColors.neonCyan] (горимд тохирсон адаптив өнгө).
   final Color? glow;
 
@@ -39,7 +41,7 @@ class EmptyState extends StatelessWidget {
           // "гэнэт гарч ирэх" биш, амьсгалтай мэдрэмж өгнө
           child: TweenAnimationBuilder<double>(
             tween: Tween(begin: 0, end: 1),
-            duration: const Duration(milliseconds: 350),
+            duration: AppMotion.duration(context, AppMotion.enter),
             curve: Curves.easeOutCubic,
             builder: (_, t, child) => Opacity(
               opacity: t,
@@ -47,46 +49,48 @@ class EmptyState extends StatelessWidget {
                   offset: Offset(0, 12 * (1 - t)), child: child),
             ),
             child: Column(mainAxisSize: MainAxisSize.min, children: [
-            // ── Glass medallion — bgElevated 0.72 + hairline + неон glow ──
-            Container(
-              width: size,
-              height: size,
-              padding: EdgeInsets.all(size * 0.13),
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: AppColors.dynBgElevated.withValues(alpha: 0.72),
-                border: Border.all(color: AppColors.dynHairline2),
-                // Зөөлөн неон гэрэлтэлт — glow өнгө + magenta давхарга
-                boxShadow: [
-                  BoxShadow(
-                      color: (glow ?? AppColors.neonCyan)
-                          .withValues(alpha: 0.22),
-                      blurRadius: 34, spreadRadius: -4),
-                  BoxShadow(
-                      color: AppColors.accentStart.withValues(alpha: 0.10),
-                      blurRadius: 40, spreadRadius: -12),
-                ],
+              // ── Glass medallion — bgElevated 0.72 + hairline + неон glow ──
+              Container(
+                width: size,
+                height: size,
+                padding: EdgeInsets.all(size * 0.13),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: AppColors.dynBgElevated.withValues(alpha: 0.72),
+                  border: Border.all(color: AppColors.dynHairline2),
+                  // Зөөлөн неон гэрэлтэлт — glow өнгө + magenta давхарга
+                  boxShadow: [
+                    BoxShadow(
+                        color: (glow ?? AppColors.neonCyan)
+                            .withValues(alpha: 0.22),
+                        blurRadius: 34,
+                        spreadRadius: -4),
+                    BoxShadow(
+                        color: AppColors.accentStart.withValues(alpha: 0.10),
+                        blurRadius: 40,
+                        spreadRadius: -12),
+                  ],
+                ),
+                child: illustration != null
+                    ? SvgPicture.asset(illustration!)
+                    : Center(
+                        child: Icon(icon,
+                            size: 32, color: AppColors.dynTextSecondary)),
               ),
-              child: illustration != null
-                  ? SvgPicture.asset(illustration!)
-                  : Center(
-                      child: Icon(icon, size: 32,
-                          color: AppColors.dynTextSecondary)),
-            ),
-            const SizedBox(height: 24),
-            Text(title, style: AppTextStyles.h3, textAlign: TextAlign.center),
-            if (subtitle != null) ...[
-              const SizedBox(height: 8),
-              // Урт текст хэт сунахгүй — уншихад эвтэйхэн өргөнд барина
-              ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 300),
-                child: Text(subtitle!,
-                    style: AppTextStyles.bodyMd.copyWith(
-                        color: AppColors.dynTextSecondary, height: 1.5),
-                    textAlign: TextAlign.center),
-              ),
-            ],
-            if (action != null) ...[const SizedBox(height: 24), action!],
+              const SizedBox(height: 24),
+              Text(title, style: AppTextStyles.h3, textAlign: TextAlign.center),
+              if (subtitle != null) ...[
+                const SizedBox(height: 8),
+                // Урт текст хэт сунахгүй — уншихад эвтэйхэн өргөнд барина
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 300),
+                  child: Text(subtitle!,
+                      style: AppTextStyles.bodyMd.copyWith(
+                          color: AppColors.dynTextSecondary, height: 1.5),
+                      textAlign: TextAlign.center),
+                ),
+              ],
+              if (action != null) ...[const SizedBox(height: 24), action!],
             ]),
           ),
         ),

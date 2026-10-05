@@ -12,6 +12,7 @@ import '../../../core/widgets/app_avatar.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/gradient_button.dart';
 import '../../../core/widgets/network_video.dart';
+import '../../../core/widgets/owl_loading.dart';
 import '../../../core/widgets/sculpted_icon.dart';
 import '../../../models/story.dart';
 import '../../../models/user_profile.dart';
@@ -107,7 +108,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text('Cover зураг хадгалж чадсангүй'),
+            content: Text('Нүүр зураг хадгалж чадсангүй'),
             backgroundColor: AppColors.error));
       }
     }
@@ -126,21 +127,16 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         // үлдээнэ — бүтэн дэлгэцийн "Алдаа гарлаа" зөвхөн өгөгдөлгүй үед
         skipError:
             cached != null && cached.id == SupabaseService.currentUser?.id,
-        loading: () => const Center(
-            child: CircularProgressIndicator(color: AppColors.accentStart)),
+        loading: () =>
+            const Center(child: OwlLoading(message: 'Профайлыг ачаалж байна')),
         error: (e, _) => Center(
-          child: Column(mainAxisSize: MainAxisSize.min, children: [
-            SculptedIcon(Icons.cloud_off_outlined,
-                color: AppColors.textTertiary, size: 48),
-            const SizedBox(height: 14),
-            Text('Алдаа гарлаа', style: AppTextStyles.h2),
-            const SizedBox(height: 12),
-            ElevatedButton(
-              onPressed: () => ref.invalidate(currentProfileProvider),
-              child: const Text('Дахин оролдох'),
-            ),
-          ]),
-        ),
+            child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: OwlLoading(
+              state: OwlLoadingState.error,
+              message: 'Профайлыг ачаалж чадсангүй',
+              onRetry: () => ref.invalidate(currentProfileProvider)),
+        )),
         data: (profile) {
           if (profile == null) {
             // Нэвтрээгүй (session дууссан/шууд холбоос) бол нэвтрэх рүү,
@@ -197,6 +193,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         ring: myRing),
                     coverBusy: _coverBusy,
                     onEdit: _openEditProfile,
+                    onShare: () => _shareProfile(context, profile),
                     onEditCover: () => _changeCover(profile.id),
                     onSettings: () => context.push(AppRoutes.settings),
                     onActions: () => _showActions(profile),
@@ -208,7 +205,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                           selected: _tab,
                           onChanged: (tab) => setState(() => _tab = tab))),
                   SliverPadding(
-                      padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+                      padding: const EdgeInsets.fromLTRB(2, 2, 2, 0),
                       sliver: _PostsGrid(
                           key: _gridKey,
                           userId: profile.id,
@@ -654,31 +651,14 @@ class _PostsGridState extends State<_PostsGrid> {
     // Хоосон (бүгд ачаалагдсан, алдаагүй) — artistic neon empty state
     if (shown.isEmpty && !_hasMore && !_loading && !_error) {
       return SliverToBoxAdapter(
-        child: EmptyState(
-          illustration: widget.reelsOnly
-              ? 'assets/images/illustrations/empty_creator.svg'
-              : 'assets/images/illustrations/empty_profile.svg',
-          title: widget.savedOnly ? 'Хадгалсан пост алга' : 'Одоохондоо хоосон',
-          subtitle: widget.savedOnly
-              ? 'Дуртай постын хадгалах товчийг дараарай'
+        child: ProfileEmptyContent(
+          kind: widget.savedOnly
+              ? ProfileContentKind.saved
               : widget.reelsOnly
-                  ? 'Эхний бичлэгээ хуваалцаарай'
-                  : 'Эхний шөнийн мөчөө хуваалцаарай',
-          // CTA — хоёр таб хоёулаа createPost (видео ч хүлээж авдаг);
-          // createReel нь venue эзэнгүй хэрэглэгчийг хаадаг. Нийтэлсний дараах
-          // шинэчлэлийг postsVersionProvider хийнэ.
-          action: widget.savedOnly
-              ? null
-              : GradientButton(
-                  label:
-                      widget.reelsOnly ? 'Бичлэг хуваалцах' : 'Пост хуваалцах',
-                  size: GradientButtonSize.md,
-                  fullWidth: false,
-                  borderRadius: 999,
-                  icon: const SculptedIcon(Icons.add,
-                      color: Colors.white, size: 16, onDark: true),
-                  onPressed: () => context.push(AppRoutes.createPost),
-                ),
+                  ? ProfileContentKind.videos
+                  : ProfileContentKind.posts,
+          onCreate: () => context.push(AppRoutes.createPost),
+          onBrowse: () => context.go(AppRoutes.feed),
         ),
       );
     }
@@ -686,7 +666,7 @@ class _PostsGridState extends State<_PostsGrid> {
     return SliverMainAxisGroup(slivers: [
       SliverGrid(
         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 3, crossAxisSpacing: 5, mainAxisSpacing: 5),
+            crossAxisCount: 3, crossAxisSpacing: 2, mainAxisSpacing: 2),
         delegate: SliverChildBuilderDelegate(
           (ctx, i) => _tile(shown[i]),
           childCount: shown.length,
@@ -703,8 +683,8 @@ class _PostsGridState extends State<_PostsGrid> {
                     return const Padding(
                       padding: EdgeInsets.all(24),
                       child: Center(
-                          child: CircularProgressIndicator(
-                              color: AppColors.accentStart, strokeWidth: 2)),
+                          child: OwlLoading(
+                              size: 40, message: 'Нийтлэлүүдийг ачаалж байна')),
                     );
                   })
                 : const SizedBox(height: 24),
@@ -714,37 +694,16 @@ class _PostsGridState extends State<_PostsGrid> {
 
   // Татах алдааны retry блок — footer болон эхний хуудсанд ашиглана
   Widget _retryBlock() => Padding(
-        padding: const EdgeInsets.all(24),
-        child: Center(
-          child: Column(mainAxisSize: MainAxisSize.min, children: [
-            SculptedIcon(Icons.cloud_off_outlined,
-                color: AppColors.textTertiary, size: 36),
-            const SizedBox(height: 10),
-            Text('Ачаалж чадсангүй',
-                style: AppTextStyles.bodySm
-                    .copyWith(color: AppColors.textSecondary)),
-            const SizedBox(height: 12),
-            MouseRegion(
-              cursor: SystemMouseCursors.click,
-              child: GestureDetector(
-                onTap: () {
-                  _error = false;
-                  _loadMore();
-                },
-                child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 20, vertical: 9),
-                  decoration: BoxDecoration(
-                      gradient: AppColors.accentGradient,
-                      borderRadius: BorderRadius.circular(999)),
-                  child: Text('Дахин оролдох',
-                      style: AppTextStyles.btn.copyWith(color: Colors.white)),
-                ),
-              ),
-            ),
-          ]),
-        ),
-      );
+      padding: const EdgeInsets.all(24),
+      child: Center(
+          child: OwlLoading(
+              state: OwlLoadingState.error,
+              size: 44,
+              message: 'Нийтлэлүүдийг ачаалж чадсангүй',
+              onRetry: () {
+                _error = false;
+                _loadMore();
+              })));
 
   Widget _tile(Map<String, dynamic> post) {
     final mediaUrl = post['media_url'] as String?;
@@ -770,7 +729,7 @@ class _PostsGridState extends State<_PostsGrid> {
         // Desktop web — баруун товчоор устгах
         onSecondaryTap: canDelete ? () => _confirmDeleteTile(id) : null,
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(2),
           child: Stack(fit: StackFit.expand, children: [
             if (mediaUrl != null && !isVideo)
               CachedNetworkImage(
@@ -841,7 +800,45 @@ class _PostsGridState extends State<_PostsGrid> {
   }
 }
 
-/// Centered profile avatar with a thin violet ring; actual stories remain tappable.
+enum ProfileContentKind { posts, saved, videos }
+
+class ProfileEmptyContent extends StatelessWidget {
+  final ProfileContentKind kind;
+  final VoidCallback onCreate;
+  final VoidCallback onBrowse;
+  const ProfileEmptyContent(
+      {super.key,
+      required this.kind,
+      required this.onCreate,
+      required this.onBrowse});
+
+  @override
+  Widget build(BuildContext context) => EmptyState(
+      illustration: kind == ProfileContentKind.videos
+          ? 'assets/images/illustrations/empty_creator.svg'
+          : 'assets/images/illustrations/empty_profile.svg',
+      title: switch (kind) {
+        ProfileContentKind.posts => 'Эхний нийтлэлээ нэмээрэй',
+        ProfileContentKind.saved => 'Хадгалсан нийтлэл алга',
+        ProfileContentKind.videos => 'Бичлэг хараахан алга',
+      },
+      subtitle: switch (kind) {
+        ProfileContentKind.posts =>
+          'Таны хуваалцсан зураг, бичлэг энд харагдана.',
+        ProfileContentKind.saved =>
+          'Дуртай постын хадгалах товчийг дараарай. Хадгалсан нийтлэлүүд энд цугларна.',
+        ProfileContentKind.videos =>
+          'Постоор хуваалцсан бичлэгүүд тань энэ хэсэгт харагдана.',
+      },
+      action: GradientButton(
+          label: kind == ProfileContentKind.saved
+              ? 'Постууд үзэх'
+              : 'Нийтлэл нэмэх',
+          fullWidth: false,
+          onPressed: kind == ProfileContentKind.saved ? onBrowse : onCreate));
+}
+
+/// Compact profile avatar with a thin violet ring; actual stories remain tappable.
 class _ProfileStoryAvatar extends ConsumerWidget {
   final String? avatarUrl;
   final String initial;
@@ -867,8 +864,8 @@ class _ProfileStoryAvatar extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final hasStory = ring != null;
     return SizedBox(
-        width: 124,
-        height: 124,
+        width: 96,
+        height: 96,
         child: Stack(children: [
           Semantics(
               button: true,
@@ -880,8 +877,8 @@ class _ProfileStoryAvatar extends ConsumerWidget {
                   child: MouseRegion(
                       cursor: SystemMouseCursors.click,
                       child: Container(
-                          width: 124,
-                          height: 124,
+                          width: 96,
+                          height: 96,
                           padding: const EdgeInsets.all(4),
                           decoration: BoxDecoration(
                               shape: BoxShape.circle,
@@ -894,7 +891,7 @@ class _ProfileStoryAvatar extends ConsumerWidget {
                           child: AppAvatar(
                               imageUrl: avatarUrl,
                               initial: initial,
-                              size: 116))))),
+                              size: 88))))),
           Positioned(
               right: 0,
               bottom: 0,
@@ -903,7 +900,7 @@ class _ProfileStoryAvatar extends ConsumerWidget {
                   onPressed: () => context.push(AppRoutes.createStory),
                   padding: EdgeInsets.zero,
                   constraints:
-                      const BoxConstraints(minWidth: 40, minHeight: 40),
+                      const BoxConstraints(minWidth: 44, minHeight: 44),
                   icon: Container(
                       width: 27,
                       height: 27,

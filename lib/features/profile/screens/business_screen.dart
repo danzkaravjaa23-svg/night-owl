@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' show CountOption;
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../core/widgets/owl_loading.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/services/supabase_service.dart';
 import '../../../models/venue.dart';
@@ -64,7 +65,8 @@ class _BusinessScreenState extends ConsumerState<BusinessScreen> {
         tooltip: 'Буцах', icon: const Icon(Icons.arrow_back),
         onPressed: () => context.canPop() ? context.pop() : context.go(AppRoutes.profile))),
       body: ref.watch(_businessDataProvider).when(
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => const Center(
+          child: OwlLoading(message: 'Бизнесийн мэдээлэл ачаалж байна')),
         error: (_, __) => Center(child: TextButton(onPressed: () => ref.invalidate(_businessDataProvider),
           child: const Text('Мэдээлэл ачаалсангүй · Дахин оролдох'))),
         data: (data) => RefreshIndicator(onRefresh: () => ref.refresh(_businessDataProvider.future),

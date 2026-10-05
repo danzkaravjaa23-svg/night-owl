@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart' show LatLng;
@@ -7,6 +8,7 @@ import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/night_owl_brand.dart';
 import '../../../core/widgets/sculpted_icon.dart';
+import '../../../core/widgets/app_motion.dart';
 import 'map_controller.dart';
 
 class VenueMapMarker {
@@ -43,6 +45,75 @@ class VenueMapMarker {
     return number != null && number.isFinite && number.abs() <= limit
         ? number
         : null;
+  }
+}
+
+/// Every marker belongs to exactly one group. The first member anchors its
+/// position, so panning never moves a bubble or changes its membership.
+class VenueMarkerGroup {
+  final List<VenueMapMarker> members;
+  VenueMarkerGroup(List<VenueMapMarker> members)
+      : members = List.unmodifiable(members);
+  LatLng get point => members.first.point;
+  bool get isCluster => members.length > 1;
+  bool get isCoincident => members.every((member) =>
+      (member.point.latitude - point.latitude).abs() < 1e-7 &&
+      (member.point.longitude - point.longitude).abs() < 1e-7);
+}
+
+/// Deterministic screen-space grouping with a bounded spatial neighborhood.
+/// Fixed anchors cannot form a long chain; no all-pairs distance scan is used.
+abstract class VenueMarkerGrouping {
+  static const double radius = 72;
+
+  static double zoomBucket(double zoom) =>
+      ((zoom.isFinite ? zoom.clamp(3, 19) : 13) * 2).floor() / 2;
+
+  static List<VenueMarkerGroup> group(List<VenueMapMarker> venues,
+      {required double zoom, String? selectedId}) {
+    final scale = 256 * math.pow(2, zoomBucket(zoom));
+    final sorted = [...venues]..sort((a, b) => a.id.compareTo(b.id));
+    final cells = <(int, int), List<int>>{};
+    final anchors = <Offset>[];
+    final members = <List<VenueMapMarker>>[];
+    VenueMapMarker? selected;
+    for (final venue in sorted) {
+      if (venue.id == selectedId) {
+        selected = venue;
+        continue;
+      }
+      final latitude = venue.point.latitude.clamp(-85.05112878, 85.05112878);
+      final sin = math.sin(latitude * math.pi / 180);
+      final pixel = Offset((venue.point.longitude + 180) / 360 * scale,
+          (.5 - math.log((1 + sin) / (1 - sin)) / (4 * math.pi)) * scale);
+      final cell = ((pixel.dx / radius).floor(), (pixel.dy / radius).floor());
+      int? closest;
+      var distance = radius * radius;
+      for (var dx = -1; dx <= 1; dx++) {
+        for (var dy = -1; dy <= 1; dy++) {
+          for (final index in cells[(cell.$1 + dx, cell.$2 + dy)] ?? <int>[]) {
+            final candidate = (pixel - anchors[index]).distanceSquared;
+            if (candidate < distance ||
+                (candidate == distance && closest != null && index < closest)) {
+              closest = index;
+              distance = candidate;
+            }
+          }
+        }
+      }
+      if (closest != null) {
+        members[closest].add(venue);
+      } else {
+        final index = members.length;
+        anchors.add(pixel);
+        members.add([venue]);
+        (cells[cell] ??= []).add(index);
+      }
+    }
+    return [
+      for (final group in members) VenueMarkerGroup(group),
+      if (selected != null) VenueMarkerGroup([selected]),
+    ];
   }
 }
 
@@ -162,6 +233,91 @@ class _VenueMapState extends State<GoogleMapView> {
     }
   }
 
+  void _openGroup(VenueMarkerGroup group) {
+    if (!_ready || !mounted) return;
+    if (group.isCoincident || _map.camera.zoom >= 18.9) {
+      _showGroupMembers(group);
+      return;
+    }
+    final height = _map.camera.nonRotatedSize.height;
+    final fit = CameraFit.bounds(
+      bounds:
+          LatLngBounds.fromPoints(group.members.map((v) => v.point).toList()),
+      padding: EdgeInsets.fromLTRB(
+          40,
+          44,
+          40,
+          (44 + widget.bottomInset)
+              .clamp(44, math.max(44, height - 120))
+              .toDouble()),
+      maxZoom: 19,
+    );
+    // A small viewport with an open venue card may not permit a closer fit.
+    // The member list is then a reachable alternative to a repeated no-op tap.
+    if (fit.fit(_map.camera).zoom <= _map.camera.zoom + .1) {
+      _showGroupMembers(group);
+    } else {
+      _map.fitCamera(fit);
+    }
+  }
+
+  void _showGroupMembers(VenueMarkerGroup group) {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      isScrollControlled: true,
+      useSafeArea: true,
+      sheetAnimationStyle: AppMotion.reduced(context)
+          ? AnimationStyle.noAnimation
+          : const AnimationStyle(
+              duration: AppMotion.enter, reverseDuration: AppMotion.exit),
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (sheetContext) => SizedBox(
+        height: math.min(560, MediaQuery.sizeOf(sheetContext).height * .72),
+        child: Column(children: [
+          Padding(
+              padding: const EdgeInsets.fromLTRB(20, 12, 12, 8),
+              child: Row(children: [
+                Expanded(
+                    child: Text('${group.members.length} ойролцоох газар',
+                        style: const TextStyle(
+                            fontSize: 17, fontWeight: FontWeight.w700))),
+                IconButton(
+                    tooltip: 'Хаах',
+                    onPressed: () => Navigator.pop(sheetContext),
+                    icon: const Icon(Icons.close_rounded)),
+              ])),
+          Expanded(
+              child: ListView.builder(
+            padding: const EdgeInsets.only(bottom: 20),
+            itemCount: group.members.length,
+            itemBuilder: (_, index) {
+              final venue = group.members[index];
+              return ListTile(
+                key: ValueKey('venue-group-member-${venue.id}'),
+                leading: Container(
+                    width: 40,
+                    height: 40,
+                    padding: const EdgeInsets.all(7),
+                    decoration: const BoxDecoration(
+                        shape: BoxShape.circle, color: Color(0xFF211737)),
+                    child: const NightOwlMark(size: 26)),
+                title: Text(venue.name.isEmpty ? 'Нэргүй газар' : venue.name),
+                subtitle: const Text('Газрын дэлгэрэнгүйг нээх'),
+                trailing: const Icon(Icons.chevron_right_rounded),
+                onTap: () {
+                  Navigator.pop(sheetContext);
+                  if (mounted) widget.onVenueTap?.call(venue.id);
+                },
+              );
+            },
+          )),
+        ]),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final tileGeneration = _tileRetry;
@@ -232,49 +388,13 @@ class _VenueMapState extends State<GoogleMapView> {
                         }
                       });
                     })),
-            MarkerLayer(markers: [
-              for (final venue in _venues)
-                Marker(
-                    key: ValueKey(venue.id),
-                    point: venue.point,
-                    width: 52,
-                    height: 64,
-                    alignment: Alignment.topCenter,
-                    child: Tooltip(
-                        message: venue.name,
-                        child: Semantics(
-                            label: venue.name,
-                            selected: venue.id == widget.selectedId,
-                            child: GestureDetector(
-                                onTap: () => widget.onVenueTap?.call(venue.id),
-                                behavior: HitTestBehavior.opaque,
-                                child: CustomPaint(
-                                    painter: _OwlPinPainter(
-                                        dark: dark,
-                                        selected:
-                                            venue.id == widget.selectedId),
-                                    child: const Padding(
-                                        padding:
-                                            EdgeInsets.fromLTRB(10, 8, 10, 24),
-                                        child: NightOwlMark(size: 30))))))),
-              if (widget.userLocation != null)
-                Marker(
-                    point: widget.userLocation!,
-                    width: 28,
-                    height: 28,
-                    child: Semantics(
-                        label: 'Миний байршил',
-                        child: Container(
-                            decoration: BoxDecoration(
-                                color: const Color(0xFF2563EB),
-                                shape: BoxShape.circle,
-                                border:
-                                    Border.all(color: Colors.white, width: 3),
-                                boxShadow: const [
-                              BoxShadow(
-                                  color: Color(0x662563EB), blurRadius: 12)
-                            ])))),
-            ]),
+            _VenueMarkerLayer(
+                venues: _venues,
+                selectedId: widget.selectedId,
+                userLocation: widget.userLocation,
+                dark: dark,
+                onVenueTap: widget.onVenueTap,
+                onGroupTap: _openGroup),
           ]),
       if (widget.bottomInset == 0)
         Positioned(
@@ -351,6 +471,146 @@ class _VenueMapState extends State<GoogleMapView> {
                   ? AppColors.neonCyanDark
                   : AppColors.neonCyanLight,
               onDark: Theme.of(context).brightness == Brightness.dark)));
+}
+
+class _VenueMarkerLayer extends StatefulWidget {
+  final List<VenueMapMarker> venues;
+  final String? selectedId;
+  final LatLng? userLocation;
+  final bool dark;
+  final void Function(String)? onVenueTap;
+  final void Function(VenueMarkerGroup) onGroupTap;
+  const _VenueMarkerLayer(
+      {required this.venues,
+      required this.selectedId,
+      required this.userLocation,
+      required this.dark,
+      required this.onVenueTap,
+      required this.onGroupTap});
+
+  @override
+  State<_VenueMarkerLayer> createState() => _VenueMarkerLayerState();
+}
+
+class _VenueMarkerLayerState extends State<_VenueMarkerLayer> {
+  double? _cachedZoom;
+  String? _cachedSelected;
+  List<VenueMapMarker>? _cachedVenues;
+  List<VenueMarkerGroup> _groups = [];
+
+  @override
+  Widget build(BuildContext context) {
+    final zoom = VenueMarkerGrouping.zoomBucket(MapCamera.of(context).zoom);
+    if (_cachedZoom != zoom ||
+        _cachedSelected != widget.selectedId ||
+        _cachedVenues != widget.venues) {
+      _groups = VenueMarkerGrouping.group(widget.venues,
+          zoom: zoom, selectedId: widget.selectedId);
+      _cachedZoom = zoom;
+      _cachedSelected = widget.selectedId;
+      _cachedVenues = widget.venues;
+    }
+    return MarkerLayer(markers: [
+      for (final group in _groups)
+        if (group.isCluster)
+          Marker(
+              key: ValueKey('venue-group-${group.members.first.id}'),
+              point: group.point,
+              width: 56,
+              height: 48,
+              child: _VenueGroupBubble(
+                  count: group.members.length,
+                  onTap: () => widget.onGroupTap(group)))
+        else
+          _venuePin(group.members.single),
+      if (widget.userLocation != null)
+        Marker(
+            point: widget.userLocation!,
+            width: 28,
+            height: 28,
+            child: Semantics(
+                label: 'Миний байршил',
+                child: Container(
+                    decoration: BoxDecoration(
+                        color: const Color(0xFF2563EB),
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white, width: 3),
+                        boxShadow: const [
+                      BoxShadow(color: Color(0x662563EB), blurRadius: 12)
+                    ])))),
+    ]);
+  }
+
+  Marker _venuePin(VenueMapMarker venue) => Marker(
+      key: ValueKey(venue.id),
+      point: venue.point,
+      width: 52,
+      height: 64,
+      alignment: Alignment.topCenter,
+      child: Tooltip(
+          message: venue.name,
+          child: Semantics(
+              label: venue.name,
+              selected: venue.id == widget.selectedId,
+              child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () => widget.onVenueTap?.call(venue.id),
+                  child: CustomPaint(
+                      painter: _OwlPinPainter(
+                          dark: widget.dark,
+                          selected: venue.id == widget.selectedId),
+                      child: const Padding(
+                          padding: EdgeInsets.fromLTRB(10, 8, 10, 24),
+                          child: NightOwlMark(size: 30)))))));
+}
+
+class _VenueGroupBubble extends StatelessWidget {
+  final int count;
+  final VoidCallback onTap;
+  const _VenueGroupBubble({required this.count, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final bubble = Container(
+      height: 44,
+      padding: const EdgeInsets.symmetric(horizontal: 4),
+      decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(22),
+          gradient: const LinearGradient(colors: [
+            Color(0xFF9879EC),
+            Color(0xFF7654D6),
+            Color(0xFF503294)
+          ]),
+          border: Border.all(color: const Color(0xFFBCA6F8)),
+          boxShadow: const [
+            BoxShadow(
+                color: Color(0x55301B57), offset: Offset(0, 2), blurRadius: 4)
+          ]),
+      child: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
+            const NightOwlMark(size: 18),
+            const SizedBox(width: 3),
+            Text('$count',
+                style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800)),
+          ])),
+    );
+    return Tooltip(
+        message: '$count газар · Газруудыг харах',
+        child: Semantics(
+            button: true,
+            label: '$count ойролцоох газар',
+            child: PressFeedback(
+                pressedScale: .96,
+                hover: false,
+                child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: onTap,
+                    child: Center(child: bubble)))));
+  }
 }
 
 class _OwlPinPainter extends CustomPainter {

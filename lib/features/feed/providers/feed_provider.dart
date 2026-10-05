@@ -11,7 +11,7 @@ class FeedNotifier extends StateNotifier<AsyncValue<List<Post>>> {
     loadFeed();
   }
 
-  DateTime? _cursor;   // сүүлд татсан постын created_at (keyset pagination)
+  DateTime? _cursor; // сүүлд татсан постын created_at (keyset pagination)
   bool _hasMore = true;
   bool _loading = false;
   Future<void>? _inflight;
@@ -19,13 +19,18 @@ class FeedNotifier extends StateNotifier<AsyncValue<List<Post>>> {
 
   /// Дараагийн хуудас бий эсэх — footer spinner-ийг зөв харуулна
   final ValueNotifier<bool> hasMore = ValueNotifier(true);
+
   /// Хуудас ачаалахад алдаа гарсан эсэх — footer дээр retry харуулна
   final ValueNotifier<bool> pageError = ValueNotifier(false);
+
+  /// Real request state, separate from whether another page may exist.
+  final ValueNotifier<bool> isFetching = ValueNotifier(false);
 
   @override
   void dispose() {
     hasMore.dispose();
     pageError.dispose();
+    isFetching.dispose();
     super.dispose();
   }
 
@@ -35,7 +40,9 @@ class FeedNotifier extends StateNotifier<AsyncValue<List<Post>>> {
     // refresh бол дуусахыг нь хүлээгээд дараа нь шинэчилнэ (silent no-op болохгүй)
     while (_loading) {
       if (!refresh) return;
-      try { await _inflight; } catch (_) {}
+      try {
+        await _inflight;
+      } catch (_) {}
       if (!mounted) return;
     }
     if (!refresh && !_hasMore) return;
@@ -46,12 +53,13 @@ class FeedNotifier extends StateNotifier<AsyncValue<List<Post>>> {
 
   Future<void> _doLoad({required bool refresh}) async {
     if (refresh) {
-      _cursor  = null;
+      _cursor = null;
       _hasMore = true;
       // Хуучин дата байвал skeleton flash хийхгүй — RefreshIndicator л хангалттай
       if (state.valueOrNull == null) state = const AsyncValue.loading();
     }
     _loading = true;
+    isFetching.value = true;
     if (pageError.value) pageError.value = false;
 
     try {
@@ -64,16 +72,15 @@ class FeedNotifier extends StateNotifier<AsyncValue<List<Post>>> {
           'get_feed_cursor',
           params: {
             'p_user_id': userId,
-            'p_limit':   AppConstants.feedPageSize,
-            'p_before':  _cursor?.toIso8601String(),
+            'p_limit': AppConstants.feedPageSize,
+            'p_before': _cursor?.toIso8601String(),
           },
         );
         rows = (data as List).cast<Map<String, dynamic>>();
       } else {
         // Fallback: plain query with cursor
-        var q = SupabaseService.client
-            .from('posts')
-            .select('*, profiles!user_id (id, username, avatar_url, is_verified)');
+        var q = SupabaseService.client.from('posts').select(
+            '*, profiles!user_id (id, username, avatar_url, is_verified)');
         if (_cursor != null) {
           q = q.lt('created_at', _cursor!.toIso8601String());
         }
@@ -106,6 +113,7 @@ class FeedNotifier extends StateNotifier<AsyncValue<List<Post>>> {
       }
     } finally {
       _loading = false;
+      if (mounted) isFetching.value = false;
     }
   }
 
@@ -117,15 +125,18 @@ class FeedNotifier extends StateNotifier<AsyncValue<List<Post>>> {
 
     final current = List<Post>.from(state.valueOrNull ?? []);
     final idx = current.indexWhere((p) => p.id == postId);
-    if (idx == -1) { _liking.remove(postId); return false; }
+    if (idx == -1) {
+      _liking.remove(postId);
+      return false;
+    }
 
-    final post     = current[idx];
+    final post = current[idx];
     final nowLiked = !post.isLikedByMe;
 
     // Optimistic update
     current[idx] = post.copyWith(
       isLikedByMe: nowLiked,
-      likesCount:  post.likesCount + (nowLiked ? 1 : -1),
+      likesCount: post.likesCount + (nowLiked ? 1 : -1),
     );
     state = AsyncValue.data(current);
 
@@ -140,7 +151,9 @@ class FeedNotifier extends StateNotifier<AsyncValue<List<Post>>> {
       if (i != -1) rollback[i] = post;
       state = AsyncValue.data(rollback);
       return false;
-    } finally { _liking.remove(postId); }
+    } finally {
+      _liking.remove(postId);
+    }
   }
 
   // ── Like toggle by id — фийдэд байхгүй пост дээр ч DB бичилт хийнэ ─────────
@@ -188,11 +201,16 @@ class FeedNotifier extends StateNotifier<AsyncValue<List<Post>>> {
           .from('posts')
           .update({'caption': trimmed})
           .eq('id', postId)
-          .eq('user_id', user.id).select('id').single();
-    } catch (_) { rethrow; }
+          .eq('user_id', user.id)
+          .select('id')
+          .single();
+    } catch (_) {
+      rethrow;
+    }
     if (!mounted) return;
-    final list = (state.valueOrNull ?? []).map((p) =>
-        p.id == postId ? p.copyWith(caption: trimmed) : p).toList();
+    final list = (state.valueOrNull ?? [])
+        .map((p) => p.id == postId ? p.copyWith(caption: trimmed) : p)
+        .toList();
     state = AsyncValue.data(list);
   }
 
@@ -220,17 +238,22 @@ class FeedNotifier extends StateNotifier<AsyncValue<List<Post>>> {
           .from('posts')
           .delete()
           .eq('id', postId)
-          .eq('user_id', user.id).select('id').single();
+          .eq('user_id', user.id)
+          .select('id')
+          .single();
     } catch (_) {
       return false; // устгаж чадсангүй
     }
     if (!mounted) return true;
-    final updated = (state.valueOrNull ?? []).where((p) => p.id != postId).toList();
+    final updated =
+        (state.valueOrNull ?? []).where((p) => p.id != postId).toList();
     state = AsyncValue.data(updated);
     return true;
   }
 }
 
 final feedProvider =
-    StateNotifierProvider<FeedNotifier, AsyncValue<List<Post>>>(
-        (ref) { ref.watch(sessionUserIdProvider); return FeedNotifier(); });
+    StateNotifierProvider<FeedNotifier, AsyncValue<List<Post>>>((ref) {
+  ref.watch(sessionUserIdProvider);
+  return FeedNotifier();
+});

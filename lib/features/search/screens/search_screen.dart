@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../core/widgets/owl_loading.dart';
 import '../../../core/widgets/app_avatar.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/glass_icon_button.dart';
@@ -191,8 +192,7 @@ class _SearchScreenState extends State<SearchScreen> {
   Widget _results() {
     // Хуучин үр дүн байхад spinner-ээр бүрхэхгүй — бүдэгрүүлж үлдээнэ
     if (_loading && _users.isEmpty && _venues.isEmpty) {
-      return const Center(child: CircularProgressIndicator(
-      color: AppColors.accentStart, strokeWidth: 2));
+      return const Center(child: OwlLoading(message: 'Илэрц хайж байна'));
     }
     if (_searchError) {
       return Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
@@ -432,35 +432,26 @@ class _PressableState extends State<_Pressable> {
 }
 
 // ─── Explore grid-ийн skeleton ───
-class _SkeletonGrid extends StatefulWidget {
+class _SkeletonGrid extends StatelessWidget {
   @override
-  State<_SkeletonGrid> createState() => _SkeletonGridState();
-}
-
-class _SkeletonGridState extends State<_SkeletonGrid>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _c = AnimationController(
-    vsync: this, duration: const Duration(milliseconds: 900),
-    lowerBound: 0.35, upperBound: 0.8)..repeat(reverse: true);
-
-  @override
-  void dispose() { _c.dispose(); super.dispose(); }
-
-  @override
-  Widget build(BuildContext context) => FadeTransition(
-    opacity: _c,
-    child: GridView.builder(
-      padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
-      physics: const NeverScrollableScrollPhysics(),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 3, crossAxisSpacing: 8, mainAxisSpacing: 8),
-      itemCount: 12,
-      itemBuilder: (_, __) => Container(
-        decoration: BoxDecoration(
-          // Цайвар горимд цагаан skeleton цөцгий дэвсгэр дээр үл харагдана — surface
-          color: AppColors.isDarkMode
-              ? AppColors.bgElevated : AppColors.bgSurface,
-          borderRadius: BorderRadius.circular(14))),
-    ),
+  Widget build(BuildContext context) => CustomScrollView(
+    slivers: [
+      const SliverToBoxAdapter(child: Padding(
+        padding: EdgeInsets.only(bottom: 20),
+        child: OwlLoading(size: 40, message: 'Постуудыг ачаалж байна'))),
+      SliverPadding(
+        padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+        sliver: SliverGrid.builder(
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 3, crossAxisSpacing: 8, mainAxisSpacing: 8),
+          itemCount: 12,
+          itemBuilder: (_, __) => Container(
+            decoration: BoxDecoration(
+              color: AppColors.isDarkMode
+                  ? AppColors.bgElevated : AppColors.bgSurface,
+              borderRadius: BorderRadius.circular(14))),
+        ),
+      ),
+    ],
   );
 }

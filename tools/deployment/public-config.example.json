@@ -1,0 +1,5 @@
+{
+  "BACKEND_MODE": "postgres",
+  "BACKEND_URL": "",
+  "BACKEND_PUBLIC_KEY": ""
+}

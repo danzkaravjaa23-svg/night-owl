@@ -1,0 +1,125 @@
+name: night-owl-backend
+
+services:
+  postgres:
+    image: postgres:17.11-bookworm
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: nightowl
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+      POSTGRES_INITDB_ARGS: --auth-host=scram-sha-256 --data-checksums
+      AUTHENTICATOR_PASSWORD_FILE: /run/secrets/authenticator_password
+      READINESS_PASSWORD_FILE: /run/secrets/readiness_password
+    secrets: [postgres_password, authenticator_password, readiness_password]
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./postgres/init:/docker-entrypoint-initdb.d:ro
+    networks: [database]
+    healthcheck:
+      test: [CMD-SHELL, "pg_isready -U postgres -d nightowl"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+    shm_size: 128mb
+    security_opt: ['no-new-privileges:true']
+
+  postgrest:
+    image: postgrest/postgrest:v16.4
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PGRST_DB_URI: '@/run/secrets/postgrest_db_uri'
+      PGRST_DB_SCHEMAS: public
+      PGRST_DB_EXTRA_SEARCH_PATH: ''
+      PGRST_DB_ANON_ROLE: anon
+      PGRST_DB_CONFIG: 'false'
+      PGRST_DB_POOL: '10'
+      PGRST_DB_MAX_ROWS: '1000'
+      PGRST_JWT_SECRET: '@/run/secrets/jwt_verification_key'
+      PGRST_JWT_AUD: authenticated
+      PGRST_ADMIN_SERVER_PORT: '3001'
+      PGRST_SERVER_HOST: '0.0.0.0'
+      PGRST_SERVER_CORS_ALLOWED_ORIGINS: '${APP_WEB_ORIGIN:-https://unconfigured.invalid}'
+      PGRST_LOG_LEVEL: error
+      PGRST_CLIENT_ERROR_VERBOSITY: minimal
+    secrets: [postgrest_db_uri, jwt_verification_key]
+    networks: [database]
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ['no-new-privileges:true']
+
+  readiness:
+    build: ./gateway
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      postgrest:
+        condition: service_started
+    env_file: .env
+    environment:
+      PGHOST: postgres
+      PGPORT: '5432'
+      PGDATABASE: nightowl
+      PGUSER: nightowl_readiness
+      READINESS_PASSWORD_FILE: /run/secrets/readiness_password
+      JWT_VERIFICATION_KEY_FILE: /run/secrets/jwt_verification_key
+      POSTGREST_READY_URL: http://postgrest:3001/ready
+    secrets: [readiness_password, jwt_verification_key]
+    networks: [database, upstream]
+    user: '65534:65534'
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: ['no-new-privileges:true']
+    healthcheck:
+      test: [CMD, python3, /app/readiness.py, --check]
+      interval: 10s
+      timeout: 10s
+      retries: 3
+
+  gateway:
+    image: caddy:2.11.6-alpine
+    restart: unless-stopped
+    depends_on:
+      readiness:
+        condition: service_started
+    environment:
+      APP_WEB_ORIGIN: '${APP_WEB_ORIGIN:-https://unconfigured.invalid}'
+      AUTH_UPSTREAM: '${AUTH_UPSTREAM:-http://readiness:8081}'
+      STORAGE_UPSTREAM: '${STORAGE_UPSTREAM:-http://readiness:8081}'
+      REALTIME_UPSTREAM: '${REALTIME_UPSTREAM:-http://readiness:8081}'
+    ports:
+      - '${GATEWAY_BIND:-127.0.0.1}:${GATEWAY_PORT:-8787}:8080'
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks: [database, upstream]
+    cap_drop: [ALL]
+    security_opt: ['no-new-privileges:true']
+
+networks:
+  database:
+    internal: true
+  upstream: {}
+
+volumes:
+  postgres_data: {}
+  caddy_data: {}
+  caddy_config: {}
+
+secrets:
+  postgres_password:
+    file: '${POSTGRES_PASSWORD_PATH:?Set a private postgres password file}'
+  authenticator_password:
+    file: '${AUTHENTICATOR_PASSWORD_PATH:?Set a private authenticator password file}'
+  readiness_password:
+    file: '${READINESS_PASSWORD_PATH:?Set a private readiness password file}'
+  postgrest_db_uri:
+    file: '${POSTGREST_DB_URI_PATH:?Set a private PostgREST connection file}'
+  jwt_verification_key:
+    file: '${JWT_VERIFICATION_KEY_PATH:?Set the chosen auth service verification key file}'

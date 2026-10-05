@@ -33,16 +33,111 @@
 
   <title>Night Owl UB</title>
   <link rel="manifest" href="manifest.json">
+  <style>
+    :root { color-scheme: dark light; --startup-bg: #0b0d17; --startup-text: #f5f3ff; --startup-muted: #b2b8ce; }
+    html, body { margin: 0; background: var(--startup-bg); }
+    #night-owl-startup {
+      position: fixed; inset: 0; z-index: 2147483647;
+      display: grid; place-items: center; overflow: auto;
+      padding: max(28px, env(safe-area-inset-top)) 24px max(28px, env(safe-area-inset-bottom));
+      box-sizing: border-box; text-align: center;
+      background: radial-gradient(ellipse at 50% 40%, #7654d61c, transparent 65%), var(--startup-bg);
+      color: var(--startup-text); font: 400 15px/1.5 system-ui, sans-serif;
+    }
+    .startup-content { width: min(100%, 320px); margin: auto; }
+    .startup-logo { width: 96px; height: 96px; border-radius: 26px; animation: owl-float 3s ease-in-out infinite; }
+    .startup-brand { margin: 20px 0 28px; font-size: 27px; font-weight: 700; letter-spacing: -.8px; }
+    .startup-brand span { color: #b6a4ff; }
+    #startup-message { margin: 0; font-size: 15px; font-weight: 600; }
+    #startup-detail { margin: 8px 0 0; color: var(--startup-muted); font-size: 13px; }
+    .startup-dots { display: flex; justify-content: center; gap: 7px; margin-top: 20px; }
+    .startup-dots i { width: 5px; height: 5px; border-radius: 50%; background: #b6a4ff; animation: owl-dot 1.4s ease-in-out infinite; }
+    .startup-dots i:nth-child(2) { animation-delay: .16s; }
+    .startup-dots i:nth-child(3) { animation-delay: .32s; }
+    #startup-retry { margin-top: 24px; min-height: 48px; padding: 12px 24px; border: 0; border-radius: 18px; background: #7654d6; color: white; font: inherit; font-weight: 600; cursor: pointer; }
+    #startup-retry:focus-visible { outline: 3px solid #b6a4ff; outline-offset: 4px; }
+    #night-owl-startup[data-state="error"] .startup-logo { animation: none; }
+    #night-owl-startup[data-state="error"] .startup-dots { display: none; }
+    @keyframes owl-float { 50% { transform: translateY(-5px); } }
+    @keyframes owl-dot { 0%, 100% { opacity: .3; } 50% { opacity: 1; } }
+    @media (prefers-color-scheme: light) {
+      :root { --startup-bg: #f5f3ff; --startup-text: #211d35; --startup-muted: #57536d; }
+      .startup-brand span { color: #7654d6; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .startup-logo, .startup-dots i { animation: none; }
+    }
+  </style>
 </head>
 <body>
-  <!--
-    You can customize the "flutter_bootstrap.js" script.
-    This is useful to provide a custom configuration to the Flutter loader
-    or to give the user feedback during the initialization process.
+  <div id="night-owl-startup" data-state="loading">
+    <div class="startup-content">
+      <img class="startup-logo" src="icons/Icon-192.png" width="96" height="96" alt="" fetchpriority="high">
+      <div class="startup-brand" aria-label="Night Owl">night <span>owl</span></div>
+      <div role="status" aria-live="polite" aria-atomic="true" id="startup-status" aria-busy="true">
+        <p id="startup-message">Night Owl-ийг ачаалж байна</p>
+        <p id="startup-detail">Түр хүлээгээрэй</p>
+      </div>
+      <div class="startup-dots" aria-hidden="true"><i></i><i></i><i></i></div>
+      <button id="startup-retry" type="button" hidden>Дахин оролдох</button>
+    </div>
+  </div>
+  <noscript>
+    <style>#night-owl-startup { display: none; }</style>
+    <p style="padding: 32px; color: var(--startup-text); font-family: system-ui; text-align: center;">Night Owl-ийг нээхийн тулд хөтчийн JavaScript тохиргоог идэвхжүүлнэ үү.</p>
+  </noscript>
+  <script id="night-owl-startup-controller">
+    (function () {
+      var loading = document.getElementById('night-owl-startup');
+      var message = document.getElementById('startup-message');
+      var detail = document.getElementById('startup-detail');
+      var status = document.getElementById('startup-status');
+      var retry = document.getElementById('startup-retry');
+      var finished = false;
 
-    For more details:
-    * https://docs.flutter.dev/platform-integration/web/initialization
-  -->
+      function fail() {
+        if (finished) return;
+        loading.dataset.state = 'error';
+        status.setAttribute('aria-busy', 'false');
+        message.textContent = 'Аппыг ачаалж чадсангүй';
+        detail.textContent = 'Интернет холболтоо шалгаад дахин оролдоно уу.';
+        retry.hidden = false;
+      }
+
+      function isStartupScript(source) {
+        if (!source) return false;
+        try {
+          var url = new URL(source, document.baseURI);
+          return ['flutter_bootstrap.js', 'main.dart.js'].some(function (file) {
+            return url.href === new URL(file, document.baseURI).href;
+          });
+        } catch (_) { return false; }
+      }
+
+      function onScriptError(event) {
+        // The Flutter callback API does not reject failed main.dart.js loads.
+        // Capture that resource failure as well as a broken bootstrap script.
+        var source = event.target && event.target.tagName === 'SCRIPT'
+          ? event.target.src : event.filename;
+        if (isStartupScript(source)) fail();
+      }
+
+      retry.addEventListener('click', function () { window.location.reload(); });
+      window.nightOwlStartup = {
+        fail: fail,
+        stage: function (label) {
+          if (!finished && loading.dataset.state !== 'error') message.textContent = label;
+        }
+      };
+      window.addEventListener('error', onScriptError, true);
+      window.addEventListener('flutter-first-frame', function () {
+        finished = true;
+        loading.remove();
+        window.removeEventListener('error', onScriptError, true);
+        delete window.nightOwlStartup;
+      }, { once: true });
+    })();
+  </script>
   <script>
     // Хуучин service worker + кеш нь шинэ хувилбарыг хааж болзошгүй тул цэвэрлэнэ.
     // (Ингэснээр deploy бүр хэрэглэгчид шууд хүрнэ.)

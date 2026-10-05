@@ -1,0 +1,35 @@
+{
+  "kind": "nightowl-google-places-offline-plan",
+  "status": "planned",
+  "action": "discover",
+  "networkRequestsMade": 0,
+  "maxRequests": 1,
+  "noDatabaseWrites": true,
+  "persistedProviderFields": [
+    "place_id"
+  ],
+  "detailsStorage": "none",
+  "policyUrl": "https://developers.google.com/maps/documentation/places/web-service/policies",
+  "queries": [
+    {
+      "textQuery": "Bars in Ulaanbaatar Mongolia",
+      "languageCode": "en",
+      "regionCode": "MN",
+      "pageSize": 20,
+      "locationRestriction": {
+        "rectangle": {
+          "low": {
+            "latitude": 47.8,
+            "longitude": 106.7
+          },
+          "high": {
+            "latitude": 48.02,
+            "longitude": 107.1
+          }
+        }
+      }
+    }
+  ],
+  "fieldMask": "places.id,nextPageToken",
+  "sku": "Text Search Essentials (IDs Only)"
+}

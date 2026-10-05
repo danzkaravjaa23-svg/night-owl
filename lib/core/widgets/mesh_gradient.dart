@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import 'night_owl_brand.dart';
+import 'app_motion.dart';
 
 /// Shared approved owl mark for authentication and onboarding screens.
 class OwlLogoMark extends StatelessWidget {
@@ -36,7 +37,7 @@ class _MeshGradientBackgroundState extends State<MeshGradientBackground>
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    if (MediaQuery.of(context).disableAnimations) {
+    if (AppMotion.reduced(context) || !TickerMode.of(context)) {
       _c.stop();
     } else if (!_c.isAnimating) {
       _c.repeat();
@@ -53,7 +54,9 @@ class _MeshGradientBackgroundState extends State<MeshGradientBackground>
   Widget build(BuildContext context) {
     return RepaintBoundary(
       child: CustomPaint(
-        painter: _MeshPainter(_c, forceDark: widget.forceDark),
+        painter: _MeshPainter(_c,
+            isDark: widget.forceDark ||
+                Theme.of(context).brightness == Brightness.dark),
         isComplex: true,
         child: widget.child,
       ),
@@ -63,8 +66,8 @@ class _MeshGradientBackgroundState extends State<MeshGradientBackground>
 
 class _MeshPainter extends CustomPainter {
   final Animation<double> t;
-  final bool forceDark;
-  _MeshPainter(this.t, {this.forceDark = false}) : super(repaint: t);
+  final bool isDark;
+  _MeshPainter(this.t, {required this.isDark}) : super(repaint: t);
 
   // (баазын байрлал x,y фракц, өнгө, радиус фракц, фаз) — chrome/steel ертөнц
   static const _blobs = [
@@ -79,10 +82,10 @@ class _MeshPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     // Баялаг хар суурь (цайвар горимд cream — bgBase адаптив)
     canvas.drawRect(Offset.zero & size,
-        Paint()..color = forceDark ? AppColors.bgBaseDark : AppColors.bgBase);
+        Paint()..color = isDark ? AppColors.bgBaseDark : AppColors.bgBaseLight);
     // Цайвар горимд бараан steel бөмбөлгүүд cream дээр бохир саарал толбо
     // болохоос сэргийлж зөөлрүүлнэ. Харанхуй горимд 1.0 — өөрчлөлтгүй.
-    final k = (forceDark || AppColors.isDarkMode) ? 1.0 : 0.35;
+    final k = isDark ? 1.0 : 0.35;
     final v = t.value * 2 * math.pi;
     for (final b in _blobs) {
       final baseX = b[0] as double, baseY = b[1] as double;
@@ -112,5 +115,5 @@ class _MeshPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_MeshPainter old) => false; // repaint via Animation
+  bool shouldRepaint(_MeshPainter old) => old.isDark != isDark || old.t != t;
 }

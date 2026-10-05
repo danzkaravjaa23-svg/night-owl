@@ -12,6 +12,8 @@ import '../../../core/services/supabase_service.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/widgets/night_owl_brand.dart';
+import '../../../core/widgets/app_motion.dart';
+import '../../../core/widgets/owl_loading.dart';
 import '../../../core/widgets/sculpted_icon.dart';
 import '../../../models/venue.dart';
 import '../../auth/providers/auth_provider.dart';
@@ -19,6 +21,7 @@ import '../providers/venue_provider.dart';
 import '../services/location_service.dart';
 import '../widgets/google_map_view.dart';
 import '../widgets/map_controller.dart';
+import '../widgets/venue_information_sheet.dart';
 
 /// Bookmarks belong to this device and account. No server table is assumed.
 class VenueBookmarksNotifier extends StateNotifier<AsyncValue<Set<String>>> {
@@ -117,6 +120,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     'nightclub': 'Клуб',
     'jazz': 'Live Music',
     'restaurant': 'Хоол',
+    'cafe': 'Кафе',
     'karaoke': 'Караоке'
   };
 
@@ -189,8 +193,13 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   }
 
   void _select(Venue venue) {
+    if (ref.read(venuesProvider).hasError ||
+        ref.read(venueCatalogStatusProvider).notice != null) {
+      _showInformation(venue);
+      return;
+    }
     if (!venue.hasLocation) {
-      context.push('/venue/reviews/${Uri.encodeComponent(venue.id)}');
+      _openVenue(venue);
       return;
     }
     setState(() {
@@ -203,9 +212,39 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     });
   }
 
+  void _openVenue(Venue venue) {
+    if (venue.communityEnabled) {
+      context.push('/venue/reviews/${Uri.encodeComponent(venue.id)}');
+      return;
+    }
+    _showInformation(venue);
+  }
+
+  void _showInformation(Venue venue) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      showDragHandle: false,
+      sheetAnimationStyle: AppMotion.reduced(context)
+          ? AnimationStyle.noAnimation
+          : const AnimationStyle(
+              duration: AppMotion.enter, reverseDuration: AppMotion.exit),
+      backgroundColor: _background,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
+      builder: (_) => ConstrainedBox(
+        constraints:
+            BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * .85),
+        child: VenueInformationSheet(venue: venue),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(venuesProvider);
+    final catalogStatus = ref.watch(venueCatalogStatusProvider);
     final bookmarks =
         ref.watch(venueBookmarksProvider).valueOrNull ?? <String>{};
     final all = state.valueOrNull ?? <Venue>[];
@@ -220,8 +259,9 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                     .contains(query)))
         .toList();
     final located = filtered.where((venue) => venue.hasLocation).toList();
-    final selected =
-        located.where((venue) => venue.id == _selectedId).firstOrNull ??
+    final selected = state.hasError || catalogStatus.notice != null
+        ? null
+        : located.where((venue) => venue.id == _selectedId).firstOrNull ??
             (!_dismissedSelection ? located.firstOrNull : null);
     return Scaffold(
         backgroundColor: _background,
@@ -232,77 +272,110 @@ class _MapScreenState extends ConsumerState<MapScreen> {
               _searchField(),
               _filters(),
               Expanded(
-                  child: _showList
-                      ? _venueList(filtered, state, bookmarks)
-                      : LayoutBuilder(builder: (context, constraints) {
-                          final cardHeight =
-                              math.min(280.0, constraints.maxHeight * .68);
-                          final attributionGap = 12 +
-                              MediaQuery.textScalerOf(context).scale(10) * 1.4;
-                          return Stack(children: [
-                            Positioned.fill(
-                                child: GoogleMapView(
-                                    lat: AppConstants.ubLat,
-                                    lng: AppConstants.ubLng,
-                                    zoom: 14,
-                                    controller: _map,
-                                    selectedId: selected?.id,
-                                    userLocation: _myLocation,
-                                    bottomInset: selected == null
-                                        ? 0
-                                        : cardHeight + attributionGap,
-                                    markersJson: jsonEncode([
-                                      for (final venue in located)
-                                        {
-                                          'id': venue.id,
-                                          'name': venue.name,
-                                          'lat': venue.lat,
-                                          'lng': venue.lng,
-                                          'type': venue.type
-                                        }
-                                    ]),
-                                    onVenueTap: (id) {
-                                      final venue = located
-                                          .where((venue) => venue.id == id)
-                                          .firstOrNull;
-                                      if (venue != null) _select(venue);
-                                    })),
-                            if (state.isLoading && !state.hasValue)
-                              Center(
-                                  child: CircularProgressIndicator(
-                                      color: _accent)),
-                            if (state.hasError && !state.hasValue)
-                              Positioned(
-                                  left: 16,
-                                  right: 74,
-                                  top: 16,
-                                  child: _notice('Газрууд ачаалж чадсангүй.',
-                                      retry: true)),
-                            if (state.hasValue && located.isEmpty)
-                              Positioned(
-                                  left: 16,
-                                  right: 74,
-                                  top: 16,
-                                  child: _notice(
-                                      filtered.isEmpty
-                                          ? 'Хайлтад тохирох газар алга.'
-                                          : 'Эдгээр газрын байршил хараахан бүртгэгдээгүй.',
-                                      showList: filtered.isNotEmpty)),
+                  child: Stack(fit: StackFit.expand, children: [
+                // Retain tiles and camera while browsing the list. Offstage
+                // stops painting and TickerMode pauses hidden animations.
+                Offstage(
+                  offstage: _showList,
+                  child: TickerMode(
+                    enabled: !_showList,
+                    child: RepaintBoundary(
+                      child: LayoutBuilder(builder: (context, constraints) {
+                        final cardHeight =
+                            math.min(280.0, constraints.maxHeight * .68);
+                        final attributionGap = 12 +
+                            MediaQuery.textScalerOf(context).scale(10) * 1.4;
+                        return Stack(children: [
+                          Positioned.fill(
+                              child: GoogleMapView(
+                                  lat: AppConstants.ubLat,
+                                  lng: AppConstants.ubLng,
+                                  zoom: 14,
+                                  controller: _map,
+                                  selectedId: selected?.id,
+                                  userLocation: _myLocation,
+                                  bottomInset: selected == null
+                                      ? 0
+                                      : cardHeight + attributionGap,
+                                  markersJson: jsonEncode([
+                                    for (final venue in located)
+                                      {
+                                        'id': venue.id,
+                                        'name': venue.name,
+                                        'lat': venue.lat,
+                                        'lng': venue.lng,
+                                        'type': venue.type
+                                      }
+                                  ]),
+                                  onVenueTap: (id) {
+                                    final venue = located
+                                        .where((venue) => venue.id == id)
+                                        .firstOrNull;
+                                    if (venue != null) _select(venue);
+                                  })),
+                          if (state.isLoading && !state.hasValue)
+                            Center(
+                                child: OwlLoading(
+                                    message:
+                                        'Танд тохирох газруудыг хайж байна…',
+                                    onDark: _dark)),
+                          if (catalogStatus.notice != null &&
+                              !state.hasError &&
+                              state.hasValue &&
+                              located.isNotEmpty)
                             Positioned(
-                                right: 16,
-                                bottom: selected == null
-                                    ? 48
-                                    : cardHeight + attributionGap + 8,
-                                child: _locationButton()),
-                            if (selected != null)
-                              Positioned(
-                                  left: 12,
-                                  right: 12,
-                                  bottom: attributionGap,
-                                  child: _detail(selected, cardHeight,
-                                      bookmarks.contains(selected.id))),
-                          ]);
-                        })),
+                              left: 16,
+                              right: 16,
+                              top: 12,
+                              child: _notice(catalogStatus.notice!,
+                                  retry: true,
+                                  maxHeight:
+                                      math.max(0, constraints.maxHeight - 24)),
+                            ),
+                          if (state.hasError)
+                            Positioned(
+                                left: 16,
+                                right: 74,
+                                top: 16,
+                                child: _notice(
+                                    state.hasValue
+                                        ? 'Шинэчилж чадсангүй. Өмнө ачаалсан газруудыг харуулж байна.'
+                                        : 'Газрууд ачаалж чадсангүй.',
+                                    retry: true,
+                                    maxHeight: math.max(
+                                        0, constraints.maxHeight - 32))),
+                          if (state.hasValue && located.isEmpty)
+                            Positioned(
+                                left: 16,
+                                right: 74,
+                                top: 16,
+                                child: _notice(
+                                    filtered.isEmpty
+                                        ? 'Хайлтад тохирох газар алга.'
+                                        : 'Эдгээр газрын байршил хараахан бүртгэгдээгүй.',
+                                    showList: filtered.isNotEmpty,
+                                    maxHeight: math.max(
+                                        0, constraints.maxHeight - 32))),
+                          Positioned(
+                              right: 16,
+                              bottom: selected == null
+                                  ? 48
+                                  : cardHeight + attributionGap + 8,
+                              child: _locationButton()),
+                          if (selected != null)
+                            Positioned(
+                                left: 12,
+                                right: 12,
+                                bottom: attributionGap,
+                                child: _detail(selected, cardHeight,
+                                    bookmarks.contains(selected.id))),
+                        ]);
+                      }),
+                    ),
+                  ),
+                ),
+                if (_showList) _venueList(filtered, state, bookmarks),
+              ])),
             ])));
   }
 
@@ -391,7 +464,8 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                 borderSide: BorderSide(color: _accent)),
           )));
   Widget _filters() => SizedBox(
-      height: 52,
+      height:
+          math.max(52, MediaQuery.textScalerOf(context).scale(14) * 1.4 + 26),
       child: ListView(
           scrollDirection: Axis.horizontal,
           padding: const EdgeInsets.fromLTRB(20, 2, 20, 10),
@@ -419,29 +493,30 @@ class _MapScreenState extends ConsumerState<MapScreen> {
           ]));
   Widget _pill(String label, bool selected, VoidCallback onTap,
           {IconData? icon}) =>
-      Material(
-          color: selected ? _violet : _background,
-          shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(24),
-              side: BorderSide(color: selected ? _violet : _line)),
-          child: InkWell(
-              onTap: onTap,
-              borderRadius: BorderRadius.circular(24),
-              child: Padding(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
-                  child: Row(mainAxisSize: MainAxisSize.min, children: [
-                    if (icon != null) ...[
-                      SculptedIcon(icon,
-                          size: 16,
-                          color: selected ? _light : _muted,
-                          onDark: selected || _dark),
-                      const SizedBox(width: 5)
-                    ],
-                    Text(label,
-                        style: AppTextStyles.bodySm
-                            .copyWith(color: selected ? _light : _muted)),
-                  ]))));
+      PressFeedback(
+          child: Material(
+              color: selected ? _violet : _background,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(24),
+                  side: BorderSide(color: selected ? _violet : _line)),
+              child: InkWell(
+                  onTap: onTap,
+                  borderRadius: BorderRadius.circular(24),
+                  child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 7),
+                      child: Row(mainAxisSize: MainAxisSize.min, children: [
+                        if (icon != null) ...[
+                          SculptedIcon(icon,
+                              size: 16,
+                              color: selected ? _light : _muted,
+                              onDark: selected || _dark),
+                          const SizedBox(width: 5)
+                        ],
+                        Text(label,
+                            style: AppTextStyles.bodySm
+                                .copyWith(color: selected ? _light : _muted)),
+                      ])))));
   Widget _locationButton() => Material(
       color: _control,
       shape: const CircleBorder(),
@@ -454,32 +529,52 @@ class _MapScreenState extends ConsumerState<MapScreen> {
               ? SizedBox(
                   width: 20,
                   height: 20,
-                  child:
-                      CircularProgressIndicator(strokeWidth: 2, color: _accent))
+                  child: OwlLoading(size: 20, compact: true, onDark: _dark))
               : SculptedIcon(Icons.my_location_rounded,
                   size: 22, color: _accent, active: true, onDark: _dark)));
-  Widget _notice(String message, {bool retry = false, bool showList = false}) =>
-      Material(
-          color: _control,
-          borderRadius: BorderRadius.circular(16),
-          child: Padding(
-              padding: const EdgeInsets.all(14),
-              child: Column(mainAxisSize: MainAxisSize.min, children: [
-                Text(message,
-                    style: AppTextStyles.bodySm.copyWith(color: _foreground)),
-                if (retry)
-                  TextButton(
-                      onPressed: () => ref.invalidate(venuesProvider),
-                      child: const Text('Дахин оролдох')),
-                if (showList)
-                  TextButton(
-                      onPressed: () => setState(() => _showList = true),
-                      child: const Text('Жагсаалт харах')),
-              ])));
+  Widget _notice(String message,
+      {bool retry = false, bool showList = false, double? maxHeight}) {
+    final text = Row(children: [
+      if (retry) ...[
+        const OwlEmotion(mood: OwlMood.patient, size: 32),
+        const SizedBox(width: 10),
+      ],
+      Expanded(
+          child: Text(message,
+              style: AppTextStyles.bodySm.copyWith(color: _foreground))),
+    ]);
+    return Material(
+        color: _control,
+        borderRadius: BorderRadius.circular(16),
+        child: ConstrainedBox(
+            constraints:
+                BoxConstraints(maxHeight: maxHeight ?? double.infinity),
+            child: Padding(
+                padding: const EdgeInsets.all(14),
+                child: Column(mainAxisSize: MainAxisSize.min, children: [
+                  if (maxHeight != null)
+                    Flexible(child: SingleChildScrollView(child: text))
+                  else
+                    text,
+                  if (retry)
+                    TextButton(
+                        onPressed: ref.read(venuesProvider).isLoading
+                            ? null
+                            : () => ref.read(refreshVenueCatalogProvider)(),
+                        child: const Text('Дахин оролдох')),
+                  if (showList)
+                    TextButton(
+                        onPressed: () => setState(() => _showList = true),
+                        child: const Text('Жагсаалт харах')),
+                ]))));
+  }
+
   Widget _venueList(List<Venue> venues, AsyncValue<List<Venue>> state,
       Set<String> bookmarks) {
     if (state.isLoading && !state.hasValue) {
-      return const Center(child: CircularProgressIndicator());
+      return Center(
+          child: OwlLoading(
+              message: 'Газрын мэдээлэл уншиж байна…', onDark: _dark));
     }
     if (state.hasError && !state.hasValue) {
       return Center(
@@ -489,8 +584,12 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     }
     return RefreshIndicator(
         onRefresh: () async {
-          ref.invalidate(venuesProvider);
-          await ref.read(venuesProvider.future);
+          ref.read(refreshVenueCatalogProvider)();
+          try {
+            await ref.read(venuesProvider.future);
+          } catch (_) {
+            // The retained rows and explicit refresh error remain visible.
+          }
         },
         child: ListView(
             physics: const AlwaysScrollableScrollPhysics(),
@@ -499,7 +598,14 @@ class _MapScreenState extends ConsumerState<MapScreen> {
               Text('${venues.length} газар',
                   style: AppTextStyles.h3.copyWith(color: _foreground)),
               const SizedBox(height: 6),
-              Text('Байршил нэмэгдээгүй газрууд энд мөн харагдана.',
+              if (state.hasError)
+                _notice(
+                    'Шинэчилж чадсангүй. Өмнө ачаалсан газруудыг харуулж байна.',
+                    retry: true)
+              else if (ref.watch(venueCatalogStatusProvider).notice != null)
+                _notice(ref.watch(venueCatalogStatusProvider).notice!,
+                    retry: true),
+              Text('Танд таалагдсан газраа хадгалаад, мэдээллийг нь нээгээрэй.',
                   style: AppTextStyles.bodyXs.copyWith(color: _muted)),
               const SizedBox(height: 16),
               if (venues.isEmpty) _notice('Хайлтад тохирох газар алга.'),
@@ -531,6 +637,10 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                                       Text(venue.typeLabel,
                                           style: AppTextStyles.bodySm
                                               .copyWith(color: _muted)),
+                                      if (venue.sourceLabel != null)
+                                        Text(venue.sourceLabel!,
+                                            style: AppTextStyles.bodyXs
+                                                .copyWith(color: _muted)),
                                       if (!venue.hasLocation)
                                         Text('Байршил нэмэгдээгүй',
                                             style: AppTextStyles.bodyXs
@@ -576,7 +686,9 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   }
 
   Widget _detail(Venue venue, double height, bool saved) {
-    final description = ref.watch(_venueDescriptionProvider(venue.id));
+    final description = venue.communityEnabled
+        ? ref.watch(_venueDescriptionProvider(venue.id))
+        : const AsyncValue<String?>.data(null);
     final text = description.valueOrNull ??
         venue.address ??
         (description.isLoading
@@ -608,8 +720,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             GestureDetector(
-                                onTap: () => context.push(
-                                    '/venue/reviews/${Uri.encodeComponent(venue.id)}'),
+                                onTap: () => _openVenue(venue),
                                 child: _photo(venue, 72)),
                             const SizedBox(width: 12),
                             Expanded(
@@ -623,8 +734,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                                       children: [
                                         Expanded(
                                             child: GestureDetector(
-                                                onTap: () => context.push(
-                                                    '/venue/reviews/${Uri.encodeComponent(venue.id)}'),
+                                                onTap: () => _openVenue(venue),
                                                 child: Text(venue.name,
                                                     maxLines: 2,
                                                     overflow:
@@ -676,7 +786,10 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                                               style: AppTextStyles.bodySm
                                                   .copyWith(color: _ink)),
                                         ] else
-                                          Text('Үнэлгээ хараахан алга',
+                                          Text(
+                                              venue.communityEnabled
+                                                  ? 'Үнэлгээ хараахан алга'
+                                                  : 'Газрын мэдээлэл',
                                               style: AppTextStyles.bodyXs
                                                   .copyWith(
                                                       color: const Color(
@@ -696,6 +809,12 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                           overflow: TextOverflow.ellipsis,
                           style: AppTextStyles.bodySm
                               .copyWith(color: _ink, height: 1.4)),
+                      if (venue.sourceLabel != null) ...[
+                        const SizedBox(height: 5),
+                        Text(venue.sourceLabel!,
+                            style: AppTextStyles.bodyXs
+                                .copyWith(color: const Color(0xFF68677F))),
+                      ],
                       const SizedBox(height: 14),
                       Row(children: [
                         Expanded(
@@ -736,8 +855,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                                 ? const SizedBox(
                                     width: 18,
                                     height: 18,
-                                    child: CircularProgressIndicator(
-                                        strokeWidth: 2))
+                                    child: OwlLoading(size: 18, compact: true))
                                 : SculptedIcon(
                                     saved
                                         ? Icons.bookmark_rounded
@@ -746,10 +864,19 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                                     color: saved ? _violet : _ink,
                                     active: saved)),
                       ]),
-                      if (venue.locationSourceUrl != null)
+                      TextButton.icon(
+                          onPressed: () => _showInformation(venue),
+                          style: TextButton.styleFrom(
+                              foregroundColor: const Color(0xFF6550AD)),
+                          icon:
+                              const Icon(Icons.info_outline_rounded, size: 17),
+                          label: const Text('Мэдээлэл, Google Maps, холбоос')),
+                      if (venueWebsiteUrl(
+                              venue.sourceUrl ?? venue.locationSourceUrl) !=
+                          null)
                         TextButton.icon(
-                            onPressed: () => _openExternal(
-                                Uri.parse(venue.locationSourceUrl!)),
+                            onPressed: () => _openExternal(venueWebsiteUrl(
+                                venue.sourceUrl ?? venue.locationSourceUrl)!),
                             style: TextButton.styleFrom(
                                 foregroundColor: const Color(0xFF6550AD),
                                 padding: EdgeInsets.zero,

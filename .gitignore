@@ -60,3 +60,15 @@ app.*.map.json
 *.mobileprovision
 .env
 .env.*
+
+# Private database/media migration exports and local server state
+/backups/
+/.migration-data/
+/backend/state/
+/backend/.secrets/
+.pgpass
+*.dump
+*.backup
+*.sql.gz
+!/backend/.env.example
+!/tools/migration/.env.example

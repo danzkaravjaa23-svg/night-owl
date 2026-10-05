@@ -13,6 +13,7 @@ import '../../auth/providers/auth_provider.dart';
 import '../../feed/providers/feed_provider.dart';
 import '../utils/post_media.dart';
 import '../../map/providers/venue_provider.dart';
+import '../../../core/widgets/owl_loading.dart';
 
 const int _maxImages = 10;
 // Файлын дээд хэмжээ — placeholder дээр амласантай нийцнэ
@@ -647,9 +648,9 @@ class _VenuePickerState extends ConsumerState<_VenuePicker> {
         decoration: const InputDecoration(hintText: 'Газар хайх', prefixIcon: Icon(Icons.search)))),
       const SizedBox(height: 12),
       Expanded(child: ref.watch(venuesProvider).when(
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => const Center(child: OwlLoading(message: 'Газрын мэдээлэл уншиж байна…')),
         error: (_, __) => Center(child: TextButton(
-          onPressed: () => ref.invalidate(venuesProvider), child: const Text('Дахин ачаалах'))),
+          onPressed: () => ref.read(refreshVenueCatalogProvider)(), child: const Text('Дахин ачаалах'))),
         data: (venues) {
           final matches = venues.where((v) =>
             '${v.name} ${v.district ?? ''} ${v.typeLabel}'.toLowerCase().contains(_query)).toList();

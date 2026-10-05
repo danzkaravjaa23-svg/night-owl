@@ -9,6 +9,7 @@
 | [`assets/icons/night_owl_mark.png`](../assets/icons/night_owl_mark.png) | Approved reference-ийн зүүн дээд owl-ыг built-in image generation-ээр тусгаарлан сэргээн бүтээсэн transparent mark. Энэ нь самбараас пикселээр яг тайрсан зураг биш. Runtime `NightOwlMark` болон `NightOwlBrand` ашиглана. |
 | [`assets/icons/night_owl_icon.png`](../assets/icons/night_owl_icon.png) | Тэр сэргээн бүтээсэн owl-ыг opaque Midnight Navy квадрат дээр төвд байрлуулсан store/platform source icon. Corner rounding, гадна shadow, wordmark оруулаагүй. |
 | [`assets/images/tonight_city.png`](../assets/images/tonight_city.png) | Өмнөх Higgsfield хотын brand illustration. Хэрэглэгч cover оруулаагүй үед профайлын fallback; бодит venue зураг эсвэл хэрэглэгчийн өөрийн cover гэж зарлахгүй. |
+| [`assets/images/owl_emotions.png`](../assets/images/owl_emotions.png) | 2026-10-05-нд Higgsfield-ээр approved owl-д тулгуурлан үүсгэсэн transparent 2×2 expression atlas: curious, wink, happy, patient. Loading ба бодит success/error төлөвт runtime quadrant сонгож ашиглана; master logo болон хүний avatar-ыг солихгүй. |
 
 Одоо runtime дээрх owl болон platform icon нэг сонгосон owl дүрслэлийг ашиглана. Хэрэглэгчийн avatar-ыг энэ owl-оор сольдоггүй; тухайн хүний бодит зураг, эсвэл зураггүй үед initial-ийг харуулна.
 
@@ -22,7 +23,7 @@
 
 - Explore: газрын зураг гол талбайг эзэлнэ; хайлт/төрөл дээд хэсэгт, сонгосон газрын цайвар карт доор. Бодит OSM болон бодит газрын өгөгдөл ашиглана.
 - Social: owl wordmark, story, бодит медиа пост, цэвэр action мөр. Reference-ийн sample хүмүүс, тоонуудыг хуулж зохиомол feed нэмэхгүй.
-- Profile: skyline/cover, голд давхарласан avatar ба нарийн violet ring, username/нэр/био, жижиг edit pill, гурван тэнцүү stat, underline tabs, дөрвөлжин гурван баганатай grid. Нийтлэл/Хадгалсан/Бичлэг нь бодит функц; sample “Tagged” контент эсвэл зохиомол verification badge байхгүй.
+- Profile: skyline/cover, circular avatar ба бодит гурван stat зэрэгцсэн Instagram-аас санаа авсан бүтэц, username/нэр/био, засах/хуваалцах үйлдэл, underline tabs, дөрвөлжин гурван баганатай grid. Том үсэгтэй жижиг дэлгэц дээр avatar/stat болон товчийг давхарлан байрлуулна. Нийтлэл/Хадгалсан/Бичлэг нь бодит функц; sample “Tagged”, story highlight, хэрэглэгч эсвэл зохиомол verification badge нэмээгүй.
 - Footer: бүтэн өргөний хавтгай таван үйлдэл, төвийн violet нийтлэх товч; 72px үндсэн өндөр дээр системийн safe area нэмэгдэнэ. Үйлдлийн нэр харагдана.
 
 ## Хэмжээст glyph, товч ба өнгөний горим
@@ -62,5 +63,15 @@ Generation тохиргоо: opaque background. Үр дүн: `assets/icons/night
 | `9b802457-987a-4781-bde4-370cc898d95d` | Өмнөх owl app icon туршилт; approved reference-ийн дугуй owl-оор солигдсон |
 
 Одоогийн runtime mark болон icon-ыг built-in image generation-ээр сэргээн бүтээсэн. Өмнөх Higgsfield icon job-ыг одоогийн icon-ын generation job гэж тэмдэглэхгүй.
+
+## Owl loading ба богино хөдөлгөөн
+
+Higgsfield job `6136c2aa-129b-425c-8b6e-f8c75e961117` нь зөвшөөрсөн reference-ийг image input болгон, `gpt_image_2_5`, 1:1, high, 1k, transparent тохиргоотой нэг atlas үүсгэсэн. Урьдчилсан credit estimate 1.5 байсан; төлбөрийн бодит ledger-ийг тусад нь шалгаагүй. Зураг нь шинэ туслах illustration бөгөөд approved flat mark-ийн пикселээр яг хуулбар биш.
+
+```text
+Create a production-ready 2 by 2 emotion sprite atlas for the Night Owl mobile app. Use ONLY the round purple owl mark in the upper-left corner of the supplied reference board as the exact character identity: round symmetrical silhouette, two purple ear tufts, large lavender circular eye rings, midnight navy pupils with white highlights, tiny pale lavender beak, split midnight navy and violet body with curved purple side panels. Preserve those proportions and the #0B0D17 #B6A4FF #7654D6 palette. Beautiful clean soft dimensional vector-like finish, gentle highlights, crisp friendly shapes. Transparent background, no text, no phone screens, no logos other than these four owls, no external decorations, no borders, no shadows outside the owl. Four equal 512x512 virtual cells on a square canvas, all owls same size and centered in their cell with generous empty padding and no touching between cells. Each owl occupies at most 70 percent of its cell. Top-left: curious loading owl, both eyes open looking slightly up. Top-right: friendly one-eye wink, otherwise identical. Bottom-left: happy successful owl with crescent smiling eyes and small joyful ear tilt. Bottom-right: tender patient owl, slight concerned eyelids, comforting and cute, never crying. Maintain a consistent identical character and lighting in all four cells. This is an isolated sprite atlas for real runtime UI states, not a mood board or app redesign.
+```
+
+Товч дарах, route солих, result/empty entrance-ийн хөдөлгөөн Flutter-д богино, хугацаатай animation-ээр хэрэгжсэн; Higgsfield видео тоглуулдаггүй. Loading зөвхөн бодит хүсэлт явж байх үед зөөлөн хөвж/анивчина. Reduced motion, offstage, success/error төлөвт animation зогсоно. Атласын decode хэмжээг 512 хүртэл хязгаарласан; blur/shader animation нэмээгүй. Хүний бодит төхөөрөмж дээр FPS хэмжээгүй.
 
 Энэ брэндийн шинэчлэл нь үнэгүй release-ийн хамрах хүрээг өөрчлөхгүй: billing/subscription/premium/IAP идэвхгүй; газрын/эвентийн admission үнэ бол мэдээлэл, RSVP нь тасалбар/төлбөр биш. Apple provider-ийн бодит тохиргоо, native build/signing, шаардлагатай серверийн deployment, төхөөрөмжийн QA болон хэрэгжээгүй Live/calls/push/private боломжийн хязгаар [release тайланд](RELEASE_READINESS.md) хэвээр байна. Энэ шинэчлэлийн GitHub push болон deployment баталгаажаагүй. Бодит газрын координатын эх сурвалж [дизайны тайланд](DESIGN_REVIEW.md#байршлын-шалгалт) бий.

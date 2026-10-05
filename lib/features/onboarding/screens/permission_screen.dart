@@ -76,8 +76,17 @@ class _PermissionScreenState extends State<PermissionScreen> {
     final illustration = isLoc
         ? 'assets/images/illustrations/perm_location.svg'
         : 'assets/images/illustrations/perm_notify.svg';
-    final title = isLoc ? s.permLocTitle : s.permNotifTitle;
-    final body  = isLoc ? s.permLocBody  : s.permNotifBody;
+    final english = s.locale == 'en';
+    final title = isLoc
+        ? (english ? 'Allow location?' : 'Байршлын зөвшөөрөл өгөх үү?')
+        : (english ? 'Allow browser notifications?' : 'Хөтчийн мэдэгдлийг зөвшөөрөх үү?');
+    final body = isLoc
+        ? (english
+            ? 'Location permission helps you find yourself on the map. You can still search and explore places without it.'
+            : 'Байршлын зөвшөөрөл нь газрын зураг дээр өөрийгөө олоход тусална. Зөвшөөрөлгүйгээр ч газрын мэдээллийг хайж, үзэж болно.')
+        : (english
+            ? 'Browser notifications are optional. Without this permission you can still view notifications inside Night Owl.'
+            : 'Хөтчийн мэдэгдэл нь сонголттой. Зөвшөөрөл өгөхгүй байсан ч Night Owl-ийн Мэдэгдэл хэсгийг ашиглаж болно.');
     // Per-kind accent: location → pink/red, notification → amber/magenta.
     final color = isLoc ? AppColors.accentEnd : AppColors.amber;
 

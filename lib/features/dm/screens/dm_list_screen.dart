@@ -6,8 +6,10 @@ import '../../../core/widgets/theme_toggle_button.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/widgets/app_avatar.dart';
 import '../../../core/widgets/glass_icon_button.dart';
-import '../../../core/widgets/gradient_button.dart';
+import '../../../core/widgets/owl_loading.dart';
+import '../../../core/widgets/skeleton.dart';
 import '../../../core/services/supabase_service.dart';
+import '../../../core/services/legacy_rpc_fallback.dart';
 import '../widgets/notes_row.dart';
 import '../widgets/create_group_sheet.dart';
 import '../widgets/search_field.dart';
@@ -20,6 +22,9 @@ class DmListScreen extends StatefulWidget {
 }
 
 class _DmListScreenState extends State<DmListScreen> {
+  static final _userIdPattern = RegExp(
+      r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$',
+      caseSensitive: false);
   final _searchCtrl = TextEditingController();
   String _search = '';
   List<Map<String, dynamic>> _convos = [];
@@ -53,8 +58,8 @@ class _DmListScreenState extends State<DmListScreen> {
         return;
       }
 
-      // RPC байвал (dm_conversations) нэг conversation тутам НЭГ мөр буцаадаг тул
-      // хамгийн зөв. Байхгүй/алдаа гарвал доорх messages-fallback руу шилжинэ.
+      // RPC нэг conversation тутам НЭГ мөр буцаана. Зөвхөн хуучин managed
+      // сервер RPC байхгүйг тодорхой мэдэгдсэн үед messages-fallback ашиглана.
       final rpcConvos = await _loadViaRpc(me);
       if (rpcConvos != null) {
         final groups = await GroupService.myGroups();
@@ -130,31 +135,70 @@ class _DmListScreenState extends State<DmListScreen> {
   }
 
   /// dm_conversations RPC-ээр нэг яриа тутам нэг мөр авна (unread count-той).
-  /// RPC байхгүй бол null буцааж fallback руу шилжүүлнэ.
+  /// Зөвшөөрөгдсөн хуучин missing-RPC тохиолдолд л null/fallback буцаана.
   Future<List<Map<String, dynamic>>?> _loadViaRpc(String me) async {
     try {
       final rows = await SupabaseService.client.rpc('dm_conversations');
       final list = (rows as List).cast<Map<String, dynamic>>();
-      return [
-        for (final r in list)
-          {
-            'partner_id': r['partner_id'],
-            'partner': {
-              'id': r['partner_id'],
-              'username': r['partner_username'] ?? 'User',
-              'avatar_url': r['partner_avatar_url'],
-              'last_seen_at': r['partner_last_seen_at'],
-            },
-            'last_msg': r['last_body'] ?? '',
-            'created_at': r['last_at'],
-            'is_me': r['last_sender_id'] == me,
-            'unread_count': (r['unread_count'] as num?)?.toInt() ?? 0,
-            'is_read': ((r['unread_count'] as num?)?.toInt() ?? 0) == 0,
+      final conversations = <Map<String, dynamic>>[];
+      final partners = <String>{};
+      for (final r in list) {
+        final partnerId = r['partner_id'];
+        final senderId = r['last_sender_id'];
+        final lastAt = r['last_at'];
+        final unread = r['unread_count'];
+        const requiredFields = {
+          'partner_id',
+          'partner_username',
+          'partner_avatar_url',
+          'partner_last_seen_at',
+          'last_body',
+          'last_at',
+          'last_sender_id',
+          'unread_count',
+        };
+        if (!requiredFields.every(r.containsKey) ||
+            partnerId is! String ||
+            !_userIdPattern.hasMatch(partnerId) ||
+            !partners.add(partnerId) ||
+            senderId is! String ||
+            (senderId != me && senderId != partnerId) ||
+            lastAt is! String ||
+            DateTime.tryParse(lastAt) == null ||
+            unread is! int ||
+            unread < 0 ||
+            (r['partner_username'] != null &&
+                r['partner_username'] is! String) ||
+            (r['partner_avatar_url'] != null &&
+                r['partner_avatar_url'] is! String) ||
+            (r['last_body'] != null && r['last_body'] is! String) ||
+            (r['partner_last_seen_at'] != null &&
+                (r['partner_last_seen_at'] is! String ||
+                    DateTime.tryParse(r['partner_last_seen_at'] as String) ==
+                        null))) {
+          throw const FormatException('Invalid conversation RPC response.');
+        }
+        conversations.add({
+          'partner_id': partnerId,
+          'partner': {
+            'id': partnerId,
+            'username': r['partner_username'] ?? 'User',
+            'avatar_url': r['partner_avatar_url'],
+            'last_seen_at': r['partner_last_seen_at'],
           },
-      ];
-    } catch (_) {
-      // RPC байхгүй эсвэл алдаа — fallback руу
-      return null;
+          'last_msg': r['last_body'] ?? '',
+          'created_at': lastAt,
+          'is_me': senderId == me,
+          'unread_count': unread,
+          'is_read': unread == 0,
+        });
+      }
+      return conversations;
+    } catch (error) {
+      if (canUseLegacyRpcFallback(error, rpcName: 'dm_conversations')) {
+        return null;
+      }
+      rethrow;
     }
   }
 
@@ -599,32 +643,31 @@ class _ErrorState extends StatelessWidget {
   const _ErrorState({required this.onRetry});
   @override
   Widget build(BuildContext context) => Center(
-          child: Column(mainAxisSize: MainAxisSize.min, children: [
-        SculptedIcon(Icons.wifi_off_rounded,
-            color: AppColors.textTertiary, size: 44),
-        const SizedBox(height: 12),
-        Text('Ачаалж чадсангүй',
-            style:
-                AppTextStyles.bodyMd.copyWith(color: AppColors.textSecondary)),
-        const SizedBox(height: 16),
-        // Нэгдсэн primary CTA — GradientButton (md)
-        GradientButton(
-            label: 'Дахин оролдох',
-            onPressed: onRetry,
-            size: GradientButtonSize.md,
-            fullWidth: false),
-      ]));
+        child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: OwlLoading(
+                size: 56,
+                state: OwlLoadingState.error,
+                message: 'Ачаалж чадсангүй',
+                onRetry: onRetry)),
+      );
 }
 
 /// Ачааллах skeleton — жагсаалттай ижил хавтгай хэлбэр: avatar + 2 мөр, 6 tile
 class _ListSkeleton extends StatelessWidget {
   const _ListSkeleton();
   @override
-  Widget build(BuildContext context) => _Pulse(
-      child: Padding(
-          padding: const EdgeInsets.only(top: 24),
-          child: Column(
-              children: [for (var i = 0; i < 6; i++) const _SkeletonTile()])));
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.only(top: 16),
+        child: Column(children: [
+          const OwlLoading(size: 36, message: 'Яриануудыг ачаалж байна'),
+          const SizedBox(height: 12),
+          SkeletonPulse(
+              child: Column(children: [
+            for (var i = 0; i < 6; i++) const _SkeletonTile(),
+          ])),
+        ]),
+      );
 }
 
 class _SkeletonTile extends StatelessWidget {
@@ -656,32 +699,6 @@ class _SkeletonTile extends StatelessWidget {
                   borderRadius: BorderRadius.circular(5))),
         ])),
       ]));
-}
-
-/// Зөөлөн анивчих (pulse) эффект
-class _Pulse extends StatefulWidget {
-  final Widget child;
-  const _Pulse({required this.child});
-  @override
-  State<_Pulse> createState() => _PulseState();
-}
-
-class _PulseState extends State<_Pulse> with SingleTickerProviderStateMixin {
-  late final AnimationController _c = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 400),
-      lowerBound: 0.45,
-      upperBound: 1.0)
-    ..repeat(reverse: true);
-  @override
-  void dispose() {
-    _c.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) =>
-      FadeTransition(opacity: _c, child: widget.child);
 }
 
 /// Групп чатын мөр

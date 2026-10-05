@@ -10,10 +10,10 @@ It's just static HTML — any of these work:
 
 ```bash
 # Option 1 — open directly
-open admin-web/index.html
+open web/admin/index.html
 
 # Option 2 — local static server (recommended; avoids file:// quirks)
-cd admin-web && python3 -m http.server 8080
+cd web/admin && python3 -m http.server 8080
 # → http://localhost:8080
 ```
 
@@ -40,6 +40,9 @@ Non-admins are signed out immediately with "Танд админ эрх алга.
 - No service-role key is embedded. Safe to host on any static host.
 
 ## Deploy
+
+**Live:** https://nightowl-ub.netlify.app/admin/ — `web/admin/` дотор байгаа тул
+Flutter build-тэй хамт `git push` хийхэд Netlify автоматаар deploy хийнэ.
 
 Drop `index.html` on Netlify / Vercel / GitHub Pages / Supabase Storage / any
 static host. No build step, no env vars.

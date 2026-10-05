@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' show PostgrestException;
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../core/widgets/owl_loading.dart';
 import '../../../core/widgets/app_avatar.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/gradient_button.dart';
@@ -318,7 +319,7 @@ class _CreatorScreenState extends ConsumerState<CreatorScreen> {
   Widget build(BuildContext context) {
     if (_loading) {
       return _shell(const Center(
-          child: CircularProgressIndicator(color: AppColors.accentStart)));
+          child: OwlLoading(message: 'Профайл ачаалж байна')));
     }
     if (_error || _profile == null) {
       // Сүлжээний алдаа эсвэл устсан/байхгүй хэрэглэгч (хуучин shared линк)

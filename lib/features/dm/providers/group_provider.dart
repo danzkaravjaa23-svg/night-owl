@@ -1,7 +1,12 @@
 import '../../../core/services/supabase_service.dart';
+import '../../../core/services/legacy_rpc_fallback.dart';
 
 /// Групп чатын үйлчилгээ — group_chats / group_members / group_messages
 class GroupService {
+  static final _groupIdPattern = RegExp(
+      r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$',
+      caseSensitive: false);
+
   /// Миний гишүүнээр орсон группүүд (сүүлийн мессежтэй хамт)
   static Future<List<Map<String, dynamic>>> myGroups() async {
     final me = SupabaseService.currentUser?.id;
@@ -9,7 +14,8 @@ class GroupService {
     try {
       final rows = await SupabaseService.client
           .from('group_members')
-          .select('group_id, group_chats!inner(id, name, created_by, created_at)')
+          .select(
+              'group_id, group_chats!inner(id, name, created_by, created_at)')
           .eq('user_id', me);
       final groups = <Map<String, dynamic>>[];
       for (final r in (rows as List).cast<Map<String, dynamic>>()) {
@@ -45,9 +51,9 @@ class GroupService {
   }
 
   /// Групп үүсгээд гишүүдийг нэмнэ. Амжилттай бол group id буцаана.
-  /// create_group RPC байвал транзакцаар (атомик) үүсгэнэ; байхгүй бол
-  /// хоёр insert хийж, гишүүд орохгүй бол group_chats-ийг буцааж устгана
-  /// (orphan групп үлдэхээс сэргийлэв).
+  /// create_group RPC транзакцаар (атомик) үүсгэнэ. Зөвхөн хуучин managed
+  /// сервер RPC байхгүйг тодорхой мэдэгдсэн үед хоёр insert хийж, гишүүд
+  /// орохгүй бол group_chats-ийг буцааж устгана. Серверийн татгалзлыг тойрохгүй.
   static Future<String?> createGroup(
       String name, List<String> memberIds) async {
     final me = SupabaseService.currentUser?.id;
@@ -60,10 +66,11 @@ class GroupService {
         'p_name': name,
         'p_member_ids': members,
       });
-      final gid = res is String ? res : res?.toString();
-      if (gid != null && gid.isNotEmpty) return gid;
-    } catch (_) {
-      // RPC байхгүй/алдаа — доорх fallback руу
+      // A UUID scalar is the RPC contract. Empty/malformed success must not
+      // repeat a possibly completed transaction through direct inserts.
+      return res is String && _groupIdPattern.hasMatch(res) ? res : null;
+    } catch (error) {
+      if (!canUseLegacyRpcFallback(error, rpcName: 'create_group')) return null;
     }
 
     // 2) Fallback — compensating delete-тэй
@@ -84,7 +91,9 @@ class GroupService {
       if (gid != null) {
         try {
           await SupabaseService.client
-              .from('group_chats').delete().eq('id', gid);
+              .from('group_chats')
+              .delete()
+              .eq('id', gid);
         } catch (_) {}
       }
       return null;

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../core/widgets/owl_loading.dart';
 import '../../../core/widgets/app_avatar.dart';
 import '../../../core/services/supabase_service.dart';
 import '../providers/follow_provider.dart';
@@ -180,9 +181,15 @@ class _FollowListScreenState extends State<FollowListScreen> {
   // Анхны ачаалалд — spinner-ийн оронд зөөлөн skeleton мөрүүд
   Widget _skeleton() => ListView.separated(
         padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
-        itemCount: 6,
+        itemCount: 7,
         separatorBuilder: (_, __) => const SizedBox(height: 4),
-        itemBuilder: (_, __) => const _RowSkeleton(),
+        itemBuilder: (_, i) => i == 0
+            ? Padding(
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                child: OwlLoading(size: 40, message: _followers
+                    ? 'Дагагчдыг ачаалж байна'
+                    : 'Дагаж буй хүмүүсийг ачаалж байна'))
+            : const _RowSkeleton(),
       );
 
   // Ачаалал бүтэлгүйтсэн — хоосон төлөвөөс ялгаатай (дахин оролдох товчтой)

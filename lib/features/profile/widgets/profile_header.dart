@@ -2,6 +2,8 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/sculpted_icon.dart';
+import '../../../core/widgets/app_motion.dart';
+import '../../../core/widgets/owl_loading.dart';
 import '../../../models/user_profile.dart';
 
 /// Profile identity and actions, using the person's actual profile data.
@@ -10,6 +12,7 @@ class ProfileHeader extends StatelessWidget {
   final Widget avatar;
   final bool coverBusy;
   final VoidCallback onEdit;
+  final VoidCallback onShare;
   final VoidCallback onEditCover;
   final VoidCallback onSettings;
   final VoidCallback onActions;
@@ -21,6 +24,7 @@ class ProfileHeader extends StatelessWidget {
     required this.profile,
     required this.avatar,
     required this.onEdit,
+    required this.onShare,
     required this.onEditCover,
     required this.onSettings,
     required this.onActions,
@@ -34,15 +38,11 @@ class ProfileHeader extends StatelessWidget {
     final username = profile.username?.trim() ?? '';
     final name = profile.name?.trim() ?? '';
     final bio = profile.bio?.trim() ?? '';
-    return Column(children: [
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       SizedBox(
-        height: 246,
-        width: double.infinity,
-        child: Stack(alignment: Alignment.bottomCenter, children: [
-          Positioned(
-              top: 0,
-              left: 0,
-              right: 0,
+        height: 132 + MediaQuery.paddingOf(context).top,
+        child: Stack(children: [
+          Positioned.fill(
               child: _ProfileCover(
                   url: profile.coverUrl, busy: coverBusy, onEdit: onEditCover)),
           Positioned(
@@ -53,96 +53,153 @@ class ProfileHeader extends StatelessWidget {
                   bottom: false,
                   child: Padding(
                       padding: const EdgeInsets.only(top: 6),
-                      child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            _CoverAction(
-                                icon: Icons.more_horiz_rounded,
-                                label: 'Профайлын үйлдлүүд',
-                                onPressed: onActions),
-                            _CoverAction(
-                                icon: Icons.settings_outlined,
-                                label: 'Тохиргоо',
-                                onPressed: onSettings),
-                          ])))),
-          avatar,
+                      child: Row(children: [
+                        _CoverAction(
+                            icon: Icons.more_horiz_rounded,
+                            label: 'Профайлын үйлдлүүд',
+                            onPressed: onActions),
+                        const Spacer(),
+                        _CoverAction(
+                            icon: Icons.settings_outlined,
+                            label: 'Тохиргоо',
+                            onPressed: onSettings),
+                      ])))),
         ]),
       ),
       Padding(
-          padding: const EdgeInsets.fromLTRB(20, 18, 20, 0),
-          child: Column(children: [
-            Text(username.isEmpty ? 'Профайл' : username,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                    color: AppColors.textPrimary,
-                    fontSize: 24,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: -0.5,
-                    height: 1.2)),
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 18),
+          child:
+              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            LayoutBuilder(builder: (context, constraints) {
+              final stats =
+                  Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Expanded(
+                    child:
+                        _ProfileStat(count: profile.postsCount, label: 'Пост')),
+                Expanded(
+                    child: _ProfileStat(
+                        count: profile.followersCount,
+                        label: 'Дагагч',
+                        onPressed: onFollowers)),
+                Expanded(
+                    child: _ProfileStat(
+                        count: profile.followingCount,
+                        label: 'Дагаж буй',
+                        onPressed: onFollowing)),
+              ]);
+              if (constraints.maxWidth < 360 &&
+                  MediaQuery.textScalerOf(context).scale(19) > 24) {
+                return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      SizedBox(width: 96, height: 96, child: avatar),
+                      const SizedBox(height: 12),
+                      stats
+                    ]);
+              }
+              return Row(children: [
+                SizedBox(width: 96, height: 96, child: avatar),
+                const SizedBox(width: 12),
+                Expanded(child: stats)
+              ]);
+            }),
+            const SizedBox(height: 14),
+            Row(children: [
+              Flexible(
+                  child: Text(username.isEmpty ? 'Профайл' : username,
+                      style: TextStyle(
+                          color: AppColors.textPrimary,
+                          fontSize: 21,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: -0.4,
+                          height: 1.2))),
+              if (profile.isVerified) ...[
+                const SizedBox(width: 6),
+                const Tooltip(
+                    message: 'Баталгаажсан профайл',
+                    child: Icon(Icons.verified,
+                        color: AppColors.accentStart, size: 18)),
+              ],
+            ]),
             if (name.isNotEmpty) ...[
-              const SizedBox(height: 6),
+              const SizedBox(height: 5),
               Text(name,
-                  textAlign: TextAlign.center,
                   style: TextStyle(
-                      color: AppColors.textSecondary,
+                      color: AppColors.textPrimary,
                       fontSize: 14,
+                      fontWeight: FontWeight.w600,
                       height: 1.4)),
             ],
             if (bio.isNotEmpty) ...[
-              const SizedBox(height: 12),
-              ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 340),
-                  child: Text(bio,
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                          color: AppColors.textSecondary,
-                          fontSize: 13,
-                          height: 1.55))),
+              const SizedBox(height: 8),
+              Text(bio,
+                  style: TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 13,
+                      height: 1.5)),
             ],
             if (profile.interests.isNotEmpty) ...[
-              const SizedBox(height: 10),
-              Text(profile.interests.join(' · '),
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                      color: AppColors.silver, fontSize: 12, height: 1.5)),
+              const SizedBox(height: 12),
+              Wrap(spacing: 6, runSpacing: 6, children: [
+                for (final interest in profile.interests)
+                  Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 5),
+                      decoration: BoxDecoration(
+                          color: AppColors.bgSurface,
+                          borderRadius: BorderRadius.circular(999),
+                          border: Border.all(color: AppColors.hairline)),
+                      child: Text(interest,
+                          style: TextStyle(
+                              color: AppColors.silver,
+                              fontSize: 11,
+                              height: 1.3))),
+              ]),
             ],
-            const SizedBox(height: 20),
-            FilledButton.icon(
-                onPressed: onEdit,
-                style: FilledButton.styleFrom(
-                    backgroundColor: AppColors.accentStart,
-                    foregroundColor: Colors.white,
-                    minimumSize: const Size(0, 44),
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 22, vertical: 11),
-                    shape: const StadiumBorder(),
-                    textStyle: const TextStyle(
-                        fontSize: 14, fontWeight: FontWeight.w600)),
-                icon: const SculptedIcon(Icons.edit_outlined,
-                    size: 17, color: Colors.white, onDark: true),
-                label:
-                    const Text('Профайл засах', textAlign: TextAlign.center)),
-            const SizedBox(height: 24),
-            ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 480),
-                child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                          child: _ProfileStat(
-                              count: profile.postsCount, label: 'Пост')),
-                      Expanded(
-                          child: _ProfileStat(
-                              count: profile.followersCount,
-                              label: 'Дагагч',
-                              onPressed: onFollowers)),
-                      Expanded(
-                          child: _ProfileStat(
-                              count: profile.followingCount,
-                              label: 'Дагаж буй',
-                              onPressed: onFollowing)),
-                    ])),
-            const SizedBox(height: 20),
+            const SizedBox(height: 16),
+            LayoutBuilder(builder: (context, constraints) {
+              final edit = PressFeedback(
+                  child: FilledButton.icon(
+                      onPressed: onEdit,
+                      style: FilledButton.styleFrom(
+                          backgroundColor: AppColors.accentStart,
+                          foregroundColor: Colors.white,
+                          minimumSize: const Size.fromHeight(44),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12)),
+                          textStyle: const TextStyle(
+                              fontSize: 13, fontWeight: FontWeight.w600)),
+                      icon: const SculptedIcon(Icons.edit_outlined,
+                          size: 17, color: Colors.white, onDark: true),
+                      label: const Text('Профайл засах',
+                          textAlign: TextAlign.center)));
+              final share = PressFeedback(
+                  child: OutlinedButton.icon(
+                      onPressed: onShare,
+                      style: OutlinedButton.styleFrom(
+                          foregroundColor: AppColors.textPrimary,
+                          minimumSize: const Size.fromHeight(44),
+                          side: BorderSide(color: AppColors.hairline2),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12)),
+                          textStyle: const TextStyle(
+                              fontSize: 13, fontWeight: FontWeight.w600)),
+                      icon: SculptedIcon(Icons.ios_share_rounded,
+                          size: 17, color: AppColors.textPrimary),
+                      label: const Text('Хуваалцах',
+                          textAlign: TextAlign.center)));
+              if (constraints.maxWidth < 360 &&
+                  MediaQuery.textScalerOf(context).scale(13) > 17) {
+                return Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [edit, const SizedBox(height: 8), share]);
+              }
+              return Row(children: [
+                Expanded(child: edit),
+                const SizedBox(width: 8),
+                Expanded(child: share)
+              ]);
+            }),
           ])),
     ]);
   }
@@ -171,7 +228,7 @@ class ProfileContentTabs extends StatelessWidget {
                         onTap: () => onChanged(entry.key),
                         child: Container(
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 6, vertical: 16),
+                                horizontal: 4, vertical: 11),
                             decoration: BoxDecoration(
                                 border: Border(
                                     bottom: BorderSide(
@@ -179,14 +236,29 @@ class ProfileContentTabs extends StatelessWidget {
                                         color: selected == entry.key
                                             ? AppColors.accentStart
                                             : Colors.transparent))),
-                            child: Text(entry.value,
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                    color: selected == entry.key
-                                        ? AppColors.textPrimary
-                                        : AppColors.textTertiary,
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w600)))))),
+                            child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  SculptedIcon(
+                                      [
+                                        Icons.grid_on_rounded,
+                                        Icons.bookmark_border_rounded,
+                                        Icons.play_circle_outline_rounded
+                                      ][entry.key],
+                                      size: 21,
+                                      color: selected == entry.key
+                                          ? AppColors.silver
+                                          : AppColors.textTertiary),
+                                  const SizedBox(height: 5),
+                                  Text(entry.value,
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                          color: selected == entry.key
+                                              ? AppColors.textPrimary
+                                              : AppColors.textTertiary,
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w600)),
+                                ]))))),
         ])),
       );
 }
@@ -238,14 +310,17 @@ class _CoverAction extends StatelessWidget {
   const _CoverAction({required this.icon, required this.label, this.onPressed});
 
   @override
-  Widget build(BuildContext context) => IconButton(
-      tooltip: label,
-      onPressed: onPressed,
-      style: IconButton.styleFrom(
-          backgroundColor: const Color(0x450B0D17),
-          foregroundColor: Colors.white,
-          minimumSize: const Size(44, 44)),
-      icon: SculptedIcon(icon, size: 22, color: Colors.white, onDark: true));
+  Widget build(BuildContext context) => PressFeedback(
+      enabled: onPressed != null,
+      child: IconButton(
+          tooltip: label,
+          onPressed: onPressed,
+          style: IconButton.styleFrom(
+              backgroundColor: const Color(0x450B0D17),
+              foregroundColor: Colors.white,
+              minimumSize: const Size(44, 44)),
+          icon:
+              SculptedIcon(icon, size: 22, color: Colors.white, onDark: true)));
 }
 
 class _ProfileCover extends StatelessWidget {
@@ -261,7 +336,7 @@ class _ProfileCover extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => SizedBox(
-      height: 186,
+      height: 132,
       child: Stack(fit: StackFit.expand, children: [
         if (url?.isNotEmpty == true)
           CachedNetworkImage(
@@ -289,17 +364,17 @@ class _ProfileCover extends StatelessWidget {
             ]))),
         if (busy)
           const Center(
-              child: SizedBox(
-                  width: 26,
-                  height: 26,
-                  child: CircularProgressIndicator(
-                      color: Colors.white, strokeWidth: 2))),
+              child: OwlLoading(
+                  size: 32,
+                  compact: true,
+                  onDark: true,
+                  message: 'Нүүр зургийг хадгалж байна')),
         Positioned(
             right: 12,
             bottom: 10,
             child: _CoverAction(
                 icon: Icons.photo_camera_outlined,
-                label: 'Cover зураг солих',
+                label: 'Нүүр зураг солих',
                 onPressed: busy ? null : onEdit)),
       ]));
 }

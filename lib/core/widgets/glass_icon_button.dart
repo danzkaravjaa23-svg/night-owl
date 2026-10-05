@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import 'sculpted_icon.dart';
+import 'app_motion.dart';
 
 /// Шилэн дугуй icon товч — апп даяар НЭГ хувилбар.
 /// (Өмнө нь ижил зорилготой 9 хувийн класс байсан: дүүргэлт нь bgElevated .72 /
@@ -48,8 +49,6 @@ class GlassIconButton extends StatefulWidget {
 }
 
 class _GlassIconButtonState extends State<GlassIconButton> {
-  bool _down = false;
-
   bool get _enabled => widget.onTap != null;
 
   @override
@@ -62,10 +61,9 @@ class _GlassIconButtonState extends State<GlassIconButton> {
       height: hit,
       child: Center(
         // Дарахад зөөлөн агших — апп-ын TapScale идиомтой ижил
-        child: AnimatedScale(
-          scale: _down ? 0.92 : 1.0,
-          duration: const Duration(milliseconds: 120),
-          curve: Curves.easeOut,
+        child: PressFeedback(
+          enabled: _enabled,
+          pressedScale: .94,
           child: Container(
             width: widget.size,
             height: widget.size,
@@ -85,8 +83,8 @@ class _GlassIconButtonState extends State<GlassIconButton> {
                     color: Colors.black.withValues(
                         alpha:
                             widget.onMedia || AppColors.isDarkMode ? .25 : .10),
-                    offset: Offset(0, _down ? 1 : 3),
-                    blurRadius: _down ? 3 : 7),
+                    offset: const Offset(0, 3),
+                    blurRadius: 7),
               ],
               border: Border.all(
                 // Медиа дээр горимоос үл хамааран цагаан шилэн ирмэг
@@ -116,9 +114,6 @@ class _GlassIconButtonState extends State<GlassIconButton> {
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: widget.onTap,
-        onTapDown: _enabled ? (_) => setState(() => _down = true) : null,
-        onTapUp: _enabled ? (_) => setState(() => _down = false) : null,
-        onTapCancel: _enabled ? () => setState(() => _down = false) : null,
         child: button,
       ),
     );

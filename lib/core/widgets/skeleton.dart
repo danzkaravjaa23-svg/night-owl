@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_radii.dart';
+import 'app_motion.dart';
 
 /// Ачаалалтын "араг яс" (skeleton) хэсгийг нэг хэмнэлээр анивчуулна.
 /// (Өмнө нь 12 хувийн класс 0.4–0.9 / 0.45–1.0 гэсэн өөр хүрээ,
@@ -27,6 +28,16 @@ class _SkeletonPulseState extends State<SkeletonPulse>
   );
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (AppMotion.reduced(context) || !TickerMode.of(context)) {
+      _c.stop();
+    } else if (!_c.isAnimating) {
+      _c.repeat(reverse: true);
+    }
+  }
+
+  @override
   void dispose() {
     _c.dispose();
     super.dispose();
@@ -35,11 +46,9 @@ class _SkeletonPulseState extends State<SkeletonPulse>
   @override
   Widget build(BuildContext context) {
     // Хүртээмж: хөдөлгөөн унтраасан үед анивчилтгүй, тогтмол бүдэг.
-    if (MediaQuery.disableAnimationsOf(context)) {
-      if (_c.isAnimating) _c.stop();
+    if (AppMotion.reduced(context) || !TickerMode.of(context)) {
       return Opacity(opacity: 0.7, child: widget.child);
     }
-    if (!_c.isAnimating) _c.repeat(reverse: true);
     return FadeTransition(opacity: _c, child: widget.child);
   }
 }

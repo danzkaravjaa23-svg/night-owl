@@ -38,6 +38,7 @@ void main() {
                 body: MediaQuery(
                     data: MediaQueryData(
                         size: Size(width, 1000),
+                        padding: const EdgeInsets.only(top: 44),
                         textScaler: const TextScaler.linear(1.5)),
                     child: Center(
                         child: SizedBox(
@@ -49,11 +50,12 @@ void main() {
                                           ProfileHeader(
                                               profile: profile,
                                               avatar: const SizedBox(
-                                                  width: 124,
-                                                  height: 124,
+                                                  width: 96,
+                                                  height: 96,
                                                   child: CircleAvatar(
                                                       child: Text('A'))),
                                               onEdit: () => calls.add('edit'),
+                                              onShare: () => calls.add('share'),
                                               onEditCover: () =>
                                                   calls.add('cover'),
                                               onSettings: () =>
@@ -76,10 +78,28 @@ void main() {
             AppColors.textPrimary);
         expect(tester.widget<Scaffold>(find.byType(Scaffold)).backgroundColor,
             AppColors.bgBase);
-        for (final icon
-            in tester.widgetList<SculptedIcon>(find.byType(SculptedIcon))) {
+        // Controls over the cover stay legible in either theme; body controls adapt.
+        for (final tooltip in [
+          'Тохиргоо',
+          'Профайлын үйлдлүүд',
+          'Нүүр зураг солих'
+        ]) {
+          final icon = tester.widget<SculptedIcon>(find.descendant(
+              of: find.byTooltip(tooltip),
+              matching: find.byType(SculptedIcon)));
           expect(icon.onDark, isTrue);
           expect(icon.color, Colors.white);
+        }
+        expect(tester.getRect(find.byTooltip('Тохиргоо')).bottom,
+            lessThan(tester.getRect(find.byTooltip('Нүүр зураг солих')).top));
+        final avatar = tester.getRect(find.byType(CircleAvatar));
+        final count = tester.getRect(find.text('17'));
+        if (width == 320) {
+          // Large text moves the complete counters below the avatar.
+          expect(count.top, greaterThan(avatar.bottom));
+        } else {
+          expect(count.left, greaterThan(avatar.right));
+          expect(count.center.dy, inInclusiveRange(avatar.top, avatar.bottom));
         }
         expect(find.text('Actual profile name'), findsOneWidget);
         expect(find.text(profile.bio!), findsOneWidget);
@@ -96,17 +116,29 @@ void main() {
         for (final tooltip in [
           'Тохиргоо',
           'Профайлын үйлдлүүд',
-          'Cover зураг солих'
+          'Нүүр зураг солих'
         ]) {
           await tester.ensureVisible(find.byTooltip(tooltip));
           await tester.tap(find.byTooltip(tooltip));
         }
-        for (final label in ['Профайл засах', 'Дагагч', 'Дагаж буй']) {
+        for (final label in [
+          'Профайл засах',
+          'Хуваалцах',
+          'Дагагч',
+          'Дагаж буй'
+        ]) {
           await tester.ensureVisible(find.text(label));
           await tester.tap(find.text(label));
         }
-        expect(calls,
-            ['settings', 'actions', 'cover', 'edit', 'followers', 'following']);
+        expect(calls, [
+          'settings',
+          'actions',
+          'cover',
+          'edit',
+          'share',
+          'followers',
+          'following'
+        ]);
         await tester.ensureVisible(find.text('Хадгалсан'));
         await tester.tap(find.text('Хадгалсан'));
         await tester.pumpAndSettle();
@@ -118,4 +150,24 @@ void main() {
       });
     }
   }
+  testWidgets('verification is shown only for verified profile data',
+      (tester) async {
+    await tester.pumpWidget(MaterialApp(
+        home: Scaffold(
+            body: SingleChildScrollView(
+                child: ProfileHeader(
+                    profile: UserProfile(id: 'verified-user', isVerified: true),
+                    avatar: const CircleAvatar(),
+                    onEdit: () {},
+                    onShare: () {},
+                    onEditCover: () {},
+                    onSettings: () {},
+                    onActions: () {},
+                    onFollowers: () {},
+                    onFollowing: () {})))));
+    await tester.pumpAndSettle();
+    expect(find.byTooltip('Баталгаажсан профайл'), findsOneWidget);
+    expect(find.text('0'), findsNWidgets(3));
+    expect(find.text('Story highlights'), findsNothing);
+  });
 }

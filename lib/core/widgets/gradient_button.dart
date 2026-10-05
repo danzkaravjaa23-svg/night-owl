@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import 'sculpted_icon.dart';
+import 'app_motion.dart';
+import 'owl_loading.dart';
 
 Widget _dimensionalButtonIcon(Widget child, {bool primary = false}) {
   if (child is Icon && child.icon != null) {
@@ -11,38 +13,6 @@ Widget _dimensionalButtonIcon(Widget child, {bool primary = false}) {
         onDark: primary);
   }
   return child;
-}
-
-/// Дарахад зөөлөн агшиж (spring press) премиум мэдрэмж өгөх wrapper —
-/// Gradient/Outline хоёр товч хоёулаа ижил мэдрэмжтэй байхаар нэгтгэсэн.
-class _PressScale extends StatefulWidget {
-  final bool enabled;
-  final Widget child;
-  const _PressScale({required this.enabled, required this.child});
-
-  @override
-  State<_PressScale> createState() => _PressScaleState();
-}
-
-class _PressScaleState extends State<_PressScale> {
-  bool _pressed = false;
-
-  @override
-  Widget build(BuildContext context) {
-    return Listener(
-      onPointerDown: (_) {
-        if (widget.enabled) setState(() => _pressed = true);
-      },
-      onPointerUp: (_) => setState(() => _pressed = false),
-      onPointerCancel: (_) => setState(() => _pressed = false),
-      child: AnimatedScale(
-        scale: _pressed ? 0.965 : 1.0,
-        duration: const Duration(milliseconds: 110),
-        curve: Curves.easeOut,
-        child: widget.child,
-      ),
-    );
-  }
 }
 
 /// Gradient товчны хэмжээ: lg = 52px (үндсэн CTA), md = 40px (мөрөнд суух товч).
@@ -57,7 +27,7 @@ class GradientButton extends StatelessWidget {
   final Widget? icon;
   final Widget? trailing;
 
-  /// Тодорхой өндөр өгвөл [size]-аас давуу.
+  /// Хамгийн бага өндөр. Том бичвэртэй үед агуулгадаа тохирч өснө.
   final double? height;
   final double borderRadius;
   final bool busy;
@@ -90,13 +60,13 @@ class GradientButton extends StatelessWidget {
     // busy үед gradient хэвээр (ажиллаж буй мэдрэмж), зөвхөн disabled үед бүдгэрнэ
     final disabled = onPressed == null;
     final effective = (busy || disabled) ? null : onPressed;
-    return _PressScale(
+    return PressFeedback(
       enabled: effective != null,
       child: SizedBox(
         width: fullWidth ? double.infinity : null,
-        height: h,
         child: AnimatedContainer(
-          duration: const Duration(milliseconds: 180),
+          constraints: BoxConstraints(minHeight: h),
+          duration: AppMotion.duration(context, AppMotion.exit),
           curve: Curves.easeOut,
           decoration: BoxDecoration(
             gradient: !disabled
@@ -151,14 +121,15 @@ class GradientButton extends StatelessWidget {
               disabledForegroundColor: Colors.white,
               shadowColor: Colors.transparent,
               minimumSize: Size(fullWidth ? double.infinity : 0, h),
-              padding: md ? const EdgeInsets.symmetric(horizontal: 20) : null,
+              padding:
+                  EdgeInsets.symmetric(horizontal: md ? 16 : 20, vertical: 8),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(borderRadius),
               ),
             ),
             // Спиннер ↔ label солигдоход зөөлөн fade + scale шилжилт
             child: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 180),
+              duration: AppMotion.duration(context, AppMotion.exit),
               switchInCurve: Curves.easeOut,
               switchOutCurve: Curves.easeIn,
               transitionBuilder: (child, anim) => FadeTransition(
@@ -168,12 +139,12 @@ class GradientButton extends StatelessWidget {
                     child: child),
               ),
               child: busy
-                  ? SizedBox(
+                  ? OwlLoading(
                       key: const ValueKey('busy'),
-                      width: md ? 18 : 22,
-                      height: md ? 18 : 22,
-                      child: const CircularProgressIndicator(
-                          strokeWidth: 2.4, color: Colors.white))
+                      size: md ? 18 : 24,
+                      compact: true,
+                      onDark: true,
+                      message: '$label: түр хүлээнэ үү')
                   : Row(
                       key: const ValueKey('label'),
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -183,12 +154,16 @@ class GradientButton extends StatelessWidget {
                           _dimensionalButtonIcon(icon!, primary: true),
                           const SizedBox(width: 8)
                         ],
-                        Text(label,
-                            style: !disabled
-                                ? labelStyle
-                                // Идэвхгүй товч бүдэг label-тай — disabled гэдэг нь илт
-                                : labelStyle.copyWith(
-                                    color: AppColors.dynTextTertiary)),
+                        Flexible(
+                            child: Text(label,
+                                maxLines: 2,
+                                textAlign: TextAlign.center,
+                                overflow: TextOverflow.ellipsis,
+                                style: !disabled
+                                    ? labelStyle
+                                    // Идэвхгүй товч бүдэг label-тай — disabled гэдэг нь илт
+                                    : labelStyle.copyWith(
+                                        color: AppColors.dynTextTertiary))),
                         if (trailing != null) ...[
                           const SizedBox(width: 8),
                           trailing!
@@ -220,11 +195,10 @@ class OutlineButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _PressScale(
+    return PressFeedback(
       enabled: onPressed != null,
       child: SizedBox(
         width: double.infinity,
-        height: height,
         child: DecoratedBox(
           decoration: BoxDecoration(
             gradient: LinearGradient(
@@ -244,6 +218,8 @@ class OutlineButton extends StatelessWidget {
           child: TextButton(
             onPressed: onPressed,
             style: TextButton.styleFrom(
+              minimumSize: Size(double.infinity, height),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
               foregroundColor: AppColors.dynTextPrimary,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(14),
@@ -257,10 +233,14 @@ class OutlineButton extends StatelessWidget {
                   _dimensionalButtonIcon(icon!),
                   const SizedBox(width: 8)
                 ],
-                Text(label,
-                    style: AppTextStyles.btn.copyWith(
-                      fontWeight: FontWeight.w600,
-                    )),
+                Flexible(
+                    child: Text(label,
+                        maxLines: 2,
+                        textAlign: TextAlign.center,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTextStyles.btn.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ))),
               ],
             ),
           ),

@@ -165,7 +165,7 @@ class _VenueDetailScreenState extends ConsumerState<VenueDetailScreen> {
       messenger.showSnackBar(SnackBar(content: Text(err)));
     } else {
       // checkin_count-ыг дахин татна (trigger шинэчилсэн бол шууд тусна)
-      ref.invalidate(venuesProvider);
+      ref.read(refreshVenueCatalogProvider)();
       messenger.showSnackBar(SnackBar(content: Text(checkedIn
           ? 'Та энэ газраас гарлаа'
           : 'Ирснээ мэдэгдлээ! 🎉 (4 цаг хүчинтэй)')));

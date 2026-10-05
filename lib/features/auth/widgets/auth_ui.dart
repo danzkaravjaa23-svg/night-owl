@@ -6,6 +6,8 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_radii.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/utils/auth_callback.dart';
+import '../../../core/widgets/app_motion.dart';
+import '../../../core/widgets/owl_loading.dart';
 import '../services/apple_auth_service.dart';
 
 /// Нэвтрэлтийн дэлгэцүүдийн хуваалцсан UI хэсгүүд.
@@ -59,6 +61,7 @@ class AuthEntrance extends StatelessWidget {
   const AuthEntrance({super.key, this.index = 0, required this.child});
   @override
   Widget build(BuildContext context) {
+    if (AppMotion.reduced(context)) return child;
     final delay = index * 40;
     final total = 220 + delay;
     return TweenAnimationBuilder<double>(
@@ -74,18 +77,12 @@ class AuthEntrance extends StatelessWidget {
   }
 }
 
-// ── Ачаалж буй товчны spinner (GradientButton-ы trailing) ──
-// Ачаалах үед onPressed=null тул товч идэвхгүй (bgSurface дэвсгэр) —
-// цайвар горимд цагаан spinner алга болохоос сэргийлж textSecondary.
+// Нэвтрэлтийн хүсэлт үргэлжилж байх үеийн брэндийн тэмдэг.
 class BtnSpinner extends StatelessWidget {
   const BtnSpinner({super.key});
   @override
-  Widget build(BuildContext context) => SizedBox(
-    width: 16, height: 16,
-    child: CircularProgressIndicator(
-      strokeWidth: 2,
-      color: AppColors.isDarkMode ? Colors.white : AppColors.textSecondary),
-  );
+  Widget build(BuildContext context) =>
+      const OwlLoading(size: 20, compact: true, message: 'Түр хүлээнэ үү');
 }
 
 /// Дарахад агшиж (0.96), hover дээр заагч гардаг tap wrapper — web мэдрэмж.
@@ -110,8 +107,8 @@ class _TapScaleState extends State<TapScale> {
       onTapUp: (_) => setState(() => _down = false),
       onTap: widget.onTap,
       child: AnimatedScale(
-        scale: _down ? 0.96 : 1.0,
-        duration: const Duration(milliseconds: 120),
+        scale: _down && !AppMotion.reduced(context) ? 0.96 : 1.0,
+        duration: AppMotion.duration(context, AppMotion.press),
         curve: Curves.easeOut,
         child: widget.child,
       ),

@@ -1,0 +1,70 @@
+{
+	admin off
+	auto_https off
+}
+
+# Loopback development endpoint. Put this behind your verified HTTPS ingress
+# for production; do not switch the app to a plain HTTP public address.
+:8080 {
+	header {
+		X-Content-Type-Options nosniff
+		-Server
+	}
+	encode gzip
+	@allowedOrigin header Origin {$APP_WEB_ORIGIN}
+	header @allowedOrigin {
+		defer
+		Access-Control-Allow-Origin {$APP_WEB_ORIGIN}
+		Access-Control-Allow-Methods "GET, HEAD, POST, PATCH, PUT, DELETE, OPTIONS"
+		Access-Control-Allow-Headers "authorization, apikey, content-type, x-client-info, prefer, range, accept, accept-profile, content-profile, x-upsert"
+		Access-Control-Expose-Headers "content-range, range-unit, preference-applied, location"
+		Vary Origin
+	}
+
+	@health path /healthz /readyz
+	handle @health {
+		reverse_proxy readiness:8081
+	}
+
+	# The route block preserves this order: the readiness guard runs BEFORE
+	# every API handler, including object URLs and websocket handshakes.
+	route {
+		forward_auth readiness:8081 {
+			uri /gate
+		}
+		@disallowedOrigin {
+			header Origin *
+			not header Origin {$APP_WEB_ORIGIN}
+		}
+		respond @disallowedOrigin "Origin is not allowed" 403
+		@preflight {
+			method OPTIONS
+			header Origin {$APP_WEB_ORIGIN}
+		}
+		handle @preflight {
+			respond "" 204
+		}
+		handle_path /rest/v1/* {
+			reverse_proxy postgrest:3000
+		}
+		@auth path /auth/v1 /auth/v1/*
+		handle @auth {
+			reverse_proxy {$AUTH_UPSTREAM}
+		}
+		@storage path /storage/v1 /storage/v1/*
+		handle @storage {
+			request_body {
+				# Above the 50 MiB object limit; the selected store enforces buckets.
+				max_size 54MB
+			}
+			reverse_proxy {$STORAGE_UPSTREAM}
+		}
+		@realtime path /realtime/v1 /realtime/v1/*
+		handle @realtime {
+			reverse_proxy {$REALTIME_UPSTREAM}
+		}
+		handle {
+			respond "Unknown API route" 404
+		}
+	}
+}

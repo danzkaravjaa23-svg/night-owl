@@ -1,0 +1,4481 @@
+{
+  "kind": "nightowl-osm-supplemental-venue-catalog",
+  "source": "OpenStreetMap",
+  "retrievedAt": "2026-10-05T04:34:47.342639+00:00",
+  "osmDataTimestamp": null,
+  "endpoint": "https://api.openstreetmap.org/api/0.6/map.json?bbox=106.908,47.912,106.925,47.925",
+  "query": null,
+  "inputFormat": "osm-api-map",
+  "sourceSha256": "c2eb51e4452f0687bceef050f6e1c058be5e3dd4a70a1fffbda3cd9552ffec79",
+  "bounds": [
+    47.912,
+    106.908,
+    47.925,
+    106.925
+  ],
+  "license": "ODbL-1.0",
+  "licenseUrl": "https://opendatacommons.org/licenses/odbl/1-0/",
+  "attribution": "© OpenStreetMap contributors",
+  "attributionUrl": "https://www.openstreetmap.org/copyright",
+  "sourceObjectCount": 16194,
+  "namedLocatedCount": 276,
+  "deduplicatedCount": 270,
+  "venueCount": 270,
+  "coverageComplete": false,
+  "skipped": {
+    "unnamed-or-inactive-or-other": 7
+  },
+  "deduplication": [
+    {
+      "kept": "osm:node:2495869639",
+      "merged": "osm:node:3912613353"
+    },
+    {
+      "kept": "osm:node:3846177957",
+      "merged": "osm:node:3931645757"
+    },
+    {
+      "kept": "osm:node:3892322872",
+      "merged": "osm:node:5187841894"
+    },
+    {
+      "kept": "osm:node:5733425521",
+      "merged": "osm:node:5742726121"
+    },
+    {
+      "kept": "osm:node:6510601118",
+      "merged": "osm:node:6567958185"
+    },
+    {
+      "kept": "osm:node:11635070329",
+      "merged": "osm:node:11782390002"
+    }
+  ],
+  "communityEnabled": false,
+  "businessStatusVerified": false,
+  "venues": [
+    {
+      "id": "osm:node:6380522595",
+      "name": "Hops & Rocks Brewery",
+      "venue_type": "bar",
+      "lat": 47.9130241,
+      "lng": 106.9088022,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/6380522595",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "phone": "+976-11-88003506",
+      "website_url": "https://www.facebook.com/hopsandrocksbrewery",
+      "source_opening_hours": "Mo-Su 18:00-01:00",
+      "source_ids": [
+        "osm:node:6380522595"
+      ]
+    },
+    {
+      "id": "osm:node:6066788101",
+      "name": "Sky 17 Bar",
+      "venue_type": "bar",
+      "lat": 47.9180021,
+      "lng": 106.9200201,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/6066788101",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "address": "Ерөнхий сайд Амарын гудамж 17th floor",
+      "phone": "0097+11+310707",
+      "source_opening_hours": "Mo-Su 12:00-02:00",
+      "source_ids": [
+        "osm:node:6066788101"
+      ]
+    },
+    {
+      "id": "osm:node:6452841082",
+      "name": "Fat Cat Jazz Club",
+      "venue_type": "bar",
+      "lat": 47.9152012,
+      "lng": 106.9174411,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/6452841082",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "website_url": "https://www.fatcatjazzclub.com/",
+      "source_ids": [
+        "osm:node:6452841082"
+      ]
+    },
+    {
+      "id": "osm:node:1477522457",
+      "name": "MB Pub",
+      "venue_type": "bar",
+      "lat": 47.9146723,
+      "lng": 106.9153202,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/1477522457",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_opening_hours": "Mo-Th 12:00-01:00; Fr 12:00-02:00; Sa 14:00-01:00; Su 16:00-01:00",
+      "source_ids": [
+        "osm:node:1477522457"
+      ]
+    },
+    {
+      "id": "osm:node:3894653628",
+      "name": "Bitter House",
+      "venue_type": "bar",
+      "lat": 47.9224039,
+      "lng": 106.9157515,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/3894653628",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:3894653628"
+      ]
+    },
+    {
+      "id": "osm:node:4997686922",
+      "name": "Brussels Belgian Beer Café",
+      "venue_type": "bar",
+      "lat": 47.9132415,
+      "lng": 106.9204794,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/4997686922",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:4997686922"
+      ]
+    },
+    {
+      "id": "osm:node:11140275605",
+      "name": "Central Garden",
+      "venue_type": "bar",
+      "lat": 47.9151308,
+      "lng": 106.9188431,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/11140275605",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:11140275605"
+      ]
+    },
+    {
+      "id": "osm:node:3899304788",
+      "name": "Esco Bar",
+      "venue_type": "bar",
+      "lat": 47.9146528,
+      "lng": 106.9089683,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/3899304788",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:3899304788"
+      ]
+    },
+    {
+      "id": "osm:node:3617059622",
+      "name": "i-Loft function house",
+      "venue_type": "bar",
+      "lat": 47.9206554,
+      "lng": 106.9203815,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/3617059622",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:3617059622"
+      ]
+    },
+    {
+      "id": "osm:node:3148656454",
+      "name": "iloft night club",
+      "venue_type": "bar",
+      "lat": 47.9205603,
+      "lng": 106.9203957,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/3148656454",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:3148656454"
+      ]
+    },
+    {
+      "id": "osm:node:3900952937",
+      "name": "MD karaoke",
+      "venue_type": "bar",
+      "lat": 47.9143111,
+      "lng": 106.91111,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/3900952937",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:3900952937"
+      ]
+    },
+    {
+      "id": "osm:node:11158663509",
+      "name": "Secret Garden",
+      "venue_type": "bar",
+      "lat": 47.9139899,
+      "lng": 106.9172367,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/11158663509",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:11158663509"
+      ]
+    },
+    {
+      "id": "osm:node:3667041925",
+      "name": "Spirit Lounge",
+      "venue_type": "bar",
+      "lat": 47.923367,
+      "lng": 106.910365,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/3667041925",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:3667041925"
+      ]
+    },
+    {
+      "id": "osm:node:11140275505",
+      "name": "UB Comedy",
+      "venue_type": "bar",
+      "lat": 47.9140766,
+      "lng": 106.9088971,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/11140275505",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:11140275505"
+      ]
+    },
+    {
+      "id": "osm:node:3900932239",
+      "name": "Караокэ & бар",
+      "venue_type": "bar",
+      "lat": 47.9127125,
+      "lng": 106.9101008,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/3900932239",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:3900932239"
+      ]
+    },
+    {
+      "id": "osm:node:4397420592",
+      "name": "ЦЭ Паб",
+      "venue_type": "pub",
+      "lat": 47.9222017,
+      "lng": 106.9206247,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/4397420592",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "address": "Залуучуудын өргөн чөлөө",
+      "source_ids": [
+        "osm:node:4397420592"
+      ]
+    },
+    {
+      "id": "osm:node:2531717697",
+      "name": "andorra",
+      "venue_type": "pub",
+      "lat": 47.91993,
+      "lng": 106.9211601,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/2531717697",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:2531717697"
+      ]
+    },
+    {
+      "id": "osm:way:244261881",
+      "name": "Andorra Karaoke",
+      "venue_type": "pub",
+      "lat": 47.9199549,
+      "lng": 106.9212805,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/way/244261881",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "geometry-bounds-center",
+      "source_ids": [
+        "osm:way:244261881"
+      ]
+    },
+    {
+      "id": "osm:node:3900871989",
+      "name": "Axis pub",
+      "venue_type": "pub",
+      "lat": 47.9145847,
+      "lng": 106.9108873,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/3900871989",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:3900871989"
+      ]
+    },
+    {
+      "id": "osm:node:3669885826",
+      "name": "Axis restaurant pub",
+      "venue_type": "pub",
+      "lat": 47.922342,
+      "lng": 106.911549,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/3669885826",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:3669885826"
+      ]
+    },
+    {
+      "id": "osm:node:2293321286",
+      "name": "Budweiser Pub",
+      "venue_type": "pub",
+      "lat": 47.9195311,
+      "lng": 106.9158316,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/2293321286",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:2293321286"
+      ]
+    },
+    {
+      "id": "osm:node:1784384900",
+      "name": "GQ Lounge Pub",
+      "venue_type": "pub",
+      "lat": 47.9200367,
+      "lng": 106.922082,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/1784384900",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:1784384900"
+      ]
+    },
+    {
+      "id": "osm:node:3904328243",
+      "name": "So: seoul kalbi 3",
+      "venue_type": "pub",
+      "lat": 47.9229495,
+      "lng": 106.911143,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/3904328243",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:3904328243"
+      ]
+    },
+    {
+      "id": "osm:node:3667073128",
+      "name": "The West Pub",
+      "venue_type": "pub",
+      "lat": 47.924132,
+      "lng": 106.909701,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/3667073128",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:3667073128"
+      ]
+    },
+    {
+      "id": "osm:node:2514667763",
+      "name": "Tse pub",
+      "venue_type": "pub",
+      "lat": 47.9248373,
+      "lng": 106.9213516,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/2514667763",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:2514667763"
+      ]
+    },
+    {
+      "id": "osm:node:3900874549",
+      "name": "UB lounge & karaoke",
+      "venue_type": "pub",
+      "lat": 47.9144462,
+      "lng": 106.9103874,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/3900874549",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:3900874549"
+      ]
+    },
+    {
+      "id": "osm:node:3673039625",
+      "name": "Venus lounge",
+      "venue_type": "pub",
+      "lat": 47.923859,
+      "lng": 106.917926,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/3673039625",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:3673039625"
+      ]
+    },
+    {
+      "id": "osm:node:13369164710",
+      "name": "Айриш паб",
+      "venue_type": "pub",
+      "lat": 47.9152094,
+      "lng": 106.9138958,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/13369164710",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:13369164710"
+      ]
+    },
+    {
+      "id": "osm:node:3902505438",
+      "name": "Алтан хундага",
+      "venue_type": "pub",
+      "lat": 47.9240193,
+      "lng": 106.9130577,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/3902505438",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:3902505438"
+      ]
+    },
+    {
+      "id": "osm:node:3674191925",
+      "name": "Звт монгол",
+      "venue_type": "pub",
+      "lat": 47.9207652,
+      "lng": 106.9108582,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/3674191925",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:3674191925"
+      ]
+    },
+    {
+      "id": "osm:node:2321598633",
+      "name": "Ривер соундс клуб",
+      "venue_type": "pub",
+      "lat": 47.9160681,
+      "lng": 106.9212274,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/2321598633",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:2321598633"
+      ]
+    },
+    {
+      "id": "osm:node:3902503193",
+      "name": "Спарта паб",
+      "venue_type": "pub",
+      "lat": 47.9236626,
+      "lng": 106.9113507,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/3902503193",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:3902503193"
+      ]
+    },
+    {
+      "id": "osm:node:3902482359",
+      "name": "Стар паб",
+      "venue_type": "pub",
+      "lat": 47.9243065,
+      "lng": 106.9120342,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/3902482359",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:3902482359"
+      ]
+    },
+    {
+      "id": "osm:node:3900115346",
+      "name": "Цэ (tse pub)",
+      "venue_type": "pub",
+      "lat": 47.917961,
+      "lng": 106.911437,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/3900115346",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:3900115346"
+      ]
+    },
+    {
+      "id": "osm:node:2514801014",
+      "name": "AVA night club",
+      "venue_type": "nightclub",
+      "lat": 47.9248595,
+      "lng": 106.9213063,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/2514801014",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:2514801014"
+      ]
+    },
+    {
+      "id": "osm:node:3913503159",
+      "name": "Vegas",
+      "venue_type": "nightclub",
+      "lat": 47.9166454,
+      "lng": 106.9186831,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/3913503159",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:3913503159"
+      ]
+    },
+    {
+      "id": "osm:node:2514667790",
+      "name": "караоке",
+      "venue_type": "nightclub",
+      "lat": 47.9241312,
+      "lng": 106.9218386,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/2514667790",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:2514667790"
+      ]
+    },
+    {
+      "id": "osm:node:3887636695",
+      "name": "Лухс",
+      "venue_type": "nightclub",
+      "lat": 47.9162941,
+      "lng": 106.9180057,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/3887636695",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:3887636695"
+      ]
+    },
+    {
+      "id": "osm:node:6066771481",
+      "name": "Asiana Central Restaurant",
+      "venue_type": "restaurant",
+      "lat": 47.9179831,
+      "lng": 106.91966,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/6066771481",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "address": "Central Tower 3rd floor",
+      "phone": "+976-77151060",
+      "website_url": "http://mgc.mn",
+      "source_opening_hours": "Mo-Su 07:30-00:00",
+      "source_ids": [
+        "osm:node:6066771481"
+      ]
+    },
+    {
+      "id": "osm:node:3886158498",
+      "name": "INDE - Indian Restaurant",
+      "venue_type": "restaurant",
+      "lat": 47.9140565,
+      "lng": 106.9088208,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/3886158498",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "address": "Seoul Street 14",
+      "phone": "77770200",
+      "website_url": "https://www.inde.mn/",
+      "source_opening_hours": "Mo-Su 09:00-00:00",
+      "source_ids": [
+        "osm:node:3886158498"
+      ]
+    },
+    {
+      "id": "osm:node:5248486522",
+      "name": "Чулуун давс",
+      "venue_type": "restaurant",
+      "lat": 47.9159684,
+      "lng": 106.9198535,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/5248486522",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "address": "Жамъян гүний гудамж",
+      "phone": "77001881",
+      "website_url": "http://www.rocksalt.mn",
+      "source_opening_hours": "Mo-Sa 12:00-00:00",
+      "source_ids": [
+        "osm:node:5248486522"
+      ]
+    },
+    {
+      "id": "osm:node:6066767487",
+      "name": "city club",
+      "venue_type": "restaurant",
+      "lat": 47.9180774,
+      "lng": 106.9204569,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/6066767487",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "address": "Ерөнхий сайд Амарын гудамж 17th floor",
+      "phone": "00976+77131111",
+      "source_opening_hours": "Mo-Su 12:00-00:00",
+      "source_ids": [
+        "osm:node:6066767487"
+      ]
+    },
+    {
+      "id": "osm:node:7001382885",
+      "name": "CORK Wine & Kitchen",
+      "venue_type": "restaurant",
+      "lat": 47.9127257,
+      "lng": 106.9230902,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/7001382885",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "address": "Олимпийн гудамж",
+      "phone": "77113390",
+      "source_opening_hours": "Mo-Su 12:00-23:55",
+      "source_ids": [
+        "osm:node:7001382885"
+      ]
+    },
+    {
+      "id": "osm:node:3674314326",
+      "name": "Daifuji Japanese Restaurant",
+      "venue_type": "restaurant",
+      "lat": 47.923701,
+      "lng": 106.917903,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/3674314326",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "address": "Их сургуулийн гудамж 4-22",
+      "phone": "90205803",
+      "source_opening_hours": "Mo-Sa 09:00-23:00",
+      "source_ids": [
+        "osm:node:3674314326"
+      ]
+    },
+    {
+      "id": "osm:node:6066771483",
+      "name": "Monet",
+      "venue_type": "restaurant",
+      "lat": 47.9181135,
+      "lng": 106.9196569,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/6066771483",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "address": "Ерөнхий сайд Амарын гудамж 17th floor",
+      "phone": "+967-11-310707",
+      "source_opening_hours": "Mo-Su 12:00-00:00",
+      "source_ids": [
+        "osm:node:6066771483"
+      ]
+    },
+    {
+      "id": "osm:node:5733425521",
+      "name": "Аянчин Даун Таун",
+      "venue_type": "restaurant",
+      "lat": 47.9150923,
+      "lng": 106.9200291,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/5733425521",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "address": "Олимпийн гудамж 101",
+      "phone": "77072611",
+      "source_opening_hours": "Mo-Su 09:00-00:00",
+      "source_ids": [
+        "osm:node:5733425521",
+        "osm:node:5742726121"
+      ]
+    },
+    {
+      "id": "osm:node:3671250725",
+      "name": "Долче Вита",
+      "venue_type": "restaurant",
+      "lat": 47.912446,
+      "lng": 106.915693,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/3671250725",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "address": "Чингисийн өргөн чөлөө 10/1",
+      "phone": "99118913",
+      "source_opening_hours": "Mo-Su 10:00-22:00",
+      "source_ids": [
+        "osm:node:3671250725"
+      ]
+    },
+    {
+      "id": "osm:node:7494632585",
+      "name": "Такэсан Рамен",
+      "venue_type": "restaurant",
+      "lat": 47.9127919,
+      "lng": 106.9230963,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/7494632585",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "address": "Олимпийн гудамж",
+      "phone": "77061212",
+      "source_opening_hours": "Mo-Su 10:00-00:00",
+      "source_ids": [
+        "osm:node:7494632585"
+      ]
+    },
+    {
+      "id": "osm:node:5248484023",
+      "name": "Чойжин сүм",
+      "venue_type": "restaurant",
+      "lat": 47.91502,
+      "lng": 106.9196788,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/5248484023",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "address": "Олимпийн гудамж",
+      "phone": "77034499",
+      "source_opening_hours": "Mo-Su 12:00-00:00",
+      "source_ids": [
+        "osm:node:5248484023"
+      ]
+    },
+    {
+      "id": "osm:node:5928074486",
+      "name": "юна",
+      "venue_type": "restaurant",
+      "lat": 47.9144744,
+      "lng": 106.910356,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/5928074486",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "address": "Сөүлийн гудамж 1",
+      "phone": "77041111",
+      "source_opening_hours": "Mo-Su 11:00-22:00",
+      "source_ids": [
+        "osm:node:5928074486"
+      ]
+    },
+    {
+      "id": "osm:node:5928074985",
+      "name": "Юна",
+      "venue_type": "restaurant",
+      "lat": 47.9197464,
+      "lng": 106.9146097,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/5928074985",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "address": "Жуулчны гудамж 1",
+      "phone": "77041111",
+      "source_opening_hours": "Mo-Su 11:30-22:00",
+      "source_ids": [
+        "osm:node:5928074985"
+      ]
+    },
+    {
+      "id": "osm:node:2871910101",
+      "name": "London restaurant",
+      "venue_type": "restaurant",
+      "lat": 47.9236272,
+      "lng": 106.91033,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/2871910101",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "address": "Бага тойрог",
+      "phone": "325808",
+      "source_ids": [
+        "osm:node:2871910101"
+      ]
+    },
+    {
+      "id": "osm:node:3671246825",
+      "name": "Mandu House",
+      "venue_type": "restaurant",
+      "lat": 47.9174057,
+      "lng": 106.9233563,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/3671246825",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "phone": "77180909",
+      "source_opening_hours": "Mo-Fr 08:00-23:00 Sa-Su 09:00-22:00",
+      "source_ids": [
+        "osm:node:3671246825"
+      ]
+    },
+    {
+      "id": "osm:node:3669998925",
+      "name": "Pizza Hut",
+      "venue_type": "restaurant",
+      "lat": 47.919768,
+      "lng": 106.914154,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/3669998925",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "address": "Жуулчны гудамж 22",
+      "source_opening_hours": "Su-Th 23:00-11:00; Fr-Sa 23:00-00:00",
+      "source_ids": [
+        "osm:node:3669998925"
+      ]
+    },
+    {
+      "id": "osm:node:5811201356",
+      "name": "The Bull",
+      "venue_type": "restaurant",
+      "lat": 47.9219159,
+      "lng": 106.9215971,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/5811201356",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "phone": "77100060",
+      "source_opening_hours": "Mo-Su 11:00-22:00",
+      "source_ids": [
+        "osm:node:5811201356"
+      ]
+    },
+    {
+      "id": "osm:node:11635124352",
+      "name": "Yami Korean restaurant&pub",
+      "venue_type": "restaurant",
+      "lat": 47.917241,
+      "lng": 106.9221821,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/11635124352",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "phone": "77110195",
+      "source_opening_hours": "Mo-Su 10:00-02:00",
+      "source_ids": [
+        "osm:node:11635124352"
+      ]
+    },
+    {
+      "id": "osm:way:662430190",
+      "name": "Наадам зоогийн газар",
+      "venue_type": "restaurant",
+      "lat": 47.912794000000005,
+      "lng": 106.92037210000001,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/way/662430190",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "geometry-bounds-center",
+      "address": "Олимпийн гудамж 19",
+      "source_opening_hours": "Mo-Sa 12:00-00:00",
+      "source_ids": [
+        "osm:way:662430190"
+      ]
+    },
+    {
+      "id": "osm:node:7756958085",
+      "name": "Рэдбүл Ресторан Лоунж",
+      "venue_type": "restaurant",
+      "lat": 47.9229572,
+      "lng": 106.9132735,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/7756958085",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "phone": "77073888",
+      "source_opening_hours": "Mo-Sa 07:00-02:00",
+      "source_ids": [
+        "osm:node:7756958085"
+      ]
+    },
+    {
+      "id": "osm:node:6066772586",
+      "name": "Чили",
+      "venue_type": "restaurant",
+      "lat": 47.9135269,
+      "lng": 106.921248,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/6066772586",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "address": "Олимпийн гудамж 3rd floor, mall",
+      "source_opening_hours": "Mo-Su 09:00-24:00",
+      "source_ids": [
+        "osm:node:6066772586"
+      ]
+    },
+    {
+      "id": "osm:node:13974096701",
+      "name": "Beef Noodlea Ma La Tang Fast Food",
+      "venue_type": "restaurant",
+      "lat": 47.9168282,
+      "lng": 106.9108273,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/13974096701",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "address": "Энх тайваны өргөн чөлөө",
+      "source_ids": [
+        "osm:node:13974096701"
+      ]
+    },
+    {
+      "id": "osm:node:2952191525",
+      "name": "Deeldar's Cafe",
+      "venue_type": "restaurant",
+      "lat": 47.9153068,
+      "lng": 106.9165496,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/2952191525",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_opening_hours": "Th-Tu 09:00-20:00; We 09:00-18:00",
+      "source_ids": [
+        "osm:node:2952191525"
+      ]
+    },
+    {
+      "id": "osm:node:14030823601",
+      "name": "Loving Hut",
+      "venue_type": "restaurant",
+      "lat": 47.9232505,
+      "lng": 106.9150913,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/14030823601",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "phone": "+97695501177",
+      "source_ids": [
+        "osm:node:14030823601"
+      ]
+    },
+    {
+      "id": "osm:node:3891278774",
+      "name": "Miracle hospital",
+      "venue_type": "restaurant",
+      "lat": 47.9196766,
+      "lng": 106.9238593,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/3891278774",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_opening_hours": "24/7",
+      "source_ids": [
+        "osm:node:3891278774"
+      ]
+    },
+    {
+      "id": "osm:node:13089216342",
+      "name": "Namaste",
+      "venue_type": "restaurant",
+      "lat": 47.9166139,
+      "lng": 106.9199054,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/13089216342",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_opening_hours": "11:00-22:00",
+      "source_ids": [
+        "osm:node:13089216342"
+      ]
+    },
+    {
+      "id": "osm:node:13165749001",
+      "name": "Namaste Restaurant",
+      "venue_type": "restaurant",
+      "lat": 47.9165825,
+      "lng": 106.9199461,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/13165749001",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "website_url": "https://namaste.mn/",
+      "source_ids": [
+        "osm:node:13165749001"
+      ]
+    },
+    {
+      "id": "osm:node:3894615949",
+      "name": "Алтангадас",
+      "venue_type": "restaurant",
+      "lat": 47.9149893,
+      "lng": 106.9089005,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/3894615949",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "phone": "+976 1131 6595",
+      "source_ids": [
+        "osm:node:3894615949"
+      ]
+    },
+    {
+      "id": "osm:node:3886158495",
+      "name": "Ариг рамэн",
+      "venue_type": "restaurant",
+      "lat": 47.9149802,
+      "lng": 106.9124633,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/3886158495",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "address": "Сөүлийн гудамж",
+      "source_ids": [
+        "osm:node:3886158495"
+      ]
+    },
+    {
+      "id": "osm:node:8087986164",
+      "name": "\"Гурван сайхан\" цайны газар",
+      "venue_type": "restaurant",
+      "lat": 47.9136235,
+      "lng": 106.9101615,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/8087986164",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_opening_hours": "09:00-22:00",
+      "source_ids": [
+        "osm:node:8087986164"
+      ]
+    },
+    {
+      "id": "osm:node:3682095928",
+      "name": "Твинкль зоог",
+      "venue_type": "restaurant",
+      "lat": 47.922658,
+      "lng": 106.918107,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/3682095928",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "address": "Их сургуулийн гудамж",
+      "source_ids": [
+        "osm:node:3682095928"
+      ]
+    },
+    {
+      "id": "osm:node:14155437401",
+      "name": "976",
+      "venue_type": "restaurant",
+      "lat": 47.915274,
+      "lng": 106.9207548,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/14155437401",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:14155437401"
+      ]
+    },
+    {
+      "id": "osm:node:14061407901",
+      "name": "Agnista",
+      "venue_type": "restaurant",
+      "lat": 47.9205846,
+      "lng": 106.9215663,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/14061407901",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:14061407901"
+      ]
+    },
+    {
+      "id": "osm:node:14008238891",
+      "name": "Alfie Restaurant",
+      "venue_type": "restaurant",
+      "lat": 47.9180745,
+      "lng": 106.9207412,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/14008238891",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:14008238891"
+      ]
+    },
+    {
+      "id": "osm:node:13784253235",
+      "name": "Arig Anya",
+      "venue_type": "restaurant",
+      "lat": 47.916274,
+      "lng": 106.9193266,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/13784253235",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:13784253235"
+      ]
+    },
+    {
+      "id": "osm:node:3093536509",
+      "name": "Bavaria",
+      "venue_type": "restaurant",
+      "lat": 47.9211492,
+      "lng": 106.9132215,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/3093536509",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:3093536509"
+      ]
+    },
+    {
+      "id": "osm:node:3669882025",
+      "name": "Bavaria",
+      "venue_type": "restaurant",
+      "lat": 47.922286,
+      "lng": 106.917281,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/3669882025",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:3669882025"
+      ]
+    },
+    {
+      "id": "osm:node:4310060692",
+      "name": "bd's Mongolian Grill",
+      "venue_type": "restaurant",
+      "lat": 47.9242154,
+      "lng": 106.9167387,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/4310060692",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:4310060692"
+      ]
+    },
+    {
+      "id": "osm:node:3669561374",
+      "name": "Black Pearl",
+      "venue_type": "restaurant",
+      "lat": 47.920798,
+      "lng": 106.922872,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/3669561374",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:3669561374"
+      ]
+    },
+    {
+      "id": "osm:node:4310331989",
+      "name": "Bluefin Cuisine D'Art",
+      "venue_type": "restaurant",
+      "lat": 47.9159669,
+      "lng": 106.9163161,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/4310331989",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:4310331989"
+      ]
+    },
+    {
+      "id": "osm:node:3886158479",
+      "name": "Broadway",
+      "venue_type": "restaurant",
+      "lat": 47.9166812,
+      "lng": 106.9091127,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/3886158479",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:3886158479"
+      ]
+    },
+    {
+      "id": "osm:node:11158654706",
+      "name": "Cafe & Bar 78",
+      "venue_type": "restaurant",
+      "lat": 47.9193794,
+      "lng": 106.9217777,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/11158654706",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:11158654706"
+      ]
+    },
+    {
+      "id": "osm:node:3092049234",
+      "name": "Cafe De Amor ресторан",
+      "venue_type": "restaurant",
+      "lat": 47.9247673,
+      "lng": 106.9193933,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/3092049234",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:3092049234"
+      ]
+    },
+    {
+      "id": "osm:node:3910207970",
+      "name": "Canteen",
+      "venue_type": "restaurant",
+      "lat": 47.9227536,
+      "lng": 106.9181025,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/3910207970",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:3910207970"
+      ]
+    },
+    {
+      "id": "osm:node:3886060488",
+      "name": "Casablanca",
+      "venue_type": "restaurant",
+      "lat": 47.912537,
+      "lng": 106.9136041,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/3886060488",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:3886060488"
+      ]
+    },
+    {
+      "id": "osm:node:3886060533",
+      "name": "Causcase рестроран",
+      "venue_type": "restaurant",
+      "lat": 47.9123047,
+      "lng": 106.9086426,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/3886060533",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:3886060533"
+      ]
+    },
+    {
+      "id": "osm:node:3902589660",
+      "name": "Century",
+      "venue_type": "restaurant",
+      "lat": 47.9229641,
+      "lng": 106.9151352,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/3902589660",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:3902589660"
+      ]
+    },
+    {
+      "id": "osm:node:3886158492",
+      "name": "City",
+      "venue_type": "restaurant",
+      "lat": 47.9160852,
+      "lng": 106.9163341,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/3886158492",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:3886158492"
+      ]
+    },
+    {
+      "id": "osm:node:2293341555",
+      "name": "Crown",
+      "venue_type": "restaurant",
+      "lat": 47.914327,
+      "lng": 106.9167241,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/2293341555",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:2293341555"
+      ]
+    },
+    {
+      "id": "osm:node:3896158890",
+      "name": "Darts",
+      "venue_type": "restaurant",
+      "lat": 47.9142411,
+      "lng": 106.9111046,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/3896158890",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:3896158890"
+      ]
+    },
+    {
+      "id": "osm:node:3902591670",
+      "name": "DC зоогийн газар",
+      "venue_type": "restaurant",
+      "lat": 47.9233181,
+      "lng": 106.9150763,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/3902591670",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:3902591670"
+      ]
+    },
+    {
+      "id": "osm:node:3902583956",
+      "name": "Felicita",
+      "venue_type": "restaurant",
+      "lat": 47.922535,
+      "lng": 106.9156926,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/3902583956",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:3902583956"
+      ]
+    },
+    {
+      "id": "osm:node:11158664606",
+      "name": "Gangnam",
+      "venue_type": "restaurant",
+      "lat": 47.9231996,
+      "lng": 106.9180912,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/11158664606",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:11158664606"
+      ]
+    },
+    {
+      "id": "osm:node:6566561785",
+      "name": "Good cheap local food",
+      "venue_type": "restaurant",
+      "lat": 47.9180256,
+      "lng": 106.924335,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/6566561785",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:6566561785"
+      ]
+    },
+    {
+      "id": "osm:node:11195429039",
+      "name": "Goody Vegan restaurant",
+      "venue_type": "restaurant",
+      "lat": 47.9197451,
+      "lng": 106.9082183,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/11195429039",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:11195429039"
+      ]
+    },
+    {
+      "id": "osm:node:4029481189",
+      "name": "Granville restaurant",
+      "venue_type": "restaurant",
+      "lat": 47.9186897,
+      "lng": 106.910609,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/4029481189",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:4029481189"
+      ]
+    },
+    {
+      "id": "osm:node:3673293728",
+      "name": "Green live",
+      "venue_type": "restaurant",
+      "lat": 47.91974,
+      "lng": 106.914077,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/3673293728",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:3673293728"
+      ]
+    },
+    {
+      "id": "osm:node:4327660898",
+      "name": "Happy ресторан",
+      "venue_type": "restaurant",
+      "lat": 47.9155932,
+      "lng": 106.921436,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/4327660898",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:4327660898"
+      ]
+    },
+    {
+      "id": "osm:node:3093535714",
+      "name": "Hashi",
+      "venue_type": "restaurant",
+      "lat": 47.9211359,
+      "lng": 106.91316,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/3093535714",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:3093535714"
+      ]
+    },
+    {
+      "id": "osm:node:12345212301",
+      "name": "Hinomaru Japanese restaurant",
+      "venue_type": "restaurant",
+      "lat": 47.9226431,
+      "lng": 106.9180564,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/12345212301",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:12345212301"
+      ]
+    },
+    {
+      "id": "osm:node:2532391369",
+      "name": "Ichiro",
+      "venue_type": "restaurant",
+      "lat": 47.9230353,
+      "lng": 106.9111268,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/2532391369",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:2532391369"
+      ]
+    },
+    {
+      "id": "osm:node:3891276601",
+      "name": "I loft",
+      "venue_type": "restaurant",
+      "lat": 47.9204934,
+      "lng": 106.9196214,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/3891276601",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:3891276601"
+      ]
+    },
+    {
+      "id": "osm:node:2511108878",
+      "name": "Irish house",
+      "venue_type": "restaurant",
+      "lat": 47.9247989,
+      "lng": 106.9182157,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/2511108878",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:2511108878"
+      ]
+    },
+    {
+      "id": "osm:node:3093532124",
+      "name": "Istanbul ресторан",
+      "venue_type": "restaurant",
+      "lat": 47.9240405,
+      "lng": 106.92231,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/3093532124",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:3093532124"
+      ]
+    },
+    {
+      "id": "osm:node:2882186758",
+      "name": "Ji Xiang",
+      "venue_type": "restaurant",
+      "lat": 47.921487,
+      "lng": 106.911461,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/2882186758",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:2882186758"
+      ]
+    },
+    {
+      "id": "osm:node:11949581869",
+      "name": "Kokoro",
+      "venue_type": "restaurant",
+      "lat": 47.9246605,
+      "lng": 106.9148211,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/11949581869",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:11949581869"
+      ]
+    },
+    {
+      "id": "osm:node:3092061831",
+      "name": "Kudamm Ecke ресторан",
+      "venue_type": "restaurant",
+      "lat": 47.9244531,
+      "lng": 106.9220082,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/3092061831",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:3092061831"
+      ]
+    },
+    {
+      "id": "osm:node:11158664205",
+      "name": "La Fontana",
+      "venue_type": "restaurant",
+      "lat": 47.9137366,
+      "lng": 106.910104,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/11158664205",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:11158664205"
+      ]
+    },
+    {
+      "id": "osm:node:11158654708",
+      "name": "La Rosa",
+      "venue_type": "restaurant",
+      "lat": 47.914284,
+      "lng": 106.9165676,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/11158654708",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:11158654708"
+      ]
+    },
+    {
+      "id": "osm:node:11974488832",
+      "name": "Loving Hut",
+      "venue_type": "restaurant",
+      "lat": 47.9147267,
+      "lng": 106.9080873,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/11974488832",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:11974488832"
+      ]
+    },
+    {
+      "id": "osm:node:11782344596",
+      "name": "Mandy house",
+      "venue_type": "restaurant",
+      "lat": 47.917281,
+      "lng": 106.923355,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/11782344596",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:11782344596"
+      ]
+    },
+    {
+      "id": "osm:node:3892322872",
+      "name": "Mille's Espresso",
+      "venue_type": "restaurant",
+      "lat": 47.914276,
+      "lng": 106.9178506,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/3892322872",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:3892322872",
+        "osm:node:5187841894"
+      ]
+    },
+    {
+      "id": "osm:node:1678362169",
+      "name": "Modern nomads",
+      "venue_type": "restaurant",
+      "lat": 47.9225949,
+      "lng": 106.9156784,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/1678362169",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:1678362169"
+      ]
+    },
+    {
+      "id": "osm:node:2532391368",
+      "name": "Modern Nomads",
+      "venue_type": "restaurant",
+      "lat": 47.9210063,
+      "lng": 106.9115869,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/2532391368",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:2532391368"
+      ]
+    },
+    {
+      "id": "osm:way:244790560",
+      "name": "Modern Nomads",
+      "venue_type": "restaurant",
+      "lat": 47.920305,
+      "lng": 106.921695,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/way/244790560",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "geometry-bounds-center",
+      "source_ids": [
+        "osm:way:244790560"
+      ]
+    },
+    {
+      "id": "osm:node:14026426284",
+      "name": "Momo",
+      "venue_type": "restaurant",
+      "lat": 47.916556,
+      "lng": 106.9082338,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/14026426284",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:14026426284"
+      ]
+    },
+    {
+      "id": "osm:node:14003594106",
+      "name": "Mr. Ramen",
+      "venue_type": "restaurant",
+      "lat": 47.916192,
+      "lng": 106.908587,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/14003594106",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:14003594106"
+      ]
+    },
+    {
+      "id": "osm:node:11158664407",
+      "name": "Nagomi",
+      "venue_type": "restaurant",
+      "lat": 47.9211233,
+      "lng": 106.9196972,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/11158664407",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:11158664407"
+      ]
+    },
+    {
+      "id": "osm:node:11113318505",
+      "name": "Navat Uzbek",
+      "venue_type": "restaurant",
+      "lat": 47.9170479,
+      "lng": 106.9116147,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/11113318505",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:11113318505"
+      ]
+    },
+    {
+      "id": "osm:node:3092025632",
+      "name": "Nayra Cafe",
+      "venue_type": "restaurant",
+      "lat": 47.9205903,
+      "lng": 106.9108861,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/3092025632",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:3092025632"
+      ]
+    },
+    {
+      "id": "osm:node:3886060509",
+      "name": "One Day in Mongolia",
+      "venue_type": "restaurant",
+      "lat": 47.9128195,
+      "lng": 106.9142289,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/3886060509",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:3886060509"
+      ]
+    },
+    {
+      "id": "osm:node:11158663708",
+      "name": "Pho",
+      "venue_type": "restaurant",
+      "lat": 47.9198337,
+      "lng": 106.914035,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/11158663708",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:11158663708"
+      ]
+    },
+    {
+      "id": "osm:node:6760903185",
+      "name": "Pho House",
+      "venue_type": "restaurant",
+      "lat": 47.9197661,
+      "lng": 106.9141009,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/6760903185",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:6760903185"
+      ]
+    },
+    {
+      "id": "osm:node:11158664409",
+      "name": "Radio Dept",
+      "venue_type": "restaurant",
+      "lat": 47.9186729,
+      "lng": 106.9105314,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/11158664409",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:11158664409"
+      ]
+    },
+    {
+      "id": "osm:node:3092028446",
+      "name": "Ramon ресторан",
+      "venue_type": "restaurant",
+      "lat": 47.9212466,
+      "lng": 106.9114804,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/3092028446",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:3092028446"
+      ]
+    },
+    {
+      "id": "osm:node:3895137758",
+      "name": "Redbull",
+      "venue_type": "restaurant",
+      "lat": 47.9222822,
+      "lng": 106.9219539,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/3895137758",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:3895137758"
+      ]
+    },
+    {
+      "id": "osm:node:3673293028",
+      "name": "Renaissance restaurant",
+      "venue_type": "restaurant",
+      "lat": 47.919776,
+      "lng": 106.914853,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/3673293028",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:3673293028"
+      ]
+    },
+    {
+      "id": "osm:node:3673293727",
+      "name": "Rogovski",
+      "venue_type": "restaurant",
+      "lat": 47.919789,
+      "lng": 106.91474,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/3673293727",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:3673293727"
+      ]
+    },
+    {
+      "id": "osm:node:2506789934",
+      "name": "Romance ресторан",
+      "venue_type": "restaurant",
+      "lat": 47.9246517,
+      "lng": 106.9182577,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/2506789934",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:2506789934"
+      ]
+    },
+    {
+      "id": "osm:node:3617034309",
+      "name": "Romans",
+      "venue_type": "restaurant",
+      "lat": 47.9246592,
+      "lng": 106.918268,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/3617034309",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:3617034309"
+      ]
+    },
+    {
+      "id": "osm:node:3886158490",
+      "name": "Rosewood",
+      "venue_type": "restaurant",
+      "lat": 47.9139165,
+      "lng": 106.909963,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/3886158490",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:3886158490"
+      ]
+    },
+    {
+      "id": "osm:node:11158664408",
+      "name": "Route 22",
+      "venue_type": "restaurant",
+      "lat": 47.9198283,
+      "lng": 106.9138943,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/11158664408",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:11158664408"
+      ]
+    },
+    {
+      "id": "osm:node:3894695000",
+      "name": "Sekitei hotpot restaurant",
+      "venue_type": "restaurant",
+      "lat": 47.9141332,
+      "lng": 106.9160883,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/3894695000",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:3894695000"
+      ]
+    },
+    {
+      "id": "osm:node:3617059620",
+      "name": "Sichuan Chinese Restaurant",
+      "venue_type": "restaurant",
+      "lat": 47.9187463,
+      "lng": 106.9223053,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/3617059620",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:3617059620"
+      ]
+    },
+    {
+      "id": "osm:node:3886158496",
+      "name": "Silk Road Bar & Grill",
+      "venue_type": "restaurant",
+      "lat": 47.9151933,
+      "lng": 106.9174944,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/3886158496",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:3886158496"
+      ]
+    },
+    {
+      "id": "osm:node:3909307967",
+      "name": "So: Hangang Restaurant",
+      "venue_type": "restaurant",
+      "lat": 47.9153728,
+      "lng": 106.9162873,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/3909307967",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:3909307967"
+      ]
+    },
+    {
+      "id": "osm:node:3904361575",
+      "name": "So: hanilgan 2",
+      "venue_type": "restaurant",
+      "lat": 47.9227983,
+      "lng": 106.9111634,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/3904361575",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:3904361575"
+      ]
+    },
+    {
+      "id": "osm:node:4029477189",
+      "name": "So: hanilguan 1",
+      "venue_type": "restaurant",
+      "lat": 47.9179995,
+      "lng": 106.9109926,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/4029477189",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:4029477189"
+      ]
+    },
+    {
+      "id": "osm:node:3671096425",
+      "name": "Sonam",
+      "venue_type": "restaurant",
+      "lat": 47.920682,
+      "lng": 106.9108664,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/3671096425",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:3671096425"
+      ]
+    },
+    {
+      "id": "osm:node:3891275402",
+      "name": "S.O.R.T",
+      "venue_type": "restaurant",
+      "lat": 47.9208135,
+      "lng": 106.9200625,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/3891275402",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:3891275402"
+      ]
+    },
+    {
+      "id": "osm:node:3846177957",
+      "name": "Sweet restaurant",
+      "venue_type": "restaurant",
+      "lat": 47.9210594,
+      "lng": 106.9219594,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/3846177957",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:3846177957",
+        "osm:node:3931645757"
+      ]
+    },
+    {
+      "id": "osm:node:3902637209",
+      "name": "The green zone",
+      "venue_type": "restaurant",
+      "lat": 47.9205117,
+      "lng": 106.9092437,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/3902637209",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:3902637209"
+      ]
+    },
+    {
+      "id": "osm:node:11158663505",
+      "name": "The Reef",
+      "venue_type": "restaurant",
+      "lat": 47.9185545,
+      "lng": 106.9151071,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/11158663505",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:11158663505"
+      ]
+    },
+    {
+      "id": "osm:node:7656869688",
+      "name": "Tom’n’Tom’s",
+      "venue_type": "restaurant",
+      "lat": 47.9178473,
+      "lng": 106.9114417,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/7656869688",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:7656869688"
+      ]
+    },
+    {
+      "id": "osm:node:2321598630",
+      "name": "Tso Tso's Trattoria",
+      "venue_type": "restaurant",
+      "lat": 47.9135288,
+      "lng": 106.9238161,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/2321598630",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:2321598630"
+      ]
+    },
+    {
+      "id": "osm:node:3886158475",
+      "name": "UB light restaurant & pub",
+      "venue_type": "restaurant",
+      "lat": 47.9143089,
+      "lng": 106.9114376,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/3886158475",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:3886158475"
+      ]
+    },
+    {
+      "id": "osm:node:3092032978",
+      "name": "U club",
+      "venue_type": "restaurant",
+      "lat": 47.9243856,
+      "lng": 106.9121007,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/3092032978",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:3092032978"
+      ]
+    },
+    {
+      "id": "osm:node:3091939327",
+      "name": "Venus ресторан",
+      "venue_type": "restaurant",
+      "lat": 47.9243584,
+      "lng": 106.9178319,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/3091939327",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:3091939327"
+      ]
+    },
+    {
+      "id": "osm:node:2293341567",
+      "name": "Veranda Restaurant",
+      "venue_type": "restaurant",
+      "lat": 47.9152046,
+      "lng": 106.9173948,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/2293341567",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:2293341567"
+      ]
+    },
+    {
+      "id": "osm:node:3673294128",
+      "name": "West side",
+      "venue_type": "restaurant",
+      "lat": 47.919765,
+      "lng": 106.914448,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/3673294128",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:3673294128"
+      ]
+    },
+    {
+      "id": "osm:node:3092023784",
+      "name": "Winners",
+      "venue_type": "restaurant",
+      "lat": 47.9203225,
+      "lng": 106.9116894,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/3092023784",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:3092023784"
+      ]
+    },
+    {
+      "id": "osm:node:3669885525",
+      "name": "W Restaurant Lounge",
+      "venue_type": "restaurant",
+      "lat": 47.922346,
+      "lng": 106.914365,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/3669885525",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:3669885525"
+      ]
+    },
+    {
+      "id": "osm:node:11782313992",
+      "name": "Yami солонгос хоол",
+      "venue_type": "restaurant",
+      "lat": 47.9173121,
+      "lng": 106.9234729,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/11782313992",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:11782313992"
+      ]
+    },
+    {
+      "id": "osm:node:5955920486",
+      "name": "Агниста",
+      "venue_type": "restaurant",
+      "lat": 47.9225801,
+      "lng": 106.9105545,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/5955920486",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:5955920486"
+      ]
+    },
+    {
+      "id": "osm:node:3902497620",
+      "name": "Анжу ресторан",
+      "venue_type": "restaurant",
+      "lat": 47.9248273,
+      "lng": 106.912641,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/3902497620",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:3902497620"
+      ]
+    },
+    {
+      "id": "osm:node:3674314327",
+      "name": "Арвай ресторан",
+      "venue_type": "restaurant",
+      "lat": 47.92414,
+      "lng": 106.917809,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/3674314327",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:3674314327"
+      ]
+    },
+    {
+      "id": "osm:node:3902502463",
+      "name": "Архитэктор",
+      "venue_type": "restaurant",
+      "lat": 47.9236336,
+      "lng": 106.9112836,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/3902502463",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:3902502463"
+      ]
+    },
+    {
+      "id": "osm:node:2492506196",
+      "name": "Баянгол ресторан",
+      "venue_type": "restaurant",
+      "lat": 47.9123155,
+      "lng": 106.9138261,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/2492506196",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:2492506196"
+      ]
+    },
+    {
+      "id": "osm:node:5036727023",
+      "name": "Берлин зоог",
+      "venue_type": "restaurant",
+      "lat": 47.9168401,
+      "lng": 106.9110571,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/5036727023",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:5036727023"
+      ]
+    },
+    {
+      "id": "osm:node:2293321275",
+      "name": "Броадвэй ресторан",
+      "venue_type": "restaurant",
+      "lat": 47.9191331,
+      "lng": 106.9157268,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/2293321275",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:2293321275"
+      ]
+    },
+    {
+      "id": "osm:node:3902502577",
+      "name": "Ванилла",
+      "venue_type": "restaurant",
+      "lat": 47.9238583,
+      "lng": 106.9115497,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/3902502577",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:3902502577"
+      ]
+    },
+    {
+      "id": "osm:node:3908087450",
+      "name": "\"Говийн наран\" цайны газар",
+      "venue_type": "restaurant",
+      "lat": 47.9171672,
+      "lng": 106.9115602,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/3908087450",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:3908087450"
+      ]
+    },
+    {
+      "id": "osm:node:4029461993",
+      "name": "Гэгээ зоог",
+      "venue_type": "restaurant",
+      "lat": 47.9213962,
+      "lng": 106.9083485,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/4029461993",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:4029461993"
+      ]
+    },
+    {
+      "id": "osm:node:4029446695",
+      "name": "Гэрэгэ зоог",
+      "venue_type": "restaurant",
+      "lat": 47.9178898,
+      "lng": 106.9113815,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/4029446695",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:4029446695"
+      ]
+    },
+    {
+      "id": "osm:node:3900125417",
+      "name": "Дөлгөөн цайны газар",
+      "venue_type": "restaurant",
+      "lat": 47.912695,
+      "lng": 106.9100128,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/3900125417",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:3900125417"
+      ]
+    },
+    {
+      "id": "osm:node:1533728072",
+      "name": "Еаглэ лоунж паб",
+      "venue_type": "restaurant",
+      "lat": 47.9237912,
+      "lng": 106.9179736,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/1533728072",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:1533728072"
+      ]
+    },
+    {
+      "id": "osm:node:4423415597",
+      "name": "Жинхэнэ Монгол бууз",
+      "venue_type": "restaurant",
+      "lat": 47.920193,
+      "lng": 106.9227207,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/4423415597",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:4423415597"
+      ]
+    },
+    {
+      "id": "osm:node:2321753376",
+      "name": "Их гүрэн зоогийн газар",
+      "venue_type": "restaurant",
+      "lat": 47.923506,
+      "lng": 106.9112295,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/2321753376",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:2321753376"
+      ]
+    },
+    {
+      "id": "osm:node:4029472991",
+      "name": "Их Монгол",
+      "venue_type": "restaurant",
+      "lat": 47.9132383,
+      "lng": 106.9083536,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/4029472991",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:4029472991"
+      ]
+    },
+    {
+      "id": "osm:node:2505566060",
+      "name": "Ле Бистрот Францайс",
+      "venue_type": "restaurant",
+      "lat": 47.9231506,
+      "lng": 106.9181094,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/2505566060",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:2505566060"
+      ]
+    },
+    {
+      "id": "osm:node:3904391170",
+      "name": "Марал",
+      "venue_type": "restaurant",
+      "lat": 47.9225587,
+      "lng": 106.9105582,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/3904391170",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:3904391170"
+      ]
+    },
+    {
+      "id": "osm:node:9735289619",
+      "name": "Милая",
+      "venue_type": "restaurant",
+      "lat": 47.9207982,
+      "lng": 106.9091955,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/9735289619",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:9735289619"
+      ]
+    },
+    {
+      "id": "osm:node:3904392041",
+      "name": "Мишээл цайны газар",
+      "venue_type": "restaurant",
+      "lat": 47.9226036,
+      "lng": 106.9105502,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/3904392041",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:3904392041"
+      ]
+    },
+    {
+      "id": "osm:node:1732841389",
+      "name": "Модерн номадс",
+      "venue_type": "restaurant",
+      "lat": 47.9203816,
+      "lng": 106.9218005,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/1732841389",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:1732841389"
+      ]
+    },
+    {
+      "id": "osm:node:3904453771",
+      "name": "Монгол ардын хуушуур бууз",
+      "venue_type": "restaurant",
+      "lat": 47.9237155,
+      "lng": 106.9104996,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/3904453771",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:3904453771"
+      ]
+    },
+    {
+      "id": "osm:node:3913288464",
+      "name": "Монгол зоог",
+      "venue_type": "restaurant",
+      "lat": 47.9228081,
+      "lng": 106.918099,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/3913288464",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:3913288464"
+      ]
+    },
+    {
+      "id": "osm:node:3904361574",
+      "name": "МТ цайны газар",
+      "venue_type": "restaurant",
+      "lat": 47.9228473,
+      "lng": 106.9111552,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/3904361574",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:3904361574"
+      ]
+    },
+    {
+      "id": "osm:node:3902583954",
+      "name": "Мөнгөтэй бууз",
+      "venue_type": "restaurant",
+      "lat": 47.922204,
+      "lng": 106.9161967,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/3902583954",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:3902583954"
+      ]
+    },
+    {
+      "id": "osm:node:3673293227",
+      "name": "Ойши Рамен",
+      "venue_type": "restaurant",
+      "lat": 47.919718,
+      "lng": 106.913844,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/3673293227",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:3673293227"
+      ]
+    },
+    {
+      "id": "osm:node:3904412708",
+      "name": "Орчлон зоогийн газар",
+      "venue_type": "restaurant",
+      "lat": 47.9228258,
+      "lng": 106.9105139,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/3904412708",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:3904412708"
+      ]
+    },
+    {
+      "id": "osm:node:3090167271",
+      "name": "Оршил Cafe",
+      "venue_type": "restaurant",
+      "lat": 47.9197913,
+      "lng": 106.9146708,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/3090167271",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:3090167271"
+      ]
+    },
+    {
+      "id": "osm:node:3912618483",
+      "name": "Рестаоран",
+      "venue_type": "restaurant",
+      "lat": 47.9246645,
+      "lng": 106.9181736,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/3912618483",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:3912618483"
+      ]
+    },
+    {
+      "id": "osm:node:3912826423",
+      "name": "Саруул хоолны газар",
+      "venue_type": "restaurant",
+      "lat": 47.9247541,
+      "lng": 106.9195136,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/3912826423",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:3912826423"
+      ]
+    },
+    {
+      "id": "osm:node:8032903275",
+      "name": "Сентоза олон үндэстэний хоол",
+      "venue_type": "restaurant",
+      "lat": 47.921442,
+      "lng": 106.9200918,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/8032903275",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:8032903275"
+      ]
+    },
+    {
+      "id": "osm:node:3092027965",
+      "name": "Солнгос хоолны газар",
+      "venue_type": "restaurant",
+      "lat": 47.9239383,
+      "lng": 106.9115664,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/3092027965",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:3092027965"
+      ]
+    },
+    {
+      "id": "osm:node:4334961291",
+      "name": "Солонгос зоогийн газар",
+      "venue_type": "restaurant",
+      "lat": 47.9216768,
+      "lng": 106.9111252,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/4334961291",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:4334961291"
+      ]
+    },
+    {
+      "id": "osm:node:2520777875",
+      "name": "Солонгос Хоол",
+      "venue_type": "restaurant",
+      "lat": 47.9223652,
+      "lng": 106.9090734,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/2520777875",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:2520777875"
+      ]
+    },
+    {
+      "id": "osm:node:3092039505",
+      "name": "Солонгос хоолны газар",
+      "venue_type": "restaurant",
+      "lat": 47.9244316,
+      "lng": 106.9122005,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/3092039505",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:3092039505"
+      ]
+    },
+    {
+      "id": "osm:node:3899233604",
+      "name": "Солонгос хоолны газар",
+      "venue_type": "restaurant",
+      "lat": 47.9144224,
+      "lng": 106.9102323,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/3899233604",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:3899233604"
+      ]
+    },
+    {
+      "id": "osm:node:4327660790",
+      "name": "Солонгос хоолны газар",
+      "venue_type": "restaurant",
+      "lat": 47.9164246,
+      "lng": 106.9185371,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/4327660790",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:4327660790"
+      ]
+    },
+    {
+      "id": "osm:node:4327669289",
+      "name": "Солонгос хоолны газар",
+      "venue_type": "restaurant",
+      "lat": 47.9226924,
+      "lng": 106.9111715,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/4327669289",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:4327669289"
+      ]
+    },
+    {
+      "id": "osm:node:4331632100",
+      "name": "Солонгос хоолны газар",
+      "venue_type": "restaurant",
+      "lat": 47.9237887,
+      "lng": 106.9114507,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/4331632100",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:4331632100"
+      ]
+    },
+    {
+      "id": "osm:node:4334971289",
+      "name": "Солонгос хоолны газар",
+      "venue_type": "restaurant",
+      "lat": 47.9223585,
+      "lng": 106.9219082,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/4334971289",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:4334971289"
+      ]
+    },
+    {
+      "id": "osm:node:4029457357",
+      "name": "Сэрүүлэг зоогийн газар",
+      "venue_type": "restaurant",
+      "lat": 47.919753,
+      "lng": 106.9139627,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/4029457357",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:4029457357"
+      ]
+    },
+    {
+      "id": "osm:node:4299257493",
+      "name": "Сүра 2",
+      "venue_type": "restaurant",
+      "lat": 47.9222642,
+      "lng": 106.9218761,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/4299257493",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:4299257493"
+      ]
+    },
+    {
+      "id": "osm:node:4423415596",
+      "name": "Тунамал",
+      "venue_type": "restaurant",
+      "lat": 47.9201807,
+      "lng": 106.9225195,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/4423415596",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:4423415596"
+      ]
+    },
+    {
+      "id": "osm:node:3902504976",
+      "name": "УБ.Т.А.В",
+      "venue_type": "restaurant",
+      "lat": 47.9239497,
+      "lng": 106.9131724,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/3902504976",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:3902504976"
+      ]
+    },
+    {
+      "id": "osm:node:3918580935",
+      "name": "Унганэ",
+      "venue_type": "restaurant",
+      "lat": 47.9244198,
+      "lng": 106.910897,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/3918580935",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:3918580935"
+      ]
+    },
+    {
+      "id": "osm:node:3666976351",
+      "name": "\"Ундрах\" Зоог",
+      "venue_type": "restaurant",
+      "lat": 47.923016,
+      "lng": 106.910474,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/3666976351",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:3666976351"
+      ]
+    },
+    {
+      "id": "osm:node:2531717710",
+      "name": "урлаг",
+      "venue_type": "restaurant",
+      "lat": 47.9198477,
+      "lng": 106.9202193,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/2531717710",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:2531717710"
+      ]
+    },
+    {
+      "id": "osm:node:3895309450",
+      "name": "хаан хуушуур",
+      "venue_type": "restaurant",
+      "lat": 47.9172107,
+      "lng": 106.9099685,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/3895309450",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:3895309450"
+      ]
+    },
+    {
+      "id": "osm:node:2532391370",
+      "name": "Хан иль гуан солонгос хоолны газар 2",
+      "venue_type": "restaurant",
+      "lat": 47.923725,
+      "lng": 106.911444,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/2532391370",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:2532391370"
+      ]
+    },
+    {
+      "id": "osm:way:220239964",
+      "name": "хоолны газар",
+      "venue_type": "restaurant",
+      "lat": 47.9248748,
+      "lng": 106.91438925,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/way/220239964",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "geometry-bounds-center",
+      "source_ids": [
+        "osm:way:220239964"
+      ]
+    },
+    {
+      "id": "osm:way:220893093",
+      "name": "хоолны газар",
+      "venue_type": "restaurant",
+      "lat": 47.920503,
+      "lng": 106.91992959999999,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/way/220893093",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "geometry-bounds-center",
+      "source_ids": [
+        "osm:way:220893093"
+      ]
+    },
+    {
+      "id": "osm:node:3091950389",
+      "name": "Хүннү",
+      "venue_type": "restaurant",
+      "lat": 47.9202218,
+      "lng": 106.9194732,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/3091950389",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:3091950389"
+      ]
+    },
+    {
+      "id": "osm:node:4873123021",
+      "name": "Хөх сэрвээ",
+      "venue_type": "restaurant",
+      "lat": 47.9160193,
+      "lng": 106.9165224,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/4873123021",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:4873123021"
+      ]
+    },
+    {
+      "id": "osm:node:3092030625",
+      "name": "Хөх тэнгэр ресторан",
+      "venue_type": "restaurant",
+      "lat": 47.9211323,
+      "lng": 106.91331,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/3092030625",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:3092030625"
+      ]
+    },
+    {
+      "id": "osm:node:3091967288",
+      "name": "Чилүгэн ресторан",
+      "venue_type": "restaurant",
+      "lat": 47.9201968,
+      "lng": 106.9196491,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/3091967288",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:3091967288"
+      ]
+    },
+    {
+      "id": "osm:node:3902458755",
+      "name": "Шанаган тогоо бууз",
+      "venue_type": "restaurant",
+      "lat": 47.9249042,
+      "lng": 106.9147217,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/3902458755",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:3902458755"
+      ]
+    },
+    {
+      "id": "osm:node:2520517045",
+      "name": "Шинэ найрамдал",
+      "venue_type": "restaurant",
+      "lat": 47.9243843,
+      "lng": 106.9122053,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/2520517045",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:2520517045"
+      ]
+    },
+    {
+      "id": "osm:node:3093533172",
+      "name": "Ялгуун ресторан",
+      "venue_type": "restaurant",
+      "lat": 47.918398,
+      "lng": 106.9240499,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/3093533172",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:3093533172"
+      ]
+    },
+    {
+      "id": "osm:node:3669882725",
+      "name": "Япон хоолны газар",
+      "venue_type": "restaurant",
+      "lat": 47.922253,
+      "lng": 106.916703,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/3669882725",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:3669882725"
+      ]
+    },
+    {
+      "id": "osm:node:3904448685",
+      "name": "Өег цайны газар",
+      "venue_type": "restaurant",
+      "lat": 47.9232054,
+      "lng": 106.9104406,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/3904448685",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:3904448685"
+      ]
+    },
+    {
+      "id": "osm:node:4327669189",
+      "name": "야르고이식당",
+      "venue_type": "restaurant",
+      "lat": 47.9209885,
+      "lng": 106.9108168,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/4327669189",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:4327669189"
+      ]
+    },
+    {
+      "id": "osm:node:4327589589",
+      "name": "야인시대",
+      "venue_type": "restaurant",
+      "lat": 47.9180145,
+      "lng": 106.9110769,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/4327589589",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:4327589589"
+      ]
+    },
+    {
+      "id": "osm:node:3902458756",
+      "name": "영빈관한식당",
+      "venue_type": "restaurant",
+      "lat": 47.9249806,
+      "lng": 106.9147002,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/3902458756",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:3902458756"
+      ]
+    },
+    {
+      "id": "osm:node:7611116886",
+      "name": "Coffee shop",
+      "venue_type": "cafe",
+      "lat": 47.9188018,
+      "lng": 106.9132677,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/7611116886",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "address": "Бага Тойруу 5/2",
+      "phone": "89934497",
+      "website_url": "https://www.facebook.com/centralkavezocoffeeshop/?ref=bookmarks",
+      "source_opening_hours": "Mo-Su 08:00-19:00",
+      "source_ids": [
+        "osm:node:7611116886"
+      ]
+    },
+    {
+      "id": "osm:node:4928823022",
+      "name": "BORKHOSH coffee & beer",
+      "venue_type": "cafe",
+      "lat": 47.9249261,
+      "lng": 106.914755,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/4928823022",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "address": "Д. Сүхбаатарын гудамж 6",
+      "phone": "88108880",
+      "source_opening_hours": "Mo-Sa 09:00-12:00",
+      "source_ids": [
+        "osm:node:4928823022"
+      ]
+    },
+    {
+      "id": "osm:node:4971571722",
+      "name": "Портал Нэтбар",
+      "venue_type": "cafe",
+      "lat": 47.9237123,
+      "lng": 106.9215403,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/4971571722",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "address": "Бага Тойруу 42/1",
+      "phone": "86090038",
+      "source_opening_hours": "24/7",
+      "source_ids": [
+        "osm:node:4971571722"
+      ]
+    },
+    {
+      "id": "osm:node:11635070329",
+      "name": "Cafe 4450",
+      "venue_type": "cafe",
+      "lat": 47.9209639,
+      "lng": 106.9228236,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/11635070329",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "phone": "88189646",
+      "source_opening_hours": "Mo-Su 09:00-00:00",
+      "source_ids": [
+        "osm:node:11635070329",
+        "osm:node:11782390002"
+      ]
+    },
+    {
+      "id": "osm:node:6031081588",
+      "name": "Caffé bene",
+      "venue_type": "cafe",
+      "lat": 47.9197425,
+      "lng": 106.9132943,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/6031081588",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "phone": "9422-2363",
+      "source_opening_hours": "Mo-Sa 10:00-12:00",
+      "source_ids": [
+        "osm:node:6031081588"
+      ]
+    },
+    {
+      "id": "osm:node:14200550201",
+      "name": "cohi haus",
+      "venue_type": "cafe",
+      "lat": 47.9131885,
+      "lng": 106.9093134,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/14200550201",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "address": "Seoul Street 31",
+      "website_url": "https://cohi.haus",
+      "source_ids": [
+        "osm:node:14200550201"
+      ]
+    },
+    {
+      "id": "osm:node:3886141371",
+      "name": "G-Man Coffee & Food",
+      "venue_type": "cafe",
+      "lat": 47.9242077,
+      "lng": 106.9163247,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/3886141371",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "address": "Нэгдсэн Үндэсний Гудамж",
+      "source_ids": [
+        "osm:node:3886141371"
+      ]
+    },
+    {
+      "id": "osm:node:6619064485",
+      "name": "Nitro-B",
+      "venue_type": "cafe",
+      "lat": 47.9158675,
+      "lng": 106.9178352,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/6619064485",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_opening_hours": "10:00-21:00",
+      "source_ids": [
+        "osm:node:6619064485"
+      ]
+    },
+    {
+      "id": "osm:node:2321491014",
+      "name": "Зочин",
+      "venue_type": "cafe",
+      "lat": 47.9223585,
+      "lng": 106.9091851,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/2321491014",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "address": "Залуучуудын өргөн чөлөө",
+      "source_ids": [
+        "osm:node:2321491014"
+      ]
+    },
+    {
+      "id": "osm:node:3913307364",
+      "name": "Кофе бийнь",
+      "venue_type": "cafe",
+      "lat": 47.9222427,
+      "lng": 106.9219999,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/3913307364",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "website_url": "https://www.facebook.com/pages/Coffee-Bean-Shop-Bluemon-Center/211157819063969?fref=ts",
+      "source_ids": [
+        "osm:node:3913307364"
+      ]
+    },
+    {
+      "id": "osm:node:3886060466",
+      "name": "220 Cafe",
+      "venue_type": "cafe",
+      "lat": 47.91322,
+      "lng": 106.9135484,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/3886060466",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:3886060466"
+      ]
+    },
+    {
+      "id": "osm:node:3886114747",
+      "name": "888 cafe",
+      "venue_type": "cafe",
+      "lat": 47.9241687,
+      "lng": 106.9160845,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/3886114747",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:3886114747"
+      ]
+    },
+    {
+      "id": "osm:node:3902580405",
+      "name": "Alice cafe",
+      "venue_type": "cafe",
+      "lat": 47.9222362,
+      "lng": 106.9164745,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/3902580405",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:3902580405"
+      ]
+    },
+    {
+      "id": "osm:node:11683919244",
+      "name": "Amita cake Studio",
+      "venue_type": "cafe",
+      "lat": 47.9226195,
+      "lng": 106.9176132,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/11683919244",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:11683919244"
+      ]
+    },
+    {
+      "id": "osm:node:13977386601",
+      "name": "Artu Shop",
+      "venue_type": "cafe",
+      "lat": 47.9178965,
+      "lng": 106.9114127,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/13977386601",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:13977386601"
+      ]
+    },
+    {
+      "id": "osm:node:3886060510",
+      "name": "Atlas",
+      "venue_type": "cafe",
+      "lat": 47.913349,
+      "lng": 106.9184591,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/3886060510",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:3886060510"
+      ]
+    },
+    {
+      "id": "osm:node:5840933686",
+      "name": "Bebe cafe",
+      "venue_type": "cafe",
+      "lat": 47.9241674,
+      "lng": 106.9127923,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/5840933686",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:5840933686"
+      ]
+    },
+    {
+      "id": "osm:node:3673023332",
+      "name": "Bon bon bakery",
+      "venue_type": "cafe",
+      "lat": 47.9243,
+      "lng": 106.911082,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/3673023332",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:3673023332"
+      ]
+    },
+    {
+      "id": "osm:node:11140275405",
+      "name": "Book & Art",
+      "venue_type": "cafe",
+      "lat": 47.9198358,
+      "lng": 106.9140898,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/11140275405",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:11140275405"
+      ]
+    },
+    {
+      "id": "osm:node:4029443407",
+      "name": "Bud",
+      "venue_type": "cafe",
+      "lat": 47.9194786,
+      "lng": 106.9158426,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/4029443407",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:4029443407"
+      ]
+    },
+    {
+      "id": "osm:node:3904175152",
+      "name": "Caffe bene",
+      "venue_type": "cafe",
+      "lat": 47.9241495,
+      "lng": 106.9127592,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/3904175152",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:3904175152"
+      ]
+    },
+    {
+      "id": "osm:node:4029404089",
+      "name": "Caffe Bene",
+      "venue_type": "cafe",
+      "lat": 47.9169065,
+      "lng": 106.9115666,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/4029404089",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:4029404089"
+      ]
+    },
+    {
+      "id": "osm:node:11665397009",
+      "name": "Caffe bene - Gallery",
+      "venue_type": "cafe",
+      "lat": 47.9208901,
+      "lng": 106.9189592,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/11665397009",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:11665397009"
+      ]
+    },
+    {
+      "id": "osm:node:5696519241",
+      "name": "Caffeine",
+      "venue_type": "cafe",
+      "lat": 47.9191321,
+      "lng": 106.923913,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/5696519241",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:5696519241"
+      ]
+    },
+    {
+      "id": "osm:node:3913309340",
+      "name": "Circle K",
+      "venue_type": "cafe",
+      "lat": 47.9223641,
+      "lng": 106.9220161,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/3913309340",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:3913309340"
+      ]
+    },
+    {
+      "id": "osm:node:11197862837",
+      "name": "Donnie's",
+      "venue_type": "cafe",
+      "lat": 47.9172876,
+      "lng": 106.9101613,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/11197862837",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:11197862837"
+      ]
+    },
+    {
+      "id": "osm:node:3899307990",
+      "name": "Goose Cafe",
+      "venue_type": "cafe",
+      "lat": 47.9148184,
+      "lng": 106.9089298,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/3899307990",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:3899307990"
+      ]
+    },
+    {
+      "id": "osm:node:3148647474",
+      "name": "ibistro pub",
+      "venue_type": "cafe",
+      "lat": 47.9204629,
+      "lng": 106.9204262,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/3148647474",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:3148647474"
+      ]
+    },
+    {
+      "id": "osm:node:2513546957",
+      "name": "Istanbul",
+      "venue_type": "cafe",
+      "lat": 47.9245394,
+      "lng": 106.9211678,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/2513546957",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:2513546957"
+      ]
+    },
+    {
+      "id": "osm:node:3957977857",
+      "name": "Lavazza",
+      "venue_type": "cafe",
+      "lat": 47.9180264,
+      "lng": 106.9206405,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/3957977857",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:3957977857"
+      ]
+    },
+    {
+      "id": "osm:node:1247498078",
+      "name": "Michele's French Bakery",
+      "venue_type": "cafe",
+      "lat": 47.9173636,
+      "lng": 106.9101835,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/1247498078",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:1247498078"
+      ]
+    },
+    {
+      "id": "osm:node:7922616556",
+      "name": "MUIS",
+      "venue_type": "cafe",
+      "lat": 47.9227144,
+      "lng": 106.9188863,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/7922616556",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:7922616556"
+      ]
+    },
+    {
+      "id": "osm:node:11633777247",
+      "name": "Muse coffe shop",
+      "venue_type": "cafe",
+      "lat": 47.9222987,
+      "lng": 106.9149836,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/11633777247",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:11633777247"
+      ]
+    },
+    {
+      "id": "osm:node:14003594071",
+      "name": "Nayra Coffee Shoppe",
+      "venue_type": "cafe",
+      "lat": 47.9151308,
+      "lng": 106.9087995,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/14003594071",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:14003594071"
+      ]
+    },
+    {
+      "id": "osm:node:12345212302",
+      "name": "POTALA Coffee",
+      "venue_type": "cafe",
+      "lat": 47.9197278,
+      "lng": 106.9086981,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/12345212302",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:12345212302"
+      ]
+    },
+    {
+      "id": "osm:node:3899326175",
+      "name": "Rainbow frozen yogurt & cafe",
+      "venue_type": "cafe",
+      "lat": 47.9143492,
+      "lng": 106.9099684,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/3899326175",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:3899326175"
+      ]
+    },
+    {
+      "id": "osm:node:11665410082",
+      "name": "Tom I Toms - Bluemon",
+      "venue_type": "cafe",
+      "lat": 47.922002,
+      "lng": 106.92168,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/11665410082",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:11665410082"
+      ]
+    },
+    {
+      "id": "osm:node:6598255586",
+      "name": "Toms Toms Coffee",
+      "venue_type": "cafe",
+      "lat": 47.9139206,
+      "lng": 106.9216085,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/6598255586",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:6598255586"
+      ]
+    },
+    {
+      "id": "osm:node:6510601118",
+      "name": "UBean",
+      "venue_type": "cafe",
+      "lat": 47.9155188,
+      "lng": 106.9175878,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/6510601118",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:6510601118",
+        "osm:node:6567958185"
+      ]
+    },
+    {
+      "id": "osm:node:4029417789",
+      "name": "Wendy bakery",
+      "venue_type": "cafe",
+      "lat": 47.9186466,
+      "lng": 106.9102965,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/4029417789",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:4029417789"
+      ]
+    },
+    {
+      "id": "osm:node:2520683345",
+      "name": "WillNet Internet Cafe",
+      "venue_type": "cafe",
+      "lat": 47.924612,
+      "lng": 106.9081767,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/2520683345",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:2520683345"
+      ]
+    },
+    {
+      "id": "osm:node:2520627419",
+      "name": "Yahoo",
+      "venue_type": "cafe",
+      "lat": 47.9200309,
+      "lng": 106.9229962,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/2520627419",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:2520627419"
+      ]
+    },
+    {
+      "id": "osm:node:4029418689",
+      "name": "Yello",
+      "venue_type": "cafe",
+      "lat": 47.9143374,
+      "lng": 106.9086132,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/4029418689",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:4029418689"
+      ]
+    },
+    {
+      "id": "osm:node:3669887125",
+      "name": "Анг",
+      "venue_type": "cafe",
+      "lat": 47.922322,
+      "lng": 106.913308,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/3669887125",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:3669887125"
+      ]
+    },
+    {
+      "id": "osm:node:3912619547",
+      "name": "Бат-байгал бейкери",
+      "venue_type": "cafe",
+      "lat": 47.9248432,
+      "lng": 106.9181978,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/3912619547",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:3912619547"
+      ]
+    },
+    {
+      "id": "osm:node:3896158876",
+      "name": "Зочин бууз",
+      "venue_type": "cafe",
+      "lat": 47.9180854,
+      "lng": 106.9114163,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/3896158876",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:3896158876"
+      ]
+    },
+    {
+      "id": "osm:node:2520627434",
+      "name": "Зөөлөн",
+      "venue_type": "cafe",
+      "lat": 47.9201717,
+      "lng": 106.9229734,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/2520627434",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:2520627434"
+      ]
+    },
+    {
+      "id": "osm:node:3895308704",
+      "name": "камино",
+      "venue_type": "cafe",
+      "lat": 47.9172038,
+      "lng": 106.9096359,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/3895308704",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:3895308704"
+      ]
+    },
+    {
+      "id": "osm:node:3895305590",
+      "name": "Кафе 9",
+      "venue_type": "cafe",
+      "lat": 47.9241709,
+      "lng": 106.9118858,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/3895305590",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:3895305590"
+      ]
+    },
+    {
+      "id": "osm:node:3902576444",
+      "name": "Кафе Анд",
+      "venue_type": "cafe",
+      "lat": 47.9223177,
+      "lng": 106.9174458,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/3902576444",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:3902576444"
+      ]
+    },
+    {
+      "id": "osm:node:2495869639",
+      "name": "Кино кафе",
+      "venue_type": "cafe",
+      "lat": 47.9238989,
+      "lng": 106.9208491,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/2495869639",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:2495869639",
+        "osm:node:3912613353"
+      ]
+    },
+    {
+      "id": "osm:node:3669885825",
+      "name": "Милая кафе",
+      "venue_type": "cafe",
+      "lat": 47.922356,
+      "lng": 106.914008,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/3669885825",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:3669885825"
+      ]
+    },
+    {
+      "id": "osm:node:2520627417",
+      "name": "Наран Кафе",
+      "venue_type": "cafe",
+      "lat": 47.920082,
+      "lng": 106.922981,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/2520627417",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:2520627417"
+      ]
+    },
+    {
+      "id": "osm:node:3913314985",
+      "name": "Оршил",
+      "venue_type": "cafe",
+      "lat": 47.9197868,
+      "lng": 106.9146713,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/3913314985",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:3913314985"
+      ]
+    },
+    {
+      "id": "osm:node:3875836173",
+      "name": "Оюутан зоог",
+      "venue_type": "cafe",
+      "lat": 47.921772,
+      "lng": 106.9246549,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/3875836173",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:3875836173"
+      ]
+    },
+    {
+      "id": "osm:node:4423415595",
+      "name": "Шилмэл бууз",
+      "venue_type": "cafe",
+      "lat": 47.9201698,
+      "lng": 106.9224341,
+      "community_enabled": false,
+      "verified": false,
+      "source_label": "OpenStreetMap",
+      "source_url": "https://www.openstreetmap.org/node/4423415595",
+      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_location_kind": "mapped-node",
+      "source_ids": [
+        "osm:node:4423415595"
+      ]
+    }
+  ]
+}

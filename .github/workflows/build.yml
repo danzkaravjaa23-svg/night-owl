@@ -22,8 +22,11 @@ jobs:
       - run: flutter pub get
       - run: flutter analyze
       - run: flutter test
-      - run: flutter build web --release --dart-define=DEVICE_PREVIEW=false
-      - run: flutter build appbundle --release
+      - run: python3 -m unittest discover -s tools/deployment/tests -v
+      - run: python3 -m unittest discover -s tools/migration/tests -v
+      - run: python3 -m unittest discover -s backend/tests -v
+      - run: sh tools/deployment/build_web.sh
+      - run: flutter build appbundle --release --dart-define=DEVICE_PREVIEW=false --dart-define-from-file=build/backend-defines.json
       - uses: actions/upload-artifact@v4
         with:
           name: unsigned-android-and-web
@@ -40,7 +43,8 @@ jobs:
           channel: stable
           cache: true
       - run: flutter pub get
-      - run: flutter build ios --release --no-codesign
+      - run: python3 tools/deployment/build_admin_clients.py --output build/client-bundle --defines-output build/backend-defines.json --execute
+      - run: flutter build ios --release --no-codesign --dart-define=DEVICE_PREVIEW=false --dart-define-from-file=build/backend-defines.json
       - uses: actions/upload-artifact@v4
         with:
           name: unsigned-ios

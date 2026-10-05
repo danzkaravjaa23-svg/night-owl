@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../core/widgets/owl_loading.dart';
 import '../../../core/l10n/app_strings.dart';
 import '../../../core/widgets/app_avatar.dart';
 import '../../../core/widgets/empty_state.dart';
@@ -502,32 +503,22 @@ class _ErrorState extends StatelessWidget {
 }
 
 // ─── Эхний ачаалалтын skeleton (spinner-ийн оронд) ───
-class _SkeletonList extends StatefulWidget {
+class _SkeletonList extends StatelessWidget {
   const _SkeletonList();
-  @override
-  State<_SkeletonList> createState() => _SkeletonListState();
-}
-
-class _SkeletonListState extends State<_SkeletonList>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _c = AnimationController(
-    vsync: this, duration: const Duration(milliseconds: 900),
-    lowerBound: 0.4, upperBound: 0.9)..repeat(reverse: true);
-
-  @override
-  void dispose() { _c.dispose(); super.dispose(); }
 
   // Цайвар горимд цагаан skeleton цөцгий дэвсгэр дээр үл харагдана — surface
   Color get _skel =>
       AppColors.isDarkMode ? AppColors.bgElevated : AppColors.bgSurface;
 
   @override
-  Widget build(BuildContext context) => FadeTransition(
-    opacity: _c,
-    child: ListView.builder(
+  Widget build(BuildContext context) => ListView.builder(
       physics: const NeverScrollableScrollPhysics(),
-      itemCount: 8,
-      itemBuilder: (_, i) => Padding(
+      itemCount: 9,
+      itemBuilder: (_, i) => i == 0
+          ? const Padding(
+              padding: EdgeInsets.symmetric(vertical: 20),
+              child: OwlLoading(size: 40, message: 'Мэдэгдэл ачаалж байна'))
+          : Padding(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
         child: Row(children: [
           Container(width: 44, height: 44,
@@ -555,6 +546,5 @@ class _SkeletonListState extends State<_SkeletonList>
               borderRadius: BorderRadius.circular(10))),
         ]),
       ),
-    ),
   );
 }

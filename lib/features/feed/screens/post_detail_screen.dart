@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../core/widgets/owl_loading.dart';
 import '../../../core/widgets/app_avatar.dart';
 import '../../../core/widgets/network_video.dart';
 import '../../../core/services/supabase_service.dart';
@@ -314,8 +315,8 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
                   loading: () => const SliverToBoxAdapter(
                     child: Padding(
                       padding: EdgeInsets.all(32),
-                      child: Center(child: CircularProgressIndicator(
-                          color: AppColors.accentStart, strokeWidth: 2)),
+                      child: Center(child: OwlLoading(
+                          size: 40, message: 'Сэтгэгдэл ачаалж байна')),
                     ),
                   ),
                   error: (e, _) => SliverToBoxAdapter(
@@ -480,6 +481,8 @@ class _PostHeaderSkeleton extends StatelessWidget {
       Stack(children: [
         Container(height: 340, width: double.infinity,
             color: AppColors.bgSurface),
+        const Positioned.fill(child: Center(
+            child: OwlLoading(message: 'Пост ачаалж байна'))),
         const Positioned(left: 0, right: 0, bottom: 0, child: _SheetCap()),
       ]),
       Padding(
