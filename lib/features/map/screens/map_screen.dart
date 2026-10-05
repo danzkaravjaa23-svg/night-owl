@@ -192,7 +192,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     }
   }
 
-  void _select(Venue venue) {
+  void _select(Venue venue, {bool fromMap = false}) {
     if (ref.read(venuesProvider).hasError ||
         ref.read(venueCatalogStatusProvider).notice != null) {
       _showInformation(venue);
@@ -207,9 +207,13 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       _selectedId = venue.id;
       _dismissedSelection = false;
     });
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) _map.center(venue.lat!, venue.lng!);
-    });
+    // A pin tap should keep the street and zoom the person is exploring.
+    // Only a selection from the list needs to move the map to that venue.
+    if (!fromMap) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _map.center(venue.lat!, venue.lng!);
+      });
+    }
   }
 
   void _openVenue(Venue venue) {
@@ -311,7 +315,9 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                                     final venue = located
                                         .where((venue) => venue.id == id)
                                         .firstOrNull;
-                                    if (venue != null) _select(venue);
+                                    if (venue != null) {
+                                      _select(venue, fromMap: true);
+                                    }
                                   })),
                           if (state.isLoading && !state.hasValue)
                             Center(

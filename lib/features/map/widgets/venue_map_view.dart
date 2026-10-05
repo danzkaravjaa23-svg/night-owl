@@ -65,6 +65,7 @@ class VenueMarkerGroup {
 /// Fixed anchors cannot form a long chain; no all-pairs distance scan is used.
 abstract class VenueMarkerGrouping {
   static const double radius = 72;
+  static const double individualZoom = 18;
 
   static double zoomBucket(double zoom) =>
       ((zoom.isFinite ? zoom.clamp(3, 19) : 13) * 2).floor() / 2;
@@ -73,6 +74,14 @@ abstract class VenueMarkerGrouping {
       {required double zoom, String? selectedId}) {
     final scale = 256 * math.pow(2, zoomBucket(zoom));
     final sorted = [...venues]..sort((a, b) => a.id.compareTo(b.id));
+    if (zoomBucket(zoom) >= individualZoom) {
+      return [
+        for (final venue in sorted)
+          if (venue.id != selectedId) VenueMarkerGroup([venue]),
+        for (final venue in sorted)
+          if (venue.id == selectedId) VenueMarkerGroup([venue]),
+      ];
+    }
     final cells = <(int, int), List<int>>{};
     final anchors = <Offset>[];
     final members = <List<VenueMapMarker>>[];
@@ -114,6 +123,80 @@ abstract class VenueMarkerGrouping {
       for (final group in members) VenueMarkerGroup(group),
       if (selected != null) VenueMarkerGroup([selected]),
     ];
+  }
+}
+
+/// Render-only positions for close zoom. The venue coordinates stay untouched.
+/// Reserve spaced pin rectangles in world pixels, independent of the viewport
+/// and selection. Panning or selecting cannot reshuffle overlapping venues.
+abstract class VenuePinLayout {
+  static const double horizontalSpacing = 60;
+  static const double verticalSpacing = 76;
+
+  static Map<String, LatLng> positions(List<VenueMapMarker> venues,
+      {required double zoom}) {
+    final scale = 256 * math.pow(2, VenueMarkerGrouping.zoomBucket(zoom));
+    final cells = <(int, int), List<Offset>>{};
+    final result = <String, LatLng>{};
+    final sorted = [...venues]..sort((a, b) => a.id.compareTo(b.id));
+    (int, int) cell(Offset p) =>
+        ((p.dx / horizontalSpacing).floor(), (p.dy / verticalSpacing).floor());
+    bool available(Offset p) {
+      final key = cell(p);
+      for (var x = -1; x <= 1; x++) {
+        for (var y = -1; y <= 1; y++) {
+          for (final other in cells[(key.$1 + x, key.$2 + y)] ?? <Offset>[]) {
+            if ((other.dx - p.dx).abs() < horizontalSpacing - .001 &&
+                (other.dy - p.dy).abs() < verticalSpacing - .001) {
+              return false;
+            }
+          }
+        }
+      }
+      return true;
+    }
+
+    for (final venue in sorted) {
+      final sin = math.sin(
+          venue.point.latitude.clamp(-85.05112878, 85.05112878) *
+              math.pi /
+              180);
+      final anchor = Offset((venue.point.longitude + 180) / 360 * scale,
+          (.5 - math.log((1 + sin) / (1 - sin)) / (4 * math.pi)) * scale);
+      var position = anchor;
+      // Expanding rectangular rings always find space, even in a building
+      // with many venues. Spatial cells keep collision checks local.
+      for (var ring = 1; !available(position); ring++) {
+        final candidates = <Offset>[
+          for (var x = -ring; x <= ring; x++)
+            for (var y = -ring; y <= ring; y++)
+              if (x.abs() == ring || y.abs() == ring)
+                Offset(x * horizontalSpacing, y * verticalSpacing)
+        ]..sort((a, b) {
+            final distance = a.distanceSquared.compareTo(b.distanceSquared);
+            if (distance != 0) return distance;
+            final vertical = a.dy.compareTo(b.dy);
+            return vertical != 0 ? vertical : a.dx.compareTo(b.dx);
+          });
+        for (final offset in candidates) {
+          final candidate = anchor + offset;
+          if (available(candidate)) {
+            position = candidate;
+            break;
+          }
+        }
+      }
+      (cells[cell(position)] ??= []).add(position);
+      if (position == anchor) {
+        result[venue.id] = venue.point;
+      } else {
+        final mercatorY = math.pi * (1 - 2 * position.dy / scale);
+        result[venue.id] = LatLng(
+            (2 * math.atan(math.exp(mercatorY)) - math.pi / 2) * 180 / math.pi,
+            position.dx / scale * 360 - 180);
+      }
+    }
+    return result;
   }
 }
 
@@ -497,6 +580,7 @@ class _VenueMarkerLayerState extends State<_VenueMarkerLayer> {
   String? _cachedSelected;
   List<VenueMapMarker>? _cachedVenues;
   List<VenueMarkerGroup> _groups = [];
+  Map<String, LatLng> _pinPositions = {};
 
   @override
   Widget build(BuildContext context) {
@@ -506,44 +590,61 @@ class _VenueMarkerLayerState extends State<_VenueMarkerLayer> {
         _cachedVenues != widget.venues) {
       _groups = VenueMarkerGrouping.group(widget.venues,
           zoom: zoom, selectedId: widget.selectedId);
+      _pinPositions = zoom >= VenueMarkerGrouping.individualZoom
+          ? VenuePinLayout.positions(widget.venues, zoom: zoom)
+          : {};
       _cachedZoom = zoom;
       _cachedSelected = widget.selectedId;
       _cachedVenues = widget.venues;
     }
-    return MarkerLayer(markers: [
-      for (final group in _groups)
-        if (group.isCluster)
+    return Stack(children: [
+      if (_pinPositions.isNotEmpty)
+        IgnorePointer(
+            child: PolylineLayer(polylines: [
+          for (final venue in widget.venues)
+            if (_pinPositions[venue.id] != venue.point)
+              Polyline(
+                  points: [venue.point, _pinPositions[venue.id]!],
+                  strokeWidth: 1.5,
+                  color: widget.dark
+                      ? const Color(0xCCB6A4FF)
+                      : const Color(0xCC7654D6)),
+        ])),
+      MarkerLayer(markers: [
+        for (final group in _groups)
+          if (group.isCluster)
+            Marker(
+                key: ValueKey('venue-group-${group.members.first.id}'),
+                point: group.point,
+                width: 56,
+                height: 48,
+                child: _VenueGroupBubble(
+                    count: group.members.length,
+                    onTap: () => widget.onGroupTap(group)))
+          else
+            _venuePin(group.members.single),
+        if (widget.userLocation != null)
           Marker(
-              key: ValueKey('venue-group-${group.members.first.id}'),
-              point: group.point,
-              width: 56,
-              height: 48,
-              child: _VenueGroupBubble(
-                  count: group.members.length,
-                  onTap: () => widget.onGroupTap(group)))
-        else
-          _venuePin(group.members.single),
-      if (widget.userLocation != null)
-        Marker(
-            point: widget.userLocation!,
-            width: 28,
-            height: 28,
-            child: Semantics(
-                label: 'Миний байршил',
-                child: Container(
-                    decoration: BoxDecoration(
-                        color: const Color(0xFF2563EB),
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white, width: 3),
-                        boxShadow: const [
-                      BoxShadow(color: Color(0x662563EB), blurRadius: 12)
-                    ])))),
+              point: widget.userLocation!,
+              width: 28,
+              height: 28,
+              child: Semantics(
+                  label: 'Миний байршил',
+                  child: Container(
+                      decoration: BoxDecoration(
+                          color: const Color(0xFF2563EB),
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white, width: 3),
+                          boxShadow: const [
+                        BoxShadow(color: Color(0x662563EB), blurRadius: 12)
+                      ])))),
+      ]),
     ]);
   }
 
   Marker _venuePin(VenueMapMarker venue) => Marker(
       key: ValueKey(venue.id),
-      point: venue.point,
+      point: _pinPositions[venue.id] ?? venue.point,
       width: 52,
       height: 64,
       alignment: Alignment.topCenter,
@@ -551,6 +652,7 @@ class _VenueMarkerLayerState extends State<_VenueMarkerLayer> {
           message: venue.name,
           child: Semantics(
               label: venue.name,
+              button: true,
               selected: venue.id == widget.selectedId,
               child: GestureDetector(
                   behavior: HitTestBehavior.opaque,

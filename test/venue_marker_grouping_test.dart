@@ -59,16 +59,53 @@ void main() {
     expect(VenueMarkerGrouping.zoomBucket(14.5), 14.5);
   });
 
-  test('coincident venues stay reachable in one group even at maximum zoom',
-      () {
+  test('close zoom exposes every coincident venue as an individual pin', () {
     final same = [
       for (var i = 0; i < 30; i++)
         marker('id-${i.toString().padLeft(2, '0')}', 0)
     ];
-    final groups = VenueMarkerGrouping.group(same, zoom: 19);
-    expect(groups, hasLength(1));
-    expect(groups.single.isCoincident, isTrue);
-    expect(groups.single.members, hasLength(30));
+    expect(VenueMarkerGrouping.group(same, zoom: 17.99), hasLength(1));
+    for (final zoom in [18.0, 18.49, 18.5, 19.0]) {
+      final groups = VenueMarkerGrouping.group(same, zoom: zoom);
+      expect(groups, hasLength(30));
+      expect(groups.every((group) => !group.isCluster), isTrue);
+      expect(groups.map((group) => group.members.single.id),
+          same.map((venue) => venue.id));
+    }
+  });
+
+  test(
+      'dense close pins have separate hit areas without changing true locations',
+      () {
+    final venues = [
+      for (var i = 0; i < 30; i++)
+        marker('id-${i.toString().padLeft(2, '0')}', i % 3 * .4)
+    ];
+    final original = {for (final venue in venues) venue.id: venue.point};
+    for (final zoom in [18.0, 18.49, 18.5, 19.0]) {
+      final positions = VenuePinLayout.positions(venues, zoom: zoom);
+      expect(positions.keys.toSet(), original.keys.toSet());
+      expect(positions,
+          VenuePinLayout.positions(venues.reversed.toList(), zoom: zoom),
+          reason: 'Backend ordering cannot reshuffle close venues.');
+      final scale = 256 * math.pow(2, zoom);
+      Offset project(LatLng point) {
+        final sin = math.sin(point.latitude * math.pi / 180);
+        return Offset((point.longitude + 180) / 360 * scale,
+            (.5 - math.log((1 + sin) / (1 - sin)) / (4 * math.pi)) * scale);
+      }
+
+      final projected = positions.values.map(project).toList();
+      for (var i = 0; i < projected.length; i++) {
+        for (var j = 0; j < i; j++) {
+          final delta = projected[i] - projected[j];
+          expect(delta.dx.abs() >= 59.99 || delta.dy.abs() >= 75.99, isTrue,
+              reason: 'The entire 52×64 touch rectangles must stay separate.');
+        }
+      }
+      expect({for (final venue in venues) venue.id: venue.point}, original,
+          reason: 'Directions and venue data must use the real coordinates.');
+    }
   });
 
   test('real catalog overview groups density without hiding any of270 venues',
@@ -226,19 +263,91 @@ void main() {
     });
   }
 
+  for (final zoom in [18.0, 19.0]) {
+    testWidgets(
+        'zoom $zoom permits direct taps on coincident and nearby pins and zoom out restores counts',
+        (tester) async {
+      final venues = [marker('a', 0), marker('b', 0), marker('c', .4)];
+      final original = {for (final venue in venues) venue.id: venue.point};
+      final taps = <String>[];
+      final controller = await render(tester, venues, onTap: taps.add);
+      final mapState = tester.state(find.byType(GoogleMapView));
+      final tileState = tester.state(find.byType(TileLayer));
+      controller.move(const LatLng(47.9188126, 106.9168967), zoom);
+      await tester.pumpAndSettle();
+      expect(find.byTooltip('3 газар · Газруудыг харах'), findsNothing);
+      final rectangles = [
+        for (final venue in venues) tester.getRect(find.byTooltip(venue.name))
+      ];
+      for (var i = 0; i < rectangles.length; i++) {
+        for (var j = 0; j < i; j++) {
+          expect(rectangles[i].overlaps(rectangles[j]), isFalse);
+        }
+      }
+      for (final venue in venues) {
+        await tester.tap(find.byTooltip(venue.name));
+        await tester.pumpAndSettle();
+      }
+      expect(taps, ['a', 'b', 'c']);
+      expect(controller.camera.zoom, zoom);
+      expect(find.byType(BottomSheet), findsNothing);
+      final markers =
+          tester.widget<MarkerLayer>(find.byType(MarkerLayer)).markers;
+      final displayPositions = {for (final pin in markers) pin.key: pin.point};
+      final leaders = tester.widget<PolylineLayer>(find.byType(PolylineLayer));
+      expect(leaders.polylines, hasLength(2));
+      for (final venue in venues.skip(1)) {
+        expect(
+            leaders.polylines.any((line) =>
+                line.points.first == venue.point &&
+                line.points.last == displayPositions[ValueKey(venue.id)]),
+            isTrue,
+            reason:
+                'Offset pins remain visibly connected to their real place.');
+      }
+      expect({for (final venue in venues) venue.id: venue.point}, original);
+
+      controller.move(const LatLng(47.9189, 106.9169), zoom);
+      await tester.pumpAndSettle();
+      expect({
+        for (final pin
+            in tester.widget<MarkerLayer>(find.byType(MarkerLayer)).markers)
+          pin.key: pin.point
+      }, displayPositions, reason: 'Panning must not rearrange close pins.');
+      controller.move(const LatLng(47.9188126, 106.9168967), 17.99);
+      await tester.pumpAndSettle();
+      expect(find.byTooltip('3 газар · Газруудыг харах'), findsOneWidget);
+      expect(find.byType(PolylineLayer), findsNothing);
+      expect(tester.state(find.byType(GoogleMapView)), same(mapState));
+      expect(tester.state(find.byType(TileLayer)), same(tileState));
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox());
+    });
+  }
+
   testWidgets(
-      'nearby distinct venues at maximum zoom open chooser without a no-op fit',
+      'selecting a close pin only raises it without rearranging its peers',
       (tester) async {
+    final venues = [marker('a', 0), marker('b', 0), marker('c', .4)];
+    final controller = await render(tester, venues);
+    controller.move(const LatLng(47.9188126, 106.9168967), 18);
+    await tester.pumpAndSettle();
+    Map<Key?, LatLng> positions() => {
+          for (final pin
+              in tester.widget<MarkerLayer>(find.byType(MarkerLayer)).markers)
+            pin.key: pin.point
+        };
+    final before = positions();
     final taps = <String>[];
-    final controller = await render(tester, [marker('a', 0), marker('b', .4)],
-        onTap: taps.add);
-    controller.move(const LatLng(47.9188126, 106.9168967), 19);
+    final updated = await render(tester, venues.reversed.toList(),
+        selected: 'b', onTap: taps.add);
+    updated.move(const LatLng(47.9188126, 106.9168967), 18);
     await tester.pumpAndSettle();
-    await tester.tap(find.byTooltip('2 газар · Газруудыг харах'));
-    await tester.pumpAndSettle();
-    expect(controller.camera.zoom, 19);
-    expect(find.byType(BottomSheet), findsOneWidget);
-    await tester.tap(find.byKey(const ValueKey('venue-group-member-b')));
+    expect(positions(), before);
+    expect(
+        tester.widget<MarkerLayer>(find.byType(MarkerLayer)).markers.last.key,
+        const ValueKey('b'));
+    await tester.tap(find.byTooltip('Газар b'));
     await tester.pumpAndSettle();
     expect(taps, ['b']);
     expect(tester.takeException(), isNull);
