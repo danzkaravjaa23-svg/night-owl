@@ -117,8 +117,8 @@
       "map_camera": "retained across theme change"
     }
   },
-  "github_push": "Prior approved 66fbd88 and be0c9a2 confirmed on night-owl-features; current migration/performance/UX changes not pushed",
-  "web_deployment": "Prior be0c9a2 published at nightowl-ub.netlify.app (Netlify deploy 6ac3034521b22f0008a3cef8); current migration/performance/UX build not deployed",
+  "github_push": "Release commit 970f4d26826e6edb269af111883f0eba7605e14a pushed and remote verified on night-owl-features",
+  "web_deployment": "Published on 2026-10-06 Asia/Ulaanbaatar: https://nightowl-ub.netlify.app; Netlify 6ac3eab4452c6d0009f932d7",
   "performance": {
     "map_list_toggle": "map, camera and tiles remain mounted; hidden map painting/tickers paused",
     "icons": "cached gradient glyph drawing replaces per-icon ShaderMask",
@@ -184,7 +184,7 @@
       "day theme and navigation",
       "390x844 auth landing"
     ],
-    "final_build_browser_check": "blocked by browser security policy while selecting localhost tab; final grouping verified by automated tests, not visually reverified",
+    "final_build_browser_check": "Public release browser verified on 2026-10-06: public startup logo/status shown; first frame removes loading overlay; authenticated session retained; feed loads; map clusters zoom into smaller groups; 279-place list; list/map keeps camera; profile loading then Saved empty state; day/night theme and venue source details sheet; browser error log empty",
     "native_phone_fps": "not measured"
   },
   "motion_loading_audit": {
@@ -206,7 +206,31 @@
     "full_flutter_tests_passed": 215,
     "analysis": "no issues",
     "web_build": "passed",
-    "browser_verification": "Local preview selection rejected by browser URL security policy; not reverified visually",
-    "deployment": "not performed"
+    "browser_verification": "Public deployed app verified: public startup logo/status shown; first frame removes loading overlay; authenticated session retained; feed loads; map clusters zoom into smaller groups; 279-place list; list/map keeps camera; profile loading then Saved empty state; day/night theme and venue source details sheet; browser error log empty",
+    "deployment": "published; public JavaScript hash matches tested local build and immutable deploy"
+  },
+  "production_verification": {
+    "checked_at": "2026-10-05T18:24:14.527797+00:00",
+    "commit": "970f4d26826e6edb269af111883f0eba7605e14a",
+    "deploy_id": "6ac3eab4452c6d0009f932d7",
+    "url": "https://nightowl-ub.netlify.app",
+    "immutable_url": "https://6ac3eab4452c6d0009f932d7--nightowl-ub.netlify.app",
+    "public_main_sha256": "12bcc769f62b7f6bac7fe39c4e3dd4bdaefc8f30acc81224b78a94740b4fef2a",
+    "immutable_main_sha256": "12bcc769f62b7f6bac7fe39c4e3dd4bdaefc8f30acc81224b78a94740b4fef2a",
+    "production_matches_immutable": true,
+    "html_startup": true,
+    "owl_runtime": true,
+    "owl_atlas_matches": true,
+    "catalog_matches": true,
+    "browser_checks": [
+      "public startup logo/status shown; first frame removes loading overlay",
+      "authenticated session retained; feed loads",
+      "map clusters zoom into smaller groups",
+      "279-place list; list/map keeps camera",
+      "profile loading then Saved empty state",
+      "day/night theme and venue source details sheet",
+      "browser error log empty"
+    ],
+    "netlify_badge": "Dismissed overlay that intercepted footer taps in this browser"
   }
 }

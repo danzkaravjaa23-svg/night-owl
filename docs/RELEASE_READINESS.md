@@ -1,16 +1,16 @@
 # Night Owl — release бэлтгэл
 
-2026-10-05. Үнэгүй аппын шинэ код ба web release build бэлэн. Энэ шинэчлэлийн GitHub push болон web deployment баталгаажаагүй. Native build/signing, App Store/Play Store нийтлэлт болон Apple provider-ийн бодит тохиргоо дараагийн ажлууд хэвээр.
+2026-10-05. Үнэгүй аппын шинэ код ба web release build бэлэн. `970f4d2` commit GitHub-д илгээгдэж, Netlify `6ac3eab4452c6d0009f932d7` дээр нийтлэгдсэн. Public JavaScript нь шалгасан локал build-тэй ижил. Native build/signing, App Store/Play Store нийтлэлт болон Apple provider-ийн бодит тохиргоо дараагийн ажлууд хэвээр.
 
 Апп ашиглах төлбөр, subscription, premium unlock, in-app purchase идэвхтэй биш. QPay хуудас, төлбөрийн түүхийг хассан; хуучин `/qpay/:id` холбоос тухайн постыг нээнэ. Урилга нь үнэгүй хуваалцах холбоос бөгөөд unlock/reward амлахгүй. Paid-content entitlement хүснэгт/түгжээ байхгүй тул төлбөрийн backend migration шаардлагагүй. Төлбөрийн системийг deployment-ийн дараа тусдаа ажлаар шийдэх тул энэ үнэгүй release-ийн blocker биш. Газрын үйлчилгээ эсвэл эвентийн орох үнэ харагдвал энэ нь зохион байгуулагчийн мэдээлэл; апп дотор төлбөр авахгүй, бүх газар/эвент үнэгүй гэсэн утгатай биш. RSVP нь очих сонирхол/оролцоогоо тэмдэглэх үйлдэл бөгөөд тасалбар эсвэл төлбөр биш.
 
 ## 2026-10-05-ны локал UX шинэчлэлт
 
-270 OSM газрын нэмэлт каталог, ойр pin-үүдийн бүлэглэл, эх сурвалж/утас/сайт/цагийн мэдээлэл, Instagram-аас санаа авсан бодит статистиктай профиль, ойлгомжтой эхлэлийн текст, Higgsfield owl emotion болон reduced-motion дэмждэг шилжилт нэмсэн. Google Places API key байхгүй тул Google мэдээлэл татсангүй. Бүтэн 215 тест, static analysis, JavaScript release build амжилттай. Эцсийн бүлэглэлийн build-ийг browser security policy хориглосон тул визуалаар дахин шалгаагүй. Доорх өмнөх browser шалгалтуудыг шинэ build-ийн баталгаа гэж үзэхгүй. Шинэ ZIP локалд бэлэн; push/deploy хийгдээгүй. PostgreSQL бүрэн export/cutover нууц үг, target host болон үйлчилгээний интеграци хүлээгдсэн хэвээр.
+270 OSM газрын нэмэлт каталог, ойр pin-үүдийн бүлэглэл, эх сурвалж/утас/сайт/цагийн мэдээлэл, Instagram-аас санаа авсан бодит статистиктай профиль, ойлгомжтой эхлэлийн текст, Higgsfield owl emotion болон reduced-motion дэмждэг шилжилт нэмсэн. Google Places API key байхгүй тул Google мэдээлэл татсангүй. Бүтэн 215 тест, static analysis, JavaScript release build амжилттай. Локал preview-ийн хоригийн дараа 2026-10-06-нд нийтлэгдсэн апп дээр эхлэлийн loading, бүлэглэл/zoom, 279 газрын жагсаалт, map/list байрлал хадгалах, profile Saved, өдөр/шөнө болон газрын мэдээллийн цонхыг шалгасан. Browser error хоосон. Шинэ ZIP бэлэн, push/deploy баталгаажсан. PostgreSQL бүрэн export/cutover нууц үг, target host болон үйлчилгээний интеграци хүлээгдсэн хэвээр.
 
 ## 2026-10-06 loading шалгалт
 
-Нийтлэгдсэн `be0c9a2` build-д шинэ owl emotion asset байхгүйг public JavaScript hash болон Netlify dashboard-аар баталсан. Локал кодын route/press motion, үндсэн loading ажилласан; хайлт, мэдэгдэл, дагагчид, creator/post detail, business болон auth loading-ийг гүйцээсэн. Web bootstrap одоо logo/status, бодит first-frame cleanup, initialization error/retry-тэй. 215 Flutter тест, 7 Node startup тест болон анализ амжилттай; шинэ release ZIP бэлэн. Нийтлэгдсэн аппыг өөрчлөөгүй.
+Нийтлэгдсэн `be0c9a2` build-д шинэ owl emotion asset байхгүйг public JavaScript hash болон Netlify dashboard-аар баталсан. Локал кодын route/press motion, үндсэн loading ажилласан; хайлт, мэдэгдэл, дагагчид, creator/post detail, business болон auth loading-ийг гүйцээсэн. Web bootstrap одоо logo/status, бодит first-frame cleanup, initialization error/retry-тэй. 215 Flutter тест, 7 Node startup тест болон анализ амжилттай; шинэ release ZIP бэлэн. Шинэ хувилбар Netlify дээр нийтлэгдэж, public файл болон браузерийн ажиллагаагаар баталгаажсан.
 
 ## Баталгаажуулалтын төлөв
 
