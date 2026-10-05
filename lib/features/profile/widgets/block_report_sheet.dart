@@ -135,7 +135,7 @@ Future<void> showPostOptionsSheet(
   bool isOwn = false,
   String? currentCaption,
   VoidCallback? onBlocked,
-  Future<void> Function()? onDelete,
+  Future<bool> Function()? onDelete,
   Future<void> Function(String)? onEditCaption,
 }) async {
   await showModalBottomSheet(
@@ -161,7 +161,13 @@ Future<void> showPostOptionsSheet(
                 onTap: () async {
                   Navigator.of(sheetCtx).pop();
                   final text = await _editCaptionDialog(context, currentCaption ?? '');
-                  if (text != null) await onEditCaption(text);
+                  if (text != null) {
+                    try { await onEditCaption(text); }
+                    catch (_) {
+                      if (context.mounted) { ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Хадгалж чадсангүй. Дахин оролдоно уу.'))); }
+                    }
+                  }
                 },
               ),
             ListTile(
@@ -172,8 +178,8 @@ Future<void> showPostOptionsSheet(
                 Navigator.of(sheetCtx).pop();
                 final ok = await _confirmDeletePost(context);
                 if (ok != true) return;
-                await onDelete?.call();
-                if (context.mounted) _toast(context, 'Пост устгагдлаа');
+                final deleted = await onDelete?.call() ?? false;
+                if (context.mounted) _toast(context, deleted ? 'Пост устгагдлаа' : 'Устгаж чадсангүй. Дахин оролдоно уу.');
               },
             ),
             const SizedBox(height: 12),

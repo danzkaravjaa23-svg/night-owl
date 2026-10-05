@@ -39,7 +39,7 @@ class EventsRail extends ConsumerWidget {
     if (eventsAsync.isLoading && !eventsAsync.hasValue) {
       return const _RailSkeleton();
     }
-    final events = eventsAsync.value ?? [];
+    final events = eventsAsync.valueOrNull ?? [];
     if (events.isEmpty) return const SizedBox.shrink();
 
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -418,7 +418,10 @@ class _EventDetailSheetState extends State<_EventDetailSheet> {
                   _line(Icons.location_on_outlined, e.venueName ?? '—'),
                   _line(Icons.schedule, _EventCard._dateStr(e.startsAt)),
                   _line(Icons.confirmation_num_outlined,
-                    e.price == 0 ? 'Үнэгүй' : _fmtPrice(e.price)),
+                    e.price == 0 ? 'Газарт орох: үнэгүй' : 'Газарт орох: ${_fmtPrice(e.price)}'),
+                  const SizedBox(height: 8),
+                  Text('Очно / Сонирхож байна нь тасалбар биш. Орох нөхцөлийг зохион байгуулагчаас лавлана уу.',
+                    style: AppTextStyles.bodyXs.copyWith(color: AppColors.textSecondary, height: 1.5)),
                   if (e.description?.isNotEmpty == true) ...[
                     const SizedBox(height: 12),
                     Text(e.description!, style: AppTextStyles.bodyMd.copyWith(

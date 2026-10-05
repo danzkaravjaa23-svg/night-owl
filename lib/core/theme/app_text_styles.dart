@@ -23,12 +23,12 @@ abstract class AppTextStyles {
 
   // ─── Heading (Inter) ───
   static TextStyle get h1 => GoogleFonts.inter(
-    fontSize: 20, fontWeight: FontWeight.w700,
+    fontSize: 24, fontWeight: FontWeight.w700,
     letterSpacing: -0.2, color: AppColors.dynTextPrimary,
   );
 
   static TextStyle get h2 => GoogleFonts.inter(
-    fontSize: 17, fontWeight: FontWeight.w700,
+    fontSize: 19, fontWeight: FontWeight.w700,
     color: AppColors.dynTextPrimary,
   );
 

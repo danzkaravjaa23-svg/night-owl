@@ -74,7 +74,7 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
             color: AppColors.accentStart, strokeWidth: 2)),
       );
     }
-    final isAdmin = profAsync.value?.isAdmin ?? false;
+    final isAdmin = profAsync.valueOrNull?.isAdmin ?? false;
 
     return Scaffold(
       backgroundColor: AppColors.bgBase,

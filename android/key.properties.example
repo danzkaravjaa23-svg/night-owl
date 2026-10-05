@@ -1,0 +1,4 @@
+storeFile=/absolute/path/to/night-owl-upload.jks
+storePassword=SET_LOCALLY
+keyAlias=night-owl-upload
+keyPassword=SET_LOCALLY

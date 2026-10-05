@@ -13,6 +13,7 @@ import '../../../core/services/supabase_service.dart';
 import '../../events/providers/event_provider.dart' show EventItem;
 import '../../events/widgets/events_rail.dart' show showEventDetailSheet;
 import '../providers/venue_provider.dart';
+import '../../../models/venue.dart';
 
 const _kMonths = ['', '1-р сар','2-р сар','3-р сар','4-р сар','5-р сар','6-р сар',
   '7-р сар','8-р сар','9-р сар','10-р сар','11-р сар','12-р сар'];
@@ -123,13 +124,19 @@ class _VenueDetailScreenState extends ConsumerState<VenueDetailScreen> {
 
   Future<void> _openDirections() async {
     if (_venue == null) return; // өгөгдөлгүй үед хоосон maps tab нээхгүй
-    final lat = (_venue?['lat'] as num?)?.toDouble();
-    final lng = (_venue?['lng'] as num?)?.toDouble();
+    final venue = Venue.fromJson(_venue!);
     final name = _venue?['name'] as String? ?? '';
     // origin-г орхивол Google Maps хэрэглэгчийн одоогийн байршлыг ашиглана
-    final dest = (lat != null && lng != null) ? '$lat,$lng' : Uri.encodeComponent(name);
-    final url = 'https://www.google.com/maps/dir/?api=1&destination=$dest';
-    await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+    final dest = venue.hasLocation ? '${venue.lat},${venue.lng}' : '$name, Улаанбаатар';
+    try {
+      final opened = await launchUrl(Uri.https('www.google.com', '/maps/dir/',
+        {'api': '1', 'destination': dest}), mode: LaunchMode.externalApplication);
+      if (!opened && mounted) { ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Чиглэл нээж чадсангүй'))); }
+    } catch (_) {
+      if (mounted) { ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Чиглэл нээж чадсангүй'))); }
+    }
   }
 
   void _openReviews() {

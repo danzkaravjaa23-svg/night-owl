@@ -291,6 +291,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                         onTap: _gLoading ? null : _googleSignIn,
                                       ),
                                     ),
+                                    const AppleSignInButton(),
                                     const SizedBox(height: 12),
                                   ],
                                 ),

@@ -21,19 +21,23 @@ dependencies:
 
   # Backend — Supabase (replaces Firebase for data/auth)
   supabase_flutter: ^2.5.0
+  sign_in_with_apple: ^8.2.0
+  crypto: ^3.0.6
+  http: ^1.2.0
 
   # Push notifications — Firebase Cloud Messaging (хожим нэмнэ)
   # firebase_core: ^2.32.0
   # firebase_messaging: ^14.9.4
   # flutter_local_notifications: ^17.2.1
 
-  # Maps — вэб дээр Leaflet (iframe), Android/iOS дээр flutter_map
+  # Maps — shared interactive renderer on web, Android and iOS
   flutter_map: ^8.3.2
   latlong2: ^0.10.1
-  # geolocator: ^11.0.0
+  geolocator: ^12.0.0
 
   # Media
   image_picker: ^1.1.2
+  image: ^4.5.4
   cached_network_image: ^3.3.1
   video_player: ^2.8.6
   pointer_interceptor: ^0.10.1

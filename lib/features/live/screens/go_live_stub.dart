@@ -21,9 +21,9 @@ class GoLiveScreen extends StatelessWidget {
         ),
         body: const EmptyState(
           icon: Icons.videocam_off_outlined,
-          title: 'Live удахгүй',
-          subtitle: 'Live дамжуулалт одоогоор зөвхөн вэб хувилбар дээр '
-              'ажиллана. Бусад live-уудыг эндээс үзэх боломжтой.',
+          title: 'Шууд дамжуулалт түр боломжгүй',
+          subtitle: 'Шууд дамжуулалт хараахан идэвхжээгүй байна. '
+              'Пост, story болон видео хуваалцах боломжтой.',
         ),
       );
 }

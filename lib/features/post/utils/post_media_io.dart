@@ -9,6 +9,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:video_player/video_player.dart';
 
 import '../../../core/constants/app_constants.dart';
+import '../../../core/utils/image_compress.dart';
 
 const _videoExts = {'mp4', 'mov', 'm4v', 'webm', '3gp', 'mkv', 'avi'};
 
@@ -90,15 +91,12 @@ void revokePreviewUrl(String url) {
   } catch (_) {}
 }
 
-/// image_picker сонгохдоо аль хэдийн 1440px / q82 болгосон — bytes буцаана
+/// The uploaded bytes must match the advertised JPEG content type/extension.
 Future<Object> resizeImageForUpload(PickedMediaFile media,
     {int maxDim = 1440, num quality = 0.82}) async {
   final path = media.file?.path ?? media.previewUrl;
-  try {
-    return await File(path).readAsBytes();
-  } catch (_) {
-    return File(path);
-  }
+  final bytes = await File(path).readAsBytes();
+  return compressToJpeg(bytes, maxDim: maxDim, quality: quality.toDouble());
 }
 
 /// Blob хэмжээ (byte)

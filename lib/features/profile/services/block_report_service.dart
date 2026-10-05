@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../auth/providers/auth_provider.dart';
 import '../../../core/services/supabase_service.dart';
 
 /// Block / Report үйлчилгээ
@@ -107,5 +108,6 @@ class BlockReportService {
 
 /// Миний блоклосон хэрэглэгчдийн ID-нуудын provider (search/list-д шүүхэд)
 final blockedIdsProvider = FutureProvider<Set<String>>((ref) async {
+  ref.watch(sessionUserIdProvider);
   return BlockReportService.myBlockedIds();
 });

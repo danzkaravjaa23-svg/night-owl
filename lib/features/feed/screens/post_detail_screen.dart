@@ -244,18 +244,15 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
       onDelete: () async {
         final ok = await ref.read(feedProvider.notifier)
             .deletePost(_post!.id);
-        if (!mounted || !context.mounted) return;
+        if (!mounted || !context.mounted) return ok;
         if (ok) {
           // Профайлын ПОСТ тоо + grid шинэчлэгдэнэ (posts_count trigger ажилласан)
           ref.read(postsVersionProvider.notifier).state++;
           ref.invalidate(currentProfileProvider);
           // Линкээр/reload-оор нээгдсэн бол доор нь хуудас байхгүй — профайл руу
           context.canPop() ? context.pop() : context.go(AppRoutes.profile);
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text('Устгаж чадсангүй. Дахин оролдоно уу.'),
-            backgroundColor: AppColors.error));
         }
+        return ok;
       },
     );
   }

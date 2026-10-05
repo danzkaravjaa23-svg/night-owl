@@ -152,7 +152,7 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen> {
   @override
   Widget build(BuildContext context) {
     final profileAsync = ref.watch(currentProfileProvider);
-    final isAdmin = profileAsync.value?.isAdmin ?? false;
+    final isAdmin = profileAsync.valueOrNull?.isAdmin ?? false;
 
     return Scaffold(
       backgroundColor: AppColors.bgBase,

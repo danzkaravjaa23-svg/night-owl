@@ -144,7 +144,7 @@ class _OwlHero extends StatelessWidget {
           ),
           alignment: Alignment.center,
           child: Image.asset(
-            'assets/images/owl_logo.png',
+            'assets/icons/night_owl_mark.png',
             width: 92,
             height: 92,
             fit: BoxFit.contain,

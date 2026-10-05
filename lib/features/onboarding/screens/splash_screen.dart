@@ -8,7 +8,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/widgets/gradient_text.dart';
 import '../../../core/router/app_router.dart';
-import '../../../core/services/supabase_service.dart' show pendingPasswordRecovery;
+import '../../../core/services/supabase_service.dart' show pendingPasswordRecovery, SupabaseService;
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -41,7 +41,7 @@ class _SplashScreenState extends State<SplashScreen>
     _ctrl.forward();
     // Нууц үг сэргээх и-мэйлийн холбоосоор ирвэл supabase_flutter
     // token-ыг сольж passwordRecovery event гаргана — түүнийг барина
-    _authSub = Supabase.instance.client.auth.onAuthStateChange.listen((s) {
+    _authSub = SupabaseService.authStream.listen((s) {
       if (s.event == AuthChangeEvent.passwordRecovery) { _recovery = true; }
     });
     // Google/OAuth-оос буцаж ирсэн бол (URL-д code/token) — шууд authLanding руу
@@ -258,7 +258,7 @@ class _OwlLogo extends StatelessWidget {
       child: ClipRRect(
         borderRadius: BorderRadius.circular(28),
         child: Image.asset(
-          'assets/images/owl_logo.png',
+          'assets/icons/night_owl_mark.png',
           width: 210, height: 210, fit: BoxFit.contain,
           errorBuilder: (_, __, ___) => _fallback(),
         ),

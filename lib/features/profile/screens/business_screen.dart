@@ -1,275 +1,110 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' show CountOption;
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
-import '../../../core/widgets/gradient_button.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/services/supabase_service.dart';
+import '../../../models/venue.dart';
 import '../../auth/providers/auth_provider.dart';
+
+class _BusinessData {
+  final List<Venue> venues;
+  final int posts, events, checkins;
+  const _BusinessData(this.venues, this.posts, this.events, this.checkins);
+}
+final _businessDataProvider = FutureProvider<_BusinessData>((ref) async {
+  final me = ref.watch(sessionUserIdProvider);
+  if (me == null) return const _BusinessData([], 0, 0, 0);
+  final client = SupabaseService.client;
+  final rows = await client.from('venues').select().eq('owner_id', me).order('name');
+  final venues = rows.map((row) => Venue.fromJson(row)).where((v) => !v.isDemo).toList();
+  final counts = await Future.wait<int>([
+    client.from('posts').count(CountOption.exact).eq('user_id', me),
+    client.from('events').count(CountOption.exact).eq('organizer_id', me)
+      .gte('starts_at', DateTime.now().toUtc().toIso8601String()),
+    venues.isEmpty ? Future.value(0) : client.from('checkins').count(CountOption.exact)
+      .inFilter('venue_id', venues.map((v) => v.id).toList())
+      .gt('expires_at', DateTime.now().toUtc().toIso8601String()),
+  ]);
+  return _BusinessData(venues, counts[0], counts[1], counts[2]);
+});
 
 class BusinessScreen extends ConsumerStatefulWidget {
   const BusinessScreen({super.key});
   @override
   ConsumerState<BusinessScreen> createState() => _BusinessScreenState();
 }
-
 class _BusinessScreenState extends ConsumerState<BusinessScreen> {
   bool _busy = false;
-
   Future<void> _becomeBusiness() async {
     if (_busy) return;
     final me = SupabaseService.currentUser?.id;
     if (me == null) return;
     setState(() => _busy = true);
     try {
-      await SupabaseService.client.from('profiles')
-          .update({'is_business': true}).eq('id', me);
+      await SupabaseService.client.from('profiles').update({'is_business': true})
+        .eq('id', me).select('id').single();
       ref.invalidate(currentProfileProvider);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Бизнес аккаунт идэвхжлээ ✓'),
-          behavior: SnackBarBehavior.floating));
-      }
     } catch (_) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Идэвхжүүлж чадсангүй. Дахин оролдоно уу'),
-          backgroundColor: AppColors.error,
-          behavior: SnackBarBehavior.floating));
-      }
-    } finally {
-      if (mounted) setState(() => _busy = false);
-    }
+      if (mounted) { ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Идэвхжүүлж чадсангүй. Дахин оролдоно уу'))); }
+    } finally { if (mounted) setState(() => _busy = false); }
   }
-
+  Future<void> _editVenue([String? id]) async {
+    await context.push(Uri(path: AppRoutes.venueEdit, queryParameters: id == null ? null : {'id': id}).toString());
+    if (mounted) ref.invalidate(_businessDataProvider);
+  }
   @override
   Widget build(BuildContext context) {
-    final isBusiness = ref.watch(currentProfileProvider).maybeWhen(
-      data: (p) => p?.isBusiness ?? false,
-      orElse: () => false,
-    );
-    return Scaffold(
-      backgroundColor: AppColors.bgBase,
-      appBar: AppBar(
-        backgroundColor: AppColors.bgBase,
-        // Reload/deep link үед stack хоосон байж болно — profile руу fallback
-        leading: IconButton(
-          onPressed: () => context.canPop()
-              ? context.pop()
-              : context.go(AppRoutes.profile),
-          icon: const Icon(Icons.arrow_back_ios_new, size: 20)),
-        title: Text('Бизнес самбар', style: AppTextStyles.h2),
-      ),
-      body: ListView(padding: EdgeInsets.fromLTRB(20, 20, 20,
-          20 + MediaQuery.paddingOf(context).bottom), children: [
-        // ── Бизнес болох / идэвхтэй төлөв ──
-        _BecomeBusinessCard(
-          isBusiness: isBusiness,
-          busy: _busy,
-          onTap: _becomeBusiness,
-        ),
-        const SizedBox(height: 12),
-        Row(children: [
-          Expanded(child: _ActionTile('Эвент нэмэх', Icons.event_rounded,
-            () => context.push(AppRoutes.createEvent))),
-          const SizedBox(width: 12),
-          Expanded(child: _ActionTile('Live эхлүүлэх', Icons.sensors_rounded,
-            () => context.push(AppRoutes.goLive))),
-          const SizedBox(width: 12),
-          Expanded(child: _ActionTile('Газраа удирдах', Icons.storefront_outlined,
-            () => context.push(AppRoutes.venueEdit))),
-        ]),
-        const SizedBox(height: 24),
-
-        // ── Аналитик (жишээ дата — жинхэнэ эх сурвалж хараахан алга) ──
-        Row(children: [
-          Text('СТАТИСТИК', style: AppTextStyles.labelSm),
-          const SizedBox(width: 8),
-          const _SampleDataChip(),
-        ]),
-        const SizedBox(height: 12),
-        const Row(children: [
-          _StatCard(label: 'Үзэлт', value: '3,421', delta: '+12%'),
-          SizedBox(width: 12),
-          _StatCard(label: 'Check-in', value: '142', delta: '+8%'),
-          SizedBox(width: 12),
-          _StatCard(label: 'Үнэлгээ', value: '4.7', delta: '★'),
-        ]),
-        const SizedBox(height: 24),
-        Row(children: [
-          Text('ҮЗЭЛТ · 7 ХОНОГ', style: AppTextStyles.labelSm),
-          const SizedBox(width: 8),
-          const _SampleDataChip(),
-        ]),
-        const SizedBox(height: 12),
-        // Simple bar chart (жишээ)
-        SizedBox(height: 80,
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [42, 65, 48, 78, 90, 55, 88].map((v) =>
-              Container(
-                width: 28,
-                height: v.toDouble(),
-                decoration: BoxDecoration(
-                  gradient: AppColors.accentGradient,
-                  borderRadius: BorderRadius.circular(4),
-                ),
-              )
-            ).toList(),
-          ),
-        ),
-        const SizedBox(height: 24),
-        Text('УДИРДЛАГА', style: AppTextStyles.labelSm),
-        const SizedBox(height: 12),
-        ...[
-          ('Хаяг & байршил', Icons.location_on_outlined),
-          ('Ажиллах цаг', Icons.access_time),
-          ('Зураг / cover', Icons.photo_library_outlined),
-          ('Холбоо барих утас', Icons.phone_outlined),
-        ].map((r) => ListTile(
-          leading: Icon(r.$2, color: AppColors.textSecondary),
-          title: Text(r.$1, style: AppTextStyles.bodyMd),
-          trailing: Icon(Icons.chevron_right, color: AppColors.textTertiary),
-          onTap: () => context.push(AppRoutes.venueEdit),
-        )),
-        const SizedBox(height: 24),
-        GradientButton(label: 'Эвент нэмэх',
-          onPressed: () => context.push(AppRoutes.createEvent)),
-      ]),
+    final profile = ref.watch(currentProfileProvider);
+    return Scaffold(backgroundColor: AppColors.bgBase,
+      appBar: AppBar(title: const Text('Бизнес самбар'), leading: IconButton(
+        tooltip: 'Буцах', icon: const Icon(Icons.arrow_back),
+        onPressed: () => context.canPop() ? context.pop() : context.go(AppRoutes.profile))),
+      body: ref.watch(_businessDataProvider).when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (_, __) => Center(child: TextButton(onPressed: () => ref.invalidate(_businessDataProvider),
+          child: const Text('Мэдээлэл ачаалсангүй · Дахин оролдох'))),
+        data: (data) => RefreshIndicator(onRefresh: () => ref.refresh(_businessDataProvider.future),
+          child: ListView(physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.all(20), children: [
+              Text('Таны газрууд. Таны үйл явдал.', style: AppTextStyles.h2),
+              const SizedBox(height: 12),
+              Text('Өөрийн газрын мэдээлэл, зураг, ажиллах цаг болон эвентээ нэг дор удирдаарай.',
+                style: AppTextStyles.bodyMd.copyWith(color: AppColors.textSecondary)),
+              const SizedBox(height: 20),
+              if (profile.hasValue && profile.value != null && !profile.value!.isBusiness)
+                FilledButton.icon(onPressed: _busy ? null : _becomeBusiness,
+                  icon: const Icon(Icons.business_center_outlined), label: Text(_busy ? 'Түр хүлээнэ үү' : 'Бизнес хаяг идэвхжүүлэх')),
+              const SizedBox(height: 12),
+              Wrap(spacing: 12, runSpacing: 12, children: [
+                _stat('Газрууд', data.venues.length), _stat('Пост', data.posts),
+                _stat('Удахгүй болох эвент', data.events), _stat('Идэвхтэй check-in', data.checkins),
+              ]),
+              const SizedBox(height: 24),
+              FilledButton.icon(onPressed: () async {
+                await context.push(AppRoutes.createEvent);
+                if (mounted) ref.invalidate(_businessDataProvider);
+              }, icon: const Icon(Icons.event_outlined), label: const Text('Эвент нэмэх')),
+              const SizedBox(height: 12),
+              OutlinedButton.icon(onPressed: () => _editVenue(),
+                icon: const Icon(Icons.storefront_outlined), label: Text(data.venues.isEmpty ? 'Газраа бүртгэх' : 'Газрын мэдээлэл засах')),
+              const SizedBox(height: 24),
+              for (final venue in data.venues) Card(child: ListTile(
+                leading: Text(venue.emoji, style: const TextStyle(fontSize: 26)),
+                title: Text(venue.name), subtitle: Text(venue.hasLocation
+                  ? venue.district ?? venue.typeLabel : 'Байршлаа бүртгэнэ үү'),
+                trailing: const Icon(Icons.edit_outlined), onTap: () => _editVenue(venue.id))),
+            ]))),
     );
   }
-}
-
-/// Бизнес болох CTA — аль хэдийн бизнес бол "Идэвхтэй ✓" төлөв, ачаалахад spinner
-class _BecomeBusinessCard extends StatelessWidget {
-  final bool isBusiness;
-  final bool busy;
-  final VoidCallback onTap;
-  const _BecomeBusinessCard({
-    required this.isBusiness, required this.busy, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return MouseRegion(
-      cursor: isBusiness ? MouseCursor.defer : SystemMouseCursors.click,
-      child: GestureDetector(
-        onTap: isBusiness ? null : onTap,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 180),
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            gradient: AppColors.accentGradient,
-            borderRadius: BorderRadius.circular(16)),
-          child: Row(children: [
-            const Icon(Icons.verified_rounded, color: Colors.white, size: 28),
-            const SizedBox(width: 12),
-            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(isBusiness ? 'Бизнес аккаунт' : 'Бизнес аккаунт болох',
-                style: AppTextStyles.labelLg.copyWith(color: Colors.white)),
-              const SizedBox(height: 2),
-              // Тэмдэглэгээ л өөрчлөгдөнө — доорх хэрэгслүүд бүгдэд нээлттэй
-              Text(isBusiness
-                  ? 'Аккаунт тань бизнес гэж тэмдэглэгдсэн'
-                  : 'Аккаунтаа бизнес гэж тэмдэглэх · Live, эвент бүх хэрэглэгчид нээлттэй',
-                style: AppTextStyles.bodyXs.copyWith(color: Colors.white70)),
-            ])),
-            if (busy)
-              const SizedBox(width: 22, height: 22, child:
-                CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-            else if (isBusiness)
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.22),
-                  borderRadius: BorderRadius.circular(999),
-                ),
-                child: Text('Идэвхтэй ✓', style: AppTextStyles.bodyXs.copyWith(
-                  color: Colors.white, fontWeight: FontWeight.w700)),
-              ),
-          ]),
-        ),
-      ),
-    );
-  }
-}
-
-/// 'Жишээ дата' шошго — жинхэнэ аналитик эх сурвалж хараахан алга
-class _SampleDataChip extends StatelessWidget {
-  const _SampleDataChip();
-  @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-    decoration: BoxDecoration(
-      color: AppColors.textTertiary.withValues(alpha: 0.12),
-      borderRadius: BorderRadius.circular(6),
-    ),
-    child: Text('Жишээ дата', style: AppTextStyles.bodyXs.copyWith(
-      color: AppColors.textTertiary, fontSize: 10)),
-  );
-}
-
-class _StatCard extends StatelessWidget {
-  final String label, value, delta;
-  const _StatCard({required this.label, required this.value, required this.delta});
-  @override
-  Widget build(BuildContext context) => Expanded(
-    child: Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppColors.bgElevated,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.hairline),
-      ),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text(label, style: AppTextStyles.bodyXs),
-        const SizedBox(height: 4),
-        Text(value, style: AppTextStyles.h2),
-        Text(delta, style: AppTextStyles.bodyXs.copyWith(
-          color: AppColors.success)),
-      ]),
-    ),
-  );
-}
-
-class _ActionTile extends StatefulWidget {
-  final String label;
-  final IconData icon;
-  final VoidCallback onTap;
-  const _ActionTile(this.label, this.icon, this.onTap);
-  @override
-  State<_ActionTile> createState() => _ActionTileState();
-}
-
-class _ActionTileState extends State<_ActionTile> {
-  bool _down = false;
-  @override
-  Widget build(BuildContext context) => MouseRegion(
-    cursor: SystemMouseCursors.click,
-    child: GestureDetector(
-      onTap: widget.onTap,
-      onTapDown: (_) => setState(() => _down = true),
-      onTapUp: (_) => setState(() => _down = false),
-      onTapCancel: () => setState(() => _down = false),
-      child: AnimatedScale(
-        scale: _down ? 0.96 : 1.0,
-        duration: const Duration(milliseconds: 120),
-        curve: Curves.easeOut,
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 16),
-          decoration: BoxDecoration(
-            color: AppColors.bgElevated,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: AppColors.hairline)),
-          child: Column(children: [
-            Icon(widget.icon, color: AppColors.accentStart, size: 24),
-            const SizedBox(height: 6),
-            Text(widget.label, style: AppTextStyles.bodyXs.copyWith(
-              color: AppColors.textPrimary)),
-          ]),
-        ),
-      ),
-    ),
-  );
+  Widget _stat(String label, int value) => Container(width: 170, padding: const EdgeInsets.all(16),
+    decoration: BoxDecoration(color: AppColors.bgElevated, borderRadius: BorderRadius.circular(18),
+      border: Border.all(color: AppColors.hairline)),
+    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Text('$value', style: AppTextStyles.h1), const SizedBox(height: 6),
+      Text(label, style: AppTextStyles.bodySm),
+    ]));
 }

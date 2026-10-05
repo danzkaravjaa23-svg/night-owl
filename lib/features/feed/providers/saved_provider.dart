@@ -1,9 +1,10 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/services/supabase_service.dart';
+import '../../auth/providers/auth_provider.dart';
 
 /// Хадгалсан постын id-ийн олонлог
 final savedPostIdsProvider = FutureProvider<Set<String>>((ref) async {
-  final me = SupabaseService.currentUser?.id;
+  final me = ref.watch(sessionUserIdProvider);
   if (me == null) return {};
   try {
     final data = await SupabaseService.client

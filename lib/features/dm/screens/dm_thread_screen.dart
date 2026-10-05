@@ -295,7 +295,7 @@ class _DmThreadScreenState extends State<DmThreadScreen> {
         initial: initial,
         online: _partnerOnline,
         presenceLabel: _presenceLabel,
-        onBack: () => context.pop(),
+        onBack: () => context.canPop() ? context.pop() : context.go('/dm'),
         onTapPeer: () => context.push('/creator/${widget.threadId}'),
         onMore: _showThreadOptions,
       ),
@@ -637,13 +637,6 @@ class _GlassAppBar extends StatelessWidget implements PreferredSizeWidget {
   @override
   Size get preferredSize => const Size.fromHeight(64);
 
-  void _soon(BuildContext context) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: const Text('Тун удахгүй'),
-      duration: const Duration(milliseconds: 1400),
-      backgroundColor: AppColors.bgElevated));
-  }
-
   @override
   Widget build(BuildContext context) {
     final topPad = MediaQuery.of(context).padding.top;
@@ -701,13 +694,6 @@ class _GlassAppBar extends StatelessWidget implements PreferredSizeWidget {
                   ]),
                 ]),
             )),
-            // right glass round buttons — дуудлага/видео "тун удахгүй", ⋮ идэвхтэй
-            GlassIconButton(icon: Icons.call, iconSize: 18,
-              tooltip: 'Дуудлага', onTap: () => _soon(context)),
-            const SizedBox(width: 2),
-            GlassIconButton(icon: Icons.videocam_outlined, iconSize: 20,
-              tooltip: 'Видео дуудлага', onTap: () => _soon(context)),
-            const SizedBox(width: 2),
             GlassIconButton(icon: Icons.more_vert, iconSize: 20,
               tooltip: 'Бусад', onTap: onMore),
           ]),

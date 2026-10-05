@@ -12,6 +12,7 @@ import '../../../core/router/app_router.dart' show AppRoutes;
 import '../../auth/providers/auth_provider.dart';
 import '../../feed/providers/feed_provider.dart';
 import '../utils/post_media.dart';
+import '../../map/providers/venue_provider.dart';
 
 const int _maxImages = 10;
 // Файлын дээд хэмжээ — placeholder дээр амласантай нийцнэ
@@ -624,129 +625,43 @@ class _PickerPlaceholder extends StatelessWidget {
 }
 
 // ─── Venue picker bottom sheet with search ───
-class _VenuePicker extends StatefulWidget {
+class _VenuePicker extends ConsumerStatefulWidget {
   final ValueChanged<String> onSelect;
   const _VenuePicker({required this.onSelect});
-
   @override
-  State<_VenuePicker> createState() => _VenuePickerState();
+  ConsumerState<_VenuePicker> createState() => _VenuePickerState();
 }
 
-class _VenuePickerState extends State<_VenuePicker> {
-  String _q = '';
-
-  static const _emoji = {
-    'bar': '🍺', 'lounge': '🛋️', 'nightclub': '🎵',
-    'pub': '🍻', 'rooftop': '🌃',
-  };
-
-  List<Map<String, dynamic>> get _filtered => _q.isEmpty
-      ? AppConstants.ubVenues
-      : AppConstants.ubVenues.where((v) =>
-          (v['name'] as String).toLowerCase().contains(_q.toLowerCase()) ||
-          (v['district'] as String).toLowerCase().contains(_q.toLowerCase()) ||
-          (v['type'] as String).toLowerCase().contains(_q.toLowerCase()),
-        ).toList();
-
+class _VenuePickerState extends ConsumerState<_VenuePicker> {
+  String _query = '';
   @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: MediaQuery.of(context).size.height * 0.75,
-      decoration: BoxDecoration(
-        color: AppColors.bgElevated,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      child: Column(children: [
-        const SizedBox(height: 12),
-        Container(width: 40, height: 4,
-          decoration: BoxDecoration(
-            color: AppColors.hairline,
-            borderRadius: BorderRadius.circular(2))),
-        const SizedBox(height: 16),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: Row(children: [
-            Text('Газар сонгох', style: AppTextStyles.h2),
-            const Spacer(),
-            IconButton(
-              onPressed: () => Navigator.pop(context),
-              icon: Icon(Icons.close, color: AppColors.textSecondary, size: 20),
-              padding: EdgeInsets.zero,
-            ),
-          ]),
-        ),
-        const SizedBox(height: 12),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: Container(
-            height: 42,
-            decoration: BoxDecoration(
-              color: AppColors.bgSurface,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppColors.hairline),
-            ),
-            child: Row(children: [
-              const SizedBox(width: 12),
-              Icon(Icons.search, color: AppColors.textTertiary, size: 18),
-              const SizedBox(width: 8),
-              Expanded(
-                child: TextField(
-                  autofocus: true,
-                  onChanged: (v) => setState(() => _q = v),
-                  style: AppTextStyles.bodyMd.copyWith(color: AppColors.textPrimary),
-                  decoration: InputDecoration(
-                    hintText: 'Газар хайх...',
-                    hintStyle: AppTextStyles.bodyMd.copyWith(
-                        color: AppColors.textTertiary),
-                    border: InputBorder.none,
-                    isDense: true,
-                    contentPadding: EdgeInsets.zero,
-                  ),
-                ),
-              ),
-            ]),
-          ),
-        ),
-        const SizedBox(height: 8),
-        Divider(color: AppColors.hairline),
-        Expanded(
-          child: _filtered.isEmpty
-              ? Center(child: Text('Газар олдсонгүй',
-                  style: AppTextStyles.bodyMd.copyWith(
-                      color: AppColors.textTertiary)))
-              : ListView.builder(
-                  itemCount: _filtered.length,
-                  itemBuilder: (_, i) {
-                    final v = _filtered[i];
-                    return ListTile(
-                      contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 20, vertical: 4),
-                      leading: Container(
-                        width: 44, height: 44,
-                        decoration: BoxDecoration(
-                          color: AppColors.bgSurface,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Center(child: Text(
-                          _emoji[v['type']] ?? '📍',
-                          style: const TextStyle(fontSize: 22))),
-                      ),
-                      title: Text(v['name']!, style: AppTextStyles.labelMd),
-                      subtitle: Text(
-                        '${v['district']} · ${v['type']}',
-                        style: AppTextStyles.bodyXs.copyWith(
-                            color: AppColors.textSecondary)),
-                      trailing: Icon(Icons.chevron_right,
-                          color: AppColors.textTertiary, size: 18),
-                      onTap: () {
-                        widget.onSelect(v['name']!);
-                        Navigator.pop(context);
-                      },
-                    );
-                  },
-                ),
-        ),
-      ]),
-    );
-  }
+  Widget build(BuildContext context) => SafeArea(child: SizedBox(
+    height: MediaQuery.sizeOf(context).height * 0.75,
+    child: Column(children: [
+      const SizedBox(height: 12),
+      ListTile(title: Text('Газар сонгох', style: AppTextStyles.h2),
+        trailing: IconButton(tooltip: 'Хаах', icon: const Icon(Icons.close),
+          onPressed: () => Navigator.pop(context))),
+      Padding(padding: const EdgeInsets.symmetric(horizontal: 20), child: TextField(
+        autofocus: true, onChanged: (value) => setState(() => _query = value.trim().toLowerCase()),
+        decoration: const InputDecoration(hintText: 'Газар хайх', prefixIcon: Icon(Icons.search)))),
+      const SizedBox(height: 12),
+      Expanded(child: ref.watch(venuesProvider).when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (_, __) => Center(child: TextButton(
+          onPressed: () => ref.invalidate(venuesProvider), child: const Text('Дахин ачаалах'))),
+        data: (venues) {
+          final matches = venues.where((v) =>
+            '${v.name} ${v.district ?? ''} ${v.typeLabel}'.toLowerCase().contains(_query)).toList();
+          if (matches.isEmpty) return const Center(child: Text('Газар олдсонгүй'));
+          return ListView.builder(itemCount: matches.length, itemBuilder: (_, index) {
+            final venue = matches[index];
+            return ListTile(leading: Text(venue.emoji, style: const TextStyle(fontSize: 24)),
+              title: Text(venue.name), subtitle: Text([if (venue.district != null) venue.district!, venue.typeLabel].join(' · ')),
+              trailing: const Icon(Icons.chevron_right), onTap: () {
+                widget.onSelect(venue.name); Navigator.pop(context);
+              });
+          });
+        })),
+    ])));
 }

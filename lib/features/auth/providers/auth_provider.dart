@@ -10,18 +10,23 @@ final authUserProvider = StreamProvider<User?>((ref) {
   return SupabaseService.authStream.map((state) => state.session?.user);
 });
 
+// The id is stable during token refresh, and null after sign-out.
+final sessionUserIdProvider = Provider<String?>((ref) {
+  final session = ref.watch(authUserProvider);
+  return session.hasValue ? session.valueOrNull?.id : SupabaseService.currentUser?.id;
+});
+
 // ─── Current user profile ───
 // authUserProvider-ийг watch хийснээр хаяг солиход (signOut→signIn) автоматаар
 // дахин уншиж, хуучин хэрэглэгчийн профайл cache-д үлдэхээс сэргийлнэ.
 final currentProfileProvider = FutureProvider<UserProfile?>((ref) async {
-  final user = ref.watch(authUserProvider).valueOrNull
-      ?? SupabaseService.currentUser;
-  if (user == null) return null;
+  final userId = ref.watch(sessionUserIdProvider);
+  if (userId == null) return null;
 
   final data = await SupabaseService.client
       .from('profiles')
       .select()
-      .eq('id', user.id)
+      .eq('id', userId)
       .maybeSingle();
 
   return data != null ? UserProfile.fromJson(data) : null;
@@ -34,12 +39,14 @@ class AuthNotifier extends StateNotifier<AsyncValue<UserProfile?>> {
   }
 
   StreamSubscription<AuthState>? _sub;
+  int _request = 0;
 
   void _init() {
     _sub = SupabaseService.authStream.listen((state) async {
+      final request = ++_request;
       final user = state.session?.user;
       if (user == null) {
-        if (!mounted) return;
+        if (!mounted || request != _request) return;
         this.state = const AsyncValue.data(null);
         return;
       }
@@ -50,11 +57,11 @@ class AuthNotifier extends StateNotifier<AsyncValue<UserProfile?>> {
             .eq('id', user.id)
             .maybeSingle();
         // await-ийн дараа notifier dispose хийгдсэн байж болно
-        if (!mounted) return;
+        if (!mounted || request != _request) return;
         this.state = AsyncValue.data(
             data != null ? UserProfile.fromJson(data) : null);
       } catch (e, st) {
-        if (!mounted) return;
+        if (!mounted || request != _request) return;
         this.state = AsyncValue.error(e, st);
       }
     });
@@ -75,7 +82,7 @@ class AuthNotifier extends StateNotifier<AsyncValue<UserProfile?>> {
   Future<void> updateProfile(Map<String, dynamic> updates) async {
     // Session дууссан үед null байж болно — crash хийхгүй
     final user = SupabaseService.currentUser;
-    if (user == null) return;
+    if (user == null) throw StateError('Нэвтэрнэ үү');
     await SupabaseService.client
         .from('profiles')
         .update({...updates, 'updated_at': DateTime.now().toIso8601String()})

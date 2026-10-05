@@ -5,12 +5,7 @@
     <uses-permission android:name="android.permission.RECORD_AUDIO"/>
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
-    <!-- Зураг/видео сонгох (Android 13+) -->
-    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES"/>
-    <uses-permission android:name="android.permission.READ_MEDIA_VIDEO"/>
-    <!-- Хуучин Android (≤12)-д зураг унших -->
-    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"
-        android:maxSdkVersion="32"/>
+    <!-- image_picker uses the system media picker; no full-library access. -->
     <uses-feature android:name="android.hardware.camera" android:required="false"/>
 
     <application

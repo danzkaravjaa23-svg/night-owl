@@ -1,15 +1,16 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/services/supabase_service.dart';
+import '../../auth/providers/auth_provider.dart';
 
 // ─── Is following a user ──────────────────────────────────────────────────────
 final isFollowingProvider =
     FutureProvider.family<bool, String>((ref, targetUserId) async {
-  final me = SupabaseService.currentUser?.id;
+  final me = ref.watch(sessionUserIdProvider);
   if (me == null || me == targetUserId) return false;
 
   final data = await SupabaseService.client
       .from('follows')
-      .select('id')
+      .select('follower_id')
       .eq('follower_id', me)
       .eq('following_id', targetUserId)
       .maybeSingle();
@@ -24,6 +25,7 @@ class FollowNotifier extends StateNotifier<AsyncValue<bool>> {
   /// toggle() бүтэлгүйтэж rollback хийсэн бол UI-д toast харуулах callback.
   /// (Провайдер өөрөө snackbar харуулж чадахгүй тул дээд давхарга бүртгэнэ.)
   void Function()? onFailure;
+  bool _busy = false;
 
   FollowNotifier(this.targetUserId) : super(const AsyncValue.loading()) {
     _init();
@@ -38,21 +40,22 @@ class FollowNotifier extends StateNotifier<AsyncValue<bool>> {
     try {
       final data = await SupabaseService.client
           .from('follows')
-          .select('id')
+          .select('follower_id')
           .eq('follower_id', me)
           .eq('following_id', targetUserId)
           .maybeSingle();
-      state = AsyncValue.data(data != null);
+      if (mounted) state = AsyncValue.data(data != null);
     } catch (e, st) {
-      state = AsyncValue.error(e, st);
+      if (mounted) state = AsyncValue.error(e, st);
     }
   }
 
   /// Дагах/болих. Амжилттай бол true, бүтэлгүйтэж rollback хийвэл false буцаана.
   Future<bool> toggle() async {
     final me = SupabaseService.currentUser?.id;
-    if (me == null) return false;
-    final current = state.value ?? false;
+    if (me == null || me == targetUserId || _busy || state.isLoading) return false;
+    _busy = true;
+    final current = state.valueOrNull ?? false;
 
     // Optimistic
     state = AsyncValue.data(!current);
@@ -73,16 +76,19 @@ class FollowNotifier extends StateNotifier<AsyncValue<bool>> {
       return true;
     } catch (_) {
       // Rollback + UI-д мэдэгдэх
-      state = AsyncValue.data(current);
+      if (mounted) state = AsyncValue.data(current);
       onFailure?.call();
       return false;
-    }
+    } finally { _busy = false; }
   }
 }
 
 final followProvider =
     StateNotifierProvider.family<FollowNotifier, AsyncValue<bool>, String>(
-        (ref, userId) => FollowNotifier(userId));
+        (ref, userId) {
+          ref.watch(sessionUserIdProvider);
+          return FollowNotifier(userId);
+        });
 
 // ─── Follower / following counts ─────────────────────────────────────────────
 class FollowCounts {

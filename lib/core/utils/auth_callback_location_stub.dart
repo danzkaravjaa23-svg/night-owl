@@ -1,0 +1,1 @@
+void replaceAuthCallbackLocation(Uri uri) {}

@@ -101,13 +101,13 @@ class GradientButton extends StatelessWidget {
                 ? [
                     BoxShadow(
                       color: AppColors.accentStart
-                          .withValues(alpha: busy ? 0.22 : 0.35),
+                          .withValues(alpha: busy ? 0.10 : 0.16),
                       blurRadius: 22, spreadRadius: -2,
                       offset: const Offset(0, 8),
                     ),
                     BoxShadow(
                       color: AppColors.accentEnd
-                          .withValues(alpha: busy ? 0.14 : 0.22),
+                          .withValues(alpha: busy ? 0.06 : 0.08),
                       blurRadius: 32, spreadRadius: 0,
                       offset: const Offset(0, 4),
                     ),

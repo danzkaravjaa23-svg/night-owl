@@ -6,10 +6,10 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/services/supabase_service.dart';
 import '../../../core/utils/image_uploader.dart';
-import '../../../core/constants/app_constants.dart';
 import '../../../core/widgets/gradient_button.dart';
 import '../../../core/router/app_router.dart';
 import '../../map/providers/venue_provider.dart';
+import '../../../models/venue.dart';
 
 /// Газрын төрөл — түлхүүр нь өгөгдлийн санд (venue_type) хэвээр англиар
 /// хадгалагдана, харин дэлгэц дээр монголоор харагдана.
@@ -18,13 +18,15 @@ const _kVenueTypes = <String, String>{
   'lounge':    'Лаунж',
   'nightclub': 'Шөнийн клуб',
   'pub':       'Паб',
+  'restaurant': 'Ресторан',
   'rooftop':   'Дээвэр бар',
   'karaoke':   'Караоке',
   'jazz':      'Жазз',
 };
 
 class VenueEditScreen extends ConsumerStatefulWidget {
-  const VenueEditScreen({super.key});
+  final String? venueId;
+  const VenueEditScreen({super.key, this.venueId});
   @override
   ConsumerState<VenueEditScreen> createState() => _VenueEditScreenState();
 }
@@ -58,27 +60,31 @@ class _VenueEditScreenState extends ConsumerState<VenueEditScreen> {
   Future<void> _load() async {
     if (mounted) setState(() { _loading = true; _loadFailed = false; });
     try {
-      final data = await SupabaseService.client
+      var query = SupabaseService.client
           .from('venues').select()
-          .eq('owner_id', _myId)
-          .limit(1).maybeSingle();
+          .eq('owner_id', _myId);
+      if (widget.venueId != null) query = query.eq('id', widget.venueId!);
+      final data = await query.limit(1).maybeSingle();
       if (!mounted) return;
       if (data != null) {
         _venueId = data['id'] as String;
         _nameCtrl.text = data['name'] as String? ?? '';
         _districtCtrl.text = data['district'] as String? ?? '';
         _descCtrl.text = data['description'] as String? ?? '';
-        _latCtrl.text = (data['lat']?.toString()) ?? '';
-        _lngCtrl.text = (data['lng']?.toString()) ?? '';
-        _type = data['venue_type'] as String? ?? 'bar';
+        final location = Venue.fromJson(data);
+        _latCtrl.text = location.lat?.toString() ?? '';
+        _lngCtrl.text = location.lng?.toString() ?? '';
+        final type = data['venue_type'] as String?;
+        _type = _kVenueTypes.containsKey(type) ? type! : 'bar';
         _coverUrl = data['cover_url'] as String?;
         _phoneCtrl.text = data['phone'] as String? ?? '';
         _openCtrl.text = data['open_time'] as String? ?? '';
         _closeCtrl.text = data['close_time'] as String? ?? '';
       } else {
-        // Шинэ venue — UB төв default координат
-        _latCtrl.text = AppConstants.ubLat.toString();
-        _lngCtrl.text = AppConstants.ubLng.toString();
+        if (widget.venueId != null) { _loadFailed = true; }
+        // New venues never receive a fabricated default coordinate.
+        _latCtrl.clear();
+        _lngCtrl.clear();
       }
     } catch (_) {
       // Ачаалал бүтэлгүйтвэл _venueId null хэвээр — save хийвэл давхар venue үүсэх
@@ -97,6 +103,14 @@ class _VenueEditScreenState extends ConsumerState<VenueEditScreen> {
     if (_busy) return;
     if (_nameCtrl.text.trim().isEmpty) {
       setState(() => _error = 'Газрын нэр шаардлагатай');
+      return;
+    }
+    if (_myId.isEmpty || _loadFailed) return;
+    final lat = double.tryParse(_latCtrl.text.trim());
+    final lng = double.tryParse(_lngCtrl.text.trim());
+    if ((_latCtrl.text.trim().isNotEmpty || _lngCtrl.text.trim().isNotEmpty) &&
+        !Venue(id: '', name: '', type: '', lat: lat, lng: lng, createdAt: DateTime.now()).hasLocation) {
+      setState(() => _error = 'Өргөрөг -90…90, уртраг -180…180 хүрээнд хоёр координатыг зөв оруулна уу.');
       return;
     }
     setState(() { _busy = true; _error = null; });
@@ -119,8 +133,8 @@ class _VenueEditScreenState extends ConsumerState<VenueEditScreen> {
         'venue_type': _type,
         'district': _districtCtrl.text.trim(),
         'description': _descCtrl.text.trim(),
-        'lat': double.tryParse(_latCtrl.text.trim()),
-        'lng': double.tryParse(_lngCtrl.text.trim()),
+        'lat': lat,
+        'lng': lng,
         'phone': _phoneCtrl.text.trim(),
         'open_time': _openCtrl.text.trim(),
         'close_time': _closeCtrl.text.trim(),

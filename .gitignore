@@ -49,3 +49,14 @@ app.*.map.json
 
 # Netlify build дээр татагддаг Flutter SDK (repo-д оруулахгүй)
 /flutter/
+
+# Local release credentials
+/android/key.properties
+*.jks
+*.keystore
+*.p12
+*.p8
+*.pem
+*.mobileprovision
+.env
+.env.*

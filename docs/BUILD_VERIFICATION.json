@@ -1,0 +1,96 @@
+{
+  "date": "2026-10-05",
+  "flutter": "3.44.0",
+  "dart": "3.12.0",
+  "analysis": "passed; no issues",
+  "flutter_tests": {
+    "passed": 78,
+    "failed": 0
+  },
+  "web": {
+    "status": "JavaScript release built",
+    "main_dart_js_sha256": "6a69209208a9544c6056adce04aac9331df2938761d73c9b5d5fadbc14875af5",
+    "archive_sha256": "9b9a8603d14e2c5005a02741f8532e632b962c9bfb5ee14f9996c3cbec85cb57",
+    "archive": "build/releases/night-owl-free-web-release.zip",
+    "files": 61
+  },
+  "android": {
+    "status": "not built",
+    "reason": "Android SDK and Java runtime unavailable"
+  },
+  "ios": {
+    "status": "not built",
+    "reason": "Full Xcode/CocoaPods unavailable"
+  },
+  "server_deployment": "not performed",
+  "store_upload": "not performed",
+  "required_server_changes": [
+    "supabase/migrations/202610050001_check_in_venue.sql",
+    "supabase/functions/delete-account/index.ts"
+  ],
+  "missing_integrations": [
+    "live media transport",
+    "voice/video calls",
+    "push notifications",
+    "private accounts"
+  ],
+  "browser_checks": [
+    "320px selected venue information",
+    "390px feed and map",
+    "1280px profile and business dashboard",
+    "free settings without QPay history or affiliate rewards",
+    "legacy /affiliate/unlock redirects to /invite",
+    "320px free invitation screen",
+    "settings complete list without account deletion button",
+    "web Apple button and disabled-provider in-app notice",
+    "OAuth cancellation shows sanitized notice and clears callback URL",
+    "refresh after callback does not repeat expired/consumed callback",
+    "approved map/feed/profile at390x844",
+    "approved map and footer at320x720; real FatCat query, clear and12venue list",
+    "real profile Saved empty state and prefilled profile edit form without submission",
+    "messages retain footer and center compose showsPost/Story/Reels/Event routes",
+    "approved desktop profile at1280x900; viewport restored",
+    "new build browser console error list empty during verification"
+  ],
+  "release_mode": "free",
+  "payments": {
+    "enabled": false,
+    "subscriptions": false,
+    "premium_unlocks": false,
+    "in_app_purchases": false,
+    "integration": "deferred until after deployment; not required for the free release",
+    "event_admission_prices": "informational; RSVP is not a payment or ticket"
+  },
+  "apple_sign_in": {
+    "client": "native iOS identity-token/nonce; web and Android OAuth; public provider preflight",
+    "ios_entitlements": "wired for Debug, Profile and Release; plist and project syntax passed",
+    "provider_flags_checked_on": "2026-10-05",
+    "apple_enabled": false,
+    "google_enabled": true,
+    "email_enabled": true,
+    "end_to_end_login": "not verified; Apple Developer and Supabase provider configuration required",
+    "callback": "web PKCE exchanged once; consumed credentials cleared; recovery redirect preserved; native stream errors sanitized",
+    "tests": 22,
+    "name_priority_tests": 4
+  },
+  "account_deletion": {
+    "settings_button": "removed at user request",
+    "existing_accounts": "unchanged",
+    "support_request": "web/delete-account.html; fulfillment unverified",
+    "store_submission": "usable in-app deletion route still required; current version not store ready"
+  },
+  "design": {
+    "approved_reference": "docs/visuals/approved-reference.png",
+    "current_mark": "assets/icons/night_owl_mark.png",
+    "current_icon": "assets/icons/night_owl_icon.png",
+    "provenance": "built-in imagegen reconstruction of user-approved round owl; replaces previous angular Higgsfield icon",
+    "reference_and_prompts": "docs/BRAND_REFERENCE.md",
+    "venue_bookmarks": "device and account scoped; not cloud synchronized",
+    "screenshots": [
+      "docs/visuals/approved-map-mobile.jpg",
+      "docs/visuals/approved-feed-mobile.jpg",
+      "docs/visuals/approved-profile-mobile.jpg",
+      "docs/visuals/approved-desktop.jpg"
+    ]
+  }
+}

@@ -71,7 +71,7 @@ final commentsProvider =
 // ─── Comment count for a post ─────────────────────────────────────────────────
 final commentCountProvider = Provider.family<int, String>((ref, postId) {
   final comments = ref.watch(commentsProvider(postId));
-  return comments.value?.length ?? 0;
+  return comments.valueOrNull?.length ?? 0;
 });
 
 // ─── Comment actions ─────────────────────────────────────────────────────────

@@ -13,7 +13,8 @@ import '../../features/auth/screens/register_screen.dart';
 import '../../features/auth/screens/setup_screen.dart';
 import '../../features/auth/screens/forgot_password_screen.dart';
 import '../../features/auth/screens/reset_password_screen.dart';
-import '../services/supabase_service.dart' show pendingPasswordRecovery;
+import '../services/supabase_service.dart'
+    show pendingPasswordRecovery, SupabaseService;
 import '../../features/shell/main_shell.dart';
 import '../theme/app_colors.dart';
 import '../widgets/empty_state.dart';
@@ -21,8 +22,6 @@ import '../widgets/gradient_button.dart';
 import '../../features/feed/screens/feed_screen.dart';
 import '../../features/feed/screens/post_detail_screen.dart';
 import '../../features/feed/screens/creator_screen.dart';
-import '../../features/feed/screens/qpay_screen.dart';
-import '../../features/map/screens/map_screen.dart';
 import '../../features/map/screens/explore_screen.dart';
 import '../../features/post/screens/create_post_screen.dart';
 import '../../features/notifications/screens/notifications_screen.dart';
@@ -41,7 +40,7 @@ import '../../features/feed/screens/saved_posts_screen.dart';
 import '../../features/admin/screens/admin_reports_screen.dart';
 import '../../features/admin/screens/admin_panel_screen.dart';
 import '../../features/admin/screens/admin_users_screen.dart';
-import '../../features/profile/screens/affiliate_screen.dart';
+import '../../features/profile/screens/invite_screen.dart';
 import '../../features/live/screens/go_live_entry.dart';
 import '../widgets/dark_system_ui.dart';
 import '../../features/live/screens/live_viewer_screen.dart';
@@ -52,63 +51,85 @@ import '../../features/events/screens/create_event_screen.dart';
 
 // ─── Route names ───
 abstract class AppRoutes {
-  static const splash          = '/';
-  static const langSelect      = '/lang-select';
-  static const onboarding      = '/onboarding';
-  static const permLocation    = '/perm/location';
-  static const permNotif       = '/perm/notification';
-  static const authLanding     = '/auth';
-  static const login           = '/auth/login';
-  static const register        = '/auth/register';
-  static const setup           = '/auth/setup';
+  static const splash = '/';
+  static const langSelect = '/lang-select';
+  static const onboarding = '/onboarding';
+  static const permLocation = '/perm/location';
+  static const permNotif = '/perm/notification';
+  static const authLanding = '/auth';
+  static const login = '/auth/login';
+  static const register = '/auth/register';
+  static const setup = '/auth/setup';
   // Бүртгэлтэй хэрэглэгч профайлаа засах — /auth/setup-г router бүрэн
   // хэрэглэгчдэд feed рүү буцаадаг тул тусдаа зам хэрэгтэй.
-  static const editProfile     = '/profile/edit';
-  static const forgotPassword  = '/auth/forgot-password';
-  static const resetPassword   = '/auth/reset';
-  static const feed            = '/feed';
-  static const postDetail      = '/post/:id';
-  static const creator         = '/creator/:id';
-  static const qpay            = '/qpay/:id';
-  static const map             = '/map';
-  static const explore         = '/explore';
-  static const createPost      = '/post/create';
-  static const notifications   = '/notifications';
-  static const dmList          = '/dm';
-  static const dmThread        = '/dm/:id';
-  static const groupThread     = '/group/:id';
-  static const profile         = '/profile';
-  static const follows         = '/follows/:id';
-  static const settings        = '/settings';
-  static const changePassword  = '/settings/password';
-  static const business        = '/business';
+  static const editProfile = '/profile/edit';
+  static const forgotPassword = '/auth/forgot-password';
+  static const resetPassword = '/auth/reset';
+  static const feed = '/feed';
+  static const postDetail = '/post/:id';
+  static const creator = '/creator/:id';
+  static const qpay = '/qpay/:id';
+  static const map = '/map';
+  static const explore = '/explore';
+  static const createPost = '/post/create';
+  static const notifications = '/notifications';
+  static const dmList = '/dm';
+  static const dmThread = '/dm/:id';
+  static const groupThread = '/group/:id';
+  static const profile = '/profile';
+  static const follows = '/follows/:id';
+  static const settings = '/settings';
+  static const changePassword = '/settings/password';
+  static const business = '/business';
   static const affiliateUnlock = '/affiliate/unlock';
-  static const affiliate       = '/affiliate';
-  static const goLive          = '/live/go';
-  static const liveView        = '/live/view/:id';
-  static const createStory     = '/story/create';
-  static const reels           = '/reels';
-  static const createReel      = '/reels/create';
-  static const createEvent     = '/event/create';
-  static const venueEdit       = '/venue/edit';
-  static const venueReviews    = '/venue/reviews/:id';
-  static const search          = '/search';
-  static const saved           = '/saved';
-  static const adminPanel      = '/admin';
-  static const adminReports    = '/admin/reports';
-  static const adminUsers      = '/admin/users';
+  static const affiliate = '/affiliate';
+  static const invite = '/invite';
+  static const goLive = '/live/go';
+  static const liveView = '/live/view/:id';
+  static const createStory = '/story/create';
+  static const reels = '/reels';
+  static const createReel = '/reels/create';
+  static const createEvent = '/event/create';
+  static const venueEdit = '/venue/edit';
+  static const venueReviews = '/venue/reviews/:id';
+  static const search = '/search';
+  static const saved = '/saved';
+  static const adminPanel = '/admin';
+  static const adminReports = '/admin/reports';
+  static const adminUsers = '/admin/users';
+
+  /// Old payment/referral links continue to work in the free release.
+  /// Discard payment query parameters; never create a purchase/entitlement.
+  static String? freeReleaseDestination(Uri uri) {
+    final parts = uri.pathSegments;
+    if (parts.length == 2 && parts.first == 'qpay') {
+      if (parts[1].isEmpty) return feed;
+      return '/post/${Uri.encodeComponent(parts[1])}';
+    }
+    if (uri.path == '/qpay') return feed;
+    if (uri.path == affiliate || uri.path == affiliateUnlock) return invite;
+    return null;
+  }
 
   // Нэвтрэлт шаардахгүй routes
   static const _publicRoutes = {
-    splash, langSelect, onboarding, permLocation, permNotif,
-    authLanding, login, register, setup, forgotPassword, resetPassword,
+    splash,
+    langSelect,
+    onboarding,
+    permLocation,
+    permNotif,
+    authLanding,
+    login,
+    register,
+    setup,
+    forgotPassword,
+    resetPassword,
   };
 
-  static bool isPublic(String location) =>
-      _publicRoutes.any((r) => location.startsWith(r.split(':')[0]));
+  static bool isPublic(String location) => _publicRoutes.contains(location);
 }
 
-final _rootKey  = GlobalKey<NavigatorState>(debugLabel: 'root');
+final _rootKey = GlobalKey<NavigatorState>(debugLabel: 'root');
 final _shellKey = GlobalKey<NavigatorState>(debugLabel: 'shell');
 
 // ─── Гөлгөр шилжилтүүд ───
@@ -139,11 +160,13 @@ CustomTransitionPage<void> _slidePage(GoRouterState state, Widget child) =>
       reverseTransitionDuration: const Duration(milliseconds: 260),
       transitionsBuilder: (_, anim, secondary, child) {
         final curved = CurvedAnimation(
-            parent: anim, curve: Curves.easeOutCubic,
+            parent: anim,
+            curve: Curves.easeOutCubic,
             reverseCurve: Curves.easeInCubic);
         return SlideTransition(
-          position: Tween<Offset>(begin: const Offset(0.06, 0), end: Offset.zero)
-              .animate(curved),
+          position:
+              Tween<Offset>(begin: const Offset(0.06, 0), end: Offset.zero)
+                  .animate(curved),
           child: FadeTransition(opacity: curved, child: child),
         );
       },
@@ -158,11 +181,13 @@ CustomTransitionPage<void> _sheetPage(GoRouterState state, Widget child) =>
       reverseTransitionDuration: const Duration(milliseconds: 260),
       transitionsBuilder: (_, anim, __, child) {
         final curved = CurvedAnimation(
-            parent: anim, curve: Curves.easeOutCubic,
+            parent: anim,
+            curve: Curves.easeOutCubic,
             reverseCurve: Curves.easeInCubic);
         return SlideTransition(
-          position: Tween<Offset>(begin: const Offset(0, 0.08), end: Offset.zero)
-              .animate(curved),
+          position:
+              Tween<Offset>(begin: const Offset(0, 0.08), end: Offset.zero)
+                  .animate(curved),
           child: FadeTransition(opacity: curved, child: child),
         );
       },
@@ -182,8 +207,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       final loggedIn = Supabase.instance.client.auth.currentUser != null;
       final loc = state.uri.path; // ?code=... гэх мэт query-г үл тоомсорло
       const authPages = {
-        AppRoutes.splash, AppRoutes.authLanding, AppRoutes.login,
-        AppRoutes.register, AppRoutes.forgotPassword,
+        AppRoutes.splash,
+        AppRoutes.authLanding,
+        AppRoutes.login,
+        AppRoutes.register,
+        AppRoutes.forgotPassword,
       };
 
       if (!loggedIn) {
@@ -208,128 +236,183 @@ final appRouterProvider = Provider<GoRouter>((ref) {
 
     routes: [
       // ── Onboarding ──
-      GoRoute(path: AppRoutes.splash,
-        pageBuilder: (_, s) => _fadePage(s, const DarkSystemUi(child: SplashScreen()))),
-      GoRoute(path: AppRoutes.langSelect,
-        pageBuilder: (_, s) => _fadePage(s, const LangSelectScreen())),
+      GoRoute(
+          path: AppRoutes.splash,
+          pageBuilder: (_, s) =>
+              _fadePage(s, const DarkSystemUi(child: SplashScreen()))),
+      GoRoute(
+          path: AppRoutes.langSelect,
+          pageBuilder: (_, s) => _fadePage(s, const LangSelectScreen())),
       GoRoute(
         path: AppRoutes.onboarding,
         pageBuilder: (_, state) {
-          final slide = int.tryParse(state.uri.queryParameters['slide'] ?? '1') ?? 1;
+          final slide =
+              int.tryParse(state.uri.queryParameters['slide'] ?? '1') ?? 1;
           return _fadePage(state, OnboardingScreen(slide: slide));
         },
       ),
-      GoRoute(path: AppRoutes.permLocation,
-        pageBuilder: (_, s) => _fadePage(s,
-          const PermissionScreen(kind: PermissionKind.location))),
-      GoRoute(path: AppRoutes.permNotif,
-        pageBuilder: (_, s) => _fadePage(s,
-          const PermissionScreen(kind: PermissionKind.notification))),
+      GoRoute(
+          path: AppRoutes.permLocation,
+          pageBuilder: (_, s) => _fadePage(
+              s, const PermissionScreen(kind: PermissionKind.location))),
+      GoRoute(
+          path: AppRoutes.permNotif,
+          pageBuilder: (_, s) => _fadePage(
+              s, const PermissionScreen(kind: PermissionKind.notification))),
 
       // ── Auth ──
-      GoRoute(path: AppRoutes.authLanding,
-        pageBuilder: (_, s) => _fadePage(s, const AuthLandingScreen())),
-      GoRoute(path: AppRoutes.login,
-        pageBuilder: (_, s) => _slidePage(s, const LoginScreen())),
-      GoRoute(path: AppRoutes.register,
-        pageBuilder: (_, s) => _slidePage(s, const RegisterScreen())),
-      GoRoute(path: AppRoutes.setup,
-        pageBuilder: (_, s) => _slidePage(s, const SetupScreen())),
-      GoRoute(path: AppRoutes.editProfile,
-        pageBuilder: (_, s) => _slidePage(s, const SetupScreen(forceEdit: true))),
-      GoRoute(path: AppRoutes.forgotPassword,
-        pageBuilder: (_, s) => _slidePage(s, const ForgotPasswordScreen())),
-      GoRoute(path: AppRoutes.resetPassword,
-        pageBuilder: (_, s) => _slidePage(s, const ResetPasswordScreen())),
+      GoRoute(
+          path: AppRoutes.authLanding,
+          pageBuilder: (_, s) => _fadePage(s, const AuthLandingScreen())),
+      GoRoute(
+          path: AppRoutes.login,
+          pageBuilder: (_, s) => _slidePage(s, const LoginScreen())),
+      GoRoute(
+          path: AppRoutes.register,
+          pageBuilder: (_, s) => _slidePage(s, const RegisterScreen())),
+      GoRoute(
+          path: AppRoutes.setup,
+          pageBuilder: (_, s) => _slidePage(s, const SetupScreen())),
+      GoRoute(
+          path: AppRoutes.editProfile,
+          pageBuilder: (_, s) =>
+              _slidePage(s, const SetupScreen(forceEdit: true))),
+      GoRoute(
+          path: AppRoutes.forgotPassword,
+          pageBuilder: (_, s) => _slidePage(s, const ForgotPasswordScreen())),
+      GoRoute(
+          path: AppRoutes.resetPassword,
+          pageBuilder: (_, s) => _slidePage(s, const ResetPasswordScreen())),
 
       // ── Main shell (bottom nav) ──
       ShellRoute(
         navigatorKey: _shellKey,
         builder: (ctx, state, child) => MainShell(child: child),
         routes: [
-          GoRoute(path: AppRoutes.feed,
-            pageBuilder: (_, s) => _fadePage(s, const FeedScreen())),
-          GoRoute(path: AppRoutes.explore,
-            pageBuilder: (_, s) => _fadePage(s, const ExploreScreen())),
-          GoRoute(path: AppRoutes.reels,
-            pageBuilder: (_, s) => _fadePage(s, const ReelsScreen())),
-          GoRoute(path: AppRoutes.profile,
-            pageBuilder: (_, s) => _fadePage(s, const ProfileScreen())),
+          GoRoute(
+              path: AppRoutes.feed,
+              pageBuilder: (_, s) => _fadePage(s, const FeedScreen())),
+          GoRoute(
+              path: AppRoutes.explore,
+              pageBuilder: (_, s) => _fadePage(s, const ExploreScreen())),
+          GoRoute(
+              path: AppRoutes.reels,
+              pageBuilder: (_, s) => _fadePage(s, const ReelsScreen())),
+          GoRoute(
+              path: AppRoutes.profile,
+              pageBuilder: (_, s) => _fadePage(s, const ProfileScreen())),
+          GoRoute(
+              path: AppRoutes.dmList,
+              pageBuilder: (_, s) => _fadePage(s, const DmListScreen())),
         ],
       ),
 
       // ── Full-screen overlays ──
       // Мэдэгдэл — feed-ийн хонхноос push хийдэг тул shell-ийн ГАДНА:
       // доод док харагдахгүй, буцах сум бүхий энгийн дэлгэц болно
-      GoRoute(path: AppRoutes.notifications,
-        pageBuilder: (_, s) => _fadePage(s, const NotificationsScreen())),
-      GoRoute(path: AppRoutes.map,
-        // iframe (Leaflet) нь route transition-ий transform-ыг дагадаггүй тул
-        // шилжилтгүй нээнэ — эс бөгөөс зураг байрлалаасаа гулсаж хар харагдана
-        pageBuilder: (_, s) => NoTransitionPage(
-            key: s.pageKey, child: const MapScreen())),
-      GoRoute(path: AppRoutes.createPost,
-        pageBuilder: (_, s) => _sheetPage(s, const CreatePostScreen())),
-      GoRoute(path: AppRoutes.postDetail,
-        pageBuilder: (_, s) => _slidePage(s,
-          PostDetailScreen(postId: s.pathParameters['id'] ?? ''))),
-      GoRoute(path: AppRoutes.creator,
-        pageBuilder: (_, s) => _slidePage(s,
-          CreatorScreen(creatorId: s.pathParameters['id'] ?? ''))),
-      GoRoute(path: AppRoutes.qpay,
-        pageBuilder: (_, s) => _sheetPage(s,
-          QPayScreen(contentId: s.pathParameters['id'] ?? ''))),
-      GoRoute(path: AppRoutes.dmList,
-        pageBuilder: (_, s) => _slidePage(s, const DmListScreen())),
-      GoRoute(path: AppRoutes.dmThread,
-        pageBuilder: (_, s) => _slidePage(s, DmThreadScreen(
-          threadId: s.pathParameters['id'] ?? '',
-          replyNote: s.uri.queryParameters['note']))),
-      GoRoute(path: AppRoutes.groupThread,
-        pageBuilder: (_, s) => _slidePage(s, GroupThreadScreen(
-          groupId: s.pathParameters['id'] ?? '',
-          groupName: s.uri.queryParameters['name']))),
-      GoRoute(path: AppRoutes.follows,
-        pageBuilder: (_, s) => _slidePage(s, FollowListScreen(
-          userId: s.pathParameters['id'] ?? '',
-          showFollowers: s.uri.queryParameters['tab'] != 'following'))),
-      GoRoute(path: AppRoutes.settings,
-        pageBuilder: (_, s) => _slidePage(s, const SettingsScreen())),
-      GoRoute(path: AppRoutes.changePassword,
-        pageBuilder: (_, s) => _slidePage(s, const ChangePasswordScreen())),
-      GoRoute(path: AppRoutes.business,
-        pageBuilder: (_, s) => _slidePage(s, const BusinessScreen())),
-      GoRoute(path: AppRoutes.affiliateUnlock,
-        pageBuilder: (_, s) => _slidePage(s, const AffiliateScreen(unlockMode: true))),
-      GoRoute(path: AppRoutes.affiliate,
-        pageBuilder: (_, s) => _slidePage(s, const AffiliateScreen(unlockMode: false))),
-      GoRoute(path: AppRoutes.goLive,
-        pageBuilder: (_, s) => _sheetPage(s, const GoLiveScreen())),
-      GoRoute(path: AppRoutes.liveView,
-        // HTML5 video platform view — transition-гүй нээнэ
-        pageBuilder: (_, s) => NoTransitionPage(key: s.pageKey,
-          child: LiveViewerScreen(liveId: s.pathParameters['id'] ?? ''))),
-      GoRoute(path: AppRoutes.createStory,
-        pageBuilder: (_, s) => _sheetPage(s, const DarkSystemUi(child: CreateStoryScreen()))),
-      GoRoute(path: AppRoutes.createReel,
-        pageBuilder: (_, s) => _sheetPage(s, const DarkSystemUi(child: CreateReelScreen()))),
-      GoRoute(path: AppRoutes.createEvent,
-        pageBuilder: (_, s) => _sheetPage(s, const CreateEventScreen())),
-      GoRoute(path: AppRoutes.venueEdit,
-        pageBuilder: (_, s) => _slidePage(s, const VenueEditScreen())),
-      GoRoute(path: AppRoutes.venueReviews,
-        pageBuilder: (_, s) => _slidePage(s,
-          VenueDetailScreen(venueId: s.pathParameters['id'] ?? ''))),
-      GoRoute(path: AppRoutes.search,
-        pageBuilder: (_, s) => _fadePage(s, const SearchScreen())),
-      GoRoute(path: AppRoutes.saved,
-        pageBuilder: (_, s) => _slidePage(s, const SavedPostsScreen())),
-      GoRoute(path: AppRoutes.adminPanel,
-        pageBuilder: (_, s) => _slidePage(s, const AdminPanelScreen())),
-      GoRoute(path: AppRoutes.adminReports,
-        pageBuilder: (_, s) => _slidePage(s, const AdminReportsScreen())),
-      GoRoute(path: AppRoutes.adminUsers,
-        pageBuilder: (_, s) => _slidePage(s, const AdminUsersScreen())),
+      GoRoute(
+          path: AppRoutes.notifications,
+          pageBuilder: (_, s) => _fadePage(s, const NotificationsScreen())),
+      GoRoute(path: AppRoutes.map, redirect: (_, __) => AppRoutes.explore),
+      GoRoute(
+          path: AppRoutes.createPost,
+          pageBuilder: (_, s) => _sheetPage(s, const CreatePostScreen())),
+      GoRoute(
+          path: AppRoutes.postDetail,
+          pageBuilder: (_, s) => _slidePage(
+              s, PostDetailScreen(postId: s.pathParameters['id'] ?? ''))),
+      GoRoute(
+          path: AppRoutes.creator,
+          pageBuilder: (_, s) => _slidePage(
+              s, CreatorScreen(creatorId: s.pathParameters['id'] ?? ''))),
+      GoRoute(
+          path: '/qpay',
+          redirect: (_, s) => AppRoutes.freeReleaseDestination(s.uri)),
+      GoRoute(
+          path: AppRoutes.qpay,
+          redirect: (_, s) => AppRoutes.freeReleaseDestination(s.uri)),
+      GoRoute(
+          path: AppRoutes.dmThread,
+          pageBuilder: (_, s) => _slidePage(
+              s,
+              DmThreadScreen(
+                  threadId: s.pathParameters['id'] ?? '',
+                  replyNote: s.uri.queryParameters['note']))),
+      GoRoute(
+          path: AppRoutes.groupThread,
+          pageBuilder: (_, s) => _slidePage(
+              s,
+              GroupThreadScreen(
+                  groupId: s.pathParameters['id'] ?? '',
+                  groupName: s.uri.queryParameters['name']))),
+      GoRoute(
+          path: AppRoutes.follows,
+          pageBuilder: (_, s) => _slidePage(
+              s,
+              FollowListScreen(
+                  userId: s.pathParameters['id'] ?? '',
+                  showFollowers: s.uri.queryParameters['tab'] != 'following'))),
+      GoRoute(
+          path: AppRoutes.settings,
+          pageBuilder: (_, s) => _slidePage(s, const SettingsScreen())),
+      GoRoute(
+          path: AppRoutes.changePassword,
+          pageBuilder: (_, s) => _slidePage(s, const ChangePasswordScreen())),
+      GoRoute(
+          path: AppRoutes.business,
+          pageBuilder: (_, s) => _slidePage(s, const BusinessScreen())),
+      GoRoute(
+          path: AppRoutes.affiliateUnlock,
+          redirect: (_, s) => AppRoutes.freeReleaseDestination(s.uri)),
+      GoRoute(
+          path: AppRoutes.affiliate,
+          redirect: (_, s) => AppRoutes.freeReleaseDestination(s.uri)),
+      GoRoute(
+          path: AppRoutes.invite,
+          pageBuilder: (_, s) => _slidePage(s, const InviteScreen())),
+      GoRoute(
+          path: AppRoutes.goLive,
+          pageBuilder: (_, s) => _sheetPage(s, const GoLiveScreen())),
+      GoRoute(
+          path: AppRoutes.liveView,
+          // HTML5 video platform view — transition-гүй нээнэ
+          pageBuilder: (_, s) => NoTransitionPage(
+              key: s.pageKey,
+              child: LiveViewerScreen(liveId: s.pathParameters['id'] ?? ''))),
+      GoRoute(
+          path: AppRoutes.createStory,
+          pageBuilder: (_, s) =>
+              _sheetPage(s, const DarkSystemUi(child: CreateStoryScreen()))),
+      GoRoute(
+          path: AppRoutes.createReel,
+          pageBuilder: (_, s) =>
+              _sheetPage(s, const DarkSystemUi(child: CreateReelScreen()))),
+      GoRoute(
+          path: AppRoutes.createEvent,
+          pageBuilder: (_, s) => _sheetPage(s, const CreateEventScreen())),
+      GoRoute(
+          path: AppRoutes.venueEdit,
+          pageBuilder: (_, s) => _slidePage(
+              s, VenueEditScreen(venueId: s.uri.queryParameters['id']))),
+      GoRoute(
+          path: AppRoutes.venueReviews,
+          pageBuilder: (_, s) => _slidePage(
+              s, VenueDetailScreen(venueId: s.pathParameters['id'] ?? ''))),
+      GoRoute(
+          path: AppRoutes.search,
+          pageBuilder: (_, s) => _fadePage(s, const SearchScreen())),
+      GoRoute(
+          path: AppRoutes.saved,
+          pageBuilder: (_, s) => _slidePage(s, const SavedPostsScreen())),
+      GoRoute(
+          path: AppRoutes.adminPanel,
+          pageBuilder: (_, s) => _slidePage(s, const AdminPanelScreen())),
+      GoRoute(
+          path: AppRoutes.adminReports,
+          pageBuilder: (_, s) => _slidePage(s, const AdminReportsScreen())),
+      GoRoute(
+          path: AppRoutes.adminUsers,
+          pageBuilder: (_, s) => _slidePage(s, const AdminUsersScreen())),
     ],
 
     // ── 404 — аппын өнгө/хэлбэрт нийцсэн хоосон төлөв ──
@@ -365,7 +448,7 @@ class AuthGate extends ChangeNotifier {
 
   AuthGate() {
     // Аливаа auth өөрчлөлтөд redirect-ийг дахин ажиллуулна
-    Supabase.instance.client.auth.onAuthStateChange.listen((s) {
+    SupabaseService.authStream.listen((s) {
       if (s.event == AuthChangeEvent.passwordRecovery) recovery = true;
       if (s.event == AuthChangeEvent.signedOut) recovery = false;
       notifyListeners();

@@ -1,0 +1,104 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:night_owl_ub/features/profile/widgets/profile_header.dart';
+import 'package:night_owl_ub/models/user_profile.dart';
+
+void main() {
+  for (final width in [320.0, 1280.0]) {
+    testWidgets(
+        'Profile preserves identity and actions at $width with large text',
+        (tester) async {
+      tester.view.physicalSize = Size(width, 1000);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+      final calls = <String>[];
+      final profile = UserProfile(
+          id: 'actual-user',
+          username: 'actual_username',
+          name: 'Actual profile name',
+          bio: 'Энэ бол хэрэглэгчийн бодит танилцуулга. '
+              'Хэрэглэгчийн мэдээлэл болон профайлын бүх үндсэн үйлдэл хадгалагдана.',
+          interests: ['Live Music', 'Clubs', 'Jazz'],
+          postsCount: 17,
+          followersCount: 2400,
+          followingCount: 412);
+      var selected = 0;
+      await tester.pumpWidget(MaterialApp(
+          home: Scaffold(
+              body: MediaQuery(
+                  data: MediaQueryData(
+                      size: Size(width, 1000),
+                      textScaler: const TextScaler.linear(1.5)),
+                  child: Center(
+                      child: SizedBox(
+                          width: width > 720 ? 720 : width,
+                          child: SingleChildScrollView(
+                              child: StatefulBuilder(
+                                  builder: (context, setState) =>
+                                      Column(children: [
+                                        ProfileHeader(
+                                            profile: profile,
+                                            avatar: const SizedBox(
+                                                width: 124,
+                                                height: 124,
+                                                child: CircleAvatar(
+                                                    child: Text('A'))),
+                                            onEdit: () => calls.add('edit'),
+                                            onEditCover: () =>
+                                                calls.add('cover'),
+                                            onSettings: () =>
+                                                calls.add('settings'),
+                                            onActions: () =>
+                                                calls.add('actions'),
+                                            onFollowers: () =>
+                                                calls.add('followers'),
+                                            onFollowing: () =>
+                                                calls.add('following')),
+                                        ProfileContentTabs(
+                                            selected: selected,
+                                            onChanged: (value) => setState(
+                                                () => selected = value)),
+                                      ])))))))));
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      expect(find.text('actual_username'), findsOneWidget);
+      expect(find.text('Actual profile name'), findsOneWidget);
+      expect(find.text(profile.bio!), findsOneWidget);
+      expect(find.text('17'), findsOneWidget);
+      expect(find.text('2.4K'), findsOneWidget);
+      expect(find.text('412'), findsOneWidget);
+      expect(find.byIcon(Icons.verified), findsNothing);
+      final fallback = tester.widgetList<Image>(find.byType(Image)).any(
+          (image) =>
+              image.image is AssetImage &&
+              (image.image as AssetImage).assetName ==
+                  'assets/images/tonight_city.png');
+      expect(fallback, isTrue);
+      for (final tooltip in [
+        'Тохиргоо',
+        'Профайлын үйлдлүүд',
+        'Cover зураг солих'
+      ]) {
+        await tester.ensureVisible(find.byTooltip(tooltip));
+        await tester.tap(find.byTooltip(tooltip));
+      }
+      for (final label in ['Профайл засах', 'Дагагч', 'Дагаж буй']) {
+        await tester.ensureVisible(find.text(label));
+        await tester.tap(find.text(label));
+      }
+      expect(calls,
+          ['settings', 'actions', 'cover', 'edit', 'followers', 'following']);
+      await tester.ensureVisible(find.text('Хадгалсан'));
+      await tester.tap(find.text('Хадгалсан'));
+      await tester.pumpAndSettle();
+      expect(selected, 1);
+      await tester.tap(find.text('Бичлэг'));
+      await tester.pumpAndSettle();
+      expect(selected, 2);
+      expect(tester.takeException(), isNull);
+    });
+  }
+}

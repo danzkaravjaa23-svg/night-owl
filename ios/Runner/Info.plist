@@ -15,10 +15,16 @@
 	<string>Контентыг таны зургийн санд хадгална.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Ойролцоох газрууд, өөрийн байршлыг газрын зураг дээр харуулахад байршил ашиглана.</string>
+	<key>CFBundleURLTypes</key>
+	<array><dict>
+		<key>CFBundleURLSchemes</key><array><string>com.nightowl.ub</string></array>
+		<key>CFBundleURLName</key><string>Night Owl authentication</string>
+	</dict></array>
+	<key>FlutterDeepLinkingEnabled</key><false/>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Night Owl Ub</string>
+	<string>Night Owl</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>

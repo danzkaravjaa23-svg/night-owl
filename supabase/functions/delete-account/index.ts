@@ -17,6 +17,10 @@ const cors = {
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
 
+  if (req.method !== "POST") {
+    return new Response("Method not allowed", { status: 405, headers: cors });
+  }
+
   try {
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
@@ -41,6 +45,30 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
+    // Remove only this authenticated user's storage prefix before auth deletion.
+    // Storage ownership can otherwise prevent deleting auth.users.
+    for (const bucket of ["avatars", "posts", "stories", "venues"]) {
+      const paths: string[] = [];
+      async function collect(prefix: string, depth = 0): Promise<void> {
+        if (depth > 8 || paths.length > 20000) throw new Error("Storage cleanup requires support");
+        for (let offset = 0; ; offset += 100) {
+          const { data, error } = await admin.storage.from(bucket)
+            .list(prefix, { limit: 100, offset, sortBy: { column: "name", order: "asc" } });
+          if (error) throw error;
+          for (const entry of data ?? []) {
+            const path = `${prefix}/${entry.name}`;
+            if (entry.id == null) await collect(path, depth + 1);
+            else paths.push(path);
+          }
+          if ((data?.length ?? 0) < 100) break;
+        }
+      }
+      await collect(user.id);
+      for (let index = 0; index < paths.length; index += 100) {
+        const { error } = await admin.storage.from(bucket).remove(paths.slice(index, index + 100));
+        if (error) throw error;
+      }
+    }
     const { error } = await admin.auth.admin.deleteUser(user.id);
     if (error) {
       return new Response(JSON.stringify({ error: error.message }),

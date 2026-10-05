@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/services/supabase_service.dart';
 import '../../auth/providers/auth_provider.dart';
+import '../../../core/providers/user_settings_provider.dart';
 
 class AppNotification {
   final String id;
@@ -41,9 +42,9 @@ class AppNotification {
 // шинэ хэрэглэгчээр автоматаар дахин үүснэ (currentProfileProvider-той ижил логик).
 final notificationsProvider =
     StreamProvider<List<AppNotification>>((ref) {
-  final me = ref.watch(authUserProvider).valueOrNull?.id
-      ?? SupabaseService.currentUser?.id;
-  if (me == null) return const Stream.empty();
+  final me = ref.watch(sessionUserIdProvider);
+  final settings = ref.watch(userSettingsProvider);
+  if (me == null || !settings.notifications) return Stream.value(const []);
 
   return SupabaseService.client
       .from('notifications')
@@ -59,7 +60,7 @@ final notificationsProvider =
 // ─── Unread count ───
 final unreadNotifCountProvider = Provider<int>((ref) {
   final notifs = ref.watch(notificationsProvider);
-  return notifs.value?.where((n) => !n.isRead).length ?? 0;
+  return notifs.valueOrNull?.where((n) => !n.isRead).length ?? 0;
 });
 
 // ─── Mark all as read ───

@@ -9,6 +9,7 @@ import '../../../core/theme/app_text_styles.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/services/supabase_service.dart';
 import '../../../core/utils/image_uploader.dart';
+import '../../../core/utils/validators.dart';
 import '../../../core/widgets/gradient_button.dart';
 import '../providers/event_provider.dart';
 
@@ -67,6 +68,11 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
     }
     if (_venueId == null) {
       setState(() => _error = 'Эвент зохиох газраа сонгоно уу (зөвхөн өөрийн venue)');
+      return;
+    }
+    final priceError = Validators.admissionPrice(_priceCtrl.text);
+    if (priceError != null) {
+      setState(() => _error = priceError);
       return;
     }
     setState(() { _busy = true; _error = null; });
@@ -145,7 +151,10 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
         const SizedBox(height: 12),
         _tile(Icons.schedule, whenStr, _pickDateTime),
         const SizedBox(height: 12),
-        _field(_priceCtrl, 'Тасалбарын үнэ (₮) — 0 = үнэгүй', number: true),
+        _field(_priceCtrl, 'Газарт орох үнэ (₮) — 0 = үнэгүй', number: true),
+        const SizedBox(height: 6),
+        Text('Зөвхөн мэдээлэл. Night Owl тасалбар худалдахгүй, төлбөр авахгүй.',
+          style: AppTextStyles.bodyXs.copyWith(color: AppColors.textSecondary)),
         const SizedBox(height: 12),
         _field(_descCtrl, 'Тайлбар', lines: 3),
         if (_error != null) ...[

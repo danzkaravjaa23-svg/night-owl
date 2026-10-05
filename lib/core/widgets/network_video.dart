@@ -6,7 +6,7 @@ import 'video_view_stub.dart'
 /// URL видео мөн эсэхийг өргөтгөлөөр шалгах
 bool isVideoUrl(String? url) {
   if (url == null) return false;
-  final u = url.toLowerCase();
+  final u = (Uri.tryParse(url)?.path ?? url).toLowerCase();
   return u.endsWith('.mp4') || u.endsWith('.mov') || u.endsWith('.webm') ||
       u.endsWith('.m4v') || u.endsWith('.avi') || u.endsWith('.mkv');
 }

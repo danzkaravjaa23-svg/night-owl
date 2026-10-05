@@ -4,18 +4,19 @@ abstract class AppConstants {
   static const String supabaseUrl    = 'https://jbbdnpsvstwxtgtjoeru.supabase.co';
   static const String supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpiYmRucHN2c3R3eHRndGpvZXJ1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNzg1ODIsImV4cCI6MjA5NTY1NDU4Mn0.90qjYby2XNwierEh9XORoP2FEs2LPlRqBC6W74_2oqE';
 
-  // CARTO basemap түлхүүр — 2026/08-аас хойш дэвсгэр зураг түлхүүр шаарддаг
-  // болсон. Үнэгүй, сард 5 сая tile хүртэл: https://carto.com/basemaps/apikey
-  // Энэ түлхүүр нь вэб код дотор ил харагдана (өөр аргагүй) — хамгаалалт нь
-  // CARTO дээр тохируулсан домэйны хязгаарлалт.
-  // Хоосон бол зураг дээр "API KEY REQUIRED" ус тэмдэг гарна.
-  static const String cartoBasemapKey =
-      String.fromEnvironment('CARTO_KEY',
-          defaultValue: 'cb1_2y7y_1_1996637335a244a9eaf546ea');
+  // Production can select another licensed provider at build time.
+  static const String mapTileUrl = String.fromEnvironment('MAP_TILE_URL',
+      defaultValue: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png');
+  static const String mapAttribution = String.fromEnvironment('MAP_ATTRIBUTION',
+      defaultValue: '© OpenStreetMap contributors');
+  static const String mapAttributionUrl = String.fromEnvironment('MAP_ATTRIBUTION_URL',
+      defaultValue: 'https://www.openstreetmap.org/copyright');
+  static const String publicAppUrl = String.fromEnvironment('PUBLIC_APP_URL',
+      defaultValue: 'https://nightowl-ub.netlify.app');
 
-  // UB location (Сүхбаатар талбай)
-  static const double ubLat = 47.9077;
-  static const double ubLng = 106.8832;
+  // OpenStreetMap relation/15638347: Сүхбаатарын талбай (reviewed 2026-10-05).
+  static const double ubLat = 47.9188126;
+  static const double ubLng = 106.9168967;
 
   // Story / Check-in expires
   static const Duration storyExpiry   = Duration(hours: 24);
@@ -45,49 +46,4 @@ abstract class AppConstants {
     'Pub', 'Wine', 'Karaoke', 'Night market',
   ];
 
-  // UB venues sample (seeding/demo)
-  static const List<Map<String, dynamic>> ubVenues = [
-    {
-      'name': 'Sugar Lounge',
-      'type': 'lounge',
-      'lat': 47.9103,
-      'lng': 106.8871,
-      'district': 'Сүхбаатар дүүрэг',
-    },
-    {
-      'name': 'Mass Club',
-      'type': 'nightclub',
-      'lat': 47.9045,
-      'lng': 106.8923,
-      'district': 'Чингэлтэй дүүрэг',
-    },
-    {
-      'name': 'Vertigo Rooftop',
-      'type': 'rooftop',
-      'lat': 47.9123,
-      'lng': 106.8845,
-      'district': 'Сүхбаатар дүүрэг',
-    },
-    {
-      'name': 'Brewery Praha',
-      'type': 'pub',
-      'lat': 47.9001,
-      'lng': 106.8912,
-      'district': 'Баянгол дүүрэг',
-    },
-    {
-      'name': 'Element Lounge',
-      'type': 'lounge',
-      'lat': 47.8956,
-      'lng': 106.8778,
-      'district': 'Хан-Уул дүүрэг',
-    },
-    {
-      'name': 'Rockstar Bar',
-      'type': 'bar',
-      'lat': 47.9067,
-      'lng': 106.8901,
-      'district': 'Баянзүрх дүүрэг',
-    },
-  ];
 }

@@ -1,10 +1,10 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart' show ScrollCacheExtent;
 import 'package:flutter/gestures.dart' show PointerDeviceKind;
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:shimmer/shimmer.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
@@ -12,7 +12,7 @@ import '../../../core/theme/app_radii.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/widgets/app_avatar.dart';
 import '../../../core/widgets/empty_state.dart';
-import '../../../core/widgets/gradient_text.dart';
+import '../../../core/widgets/night_owl_brand.dart';
 import '../../../core/widgets/network_video.dart';
 import '../../../core/router/app_router.dart';
 import '../../auth/providers/auth_provider.dart';
@@ -21,13 +21,11 @@ import '../providers/stories_provider.dart';
 import '../providers/saved_provider.dart';
 import '../../../core/services/supabase_service.dart';
 import '../widgets/live_story_bar.dart';
-import '../../live/providers/live_provider.dart';
 import '../../notifications/providers/notification_provider.dart';
-import '../../events/widgets/events_rail.dart';
 import '../../profile/widgets/block_report_sheet.dart';
 import '../../profile/utils/app_links.dart' show appOrigin;
-import '../../../core/widgets/ger_icon.dart';
-import '../../../core/widgets/theme_toggle_button.dart';
+import '../../profile/providers/follow_provider.dart';
+import '../../events/widgets/events_rail.dart';
 import '../../events/providers/event_provider.dart';
 import '../../../models/post.dart';
 
@@ -47,12 +45,15 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
   // Орох анимац зөвхөн эхний build дээр — scroll-оор буцахад дахин тоглохгүй
   // (setState хэрэггүй: дараагийн itemBuilder-ууд шинэ утгыг нь уншина)
   bool _introDone = false;
+  bool _followingOnly = false;
+  Timer? _introTimer;
 
   @override
   void initState() {
     super.initState();
     _scrollCtrl.addListener(_onScroll);
-    Future.delayed(const Duration(milliseconds: 900), () => _introDone = true);
+    _introTimer =
+        Timer(const Duration(milliseconds: 900), () => _introDone = true);
   }
 
   void _onScroll() {
@@ -64,122 +65,244 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
 
   @override
   void dispose() {
+    _introTimer?.cancel();
     _scrollCtrl.removeListener(_onScroll);
     _scrollCtrl.dispose();
     super.dispose();
   }
 
+  Future<void> _refresh() async {
+    await ref.read(feedProvider.notifier).loadFeed(refresh: true);
+    if (!mounted) return;
+    ref.invalidate(storiesProvider);
+    ref.invalidate(feedFollowingIdsProvider);
+    ref.invalidate(upcomingEventsProvider);
+  }
+
   @override
   Widget build(BuildContext context) {
     final feedAsync = ref.watch(feedProvider);
+    final rings = ref.watch(storiesProvider).valueOrNull ?? [];
+    final following = ref.watch(feedFollowingIdsProvider);
+    final posts = feedAsync.valueOrNull ?? [];
+    final visiblePosts = _followingOnly
+        ? posts
+            .where(
+                (post) => following.valueOrNull?.contains(post.userId) ?? false)
+            .toList()
+        : posts;
+    final notifier = ref.read(feedProvider.notifier);
 
     return Scaffold(
       backgroundColor: AppColors.bgBase,
-      body: Stack(children: [
-        // ── Агаар мандлын неон гэрэл — маш бүдэг radial угаалт (дээд-зүүн magenta, доод-баруун cyan) ──
-        const Positioned.fill(
-            child: IgnorePointer(
-                child: DecoratedBox(
-                    decoration: BoxDecoration(
-                        gradient: RadialGradient(
-                            center: Alignment(-0.9, -0.9),
-                            radius: 1.1,
-                            colors: [
-              Color(0x12E935C8),
-              Colors.transparent
-            ]))))),
-        const Positioned.fill(
-            child: IgnorePointer(
-                child: DecoratedBox(
-                    decoration: BoxDecoration(
-                        gradient: RadialGradient(
-                            center: Alignment(1.0, 1.0),
-                            radius: 1.1,
-                            colors: [
-              Color(0x0E22E7FF),
-              Colors.transparent
-            ]))))),
-        SafeArea(
-          child: Column(children: [
-            _FeedTopBar(),
-            Expanded(
-              child: feedAsync.when(
-                loading: () => const _FeedSkeleton(),
-                error: (e, _) => _ErrorView(
-                    message: e.toString(),
-                    onRetry: () => ref
-                        .read(feedProvider.notifier)
-                        .loadFeed(refresh: true)),
-                data: (posts) {
-                  final storiesAsync = ref.watch(storiesProvider);
-                  final rings = storiesAsync.value ?? [];
-                  return posts.isEmpty && rings.isEmpty
-                      ? _EmptyFeed(
-                          onPost: () => context.push(AppRoutes.createPost))
-                      : RefreshIndicator(
-                          color: AppColors.accentStart,
-                          backgroundColor: AppColors.bgElevated,
-                          onRefresh: () async {
-                            await ref
-                                .read(feedProvider.notifier)
-                                .loadFeed(refresh: true);
-                            ref.invalidate(storiesProvider);
-                            ref.invalidate(activeLivesProvider);
-                            ref.invalidate(upcomingEventsProvider);
-                          },
-                          child: ListView.builder(
-                            controller: _scrollCtrl,
-                            physics: const AlwaysScrollableScrollPhysics(),
-                            // Дараагийн картуудыг урьдчилан бэлдэж scroll гөлгөр болгоно
-                            scrollCacheExtent:
-                                const ScrollCacheExtent.pixels(1200),
-                            // +1 for stories bar, +1 for footer
-                            itemCount: posts.length + 2,
-                            itemBuilder: (ctx, i) {
-                              if (i == 0) {
-                                // ── Story rail + Event постерууд (хуваагч шугамгүй,
-                                //    секц хоорондын агаараар ялгарна) ──
-                                return Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    const SizedBox(height: 4),
-                                    LiveStoryBar(rings: rings),
-                                    const EventsRail(),
-                                  ],
-                                );
+      body: SafeArea(
+        child: Column(children: [
+          _FeedTopBar(),
+          Expanded(
+            child: RefreshIndicator(
+              color: AppColors.accentStart,
+              backgroundColor: AppColors.bgElevated,
+              onRefresh: _refresh,
+              child: CustomScrollView(
+                controller: _scrollCtrl,
+                physics: const AlwaysScrollableScrollPhysics(),
+                scrollCacheExtent: const ScrollCacheExtent.pixels(1000),
+                slivers: [
+                  SliverToBoxAdapter(child: LiveStoryBar(rings: rings)),
+                  SliverToBoxAdapter(
+                    child: _FeedToolbar(
+                      followingOnly: _followingOnly,
+                      onFilterChanged: (value) {
+                        setState(() => _followingOnly = value);
+                        if (value) ref.invalidate(feedFollowingIdsProvider);
+                      },
+                    ),
+                  ),
+                  if (feedAsync.isLoading && feedAsync.valueOrNull == null)
+                    SliverList.builder(
+                        itemCount: 2, itemBuilder: (_, __) => _SkeletonCard())
+                  else if (feedAsync.hasError && feedAsync.valueOrNull == null)
+                    SliverToBoxAdapter(
+                      child: SizedBox(
+                          height: 360,
+                          child: _ErrorView(
+                            message: feedAsync.error.toString(),
+                            onRetry: _refresh,
+                          )),
+                    )
+                  else if (_followingOnly && following.isLoading)
+                    const SliverToBoxAdapter(
+                        child: Padding(
+                      padding: EdgeInsets.all(40),
+                      child: Center(
+                          child: CircularProgressIndicator(strokeWidth: 2)),
+                    ))
+                  else if (_followingOnly && following.hasError)
+                    SliverToBoxAdapter(
+                        child: SizedBox(
+                            height: 300,
+                            child: _ErrorView(
+                              message: 'Дагаж буй хүмүүсийг ачаалж чадсангүй.',
+                              onRetry: () =>
+                                  ref.invalidate(feedFollowingIdsProvider),
+                            )))
+                  else ...[
+                    if (visiblePosts.isEmpty)
+                      SliverToBoxAdapter(
+                          child: _EmptyFeed(
+                        followingOnly: _followingOnly,
+                        onPost: () => context.push(AppRoutes.createPost),
+                      ))
+                    else
+                      SliverList.builder(
+                        itemCount: visiblePosts.length,
+                        itemBuilder: (_, postIdx) {
+                          final post = visiblePosts[postIdx];
+                          final card = _PostCard(
+                            key: ValueKey(post.id),
+                            post: post,
+                            isLast: postIdx == visiblePosts.length - 1,
+                            onLike: () async {
+                              final ok = await notifier.toggleLike(post.id);
+                              if (!ok && context.mounted) {
+                                ScaffoldMessenger.of(context)
+                                    .showSnackBar(const SnackBar(
+                                  content: Text(
+                                      'Лайк хадгалж чадсангүй. Дахин оролдоно уу.'),
+                                ));
                               }
-                              final postIdx = i - 1;
-                              if (postIdx == posts.length) {
-                                return _FeedFooter(
-                                  notifier: ref.read(feedProvider.notifier),
-                                  hasPosts: posts.isNotEmpty,
-                                );
-                              }
-                              final card = _PostCard(
-                                // Пост устгах/блоклоход жагсаалт шилжинэ — key-гүй
-                                // бол _hidden зэрэг state дараагийн пост руу шилждэг
-                                key: ValueKey(posts[postIdx].id),
-                                post: posts[postIdx],
-                                isLast: postIdx == posts.length - 1,
-                                onLike: () => ref
-                                    .read(feedProvider.notifier)
-                                    .toggleLike(posts[postIdx].id),
-                              );
-                              // Эхний картуудад шатлалтай орох анимац (нэг л удаа)
-                              if (!_introDone && postIdx < 4) {
-                                return _Entrance(index: postIdx, child: card);
-                              }
-                              return card;
                             },
-                          ),
-                        );
-                },
+                          );
+                          return !_introDone && postIdx < 4
+                              ? _Entrance(index: postIdx, child: card)
+                              : card;
+                        },
+                      ),
+                    SliverToBoxAdapter(
+                        child: _FeedFooter(
+                      notifier: notifier,
+                      hasPosts: visiblePosts.isNotEmpty,
+                      loadMoreButton: _followingOnly,
+                    )),
+                  ],
+                ],
               ),
             ),
+          ),
+        ]),
+      ),
+    );
+  }
+}
+
+/// Filter identifiers are scoped to the signed-in account, independent of
+/// the currently fetched feed page. Pull-to-refresh also refreshes this list.
+final feedFollowingIdsProvider = FutureProvider<Set<String>>((ref) async {
+  ref.watch(sessionUserIdProvider);
+  return FollowService.myFollowingIds();
+});
+
+class _FeedToolbar extends StatelessWidget {
+  final bool followingOnly;
+  final ValueChanged<bool> onFilterChanged;
+  const _FeedToolbar(
+      {required this.followingOnly, required this.onFilterChanged});
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.fromLTRB(16, 8, 12, 6),
+        child: Row(children: [
+          Expanded(
+              child: Text('Нийтлэл',
+                  style: AppTextStyles.h2.copyWith(
+                    fontSize: 21,
+                    fontWeight: FontWeight.w700,
+                  ))),
+          IconButton(
+            tooltip: 'Reels',
+            onPressed: () => context.push(AppRoutes.reels),
+            icon: Icon(Icons.movie_outlined,
+                color: AppColors.textSecondary, size: 21),
+          ),
+          PopupMenuButton<String>(
+            tooltip: 'Нийтлэлийн шүүлтүүр',
+            initialValue: followingOnly ? 'following' : 'all',
+            onSelected: (value) {
+              if (value == 'events') {
+                showModalBottomSheet<void>(
+                  context: context,
+                  backgroundColor: AppColors.bgBase,
+                  useSafeArea: true,
+                  isScrollControlled: true,
+                  builder: (_) => const _FeedEventsSheet(),
+                );
+              } else {
+                onFilterChanged(value == 'following');
+              }
+            },
+            color: AppColors.bgElevated,
+            itemBuilder: (_) => const [
+              PopupMenuItem(value: 'all', child: Text('Бүх нийтлэл')),
+              PopupMenuItem(value: 'following', child: Text('Дагаж буй')),
+              PopupMenuDivider(),
+              PopupMenuItem(value: 'events', child: Text('Эвентүүд')),
+            ],
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 12),
+              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                Text(followingOnly ? 'Дагаж буй' : 'Бүгд',
+                    style: AppTextStyles.bodySm.copyWith(
+                      color: AppColors.textPrimary,
+                      fontWeight: FontWeight.w600,
+                    )),
+                const SizedBox(width: 4),
+                Icon(Icons.keyboard_arrow_down_rounded,
+                    color: AppColors.textPrimary, size: 19),
+              ]),
+            ),
+          ),
+        ]),
+      );
+}
+
+class _FeedEventsSheet extends ConsumerWidget {
+  const _FeedEventsSheet();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final events = ref.watch(upcomingEventsProvider);
+    return SafeArea(
+        child: Padding(
+      padding: const EdgeInsets.symmetric(vertical: 16),
+      child: Column(mainAxisSize: MainAxisSize.min, children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Row(children: [
+            Expanded(child: Text('Эвентүүд', style: AppTextStyles.h2)),
+            IconButton(
+                tooltip: 'Хаах',
+                onPressed: () => Navigator.pop(context),
+                icon: const Icon(Icons.close)),
           ]),
         ),
+        if (events.hasError)
+          Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(children: [
+                const Text('Эвентүүдийг ачаалж чадсангүй.'),
+                TextButton(
+                    onPressed: () => ref.invalidate(upcomingEventsProvider),
+                    child: const Text('Дахин оролдох')),
+              ]))
+        else if (!events.isLoading && (events.valueOrNull?.isEmpty ?? true))
+          Padding(
+              padding: const EdgeInsets.all(24),
+              child: Text('Удахгүй болох эвент одоогоор алга.',
+                  style: AppTextStyles.bodyMd))
+        else
+          const EventsRail(),
       ]),
-    );
+    ));
   }
 }
 
@@ -191,6 +314,7 @@ class _Entrance extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (MediaQuery.of(context).disableAnimations) return child;
     final delay = index * 40;
     final total = 220 + delay;
     return TweenAnimationBuilder<double>(
@@ -212,11 +336,8 @@ class _FeedTopBar extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final unread = ref.watch(unreadNotifCountProvider);
     return Container(
-      height: 56,
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      decoration: BoxDecoration(
-        border: Border(bottom: BorderSide(color: AppColors.hairline, width: 1)),
-      ),
+      height: 64,
+      padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Row(children: [
         // Лого зай хүрэлцэхгүй (360px утас) үед багасна — overflow болохгүй
         const Expanded(
@@ -224,27 +345,22 @@ class _FeedTopBar extends ConsumerWidget {
             alignment: Alignment.centerLeft,
             child: FittedBox(
               fit: BoxFit.scaleDown,
-              child: NightOwlLogoText(fontSize: 22),
+              child: NightOwlBrand(size: 28),
             ),
           ),
         ),
-        // Дараалал: горимын toggle → хайх → мэдэгдэл → мессенжер
-        const ThemeToggleButton(),
-        const SizedBox(width: 8),
         _TopIconBtn(
-          icon: Icon(Icons.search, color: AppColors.textPrimary, size: 20),
-          onTap: () => context.push(AppRoutes.search),
-        ),
-        const SizedBox(width: 8),
-        _TopIconBtn(
-          icon: AnimatedGerIcon(size: 40, ringing: unread > 0),
+          icon: Icon(Icons.notifications_none_rounded,
+              color: AppColors.textPrimary, size: 22),
           tooltip: 'Мэдэгдэл',
-          bare: true, // зурагт өөрийн дугуй хүрээ бий
+          bare: true,
           badgeCount: unread,
           onTap: () => context.push(AppRoutes.notifications),
         ),
         const SizedBox(width: 8),
         _TopIconBtn(
+          tooltip: 'Мессеж',
+          bare: true,
           icon:
               Icon(Icons.send_outlined, color: AppColors.textPrimary, size: 19),
           onTap: () => context.push(AppRoutes.dmList),
@@ -451,8 +567,9 @@ class _PostCardState extends ConsumerState<_PostCard>
     final venue = widget.post.venue;
     final venueName = widget.post.venueName ?? venue?.name;
     final caption = (widget.post.caption ?? '').trim();
-    final isVideo =
-        widget.post.mediaUrls.length <= 1 && _isVideoUrl(widget.post.mediaUrl);
+    final mediaUrl = widget.post.mediaUrl ??
+        (widget.post.mediaUrls.isNotEmpty ? widget.post.mediaUrls.first : null);
+    final isVideo = widget.post.mediaUrls.length <= 1 && _isVideoUrl(mediaUrl);
     final liked = widget.post.isLikedByMe;
     // Өнгөт цагираг зөвхөн үзээгүй story-той зохиогч дээр — цагираг утгатай
     final hasStory = ref.watch(storiesProvider.select((a) =>
@@ -465,28 +582,9 @@ class _PostCardState extends ConsumerState<_PostCard>
     void openPost() => context.push('/post/${widget.post.id}');
     void openAuthor() => context.push('/creator/${widget.post.userId}');
 
-    // IG/Threads загвар: пост бүр хайрцаггүй — хуудасны дэвсгэр дээр шууд,
-    // медиа ирмэгээс ирмэг хүртэл, постуудын хооронд нимгэн неон зураас.
-    // (Өмнө нь карт + дотор нь дугуй медиа хайрцаг = давхар хүрээ байсан.)
     return Padding(
-      padding: const EdgeInsets.only(bottom: AppSpacing.x4),
+      padding: const EdgeInsets.only(bottom: 18),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        // ── Неон хуваагч (ягаан → цэнхэр, ирмэгтээ бүдгэрнэ) ──
-        Container(
-          width: double.infinity,
-          height: 1,
-          margin: const EdgeInsets.fromLTRB(
-              AppSpacing.x4, 0, AppSpacing.x4, AppSpacing.x1),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(colors: [
-              Colors.transparent,
-              AppColors.magenta.withValues(alpha: 0.22),
-              AppColors.neonCyan.withValues(alpha: 0.22),
-              Colors.transparent,
-            ]),
-          ),
-        ),
-
         // ── Зохиогч: нэр · хугацаа / газар ──
         Padding(
           padding: const EdgeInsets.fromLTRB(
@@ -499,7 +597,7 @@ class _PostCardState extends ConsumerState<_PostCard>
                   ? AppAvatar(
                       imageUrl: author?.avatarUrl,
                       initial: author?.initial ?? '?',
-                      size: 36,
+                      size: 42,
                       showRing: true,
                     )
                   : DecoratedBox(
@@ -512,7 +610,7 @@ class _PostCardState extends ConsumerState<_PostCard>
                       child: AppAvatar(
                         imageUrl: author?.avatarUrl,
                         initial: author?.initial ?? '?',
-                        size: 36,
+                        size: 42,
                       ),
                     ),
             ),
@@ -542,42 +640,31 @@ class _PostCardState extends ConsumerState<_PostCard>
                           Icon(Icons.verified_rounded,
                               size: 14, color: AppColors.neonCyan),
                         ],
-                        Text(' · ${widget.post.timeAgo}',
-                            maxLines: 1,
-                            style: AppTextStyles.bodySm.copyWith(
-                                color: AppColors.textTertiary,
-                                letterSpacing: 0)),
                       ]),
                     ),
                   ),
-                  if (venueName != null) ...[
-                    const SizedBox(height: 2),
-                    MouseRegion(
-                      cursor: widget.post.venueId == null
-                          ? MouseCursor.defer
-                          : SystemMouseCursors.click,
-                      child: GestureDetector(
-                        behavior: HitTestBehavior.opaque,
-                        onTap: widget.post.venueId == null
-                            ? null
-                            : () => context
-                                .push('/venue/reviews/${widget.post.venueId}'),
-                        child: Row(children: [
-                          const Icon(Icons.location_on_rounded,
-                              size: 12, color: AppColors.accentStart),
-                          const SizedBox(width: 3),
-                          Flexible(
-                            child: Text(venueName,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: AppTextStyles.bodyXs.copyWith(
-                                    fontSize: 12,
-                                    color: AppColors.textSecondary)),
-                          ),
-                        ]),
+                  const SizedBox(height: 2),
+                  MouseRegion(
+                    cursor: widget.post.venueId == null
+                        ? MouseCursor.defer
+                        : SystemMouseCursors.click,
+                    child: GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: widget.post.venueId == null
+                          ? null
+                          : () => context
+                              .push('/venue/reviews/${widget.post.venueId}'),
+                      child: Text(
+                        venueName == null
+                            ? widget.post.timeAgo
+                            : '${widget.post.timeAgo} · $venueName',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTextStyles.bodyXs
+                            .copyWith(color: AppColors.textTertiary),
                       ),
                     ),
-                  ],
+                  ),
                 ],
               ),
             ),
@@ -604,11 +691,12 @@ class _PostCardState extends ConsumerState<_PostCard>
                     final ok = await ref
                         .read(feedProvider.notifier)
                         .deletePost(widget.post.id);
-                    if (!mounted || !ok) return;
+                    if (!mounted || !ok) return ok;
                     // Профайлын grid + ПОСТ тоо шинэчлэгдэнэ
                     ref.read(postsVersionProvider.notifier).state++;
                     ref.invalidate(currentProfileProvider);
                     setState(() => _hidden = true);
+                    return true;
                   },
                   onEditCaption: (text) => ref
                       .read(feedProvider.notifier)
@@ -628,171 +716,214 @@ class _PostCardState extends ConsumerState<_PostCard>
           ]),
         ),
 
-        // ── Медиа — ирмэгээс ирмэг, давхар товшвол лайк ──
-        ClipRect(
-          child: GestureDetector(
-            onDoubleTap: _doubleTapLike,
-            onTap: openPost,
-            child: Stack(children: [
-              if (widget.post.mediaUrls.length > 1)
-                _PostCarousel(urls: widget.post.mediaUrls)
-              else if (widget.post.mediaUrl != null)
-                isVideo
-                    // 4:5 хүрээг дүүргэж тайрна — хоёр талд хар зурвасгүй.
-                    // Бүтэн кадр нь пост дэлгэрэнгүй дээр харагдана.
-                    ? AspectRatio(
-                        aspectRatio: 4 / 5,
-                        child: NetworkVideo(
-                            url: widget.post.mediaUrl!, cover: true),
-                      )
-                    // 4:5 харьцаанд түгжинэ — зураг ачаалахад пост хэмжээгээ
-                    // өөрчилж фийд үсрэхгүй (placeholder ч мөн адил хайрцагт)
-                    : AspectRatio(
-                        aspectRatio: 4 / 5,
-                        child: CachedNetworkImage(
-                          imageUrl: widget.post.mediaUrl!,
-                          width: double.infinity,
-                          fit: BoxFit.cover,
-                          memCacheWidth:
-                              900, // feed зураг — дэлгэцийн өргөнөөр decode
-                          fadeInDuration: const Duration(milliseconds: 180),
-                          placeholder: (_, __) =>
-                              Container(color: AppColors.bgSurface),
-                          errorWidget: (_, __, ___) => Container(
-                            color: AppColors.bgSurface,
-                            child: const Center(
-                                child:
-                                    Text('📸', style: TextStyle(fontSize: 48))),
+        // ── Rounded media; double-tap retains the real like action. ──
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(14),
+            child: GestureDetector(
+              onDoubleTap: _doubleTapLike,
+              onTap: openPost,
+              child: Stack(children: [
+                if (widget.post.mediaUrls.length > 1)
+                  _PostCarousel(urls: widget.post.mediaUrls)
+                else if (mediaUrl != null)
+                  isVideo
+                      // Reference media frame; full media is available in post detail.
+                      // Бүтэн кадр нь пост дэлгэрэнгүй дээр харагдана.
+                      ? AspectRatio(
+                          aspectRatio: 3 / 2,
+                          child: NetworkVideo(url: mediaUrl, cover: true),
+                        )
+                      // 3:2 харьцаанд түгжинэ — зураг ачаалахад пост хэмжээгээ
+                      // өөрчилж фийд үсрэхгүй (placeholder ч мөн адил хайрцагт)
+                      : AspectRatio(
+                          aspectRatio: 3 / 2,
+                          child: CachedNetworkImage(
+                            imageUrl: mediaUrl,
+                            width: double.infinity,
+                            fit: BoxFit.cover,
+                            memCacheWidth:
+                                900, // feed зураг — дэлгэцийн өргөнөөр decode
+                            fadeInDuration: const Duration(milliseconds: 180),
+                            placeholder: (_, __) =>
+                                Container(color: AppColors.bgSurface),
+                            errorWidget: (_, __, ___) => Container(
+                              color: AppColors.bgSurface,
+                              child: const Center(
+                                  child: Text('📸',
+                                      style: TextStyle(fontSize: 48))),
+                            ),
                           ),
-                        ),
-                      )
-              else
-                Container(
-                  height: 280,
-                  color: AppColors.bgSurface,
-                  child: const Center(
-                      child: Text('📸', style: TextStyle(fontSize: 48))),
-                ),
+                        )
+                else
+                  const SizedBox.shrink(),
 
-              // Видео тэмдэг — медиа дээр тул цагаан + сүүдэр (хоёр горимд)
-              if (isVideo)
-                const Positioned(
-                  top: 12,
-                  right: 12,
-                  child: IgnorePointer(
-                    child: Icon(Icons.videocam_rounded,
-                        size: 18,
-                        color: Colors.white,
-                        shadows: [
-                          Shadow(color: Color(0x99000000), blurRadius: 6)
-                        ]),
+                // Видео тэмдэг — медиа дээр тул цагаан + сүүдэр (хоёр горимд)
+                if (isVideo)
+                  const Positioned(
+                    top: 12,
+                    right: 12,
+                    child: IgnorePointer(
+                      child: Icon(Icons.videocam_rounded,
+                          size: 18,
+                          color: Colors.white,
+                          shadows: [
+                            Shadow(color: Color(0x99000000), blurRadius: 6)
+                          ]),
+                    ),
                   ),
-                ),
 
-              // Давхар товшилтын зүрх — неон гэрэлтэй, зөөлөн бүдгэрч алга болно
-              if (_showHeart)
-                Positioned.fill(
-                  child: IgnorePointer(
-                    child: Center(
-                      child: FadeTransition(
-                        opacity: Tween(begin: 1.0, end: 0.0).animate(
-                            CurvedAnimation(
-                                parent: _heartCtrl,
-                                curve: const Interval(0.7, 1.0,
-                                    curve: Curves.easeIn))),
-                        child: ScaleTransition(
-                          scale: _heartAnim,
-                          child: Icon(Icons.favorite_rounded,
-                              color: Colors.white,
-                              size: 92,
-                              shadows: [
-                                Shadow(
-                                    color:
-                                        AppColors.like.withValues(alpha: 0.75),
-                                    blurRadius: 28),
-                                const Shadow(
-                                    color: Color(0x59000000), blurRadius: 8),
-                              ]),
+                // Давхар товшилтын зүрх — неон гэрэлтэй, зөөлөн бүдгэрч алга болно
+                if (_showHeart)
+                  Positioned.fill(
+                    child: IgnorePointer(
+                      child: Center(
+                        child: FadeTransition(
+                          opacity: Tween(begin: 1.0, end: 0.0).animate(
+                              CurvedAnimation(
+                                  parent: _heartCtrl,
+                                  curve: const Interval(0.7, 1.0,
+                                      curve: Curves.easeIn))),
+                          child: ScaleTransition(
+                            scale: _heartAnim,
+                            child: Icon(Icons.favorite_rounded,
+                                color: Colors.white,
+                                size: 92,
+                                shadows: [
+                                  Shadow(
+                                      color: AppColors.like
+                                          .withValues(alpha: 0.75),
+                                      blurRadius: 28),
+                                  const Shadow(
+                                      color: Color(0x59000000), blurRadius: 8),
+                                ]),
+                          ),
                         ),
                       ),
                     ),
                   ),
-                ),
-            ]),
+              ]),
+            ),
           ),
         ),
 
         // ── Үйлдлүүд — тод дүрс, 44px талбай, дүрсний ирмэг 16px-т ──
         Padding(
-          padding: const EdgeInsets.fromLTRB(7, 2, 7, 0),
-          child: Row(children: [
-            _ActionBtn(
-              onTap: () {
-                HapticFeedback.lightImpact();
-                widget.onLike();
-              },
-              icon: liked
-                  ? Icons.favorite_rounded
-                  : Icons.favorite_border_rounded,
-              color: liked ? AppColors.like : AppColors.textPrimary,
-              glow: liked,
-              label:
-                  widget.post.likesCount > 0 ? widget.post.formattedLikes : '',
-            ),
-            _ActionBtn(
-              onTap: openPost,
-              icon: Icons.chat_bubble_outline_rounded,
-              color: AppColors.textPrimary,
-              label: widget.post.commentsCount > 0
-                  ? widget.post.formattedComments
-                  : '',
-            ),
-            _ActionBtn(
-              onTap: () async {
-                // Deploy хийсэн домэйноо ашиглана — үхмэл линк өгөхгүй
-                final link = '${appOrigin()}/#/post/${widget.post.id}';
-                await Clipboard.setData(ClipboardData(text: link));
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                      content: Text('Холбоос хуулагдлаа 🔗'),
-                      duration: Duration(seconds: 2)));
-                }
-              },
-              icon: Icons.send_outlined,
-              color: AppColors.textPrimary,
-              label: '',
-            ),
-            const Spacer(),
-            // Хадгалах — баруун талд ганцаараа
-            Tooltip(
-              message: _saved ? 'Хадгалснаас хасах' : 'Хадгалах',
-              child: _Press(
-                scale: 0.85,
-                onTap: _toggleSave,
-                child: SizedBox(
-                  width: 44,
-                  height: 44,
-                  child: Center(
-                    child: AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 220),
-                      switchInCurve: Curves.easeOutBack,
-                      transitionBuilder: (c, a) => ScaleTransition(
-                          scale: Tween(begin: 0.7, end: 1.0).animate(a),
-                          child: c),
-                      child: Icon(
-                          _saved
-                              ? Icons.bookmark_rounded
-                              : Icons.bookmark_border_rounded,
-                          key: ValueKey(_saved),
-                          color:
-                              _saved ? AppColors.saved : AppColors.textPrimary,
-                          size: 26),
+          padding: const EdgeInsets.fromLTRB(7, 7, 7, 0),
+          child: LayoutBuilder(builder: (context, constraints) {
+            final likes =
+                widget.post.likesCount > 0 ? widget.post.formattedLikes : '';
+            final comments = widget.post.commentsCount > 0
+                ? widget.post.formattedComments
+                : '';
+            double actionWidth(String label) {
+              if (label.isEmpty) return 44;
+              final painter = TextPainter(
+                text: TextSpan(
+                    text: label,
+                    style: AppTextStyles.labelLg.copyWith(
+                      letterSpacing: 0,
+                      fontFeatures: const [FontFeature.tabularFigures()],
+                    )),
+                textScaler: MediaQuery.textScalerOf(context),
+                textDirection: TextDirection.ltr,
+                maxLines: 1,
+              )..layout();
+              final width = painter.width + 46;
+              painter.dispose();
+              return width < 44 ? 44 : width;
+            }
+
+            final inlineCounts =
+                actionWidth(likes) + actionWidth(comments) + 88 <=
+                    constraints.maxWidth;
+            return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(children: [
+                    _ActionBtn(
+                      onTap: () {
+                        HapticFeedback.lightImpact();
+                        widget.onLike();
+                      },
+                      icon: liked
+                          ? Icons.favorite_rounded
+                          : Icons.favorite_border_rounded,
+                      color: liked ? AppColors.like : AppColors.textPrimary,
+                      glow: liked,
+                      label: inlineCounts ? likes : '',
                     ),
-                  ),
-                ),
-              ),
-            ),
-          ]),
+                    _ActionBtn(
+                      onTap: openPost,
+                      icon: Icons.chat_bubble_outline_rounded,
+                      color: AppColors.textPrimary,
+                      label: inlineCounts ? comments : '',
+                    ),
+                    _ActionBtn(
+                      onTap: () async {
+                        // Deploy хийсэн домэйноо ашиглана — үхмэл линк өгөхгүй
+                        final link = '${appOrigin()}/#/post/${widget.post.id}';
+                        await Clipboard.setData(ClipboardData(text: link));
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                  content: Text('Холбоос хуулагдлаа 🔗'),
+                                  duration: Duration(seconds: 2)));
+                        }
+                      },
+                      icon: Icons.send_outlined,
+                      color: AppColors.textPrimary,
+                      label: '',
+                    ),
+                    const Spacer(),
+                    // Хадгалах — баруун талд ганцаараа
+                    Tooltip(
+                      message: _saved ? 'Хадгалснаас хасах' : 'Хадгалах',
+                      child: _Press(
+                        scale: 0.85,
+                        onTap: _toggleSave,
+                        child: SizedBox(
+                          width: 44,
+                          height: 44,
+                          child: Center(
+                            child: AnimatedSwitcher(
+                              duration: const Duration(milliseconds: 220),
+                              switchInCurve: Curves.easeOutBack,
+                              transitionBuilder: (c, a) => ScaleTransition(
+                                  scale: Tween(begin: 0.7, end: 1.0).animate(a),
+                                  child: c),
+                              child: Icon(
+                                  _saved
+                                      ? Icons.bookmark_rounded
+                                      : Icons.bookmark_border_rounded,
+                                  key: ValueKey(_saved),
+                                  color: _saved
+                                      ? AppColors.saved
+                                      : AppColors.textPrimary,
+                                  size: 24),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ]),
+                  if (!inlineCounts)
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(9, 2, 9, 4),
+                      child: Wrap(spacing: 14, runSpacing: 4, children: [
+                        if (likes.isNotEmpty)
+                          Text('$likes лайк', style: AppTextStyles.bodySm),
+                        if (comments.isNotEmpty)
+                          GestureDetector(
+                            onTap: openPost,
+                            child: Text('$comments сэтгэгдэл',
+                                style: AppTextStyles.bodySm),
+                          ),
+                      ]),
+                    ),
+                ]);
+          }),
         ),
 
         // ── Тайлбар — 14px, #tag/@нэр неон, урт бол "дэлгэрэнгүй" ──
@@ -884,7 +1015,7 @@ List<InlineSpan> _captionSpans(String s, TextStyle base) {
     out.add(TextSpan(
         text: m.group(0),
         style: base.copyWith(
-            color: AppColors.neonCyan, fontWeight: FontWeight.w600)));
+            color: AppColors.silver, fontWeight: FontWeight.w600)));
     i = m.end;
   }
   if (i < s.length) out.add(TextSpan(text: s.substring(i)));
@@ -911,9 +1042,9 @@ class _PostCarouselState extends State<_PostCarousel> {
 
   @override
   Widget build(BuildContext context) {
-    // Ганц зурагтай посттой ижил 4:5 хайрцаг — фийд үсрэхгүй
+    // Ганц зурагтай посттой ижил 3:2 хайрцаг — фийд үсрэхгүй
     return AspectRatio(
-      aspectRatio: 4 / 5,
+      aspectRatio: 3 / 2,
       child: Stack(children: [
         // Веб дээр хулганаар чирж гүйлгэнэ (анхдагч нь зөвхөн touch —
         // desktop дээр 2 дахь зураг руу хүрэх боломжгүй байсан)
@@ -1044,7 +1175,7 @@ class _ActionBtn extends StatelessWidget {
                   child: Icon(icon,
                       key: ValueKey(icon),
                       color: color,
-                      size: 26,
+                      size: 24,
                       shadows: glow && AppColors.isDarkMode
                           ? [
                               Shadow(
@@ -1073,7 +1204,11 @@ class _ActionBtn extends StatelessWidget {
 class _FeedFooter extends StatelessWidget {
   final FeedNotifier notifier;
   final bool hasPosts;
-  const _FeedFooter({required this.notifier, required this.hasPosts});
+  final bool loadMoreButton;
+  const _FeedFooter(
+      {required this.notifier,
+      required this.hasPosts,
+      this.loadMoreButton = false});
 
   @override
   Widget build(BuildContext context) => ValueListenableBuilder<bool>(
@@ -1101,6 +1236,17 @@ class _FeedFooter extends StatelessWidget {
           return ValueListenableBuilder<bool>(
             valueListenable: notifier.hasMore,
             builder: (_, more, __) {
+              if (more && loadMoreButton) {
+                return Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Center(
+                      child: TextButton.icon(
+                    onPressed: () => notifier.loadFeed(),
+                    icon: const Icon(Icons.expand_more_rounded),
+                    label: const Text('Дараагийн нийтлэлүүдийг ачаалах'),
+                  )),
+                );
+              }
               if (more) {
                 return const Padding(
                   padding: EdgeInsets.all(24),
@@ -1128,18 +1274,25 @@ class _FeedFooter extends StatelessWidget {
 // ─── Empty feed ───
 class _EmptyFeed extends StatelessWidget {
   final VoidCallback onPost;
-  const _EmptyFeed({required this.onPost});
+  final bool followingOnly;
+  const _EmptyFeed({required this.onPost, this.followingOnly = false});
 
   @override
   Widget build(BuildContext context) => EmptyState(
         illustration: 'assets/images/illustrations/empty_feed.svg',
-        title: 'Фийд хоосон байна',
-        subtitle: 'Өнөө шөнийн мөчөө хамгийн түрүүнд хуваалцаарай.',
-        action: ElevatedButton.icon(
-          onPressed: onPost,
-          icon: const Icon(Icons.add, size: 18),
-          label: const Text('Зураг оруулах'),
-        ),
+        title: followingOnly
+            ? 'Дагаж буй хүмүүсийн нийтлэл'
+            : 'Нийтлэл алга байна',
+        subtitle: followingOnly
+            ? 'Ачаалсан нийтлэлүүдэд дагаж буй хүмүүсийн пост алга. Бүх нийтлэлээс хүмүүсийг дагаж болно.'
+            : 'Өнөө шөнийн мөчөө хамгийн түрүүнд хуваалцаарай.',
+        action: followingOnly
+            ? null
+            : ElevatedButton.icon(
+                onPressed: onPost,
+                icon: const Icon(Icons.add, size: 18),
+                label: const Text('Зураг оруулах'),
+              ),
       );
 }
 
@@ -1171,18 +1324,7 @@ class _ErrorView extends StatelessWidget {
       );
 }
 
-// ─── Shimmer skeleton ───
-class _FeedSkeleton extends StatelessWidget {
-  const _FeedSkeleton();
-
-  @override
-  Widget build(BuildContext context) => Shimmer.fromColors(
-        baseColor: AppColors.bgElevated,
-        highlightColor: AppColors.bgSurface,
-        child: ListView(children: List.generate(3, (_) => _SkeletonCard())),
-      );
-}
-
+// Skeleton uses the same media geometry as loaded posts.
 class _SkeletonCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Padding(
@@ -1192,10 +1334,6 @@ class _SkeletonCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
-              child: _box(w: double.infinity, h: 1, r: 0),
-            ),
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
               child: Row(children: [
@@ -1208,7 +1346,10 @@ class _SkeletonCard extends StatelessWidget {
                 ]),
               ]),
             ),
-            AspectRatio(aspectRatio: 4 / 5, child: _box(r: 0)),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: AspectRatio(aspectRatio: 3 / 2, child: _box(r: 14)),
+            ),
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
               child: Row(children: [

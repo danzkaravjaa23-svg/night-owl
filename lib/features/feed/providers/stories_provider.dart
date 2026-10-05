@@ -1,12 +1,13 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/services/supabase_service.dart';
+import '../../auth/providers/auth_provider.dart';
 import '../../../models/story.dart';
 import '../../../models/user_profile.dart';
 
 // ─── Active stories grouped by user ──────────────────────────────────────────
 final storiesProvider = FutureProvider<List<StoryRing>>((ref) async {
   // Зөвхөн дагадаг хүмүүс + өөрийн story (500к scale дээр global fetch болохгүй)
-  final me = SupabaseService.currentUser?.id;
+  final me = ref.watch(sessionUserIdProvider);
 
   List<String> targetIds = [];
   if (me != null) {

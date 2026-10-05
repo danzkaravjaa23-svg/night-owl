@@ -30,10 +30,7 @@ abstract class AppSpacing {
   /// Хуудасны хэвтээ padding — Padding(padding: AppSpacing.pageH).
   static const EdgeInsets pageH = EdgeInsets.symmetric(horizontal: page);
 
-  /// MainShell-ийн хөвөгч доод док эзэлдэг өндөр:
-  /// 14 (гадна margin) + 62 (док өөрөө) + 16 (FAB өргөлт) = 92px.
-  /// Shell дотор ажиллаж буй дэлгэцүүд гүйлгэх (scroll) хэсгийнхээ ёроолд
-  /// энэ зайг + MediaQuery-ийн доод padding-ийг нэмж нөөцлөх ёстой,
-  /// эс бөгөөс сүүлийн мөр докны цаана далдлагдана.
-  static const double dockClearance = 92;
+  /// Shell allocates the footer's height itself. Only a little scroll
+  /// breathing room is needed above the fixed navigation bar.
+  static const double dockClearance = 16;
 }

@@ -25,9 +25,23 @@ abstract class Validators {
     return null;
   }
 
+  /// Optional physical-event admission price, stored as a PostgreSQL int.
+  static String? admissionPrice(String? value) {
+    final text = value?.trim() ?? '';
+    if (text.isEmpty) return null;
+    final amount = int.tryParse(text);
+    if (!RegExp(r'^[0-9]+$').hasMatch(text) || amount == null ||
+        amount < 0 || amount > 2147483647) {
+      return 'Орох үнийг 0 буюу эерэг бүхэл тоогоор оруулна уу';
+    }
+    return null;
+  }
+
   static String? username(String? v) {
+    v = v?.trim();
     if (v == null || v.isEmpty) return 'Хэрэглэгчийн нэр шаардлагатай';
     if (v.length < 3) return 'Хамгийн багадаа 3 тэмдэгт';
+    if (v.length > 20) return 'Хамгийн ихдээ 20 тэмдэгт';
     if (!RegExp(r'^[a-zA-Z0-9_.]+$').hasMatch(v)) {
       return 'Зөвхөн латин үсэг, тоо, _ болон . зөвшөөрнө';
     }

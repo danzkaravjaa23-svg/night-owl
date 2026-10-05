@@ -1,85 +1,93 @@
 import 'package:flutter/material.dart';
 
 /// NightOwl UB — Design tokens
-/// "FUTURIST NIGHTSCAPE" — neon палитр.
+/// Midnight violet palette shared by every app surface.
 /// ⚠️ Token НЭРС хэвээр (бүх дэлгэц эдгээрийг уншдаг) — зөвхөн УТГА нь neon болсон.
 abstract class AppColors {
   // ─── Deep void (dark theme, default) ───
-  static const Color bgBaseDark = Color(0xFF050505); // void black
+  static const Color bgBaseDark = Color(0xFF0B0D17); // void black
   static Color get bgBase => isDarkMode ? bgBaseDark : bgBaseLight;
-  static const Color bgElevatedDark = Color(0xFF0D0D12);
+  static const Color bgElevatedDark = Color(0xFF121625);
   static Color get bgElevated => isDarkMode ? bgElevatedDark : bgElevatedLight;
-  static const Color bgSurfaceDark = Color(0xFF15151C);
+  static const Color bgSurfaceDark = Color(0xFF1B2033);
   static Color get bgSurface => isDarkMode ? bgSurfaceDark : bgSurfaceLight;
-  static const Color bgOverlay   = Color(0xC0050505); // rgba(5,5,5,0.75)
+  static const Color bgOverlay = Color(0xC00B0D17); // rgba(5,5,5,0.75)
 
   // Borders — ultra-thin glass hairline
   static const Color hairlineDark = Color(0x1FFFFFFF); // rgba(255,255,255,0.12)
   static Color get hairline => isDarkMode ? hairlineDark : hairlineLight;
-  static const Color hairline2Dark = Color(0x26FFFFFF); // rgba(255,255,255,0.15)
+  static const Color hairline2Dark =
+      Color(0x26FFFFFF); // rgba(255,255,255,0.15)
   static Color get hairline2 => isDarkMode ? hairline2Dark : hairline2Light;
 
   // Text — cool white / steel
-  static const Color textPrimaryDark = Color(0xFFF4F6FA);
-  static Color get textPrimary => isDarkMode ? textPrimaryDark : textPrimaryLight;
-  static const Color textSecondaryDark = Color(0xFFA7ADBA);
-  static Color get textSecondary => isDarkMode ? textSecondaryDark : textSecondaryLight;
+  static const Color textPrimaryDark = Color(0xFFF5F5FC);
+  static Color get textPrimary =>
+      isDarkMode ? textPrimaryDark : textPrimaryLight;
+  static const Color textSecondaryDark = Color(0xFFB2B8CE);
+  static Color get textSecondary =>
+      isDarkMode ? textSecondaryDark : textSecondaryLight;
   // WCAG AA (4.5:1) хангахаар цайруулсан — 10–11px жижиг шошгонд уншигдана.
-  static const Color textTertiaryDark = Color(0xFF7E8494);
-  static Color get textTertiary => isDarkMode ? textTertiaryDark : textTertiaryLight;
+  static const Color textTertiaryDark = Color(0xFF8993AE);
+  static Color get textTertiary =>
+      isDarkMode ? textTertiaryDark : textTertiaryLight;
   static const Color textMonoDark = Color(0xFF9FB6C2);
   static Color get textMono => isDarkMode ? textMonoDark : textSecondaryLight;
 
   // ─── Electric cyan (active / selected / focus — "silver" нэрээр) ───
   // Хуучин "silver" токенуудыг neon cyan болгосон тул nav-active, брэнд гялбаа cyan болно.
-  static const Color silverNeon = Color(0xFF22E7FF); // neon cyan (active)
+  static const Color silverNeon = Color(0xFFB6A4FF); // neon cyan (active)
   static Color get silver => isDarkMode ? silverNeon : neonCyanLight;
-  static const Color silverLight = Color(0xFFBDF6FF);
-  static const Color silverDark  = Color(0xFF15C2DA);
-  static const Color steel       = Color(0xFF0E7F90); // deep cyan
+  static const Color silverLight = Color(0xFFE4DCFF);
+  static const Color silverDark = Color(0xFF9680EA);
+  static const Color steel = Color(0xFF6350AC); // deep cyan
 
   // Дөт хандалт (шинэ alias — нэмэлт, аюулгүй)
-  static const Color neonCyanDark  = Color(0xFF22E7FF);
-  static const Color neonCyanLight = Color(0xFF0B7A8A); // цайвар дэвсгэр дээр AA
+  static const Color neonCyanDark = Color(0xFFB6A4FF);
+  static const Color neonCyanLight =
+      Color(0xFF6550AD); // цайвар дэвсгэр дээр AA
   static Color get neonCyan => isDarkMode ? neonCyanDark : neonCyanLight;
-  static const Color magenta  = Color(0xFFE935C8);
-  static const Color limeDark  = Color(0xFFB4FF2E);
-  static const Color limeLight = Color(0xFF3F8F00); // цайвар дэвсгэр дээр AA
+  static const Color magenta = Color(0xFFA78BFA);
+  static const Color limeDark = Color(0xFF6EE7B7);
+  static const Color limeLight = Color(0xFF17734F); // цайвар дэвсгэр дээр AA
   static Color get lime => isDarkMode ? limeDark : limeLight;
-  static const Color amber    = Color(0xFFFFB020);
-  static const Color orange   = Color(0xFFFF6A2B);
+  static const Color amber = Color(0xFFFFB020);
+  static const Color orange = Color(0xFFFF6A2B);
 
   // ─── Primary accent (magenta/purple — primary action, like, badge, pin) ───
   // Цагаан текст уншигдахуйц гүн magenta-purple.
-  static const Color accentStart  = Color(0xFFC026D3); // vivid magenta (primary/solid)
-  static const Color accentMid    = Color(0xFF9333EA); // purple (gradient mid)
-  static const Color accentEnd    = Color(0xFFFF2D8E); // pink (gradient end)
-  static const Color accentPurple = Color(0xFF7C3AED); // purple
+  static const Color accentStart =
+      Color(0xFF7654D6); // vivid magenta (primary/solid)
+  static const Color accentMid = Color(0xFF6944C6); // purple (gradient mid)
+  static const Color accentEnd = Color(0xFF6745C1); // pink (gradient end)
+  static const Color accentPurple =
+      Color(0xFF7654D6); // selected reference violet
 
   // ─── Үйлдлийн семантик өнгө — апп даяар НЭГ өнгө ───
   // (Өмнө нь feed / reels / story viewer гурав өөр өнгөөр зүрх будаж байсан.)
-  static const Color like  = accentEnd;    // зүрх — дарсан үе
-  static const Color saved = accentStart;  // хадгалсан тэмдэг
+  static const Color like = accentEnd; // зүрх — дарсан үе
+  static const Color saved = accentStart; // хадгалсан тэмдэг
 
   // Status
-  static const Color successDark  = Color(0xFFB4FF2E); // glowing lime (live/active)
-  static const Color successLight = Color(0xFF3F8F00); // цайвар дэвсгэр дээр AA
+  static const Color successDark =
+      Color(0xFF6EE7B7); // glowing lime (live/active)
+  static const Color successLight = Color(0xFF17734F); // цайвар дэвсгэр дээр AA
   static Color get success => isDarkMode ? successDark : successLight;
-  static const Color error   = Color(0xFFFF4566);
+  static const Color error = Color(0xFFFF4566);
   static const Color warning = Color(0xFFFFB020); // amber
 
   // ─── Light theme ───
-  static const Color bgBaseLight      = Color(0xFFFAF6EE);
-  static const Color bgElevatedLight  = Color(0xFFFFFFFF);
-  static const Color bgSurfaceLight   = Color(0xFFF3ECDF);
+  static const Color bgBaseLight = Color(0xFFF5F4FA);
+  static const Color bgElevatedLight = Color(0xFFFFFFFF);
+  static const Color bgSurfaceLight = Color(0xFFEDEBF5);
 
-  static const Color hairlineLight    = Color(0x141A0B2E);
-  static const Color hairline2Light   = Color(0x291A0B2E);
+  static const Color hairlineLight = Color(0x141A0B2E);
+  static const Color hairline2Light = Color(0x291A0B2E);
 
-  static const Color textPrimaryLight   = Color(0xFF13031F);
-  static const Color textSecondaryLight = Color(0xFF5C4A82);
+  static const Color textPrimaryLight = Color(0xFF19172B);
+  static const Color textSecondaryLight = Color(0xFF57536D);
   // Цайвар дэвсгэр дээр AA хангахаар бараантуулсан.
-  static const Color textTertiaryLight  = Color(0xFF6F6390);
+  static const Color textTertiaryLight = Color(0xFF6C6680);
 
   // ─── Theme-aware (динамик) резолюц ───
   // ThemeModeNotifier горим солигдоход энэ флагийг шинэчилдэг;
@@ -121,20 +129,20 @@ abstract class AppColors {
   static const LinearGradient accentGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [Color(0xFF7C3AED), Color(0xFFC026D3), Color(0xFFFF2D8E)],
+    colors: [Color(0xFF7654D6), Color(0xFF6944C6), Color(0xFF6745C1)],
     stops: [0.0, 0.55, 1.0],
   );
 
   static const LinearGradient accentGradientSoft = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [Color(0x55C026D3), Color(0x337C3AED)],
+    colors: [Color(0x557654D6), Color(0x336745C1)],
   );
 
   static const LinearGradient purpleGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [Color(0xFF7C3AED), Color(0xFFC026D3), accentEnd],
+    colors: [Color(0xFF6745C1), Color(0xFF7654D6), accentEnd],
   );
 
   // ─── Cyan glow gradient ("chrome" нэрээр — nav active / брэнд гялбаа) ───
@@ -155,24 +163,30 @@ abstract class AppColors {
   static const RadialGradient auroraGradient = RadialGradient(
     center: Alignment(-0.6, -0.6),
     radius: 1.2,
-    colors: [Color(0x4022E7FF), Colors.transparent],
+    colors: [Color(0x40B6A4FF), Colors.transparent],
   );
 
   // ─── Story ring — magenta → pink → cyan люкс sweep ───
   // Эхлэл/төгсгөл ижил өнгө тул эргэлт залгаасгүй, тасралтгүй харагдана.
   static const SweepGradient storyRingGradient = SweepGradient(
     transform: GradientRotation(-1.5708), // дээд цэгээс эхэлнэ
-    colors: [magenta, accentEnd, Color(0xFFFF6FB3), neonCyanDark, accentPurple, magenta],
-    stops: [0.0, 0.25, 0.45, 0.65, 0.85, 1.0],
+    colors: [accentStart, silverDark, silverNeon, accentStart],
+    stops: [0.0, 0.35, 0.7, 1.0],
   );
 
   // ─── Неон glow сүүдэр — CTA/идэвхтэй элементэд нэг мөрөөр ───
   static List<BoxShadow> glowShadow(Color color,
-      {double alpha = 0.35, double blur = 22, double spread = -2,
-      Offset offset = const Offset(0, 6)}) => [
-    BoxShadow(color: color.withValues(alpha: alpha),
-        blurRadius: blur, spreadRadius: spread, offset: offset),
-  ];
+          {double alpha = 0.16,
+          double blur = 18,
+          double spread = -2,
+          Offset offset = const Offset(0, 6)}) =>
+      [
+        BoxShadow(
+            color: color.withValues(alpha: alpha),
+            blurRadius: blur,
+            spreadRadius: spread,
+            offset: offset),
+      ];
 
   // ─── Давхарласан сүүдэр пресетүүд — glass элемент агаарт хөвөх мэдрэмж ───
   // Карт: ойрын нягт + холын зөөлөн сүүдэр

@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/services/supabase_service.dart';
 import '../../../core/constants/app_constants.dart';
+import '../../auth/providers/auth_provider.dart';
 import '../../../models/post.dart';
 
 // ─── Feed posts (paginated, RPC-based for correct isLikedByMe) ───────────────
@@ -14,6 +15,7 @@ class FeedNotifier extends StateNotifier<AsyncValue<List<Post>>> {
   bool _hasMore = true;
   bool _loading = false;
   Future<void>? _inflight;
+  final _liking = <String>{};
 
   /// Дараагийн хуудас бий эсэх — footer spinner-ийг зөв харуулна
   final ValueNotifier<bool> hasMore = ValueNotifier(true);
@@ -28,11 +30,13 @@ class FeedNotifier extends StateNotifier<AsyncValue<List<Post>>> {
   }
 
   Future<void> loadFeed({bool refresh = false}) async {
+    if (!mounted) return;
     // In-flight ачаалалтай үед: pagination бол алгасна,
     // refresh бол дуусахыг нь хүлээгээд дараа нь шинэчилнэ (silent no-op болохгүй)
     while (_loading) {
       if (!refresh) return;
       try { await _inflight; } catch (_) {}
+      if (!mounted) return;
     }
     if (!refresh && !_hasMore) return;
     final f = _doLoad(refresh: refresh);
@@ -45,7 +49,7 @@ class FeedNotifier extends StateNotifier<AsyncValue<List<Post>>> {
       _cursor  = null;
       _hasMore = true;
       // Хуучин дата байвал skeleton flash хийхгүй — RefreshIndicator л хангалттай
-      if (state.value == null) state = const AsyncValue.loading();
+      if (state.valueOrNull == null) state = const AsyncValue.loading();
     }
     _loading = true;
     if (pageError.value) pageError.value = false;
@@ -80,18 +84,20 @@ class FeedNotifier extends StateNotifier<AsyncValue<List<Post>>> {
       }
 
       final fetched = rows.map((j) => Post.fromJson(j)).toList();
+      if (!mounted) return;
       _hasMore = fetched.length == AppConstants.feedPageSize;
       if (fetched.isNotEmpty) _cursor = fetched.last.createdAt;
 
       // Давхардлаас сэргийлэх (cursor хилийн ижил timestamp edge case)
-      final existing = refresh ? <Post>[] : (state.value ?? []);
+      final existing = refresh ? <Post>[] : (state.valueOrNull ?? []);
       final seen = existing.map((p) => p.id).toSet();
       final merged = [...existing, ...fetched.where((p) => seen.add(p.id))];
 
       state = AsyncValue.data(merged);
       hasMore.value = _hasMore;
     } catch (e, st) {
-      if (refresh && state.value == null) {
+      if (!mounted) return;
+      if (state.valueOrNull == null) {
         // Анхны ачаалал бүтэлгүйтвэл бүтэн error state
         state = AsyncValue.error(e, st);
       } else {
@@ -107,11 +113,11 @@ class FeedNotifier extends StateNotifier<AsyncValue<List<Post>>> {
   /// true = амжилттай, false = DB бичилт бүтэлгүйтэж rollback хийсэн
   Future<bool> toggleLike(String postId) async {
     final user = SupabaseService.currentUser;
-    if (user == null) return false;
+    if (user == null || !mounted || !_liking.add(postId)) return false;
 
-    final current = List<Post>.from(state.value ?? []);
+    final current = List<Post>.from(state.valueOrNull ?? []);
     final idx = current.indexWhere((p) => p.id == postId);
-    if (idx == -1) return false;
+    if (idx == -1) { _liking.remove(postId); return false; }
 
     final post     = current[idx];
     final nowLiked = !post.isLikedByMe;
@@ -127,13 +133,14 @@ class FeedNotifier extends StateNotifier<AsyncValue<List<Post>>> {
       await _writeLike(user.id, postId, nowLiked);
       return true;
     } catch (_) {
+      if (!mounted) return false;
       // Rollback
-      final rollback = List<Post>.from(state.value ?? []);
+      final rollback = List<Post>.from(state.valueOrNull ?? []);
       final i = rollback.indexWhere((p) => p.id == postId);
       if (i != -1) rollback[i] = post;
       state = AsyncValue.data(rollback);
       return false;
-    }
+    } finally { _liking.remove(postId); }
   }
 
   // ── Like toggle by id — фийдэд байхгүй пост дээр ч DB бичилт хийнэ ─────────
@@ -144,7 +151,7 @@ class FeedNotifier extends StateNotifier<AsyncValue<List<Post>>> {
     if (user == null) return false;
 
     // Фийдэд байвал optimistic toggle (feed картууд ч мөн шинэчлэгдэнэ)
-    if ((state.value ?? []).any((p) => p.id == postId)) {
+    if ((state.valueOrNull ?? []).any((p) => p.id == postId)) {
       return toggleLike(postId);
     }
     // Фийдэд байхгүй — DB рүү шууд бичнэ
@@ -174,16 +181,17 @@ class FeedNotifier extends StateNotifier<AsyncValue<List<Post>>> {
   // ── Edit own post caption ───────────────────────────────────────────────────
   Future<void> editCaption(String postId, String caption) async {
     final user = SupabaseService.currentUser;
-    if (user == null) return;
+    if (user == null) throw StateError('Нэвтэрнэ үү');
     final trimmed = caption.trim();
     try {
       await SupabaseService.client
           .from('posts')
           .update({'caption': trimmed})
           .eq('id', postId)
-          .eq('user_id', user.id);
-    } catch (_) { return; }
-    final list = (state.value ?? []).map((p) =>
+          .eq('user_id', user.id).select('id').single();
+    } catch (_) { rethrow; }
+    if (!mounted) return;
+    final list = (state.valueOrNull ?? []).map((p) =>
         p.id == postId ? p.copyWith(caption: trimmed) : p).toList();
     state = AsyncValue.data(list);
   }
@@ -192,14 +200,14 @@ class FeedNotifier extends StateNotifier<AsyncValue<List<Post>>> {
   /// Блоклосон хэрэглэгчийн бүх постыг feed-ээс шууд арилгана
   /// (бүтэн feed дахин татахгүй).
   void removeAuthor(String userId) {
-    final cur = state.value;
+    final cur = state.valueOrNull;
     if (cur == null) return;
     state = AsyncValue.data(cur.where((p) => p.userId != userId).toList());
   }
 
   /// Өөр газар (профайлын grid) устгасан постыг feed-ээс арилгана.
   void removeLocal(String postId) {
-    final cur = state.value;
+    final cur = state.valueOrNull;
     if (cur == null) return;
     state = AsyncValue.data(cur.where((p) => p.id != postId).toList());
   }
@@ -212,11 +220,12 @@ class FeedNotifier extends StateNotifier<AsyncValue<List<Post>>> {
           .from('posts')
           .delete()
           .eq('id', postId)
-          .eq('user_id', user.id);
+          .eq('user_id', user.id).select('id').single();
     } catch (_) {
       return false; // устгаж чадсангүй
     }
-    final updated = (state.value ?? []).where((p) => p.id != postId).toList();
+    if (!mounted) return true;
+    final updated = (state.valueOrNull ?? []).where((p) => p.id != postId).toList();
     state = AsyncValue.data(updated);
     return true;
   }
@@ -224,4 +233,4 @@ class FeedNotifier extends StateNotifier<AsyncValue<List<Post>>> {
 
 final feedProvider =
     StateNotifierProvider<FeedNotifier, AsyncValue<List<Post>>>(
-        (_) => FeedNotifier());
+        (ref) { ref.watch(sessionUserIdProvider); return FeedNotifier(); });

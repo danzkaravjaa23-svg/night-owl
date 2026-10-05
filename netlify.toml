@@ -1,17 +1,20 @@
 # Netlify автомат deploy — git push хийхэд өөрөө build хийж нийтэлнэ.
-# Netlify дээр Flutter суулгаагүй тул SDK-г татаж аваад build хийнэ.
+# Локалд шалгасан Flutter 3.44.0 хувилбараар build хийнэ.
 
 [build]
   publish = "build/web"
   command = """
     if [ ! -x flutter/bin/flutter ]; then \
-      git clone https://github.com/flutter/flutter.git --depth 1 -b stable flutter; \
+      git clone https://github.com/flutter/flutter.git --depth 1 -b 3.44.0 flutter; \
+    else \
+      git -C flutter fetch --depth 1 origin refs/tags/3.44.0 && \
+      git -C flutter checkout --detach FETCH_HEAD; \
     fi && \
     export PATH="$PWD/flutter/bin:$PATH" && \
     flutter --version && \
     flutter config --enable-web && \
     flutter pub get && \
-    flutter build web --release --pwa-strategy=none
+    flutter build web --release --dart-define=DEVICE_PREVIEW=false
   """
 
 # SPA — go_router-ийн бүх зам index.html руу (шууд /profile гэх мэт хаяг руу орж болно)

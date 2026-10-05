@@ -139,13 +139,6 @@ class AppStrings {
   String get phWriteMessage => _t('Write a message...', 'Мессеж бичих...');
   String get phCaption      => _t('What happened tonight?...', 'Энэ шөнө юу болов?...');
 
-  // ─── QPay ───
-  String get qpayPayment   => _t('QPAY · PAYMENT', 'QPAY · ТӨЛБӨР');
-  String get qpayWaiting   => _t('Waiting for payment confirmation...', 'Төлбөр баталгаажихыг хүлээж байна...');
-  String get qpaySuccess   => _t('Content Unlocked', 'Контент нээгдлээ');
-  String get qpayFailed    => _t('Payment Failed', 'Төлбөр амжилтгүй');
-  String get qpaySelectBank => _t('OR SELECT YOUR BANK', 'ЭСВЭЛ БАНКАА СОНГО');
-
   // ─── Notifications ───
   String get notifEmptyTitle => _t('No Notifications', 'Мэдэгдэл алга');
   String get notifEmptyBody  => _t('New likes, followers, and comments will appear here.', 'Шинэ лайк, дагагч, сэтгэгдэл энд харагдана.');
@@ -164,7 +157,6 @@ class AppStrings {
   String get sectAccount        => _t('Account', 'Бүртгэл');
   String get sectNotifications  => _t('Notifications', 'Мэдэгдэл');
   String get sectPrivacy        => _t('Privacy', 'Нууцлал');
-  String get sectPayments       => _t('Payments', 'Төлбөр');
   String get sectOther          => _t('Other', 'Бусад');
   String get setEditProfile     => _t('Edit Profile', 'Профайл засах');
   String get setChangePassword  => _t('Change Password', 'Нууц үг солих');

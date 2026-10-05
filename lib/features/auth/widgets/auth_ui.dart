@@ -5,6 +5,8 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_radii.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../core/utils/auth_callback.dart';
+import '../services/apple_auth_service.dart';
 
 /// Нэвтрэлтийн дэлгэцүүдийн хуваалцсан UI хэсгүүд.
 /// login/register/forgot дээр давхардаж байсан кодыг нэг дор нэгтгэв.
@@ -14,11 +16,12 @@ const int kPasswordMinLength = 8;
 
 // ── Google OAuth — жинхэнэ нэвтрэлт (web: одоогийн origin, native: deep link руу буцна) ──
 Future<void> signInWithGoogle() async {
-  await Supabase.instance.client.auth.signInWithOAuth(
+  final opened = await Supabase.instance.client.auth.signInWithOAuth(
     OAuthProvider.google,
     // AndroidManifest-ийн intent-filter-тэй тохирно; Supabase Redirect URLs-д бүртгэнэ
-    redirectTo: kIsWeb ? Uri.base.origin : 'com.nightowl.ub://login-callback',
+    redirectTo: oauthRedirectUrl(isWeb: kIsWeb, baseUri: Uri.base),
   );
+  if (!opened) throw StateError('Unable to open Google sign-in');
 }
 
 /// Талбарт бичигдэх текстийн нэгдсэн хэв маяг — бүх auth талбар үүнийг
@@ -257,4 +260,44 @@ class AuthAura extends StatelessWidget {
       gradient: RadialGradient(colors: [color, Colors.transparent]),
     ),
   );
+}
+
+/// Native iOS uses Apple credentials; other platforms use verified OAuth.
+/// Provider signing keys are configured server-side, never in the app.
+class AppleSignInButton extends StatefulWidget {
+  final Future<void> Function()? onSignIn;
+  final bool onDark;
+  const AppleSignInButton({super.key, this.onSignIn, this.onDark = false});
+  @override
+  State<AppleSignInButton> createState() => _AppleSignInButtonState();
+}
+
+class _AppleSignInButtonState extends State<AppleSignInButton> {
+  bool _busy = false;
+  Future<void> _signIn() async {
+    if (_busy) return;
+    setState(() => _busy = true);
+    try {
+      await (widget.onSignIn ?? signInWithApple)();
+    } catch (error) {
+      if (mounted) {
+        final message = error is AppleSignInFailure ? error.message
+          : 'Apple-ээр нэвтрэхэд алдаа гарлаа. Дахин оролдоно уу.';
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+      }
+    } finally { if (mounted) setState(() => _busy = false); }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(padding: const EdgeInsets.only(top: 12), child: OutlinedButton.icon(
+      onPressed: _busy ? null : _signIn,
+      style: OutlinedButton.styleFrom(
+        foregroundColor: widget.onDark ? Colors.white : AppColors.textPrimary,
+        minimumSize: const Size.fromHeight(52),
+        side: BorderSide(color: widget.onDark ? AppColors.hairline2Dark : AppColors.hairline2),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
+      icon: const Icon(Icons.apple),
+      label: Text(_busy ? 'Түр хүлээнэ үү…' : 'Apple-ээр үргэлжлүүлэх')));
+  }
 }

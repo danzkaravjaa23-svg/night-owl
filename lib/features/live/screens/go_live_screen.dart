@@ -448,7 +448,7 @@ class _GoLiveScreenState extends ConsumerState<GoLiveScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final profile = ref.watch(currentProfileProvider).value;
+    final profile = ref.watch(currentProfileProvider).valueOrNull;
     final size    = MediaQuery.of(context).size;
 
     return PopScope(

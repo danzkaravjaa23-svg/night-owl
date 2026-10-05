@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
@@ -9,7 +8,9 @@ import '../../../core/router/app_router.dart';
 import '../../../core/widgets/theme_toggle_button.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../../models/user_profile.dart';
-import '../widgets/invite_sheet.dart';
+import '../../../core/constants/app_constants.dart';
+import 'package:url_launcher/url_launcher.dart';
+import '../../../core/providers/user_settings_provider.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -18,36 +19,6 @@ class SettingsScreen extends ConsumerStatefulWidget {
 }
 
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
-  // Тохиргоо — SharedPreferences-т хадгалагдана (ThemeModeNotifier шиг)
-  static const _kNotif = 'settings_notif';
-  static const _kActivity = 'settings_activity_status';
-  bool _notifLikes = true;
-  bool _activityStatus = true;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadPrefs();
-  }
-
-  Future<void> _loadPrefs() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      if (!mounted) return;
-      setState(() {
-        _notifLikes = prefs.getBool(_kNotif) ?? true;
-        _activityStatus = prefs.getBool(_kActivity) ?? true;
-      });
-    } catch (_) {/* prefs уншиж чадвал default утга ашиглана */}
-  }
-
-  Future<void> _setPref(String key, bool value) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setBool(key, value);
-    } catch (_) {/* локал хадгалалт бүтэлгүйтэвч UI төлөв хадгалагдана */}
-  }
-
   void _toast(String msg) => ScaffoldMessenger.of(context).showSnackBar(
     SnackBar(content: Text(msg), duration: const Duration(seconds: 2)));
 
@@ -59,78 +30,25 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 
   // Switch-үүдийг мөр дарахад ч, switch дарахад ч ижил замаар солино
-  void _setNotifLikes(bool v) {
-    setState(() => _notifLikes = v);
-    _setPref(_kNotif, v);
+  Future<void> _setNotifLikes(bool v) async {
+    try { await ref.read(userSettingsProvider.notifier).setNotifications(v); }
+    catch (_) { if (mounted) _toast('Тохиргоо хадгалж чадсангүй'); }
   }
 
-  void _setActivityStatus(bool v) {
-    setState(() => _activityStatus = v);
-    _setPref(_kActivity, v);
-  }
-
-  Future<void> _deleteAccount() async {
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (dCtx) => AlertDialog(
-        backgroundColor: AppColors.bgElevated,
-        title: Text('Данс устгах уу?', style: AppTextStyles.h3),
-        content: Text(
-          'Таны бүх пост, сэтгэгдэл, дагалт, мессеж бүрмөсөн устана. '
-          'Энэ үйлдлийг буцаах боломжгүй.',
-          style: AppTextStyles.bodySm.copyWith(
-            color: AppColors.textSecondary, height: 1.5)),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dCtx).pop(false),
-            child: Text('Болих', style: AppTextStyles.bodyMd.copyWith(
-              color: AppColors.textSecondary))),
-          TextButton(
-            onPressed: () => Navigator.of(dCtx).pop(true),
-            child: Text('Бүрмөсөн устгах', style: AppTextStyles.bodyMd.copyWith(
-              color: AppColors.error, fontWeight: FontWeight.w600))),
-        ],
-      ),
-    );
-    if (ok != true) return;
-    final me = Supabase.instance.client.auth.currentUser?.id;
-    if (me == null) return;
-
-    // 1) Edge function-аар auth хэрэглэгч + бүх датаг бүрмөсөн устгахыг оролдоно
+  Future<void> _setActivityStatus(bool value) async {
     try {
-      await Supabase.instance.client.functions.invoke('delete-account');
-      await Supabase.instance.client.auth.signOut();
-      if (mounted) context.go(AppRoutes.authLanding);
-      return;
-    } on FunctionException catch (e) {
-      // Зөвхөн function байхгүй (404) үед л profiles-only fallback руу орно.
-      // Бусад алдааг (RLS/сүлжээ) хэрэглэгчид харуулна — чимээгүй нуухгүй.
-      if (e.status != 404) {
-        if (mounted) _toast('Данс устгаж чадсангүй. Дахин оролдоно уу');
-        return;
-      }
+      await ref.read(userSettingsProvider.notifier).setActivity(value);
     } catch (_) {
-      if (mounted) _toast('Данс устгаж чадсангүй. Дахин оролдоно уу');
-      return;
-    }
-
-    // 2) Fallback — function deploy хийгдээгүй тул profiles-ыг устгана (контент cascade).
-    //    Гэхдээ auth хэрэглэгч устахгүй тул нэвтрэлт хэвээр үлдэхийг мэдэгдэнэ.
-    try {
-      await Supabase.instance.client.from('profiles').delete().eq('id', me);
-      await Supabase.instance.client.auth.signOut();
-      if (mounted) {
-        _toast('Профайл устлаа. Нэвтрэх эрх серверт хэвээр — админд хандана уу');
-        context.go(AppRoutes.authLanding);
-      }
-    } catch (_) {
-      if (mounted) _toast('Данс устгаж чадсангүй. Дахин оролдоно уу');
+      if (mounted) _toast('Тохиргоо хадгалж чадсангүй');
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final profileAsync = ref.watch(currentProfileProvider);
+    final preferences = ref.watch(userSettingsProvider);
+    final notifLikes = preferences.notifications;
+    final activityStatus = preferences.activity;
 
     return Scaffold(
       backgroundColor: AppColors.bgBase,
@@ -228,10 +146,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         const _RowDivider(),
                         _SettingRow(
                           icon: Icons.notifications_none,
-                          label: 'Мэдэгдэл',
-                          onTap: () => _setNotifLikes(!_notifLikes),
+                          label: 'Апп доторх мэдэгдэл',
+                          sub: 'Энэ төхөөрөмж дээр',
+                          onTap: () => _setNotifLikes(!notifLikes),
                           trailing: _NeonSwitch(
-                            value: _notifLikes,
+                            value: notifLikes,
                             onChanged: _setNotifLikes,
                           ),
                         ),
@@ -255,10 +174,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         _SettingRow(
                           icon: Icons.radar_outlined,
                           label: 'Идэвхтэй төлөв',
-                          sub: 'Найзууд таныг шөнө олох боломжтой',
-                          onTap: () => _setActivityStatus(!_activityStatus),
+                          sub: 'Энэ төхөөрөмжөөс идэвхтэй төлөв харуулах',
+                          onTap: () => _setActivityStatus(!activityStatus),
                           trailing: _NeonSwitch(
-                            value: _activityStatus,
+                            value: activityStatus,
                             onChanged: _setActivityStatus,
                           ),
                         ),
@@ -266,18 +185,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
                       const SizedBox(height: 24),
 
-                      // ─── ТӨЛБӨР ───
-                      const _SectionLabel('Төлбөр'),
+                      const _SectionLabel('Бизнес'),
                       const SizedBox(height: 10),
                       _GlassCard(children: [
-                        // QPay түүх — payments хүснэгт серверт байхгүй тул идэвхгүй
-                        const _SettingRow(
-                          icon: Icons.receipt_long_outlined,
-                          label: 'QPay түүх',
-                          trailingValue: 'Тун удахгүй',
-                          disabled: true,
-                        ),
-                        const _RowDivider(),
                         _SettingRow(
                           icon: Icons.business_center_outlined,
                           label: 'Бизнес самбар',
@@ -294,25 +204,24 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         _SettingRow(
                           icon: Icons.person_add_alt_1_outlined,
                           label: 'Найзаа урих',
-                          onTap: () => showInviteSheet(context),
-                        ),
-                        const _RowDivider(),
-                        // Түншлэлийн хөтөлбөр — өмнө нь зөвхөн URL бичиж л хүрдэг байсан
-                        _SettingRow(
-                          icon: Icons.handshake_outlined,
-                          label: 'Түншлэлийн хөтөлбөр',
-                          onTap: () => context.push(AppRoutes.affiliate),
+                          onTap: () => context.push(AppRoutes.invite),
                         ),
                         const _RowDivider(),
                         _SettingRow(
                           icon: Icons.help_outline,
                           label: 'Тусламж',
-                          onTap: () => _toast('Тусламж: support@nightowl.mn'),
+                          onTap: () => _toast('Тусламж: osokhe@gmail.com'),
                         ),
+                        const _RowDivider(),
+                        _SettingRow(icon: Icons.privacy_tip_outlined, label: 'Нууцлалын бодлого',
+                          onTap: () => launchUrl(Uri.parse('${AppConstants.publicAppUrl}/privacy.html'))),
+                        const _RowDivider(),
+                        _SettingRow(icon: Icons.description_outlined, label: 'Үйлчилгээний нөхцөл',
+                          onTap: () => launchUrl(Uri.parse('${AppConstants.publicAppUrl}/terms.html'))),
                         const _RowDivider(),
                         const _SettingRow(
                           icon: Icons.account_tree_outlined,
-                          label: 'Хувилбар',
+                          label: 'Хувилбар · Үнэгүй',
                           trailingValue: '1.0.0',
                           mono: true,
                         ),
@@ -331,13 +240,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                             context.go(AppRoutes.authLanding);
                           }
                         },
-                      ),
-                      const SizedBox(height: 18),
-                      // 'Бүртгэл устгах' нь эргэшгүй тул жинхэнэ destructive товч
-                      _DangerButton(
-                        label: 'Бүртгэл устгах',
-                        icon: Icons.delete_forever_outlined,
-                        onTap: _deleteAccount,
                       ),
                       const SizedBox(height: 24),
                     ],
@@ -806,51 +708,6 @@ class _NeutralButton extends StatelessWidget {
             Text(
               label,
               style: AppTextStyles.btn.copyWith(color: AppColors.textPrimary),
-            ),
-          ],
-        ),
-      ),
-      ),
-    );
-  }
-}
-
-// ─────────────────────────────────────────────────────────────
-//  Danger button — эргэшгүй (destructive) үйлдэлд
-// ─────────────────────────────────────────────────────────────
-class _DangerButton extends StatelessWidget {
-  final String label;
-  final IconData icon;
-  final VoidCallback onTap;
-  const _DangerButton({
-    required this.label,
-    required this.icon,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return MouseRegion(
-      cursor: SystemMouseCursors.click,
-      child: GestureDetector(
-      onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: Container(
-        height: 52,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: AppColors.error.withValues(alpha: 0.12),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.error.withValues(alpha: 0.45)),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 18, color: AppColors.error),
-            const SizedBox(width: 8),
-            Text(
-              label,
-              style: AppTextStyles.btn.copyWith(color: AppColors.error),
             ),
           ],
         ),

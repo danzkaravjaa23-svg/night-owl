@@ -34,7 +34,8 @@ Future<void> main() async {
 
   // Утасны хүрээ дотор preview (зөвхөн веб debug; утас болон release-д унтарна).
   // Унтраах:  flutter run -d chrome --dart-define=DEVICE_PREVIEW=false
-  const usePreview = kIsWeb && !kReleaseMode &&
+  const usePreview = kIsWeb &&
+      !kReleaseMode &&
       bool.fromEnvironment('DEVICE_PREVIEW', defaultValue: true);
 
   runApp(
@@ -45,11 +46,44 @@ Future<void> main() async {
   );
 }
 
-class NightOwlApp extends ConsumerWidget {
+class NightOwlApp extends ConsumerStatefulWidget {
   const NightOwlApp({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<NightOwlApp> createState() => _NightOwlAppState();
+}
+
+class _NightOwlAppState extends ConsumerState<NightOwlApp> {
+  final _messengerKey = GlobalKey<ScaffoldMessengerState>();
+
+  @override
+  void initState() {
+    super.initState();
+    authCallbackError.addListener(_showAuthCallbackError);
+    _showAuthCallbackError();
+  }
+
+  void _showAuthCallbackError() {
+    final message = authCallbackError.value;
+    if (message == null) return;
+    authCallbackError.value = null;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _messengerKey.currentState?.showSnackBar(SnackBar(
+        content: Text('Нэвтрэлт: $message'),
+      ));
+    });
+    WidgetsBinding.instance.ensureVisualUpdate();
+  }
+
+  @override
+  void dispose() {
+    authCallbackError.removeListener(_showAuthCallbackError);
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final router = ref.watch(appRouterProvider);
     final themeMode = ref.watch(themeModeProvider);
 
@@ -67,14 +101,27 @@ class NightOwlApp extends ConsumerWidget {
     return MaterialApp.router(
       title: 'Night Owl UB',
       debugShowCheckedModeBanner: false,
+      scaffoldMessengerKey: _messengerKey,
 
       // device_preview — сонгосон утасны хэмжээ/locale-ийг апп-д тусгана
       locale: DevicePreview.locale(context),
       // Веб/desktop дээр утасны өргөнөөр голлуулна (MobileFrame).
       // ThemeReveal гадна талд — горим солиход хажуугийн зай ч хамт тэлнэ.
       builder: (context, child) {
-        final tree = ThemeReveal(
-            child: MobileFrame(child: DevicePreview.appBuilder(context, child)));
+        final tree = ListenableBuilder(
+          listenable: router.routeInformationProvider,
+          builder: (context, _) => ThemeReveal(
+              child: MobileFrame(
+                  wideLayout: {
+                    AppRoutes.feed,
+                    AppRoutes.explore,
+                    AppRoutes.profile,
+                    AppRoutes.map,
+                    AppRoutes.reels,
+                    AppRoutes.dmList
+                  }.contains(router.routeInformationProvider.value.uri.path),
+                  child: DevicePreview.appBuilder(context, child))),
+        );
         // Веб дээр statusBarColor нь <meta theme-color>-г солидог тул оролцуулахгүй
         if (kIsWeb) return tree;
         final dark = Theme.of(context).brightness == Brightness.dark;

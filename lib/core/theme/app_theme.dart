@@ -78,7 +78,7 @@ class AppTheme {
       ),
       cardTheme: CardThemeData(
         // Premium glass card — slightly tighter radius, deeper separation
-        color: isDark ? elevated.withValues(alpha: 0.72) : elevated,
+        color: elevated,
         elevation: 0,
         margin: EdgeInsets.zero,
         clipBehavior: Clip.antiAlias,
@@ -90,7 +90,7 @@ class AppTheme {
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         // Шилэн талбар — dark горимд бага зэрэг тунгалаг
-        fillColor: isDark ? surface.withValues(alpha: 0.72) : surface,
+        fillColor: surface,
         border: OutlineInputBorder(
           borderRadius: AppRadii.mdR,
           borderSide: BorderSide(color: hairline),
