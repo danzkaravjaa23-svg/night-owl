@@ -11,6 +11,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/services/supabase_service.dart';
+import '../../../core/widgets/app_avatar.dart';
 import '../../../core/utils/image_uploader.dart';
 import '../../../core/utils/image_compress.dart';
 import '../../../core/constants/stickers.dart';
@@ -1051,13 +1052,8 @@ class _PickerSheetState extends State<_PickerSheet> {
                     }
                     final uname = (r['username'] as String? ?? 'User').replaceAll('@', '');
                     return ListTile(
-                      leading: CircleAvatar(
-                        backgroundColor: AppColors.bgSurface,
-                        backgroundImage: r['avatar_url'] != null
-                            ? NetworkImage(r['avatar_url'] as String) : null,
-                        child: r['avatar_url'] == null
-                            ? Text(uname.isNotEmpty ? uname[0].toUpperCase() : '?',
-                                style: TextStyle(color: AppColors.textPrimary)) : null),
+                      leading: AppAvatar(
+                        imageUrl: r['avatar_url'] as String?, size: 40),
                       title: Text('@$uname',
                           style: AppTextStyles.bodyMd.copyWith(color: AppColors.textPrimary)),
                       onTap: () => Navigator.pop(context, r),

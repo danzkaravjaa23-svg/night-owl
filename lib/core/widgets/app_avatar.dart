@@ -1,17 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import '../constants/avatar_presets.dart';
 import '../theme/app_colors.dart';
-import '../theme/app_text_styles.dart';
 
-/// User avatar widget — matches JSX Avatar component
+/// Uploaded photos and built-in owl portraits share one renderer everywhere.
 class AppAvatar extends StatelessWidget {
   final String? imageUrl;
+  // Retained for existing call sites; photo-less users now receive an owl.
   final String? initial;
   final double size;
-  final bool showRing;       // gradient ring
+  final bool showRing; // gradient ring
   final bool showOnlineDot;
+
   /// Үргэлж харанхуй гадаргуу (story, reels, live) дээр — гэрэл горимд ч
-  /// цагирагны завсар, эхний үсэг харанхуй палитраар зурагдана.
+  /// цагирагны завсар болон хүрээ харанхуй палитраар зурагдана.
   final bool onDark;
 
   const AppAvatar({
@@ -30,10 +32,13 @@ class AppAvatar extends StatelessWidget {
     final avatarSize = showRing ? size - 7 : size;
 
     Widget avatar;
-    if (imageUrl != null && imageUrl!.isNotEmpty) {
+    final preset = NightOwlAvatars.fromValue(imageUrl);
+    if (preset != null) {
+      avatar = _presetAvatar(avatarSize, preset);
+    } else if (NightOwlAvatars.isNetworkPhoto(imageUrl)) {
       avatar = ClipOval(
         child: CachedNetworkImage(
-          imageUrl: imageUrl!,
+          imageUrl: imageUrl!.trim(),
           width: avatarSize,
           height: avatarSize,
           fit: BoxFit.cover,
@@ -74,7 +79,8 @@ class AppAvatar extends StatelessWidget {
         children: [
           avatar,
           Positioned(
-            right: 0, bottom: 0,
+            right: 0,
+            bottom: 0,
             child: Container(
               width: size * 0.27,
               height: size * 0.27,
@@ -89,7 +95,8 @@ class AppAvatar extends StatelessWidget {
                 boxShadow: [
                   BoxShadow(
                       color: AppColors.success.withValues(alpha: 0.55),
-                      blurRadius: 8, spreadRadius: 0.5),
+                      blurRadius: 8,
+                      spreadRadius: 0.5),
                 ],
               ),
             ),
@@ -102,21 +109,21 @@ class AppAvatar extends StatelessWidget {
   }
 
   Widget _placeholder(double sz) {
-    return Container(
-      width: sz, height: sz,
-      decoration: const BoxDecoration(
-        shape: BoxShape.circle,
-        gradient: AppColors.accentGradientSoft,
-      ),
-      alignment: Alignment.center,
-      child: Text(
-        (initial ?? '?').toUpperCase(),
-        style: AppTextStyles.labelLg.copyWith(
-          fontSize: sz * 0.38,
-          color: onDark ? AppColors.textPrimaryDark : AppColors.textPrimary,
-          fontWeight: FontWeight.w700,
-        ),
-      ),
-    );
+    return _presetAvatar(sz, NightOwlAvatars.defaultPreset);
   }
+
+  Widget _presetAvatar(double sz, NightOwlAvatarPreset preset) => ClipOval(
+        child: Image.asset(preset.assetPath,
+            width: sz,
+            height: sz,
+            fit: BoxFit.cover,
+            cacheWidth: (sz * 3).round().clamp(1, 512),
+            excludeFromSemantics: true,
+            errorBuilder: (_, __, ___) => Image.asset(
+                'assets/icons/night_owl_mark.png',
+                width: sz,
+                height: sz,
+                fit: BoxFit.contain,
+                excludeFromSemantics: true)),
+      );
 }

@@ -6,6 +6,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/theme/theme_provider.dart';
 import '../../../core/router/app_router.dart';
+import '../../../core/widgets/app_avatar.dart';
 import '../../../core/widgets/sculpted_icon.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../../models/user_profile.dart';
@@ -442,16 +443,7 @@ class _ProfileCard extends StatelessWidget {
                     color: AppColors.bgBase,
                   ),
                   padding: const EdgeInsets.all(2),
-                  child: ClipOval(
-                    child: (avatarUrl != null && avatarUrl.isNotEmpty)
-                        ? Image.network(
-                            avatarUrl,
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) =>
-                                _avatarFallback(p?.initial ?? '?'),
-                          )
-                        : _avatarFallback(p?.initial ?? '?'),
-                  ),
+                  child: AppAvatar(imageUrl: avatarUrl, size: 55),
                 ),
               ),
               const SizedBox(width: 14),
@@ -490,15 +482,6 @@ class _ProfileCard extends StatelessWidget {
       ),
     );
   }
-
-  Widget _avatarFallback(String initial) => Container(
-        decoration: const BoxDecoration(gradient: AppColors.accentGradient),
-        alignment: Alignment.center,
-        child: Text(
-          initial,
-          style: AppTextStyles.h2.copyWith(color: Colors.white),
-        ),
-      );
 }
 
 class _ProfileCardSkeleton extends StatelessWidget {

@@ -162,9 +162,7 @@ class _MyStoryItem extends StatelessWidget {
                           : AppColors.hairline2,
                       width: 1.8),
                 ),
-                child: avatarUrl?.isNotEmpty == true
-                    ? AppAvatar(imageUrl: avatarUrl, size: 56)
-                    : const Center(child: NightOwlMark(size: 42)),
+                child: AppAvatar(imageUrl: avatarUrl, size: 56),
               ),
             ),
             Positioned(

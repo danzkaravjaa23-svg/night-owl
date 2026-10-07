@@ -80,5 +80,6 @@ flutter:
     - assets/data/
     - assets/images/
     - assets/images/illustrations/
+    - assets/images/avatars/
     - assets/icons/
     - assets/animations/

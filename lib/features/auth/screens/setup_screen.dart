@@ -2,17 +2,24 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/widgets/gradient_button.dart';
+import '../../../core/widgets/app_avatar.dart';
 import '../../../core/constants/app_constants.dart';
+import '../../../core/constants/avatar_presets.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/services/supabase_service.dart';
 import '../../../core/utils/image_compress.dart';
 import '../../../core/utils/validators.dart';
+import '../providers/auth_provider.dart';
+import '../../feed/providers/feed_provider.dart';
+import '../../feed/providers/reels_provider.dart';
+import '../../feed/providers/stories_provider.dart';
 import '../widgets/auth_ui.dart';
 
 /// A saved profile name wins over the one-time name supplied by Apple.
@@ -35,7 +42,10 @@ class SetupScreen extends StatefulWidget {
   /// Профайлаас "Профайл засах" дарж нээсэн — хадгалсны дараа буцна
   /// (шинэ хэрэглэгчийн анхны setup бол false — хадгалаад Нүүр рүү).
   final bool forceEdit;
-  const SetupScreen({super.key, this.forceEdit = false});
+
+  /// Allows a platform picker adapter; cancellation is represented by null.
+  final Future<Uint8List?> Function()? avatarPicker;
+  const SetupScreen({super.key, this.forceEdit = false, this.avatarPicker});
 
   @override
   State<SetupScreen> createState() => _SetupScreenState();
@@ -50,6 +60,9 @@ class _SetupScreenState extends State<SetupScreen> {
   final _bioFocus = FocusNode();
   Uint8List? _avatarBytes;
   String? _avatarUrl; // одоо байгаа аватар (edit mode-д харуулна)
+  bool _avatarChanged = false;
+  bool _pickingAvatar = false;
+  bool _accountChanged = false;
   List<String> _interests = [];
   bool _loading = false;
   bool _isEditMode = false;
@@ -69,15 +82,32 @@ class _SetupScreenState extends State<SetupScreen> {
     _setupUserId = SupabaseService.currentUser?.id;
     // Native Apple name metadata may arrive after signedIn opened this route.
     _authSub = SupabaseService.authStream.listen((state) {
+      if (mounted && !_isSetupUser(state.session?.user)) {
+        setState(() {
+          _accountChanged = true;
+          _profileLoading = false;
+          _avatarBytes = null;
+        });
+        return;
+      }
       _fillMetadataName(state.session?.user);
     });
     _loadExistingProfile();
   }
 
   bool _isSetupUser(User? user) =>
+      !_accountChanged &&
       _setupUserId != null &&
       user?.id == _setupUserId &&
       SupabaseService.currentUser?.id == _setupUserId;
+
+  bool get _canEdit =>
+      !_loading &&
+      !_pickingAvatar &&
+      !_profileLoading &&
+      !_loadFailed &&
+      _profileLoaded &&
+      !_accountChanged;
 
   void _fillMetadataName(User? user) {
     if (!mounted ||
@@ -96,7 +126,10 @@ class _SetupScreenState extends State<SetupScreen> {
   Future<void> _loadExistingProfile() async {
     final user = SupabaseService.currentUser;
     if (!_isSetupUser(user)) {
-      setState(() => _profileLoading = false);
+      setState(() {
+        _profileLoading = false;
+        _accountChanged = true;
+      });
       return;
     }
     _profileLoaded = false;
@@ -125,12 +158,20 @@ class _SetupScreenState extends State<SetupScreen> {
           _usernameCtrl.text = username;
           if (!_nameEdited && _hasSavedName) _nameCtrl.text = savedName;
           _bioCtrl.text = data['bio'] as String? ?? '';
-          _avatarUrl = data['avatar_url'] as String?;
+          final savedAvatar = data['avatar_url'] as String?;
+          _avatarChanged = savedAvatar == null || savedAvatar.trim().isEmpty;
+          _avatarUrl = _avatarChanged
+              ? NightOwlAvatars.defaultPreset.value
+              : savedAvatar;
           _interests = List<String>.from(data['interests'] ?? []);
           _profileLoading = false;
         });
       } else {
-        setState(() => _profileLoading = false);
+        setState(() {
+          _avatarUrl = NightOwlAvatars.defaultPreset.value;
+          _avatarChanged = true;
+          _profileLoading = false;
+        });
       }
       _profileLoaded = true;
       // Use the latest currentUser: Apple may have updated metadata while
@@ -168,18 +209,52 @@ class _SetupScreenState extends State<SetupScreen> {
   }
 
   Future<void> _pickAvatar() async {
-    final picker = ImagePicker();
-    final file = await picker.pickImage(
-      source: ImageSource.gallery,
-      imageQuality: AppConstants.imageQuality,
-      maxWidth: 400,
-    );
-    if (file == null) return;
-    final bytes = await file.readAsBytes();
-    if (mounted) setState(() => _avatarBytes = bytes);
+    if (!_canEdit) return;
+    final user = SupabaseService.currentUser;
+    if (!_isSetupUser(user)) return;
+    setState(() {
+      _pickingAvatar = true;
+      _error = null;
+    });
+    try {
+      Uint8List? bytes;
+      if (widget.avatarPicker != null) {
+        bytes = await widget.avatarPicker!();
+      } else {
+        final file = await ImagePicker().pickImage(
+          source: ImageSource.gallery,
+          imageQuality: AppConstants.imageQuality,
+          maxWidth: 400,
+        );
+        if (file != null) bytes = await file.readAsBytes();
+      }
+      if (bytes == null || !mounted || !_isSetupUser(user)) return;
+      if (bytes.isEmpty) throw StateError('Empty image');
+      setState(() {
+        _avatarBytes = bytes;
+        _avatarChanged = true;
+      });
+    } catch (_) {
+      if (mounted && _isSetupUser(user)) {
+        setState(() => _error = 'Зураг сонгож чадсангүй. Дахин оролдоорой.');
+      }
+    } finally {
+      if (mounted) setState(() => _pickingAvatar = false);
+    }
+  }
+
+  void _selectAvatar(NightOwlAvatarPreset preset) {
+    if (!_canEdit || !_isSetupUser(SupabaseService.currentUser)) return;
+    setState(() {
+      _avatarBytes = null;
+      _avatarUrl = preset.value;
+      _avatarChanged = true;
+      _error = null;
+    });
   }
 
   void _toggleInterest(String tag) {
+    if (!_canEdit) return;
     setState(() {
       if (_interests.contains(tag)) {
         _interests.remove(tag);
@@ -196,16 +271,27 @@ class _SetupScreenState extends State<SetupScreen> {
 
   Future<void> _save() async {
     // Enter дарж давхар илгээхээс сэргийлнэ
-    if (_loading) return;
+    if (!_canEdit) return;
     // Хэрэглэгчийн нэрийн алдаа талбарын доор inline харагдана
     if (_formKey.currentState?.validate() != true) return;
     final username = _usernameCtrl.text.trim().toLowerCase();
 
     final user = Supabase.instance.client.auth.currentUser;
-    if (user == null) {
-      if (mounted) context.go(AppRoutes.authLanding);
+    if (!_isSetupUser(user)) {
+      if (mounted) setState(() => _accountChanged = true);
       return;
     }
+    final savedUser = user!;
+    final pendingAvatar = _avatarBytes;
+    final selectedAvatar = _avatarUrl ?? NightOwlAvatars.defaultPreset.value;
+    final updates = <String, dynamic>{
+      'id': savedUser.id,
+      'username': username,
+      'full_name': _nameCtrl.text.trim(),
+      'bio': _bioCtrl.text.trim(),
+      'interests': List<String>.from(_interests),
+      'updated_at': DateTime.now().toIso8601String(),
+    };
     setState(() {
       _loading = true;
       _error = null;
@@ -213,37 +299,42 @@ class _SetupScreenState extends State<SetupScreen> {
     try {
       String? avatarUrl;
 
-      if (_avatarBytes != null) {
+      if (pendingAvatar != null) {
         final path =
-            '${user.id}/avatar_${DateTime.now().millisecondsSinceEpoch}.jpg';
+            '${savedUser.id}/avatar_${DateTime.now().millisecondsSinceEpoch}.jpg';
+        final compressed = await compressToJpeg(pendingAvatar, maxDim: 400);
+        if (!mounted || !_isSetupUser(savedUser)) return;
         await Supabase.instance.client.storage.from('avatars').uploadBinary(
-            path, await compressToJpeg(_avatarBytes!, maxDim: 400),
+            path, compressed,
             fileOptions:
                 const FileOptions(contentType: 'image/jpeg', upsert: true));
         // Cache-buster — ижил URL дээр хуучин зураг cache-с гарахаас сэргийлнэ
         final publicUrl =
             Supabase.instance.client.storage.from('avatars').getPublicUrl(path);
         avatarUrl = '$publicUrl?v=${DateTime.now().millisecondsSinceEpoch}';
+      } else if (_avatarChanged) {
+        avatarUrl = selectedAvatar;
       }
-
-      final updates = <String, dynamic>{
-        'id': user.id,
-        'username': username,
-        'full_name': _nameCtrl.text.trim(),
-        'bio': _bioCtrl.text.trim(),
-        'interests': _interests,
-        'updated_at': DateTime.now().toIso8601String(),
-      };
+      if (!mounted || !_isSetupUser(savedUser)) return;
       if (avatarUrl != null) updates['avatar_url'] = avatarUrl;
 
       await Supabase.instance.client.from('profiles').upsert(updates);
+      if (!mounted || !_isSetupUser(savedUser)) return;
 
       // "Профайл дуусгасан" тэмдгийг auth metadata-д тавина — router AuthGate
       // үүгээр л шинэ/бүртгэлтэйг ялгадаг (presence/follow update нөлөөлөхгүй)
-      await Supabase.instance.client.auth
-          .updateUser(UserAttributes(data: {'setup_complete': true}));
+      if (savedUser.userMetadata?['setup_complete'] != true) {
+        await Supabase.instance.client.auth
+            .updateUser(UserAttributes(data: {'setup_complete': true}));
+      }
+      if (!mounted || !_isSetupUser(savedUser)) return;
+      final container = ProviderScope.containerOf(context, listen: false);
+      container.invalidate(currentProfileProvider);
+      container.invalidate(feedProvider);
+      container.invalidate(reelsProvider);
+      container.invalidate(storiesProvider);
       authGate.refresh();
-      if (!mounted) return;
+      if (!mounted || !_isSetupUser(savedUser)) return;
       if (widget.forceEdit) {
         // Засах горим — ирсэн газраа буцна (профайл/тохиргоо)
         ScaffoldMessenger.of(context).showSnackBar(
@@ -253,12 +344,12 @@ class _SetupScreenState extends State<SetupScreen> {
         context.go(AppRoutes.feed);
       }
     } on PostgrestException catch (e) {
-      if (!mounted) return;
+      if (!mounted || !_isSetupUser(savedUser)) return;
       setState(() => _error = e.code == '23505'
           ? 'Энэ хэрэглэгчийн нэр аль хэдийн ашиглагдаж байна.'
           : 'Хадгалахад алдаа гарлаа. Дахин оролдоно уу.');
     } catch (e) {
-      if (mounted) {
+      if (mounted && _isSetupUser(savedUser)) {
         setState(
             () => _error = 'Хадгалахад алдаа гарлаа. Сүлжээгээ шалгана уу.');
       }
@@ -289,7 +380,9 @@ class _SetupScreenState extends State<SetupScreen> {
                         Row(children: [
                           GlassBack(onTap: _back),
                           const SizedBox(width: 14),
-                          Text('Профайл засах', style: AppTextStyles.h1),
+                          Expanded(
+                              child: Text('Профайл засах',
+                                  style: AppTextStyles.h1)),
                         ]),
                       ] else ...[
                         Text('Өөрийгөө', style: AppTextStyles.displayMd),
@@ -315,8 +408,11 @@ class _SetupScreenState extends State<SetupScreen> {
                   child: _GlassSheet(
                     child: AnimatedSwitcher(
                       duration: const Duration(milliseconds: 200),
-                      child:
-                          _profileLoading ? const _FormSkeleton() : _formView(),
+                      child: _profileLoading
+                          ? const _FormSkeleton()
+                          : _accountChanged
+                              ? _accountChangedView()
+                              : _formView(),
                     ),
                   ),
                 ),
@@ -331,6 +427,114 @@ class _SetupScreenState extends State<SetupScreen> {
   // Цайвар дэвсгэр дээр amber текст уншигдахгүй тул бараан amber
   Color get _amberInk =>
       AppColors.isDarkMode ? AppColors.amber : const Color(0xFF8A5A00);
+
+  Widget _accountChangedView() => Padding(
+        padding: const EdgeInsets.all(24),
+        child: Center(
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+          const AuthErrorBox(
+              'Нэвтэрсэн бүртгэл өөрчлөгдлөө. Профайлаа дахин нээгээрэй.'),
+          const SizedBox(height: 18),
+          TextButton(
+              onPressed: () => context.go(SupabaseService.currentUser == null
+                  ? AppRoutes.authLanding
+                  : AppRoutes.profile),
+              child: const Text('Буцах')),
+        ])),
+      );
+
+  Widget _avatarChoices() => Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Center(
+              child: TextButton.icon(
+            key: const ValueKey('setup-upload-avatar'),
+            onPressed: _canEdit ? _pickAvatar : null,
+            icon: const Icon(Icons.add_photo_alternate_outlined, size: 20),
+            label: Text(_pickingAvatar
+                ? 'Зураг сонгож байна...'
+                : 'Өөрийн зураг оруулах'),
+          )),
+          const SizedBox(height: 16),
+          Text('Өөртөө тохирох дүрээ сонго', style: AppTextStyles.h3),
+          const SizedBox(height: 6),
+          Text('Шар шувуунаас сонгох эсвэл өөрийн зургаа оруулаарай.',
+              style: AppTextStyles.bodySm
+                  .copyWith(color: AppColors.textSecondary)),
+          const SizedBox(height: 14),
+          LayoutBuilder(builder: (context, constraints) {
+            final columns = constraints.maxWidth >= 520 ? 4 : 2;
+            final width = (constraints.maxWidth - 12 * (columns - 1)) / columns;
+            return Wrap(spacing: 12, runSpacing: 12, children: [
+              for (final preset in NightOwlAvatars.all)
+                SizedBox(
+                    width: width,
+                    child: Semantics(
+                      label: preset.label,
+                      button: true,
+                      selected:
+                          _avatarBytes == null && _avatarUrl == preset.value,
+                      child: Material(
+                        key: ValueKey('avatar-preset-${preset.id}'),
+                        color:
+                            _avatarBytes == null && _avatarUrl == preset.value
+                                ? AppColors.accentStart.withValues(alpha: .14)
+                                : AppColors.bgSurface,
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(20),
+                            side: BorderSide(
+                                color: _avatarBytes == null &&
+                                        _avatarUrl == preset.value
+                                    ? AppColors.accentStart
+                                    : AppColors.hairline,
+                                width: 1.5)),
+                        clipBehavior: Clip.antiAlias,
+                        child: InkWell(
+                          onTap: _canEdit ? () => _selectAvatar(preset) : null,
+                          child: Padding(
+                              padding:
+                                  const EdgeInsets.fromLTRB(10, 14, 10, 12),
+                              child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Stack(clipBehavior: Clip.none, children: [
+                                      AppAvatar(
+                                          imageUrl: preset.value, size: 68),
+                                      if (_avatarBytes == null &&
+                                          _avatarUrl == preset.value)
+                                        Positioned(
+                                            right: -2,
+                                            bottom: -2,
+                                            child: Container(
+                                                padding:
+                                                    const EdgeInsets.all(3),
+                                                decoration: BoxDecoration(
+                                                    color:
+                                                        AppColors.accentStart,
+                                                    shape: BoxShape.circle,
+                                                    border: Border.all(
+                                                        color: AppColors
+                                                            .bgElevated,
+                                                        width: 2)),
+                                                child: const Icon(
+                                                    Icons.check_rounded,
+                                                    color: Colors.white,
+                                                    size: 14))),
+                                    ]),
+                                    const SizedBox(height: 10),
+                                    Text(preset.label,
+                                        textAlign: TextAlign.center,
+                                        style: AppTextStyles.labelMd.copyWith(
+                                            color: AppColors.textPrimary,
+                                            fontWeight: FontWeight.w600)),
+                                  ])),
+                        ),
+                      ),
+                    )),
+            ]);
+          }),
+        ],
+      );
 
   Widget _formView() => SingleChildScrollView(
         key: const ValueKey('form'),
@@ -371,7 +575,7 @@ class _SetupScreenState extends State<SetupScreen> {
               // ── Avatar hero — 96, story-ring хүрээ + gradient edit badge ──
               Center(
                 child: TapScale(
-                  onTap: _pickAvatar,
+                  onTap: _canEdit ? _pickAvatar : null,
                   child: Stack(
                     clipBehavior: Clip.none,
                     children: [
@@ -393,28 +597,18 @@ class _SetupScreenState extends State<SetupScreen> {
                                 ? AppColors.bgBase
                                 : AppColors.bgElevated,
                           ),
-                          child: Container(
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              gradient:
-                                  (_avatarBytes == null && _avatarUrl == null)
-                                      ? AppColors.accentGradientSoft
-                                      : null,
-                              image: _avatarBytes != null
-                                  ? DecorationImage(
-                                      image: MemoryImage(_avatarBytes!),
-                                      fit: BoxFit.cover)
-                                  : (_avatarUrl != null
-                                      ? DecorationImage(
-                                          image: NetworkImage(_avatarUrl!),
-                                          fit: BoxFit.cover)
-                                      : null),
-                            ),
-                            child: (_avatarBytes == null && _avatarUrl == null)
-                                ? Icon(Icons.person,
-                                    color: AppColors.textTertiary, size: 40)
-                                : null,
-                          ),
+                          child: _avatarBytes != null
+                              ? ClipOval(
+                                  child: Image.memory(_avatarBytes!,
+                                      key: const ValueKey(
+                                          'setup-upload-preview'),
+                                      width: 85,
+                                      height: 85,
+                                      fit: BoxFit.cover))
+                              : AppAvatar(
+                                  key: const ValueKey('setup-avatar-preview'),
+                                  imageUrl: _avatarUrl,
+                                  size: 85),
                         ),
                       ),
                       // Gradient edit badge — glow-той, bgBase cutout хүрээ
@@ -443,11 +637,14 @@ class _SetupScreenState extends State<SetupScreen> {
                   ),
                 ),
               ),
+              const SizedBox(height: 8),
+              _avatarChoices(),
               const SizedBox(height: 28),
 
               const FieldLabel('Нэр'),
               const SizedBox(height: 8),
               TextFormField(
+                  enabled: _canEdit,
                   controller: _nameCtrl,
                   maxLength: 60,
                   style: authFieldStyle,
@@ -459,6 +656,7 @@ class _SetupScreenState extends State<SetupScreen> {
               const FieldLabel('Хэрэглэгчийн нэр'),
               const SizedBox(height: 8),
               TextFormField(
+                enabled: _canEdit,
                 controller: _usernameCtrl,
                 style: authFieldStyle,
                 textInputAction: TextInputAction.next,
@@ -473,6 +671,7 @@ class _SetupScreenState extends State<SetupScreen> {
               const FieldLabel('Танилцуулга'),
               const SizedBox(height: 8),
               TextFormField(
+                enabled: _canEdit,
                 controller: _bioCtrl,
                 focusNode: _bioFocus,
                 maxLines: 3,
@@ -539,10 +738,11 @@ class _SetupScreenState extends State<SetupScreen> {
 
               const SizedBox(height: 32),
               GradientButton(
+                key: const ValueKey('setup-save'),
                 label: _loading
                     ? 'Хадгалж байна...'
                     : (_isEditMode ? 'Хадгалах' : 'Эхлэх'),
-                onPressed: _loading ? null : _save,
+                onPressed: _canEdit ? _save : null,
                 borderRadius: 999,
                 trailing: _loading ? const BtnSpinner() : null,
               ),

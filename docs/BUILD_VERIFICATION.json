@@ -267,5 +267,58 @@
       "Selected video identity, older video lookup, lifecycle/route pause, stale refresh cannot restore deleted video"
     ],
     "current_public_runtime_commit": "7c277c713d59217da24116f7c227f6ddf4d1c8ba"
+  },
+  "avatar_update": {
+    "date": "2026-10-07",
+    "verified_at": "2026-10-07T01:50:59.995496+00:00",
+    "status": "Local code and build ready; not pushed or publicly deployed",
+    "flutter_tests_passed": 267,
+    "flutter_tests_failed": 0,
+    "focused_avatar_tests": 18,
+    "analysis": "No issues found",
+    "web_build": "passed",
+    "archive": "build/releases/night-owl-avatars-web-release.zip",
+    "archive_files": 67,
+    "archive_bytes": 21685021,
+    "archive_sha256": "eff1dee2a90896808cd98c091f482ec85aac9bd26df0c41360cce1cc7c2ddf77",
+    "main_dart_js_sha256": "f5e84ba74dad3f7d8a74f774e19c79f61cff8d346246f6bb4a097d8eb3da0009",
+    "assets": [
+      {
+        "path": "assets/images/avatars/owl_older_man.webp",
+        "bytes": 30720,
+        "sha256": "2d8820ad2ecb540787aafcc0daa93c590727d0995671e9558ea4aece410e7c73"
+      },
+      {
+        "path": "assets/images/avatars/owl_older_woman.webp",
+        "bytes": 30880,
+        "sha256": "6ef0a510fd4e253478a2c0788eef282730613ef668aad6a8b1b2b8895a202e8c"
+      },
+      {
+        "path": "assets/images/avatars/owl_young_man.webp",
+        "bytes": 26372,
+        "sha256": "aafbc7fc03f903842f1c6ea22caaf107e562f2275587e306d8f75498cb63bb9a"
+      },
+      {
+        "path": "assets/images/avatars/owl_young_woman.webp",
+        "bytes": 24150,
+        "sha256": "e5ad7882001570e33cf239302f1ac82628e89c5e61e1fee66f79265f093151a4"
+      }
+    ],
+    "higgsfield_provenance": "docs/AVATAR_ASSETS.json",
+    "storage": "Existing avatar_url field; stable preset references or uploaded photo URL. No new SQL required for avatars.",
+    "verification": [
+      "All four selections preview and persist without upload",
+      "Existing uploaded photo retained; picker cancellation preserves current choice",
+      "Custom photo uploads as actual JPEG with correct MIME type",
+      "New empty profile persists default owl",
+      "Failed save permits retry; duplicate save disabled",
+      "Late upload and profile-save responses do not mutate the new account",
+      "Completed profile saves avoid Auth metadata writes",
+      "320px at 1.5x text, day and night",
+      "Null/invalid/failed image renders bundled owl; presets need no network"
+    ],
+    "visual_preview": "build/releases/avatar-profile-preview.png; actual SetupScreen widget rendered with synthetic profile and local test font; not production-browser proof",
+    "public_verification": "Pending. This combined release includes admin-featured Explore events whose Supabase confirmation remains unanswered.",
+    "current_public_runtime_commit": "7c277c713d59217da24116f7c227f6ddf4d1c8ba"
   }
 }

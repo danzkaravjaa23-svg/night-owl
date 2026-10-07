@@ -1,0 +1,46 @@
+{
+  "created": "2026-10-07",
+  "tool": "Higgsfield generate_image_batch",
+  "model": "gpt_image_2_5",
+  "quality": "high",
+  "reference": "assets/icons/night_owl_mark.png",
+  "source_dimensions": [
+    1024,
+    1024
+  ],
+  "app_dimensions": [
+    512,
+    512
+  ],
+  "processing": "WebP quality90; size reduction only, no visual redesign",
+  "variants": [
+    {
+      "id": "young-man",
+      "label": "Залуу эрэгтэй",
+      "file": "assets/images/avatars/owl_young_man.webp",
+      "job_id": "371335e2-06cf-4825-af4a-6b66dc39edc7",
+      "prompt": "Create ONE polished 3D profile avatar for Night Owl, a social nightlife app. Use the reference as the brand identity: a friendly round PURPLE OWL, huge circular lavender eyes with glossy midnight pupils, small pale lavender triangular beak, pointed owl ear tufts, deep navy and violet feathers. Keep it unmistakably an owl, not a human, not a photorealistic bird. Premium soft 3D vinyl/clay sculpture with subtle feather shapes, gentle rim lighting, warm welcoming expression. Symmetrical front-facing head-and-shoulders portrait, entire head and ear tips inside central 78% of square for circular cropping; centered at identical scale in a coherent four-avatar family. Opaque midnight navy #0B0D17 backdrop with very restrained violet radial glow. Palette lavender #B6A4FF, violet #7654D6, dark navy; elegant clean silhouette that reads at 40 pixels. No text, no letters, no watermark, no frame, no extra characters, no props outside silhouette. This is an avatar asset, not a UI mockup. Variant: YOUNG ADULT MALE owl, age impression around 25-30 (never a child). Small stylish upward feather quiff, confident relaxed eyebrows, simple dark violet bomber-jacket collar. Fresh energetic friendly expression."
+    },
+    {
+      "id": "young-woman",
+      "label": "Залуу эмэгтэй",
+      "file": "assets/images/avatars/owl_young_woman.webp",
+      "job_id": "a394e970-8f56-4023-b365-c95d65bb1ca9",
+      "prompt": "Create ONE polished 3D profile avatar for Night Owl, a social nightlife app. Use the reference as the brand identity: a friendly round PURPLE OWL, huge circular lavender eyes with glossy midnight pupils, small pale lavender triangular beak, pointed owl ear tufts, deep navy and violet feathers. Keep it unmistakably an owl, not a human, not a photorealistic bird. Premium soft 3D vinyl/clay sculpture with subtle feather shapes, gentle rim lighting, warm welcoming expression. Symmetrical front-facing head-and-shoulders portrait, entire head and ear tips inside central 78% of square for circular cropping; centered at identical scale in a coherent four-avatar family. Opaque midnight navy #0B0D17 backdrop with very restrained violet radial glow. Palette lavender #B6A4FF, violet #7654D6, dark navy; elegant clean silhouette that reads at 40 pixels. No text, no letters, no watermark, no frame, no extra characters, no props outside silhouette. This is an avatar asset, not a UI mockup. Variant: YOUNG ADULT FEMALE owl, age impression around 25-30 (never a child). Swept feather fringe with one small lavender crescent hair clip, understated eyelashes, simple modern lilac collar. Bright calm confident friendly expression; no exaggerated makeup."
+    },
+    {
+      "id": "older-man",
+      "label": "Ахимаг эрэгтэй",
+      "file": "assets/images/avatars/owl_older_man.webp",
+      "job_id": "169ce7cb-9283-4a7f-a95f-37f098f7380a",
+      "prompt": "Create ONE polished 3D profile avatar for Night Owl, a social nightlife app. Use the reference as the brand identity: a friendly round PURPLE OWL, huge circular lavender eyes with glossy midnight pupils, small pale lavender triangular beak, pointed owl ear tufts, deep navy and violet feathers. Keep it unmistakably an owl, not a human, not a photorealistic bird. Premium soft 3D vinyl/clay sculpture with subtle feather shapes, gentle rim lighting, warm welcoming expression. Symmetrical front-facing head-and-shoulders portrait, entire head and ear tips inside central 78% of square for circular cropping; centered at identical scale in a coherent four-avatar family. Opaque midnight navy #0B0D17 backdrop with very restrained violet radial glow. Palette lavender #B6A4FF, violet #7654D6, dark navy; elegant clean silhouette that reads at 40 pixels. No text, no letters, no watermark, no frame, no extra characters, no props outside silhouette. This is an avatar asset, not a UI mockup. Variant: OLDER ADULT MALE owl, age impression around 60-70. Distinct silver-lavender temple feather tufts and bushier silvery brows, tasteful thin round gold spectacles and a short neat pale feather beard under the beak, navy cardigan collar. Warm dignified wise smile, youthful spirit."
+    },
+    {
+      "id": "older-woman",
+      "label": "Ахимаг эмэгтэй",
+      "file": "assets/images/avatars/owl_older_woman.webp",
+      "job_id": "1f59b2ca-772e-4774-99ab-a60e351f3f82",
+      "prompt": "Create ONE polished 3D profile avatar for Night Owl, a social nightlife app. Use the reference as the brand identity: a friendly round PURPLE OWL, huge circular lavender eyes with glossy midnight pupils, small pale lavender triangular beak, pointed owl ear tufts, deep navy and violet feathers. Keep it unmistakably an owl, not a human, not a photorealistic bird. Premium soft 3D vinyl/clay sculpture with subtle feather shapes, gentle rim lighting, warm welcoming expression. Symmetrical front-facing head-and-shoulders portrait, entire head and ear tips inside central 78% of square for circular cropping; centered at identical scale in a coherent four-avatar family. Opaque midnight navy #0B0D17 backdrop with very restrained violet radial glow. Palette lavender #B6A4FF, violet #7654D6, dark navy; elegant clean silhouette that reads at 40 pixels. No text, no letters, no watermark, no frame, no extra characters, no props outside silhouette. This is an avatar asset, not a UI mockup. Variant: OLDER ADULT FEMALE owl, age impression around 60-70. Distinct swept-back silver-lavender feather crown with elegant small feather bun between ear tufts, gentle fine smile creases near the eyes, tasteful slim oval lavender glasses and soft violet shawl collar. Warm dignified welcoming expression."
+    }
+  ]
+}
