@@ -241,5 +241,31 @@
       "closing card preserves individual pins; zooming out restores counts; zooming in separates again",
       "browser error log empty"
     ]
+  },
+  "explore_discovery_update": {
+    "date": "2026-10-07",
+    "verified_at": "2026-10-07T01:32:31.909115+00:00",
+    "status": "Local code and JavaScript web release ready; Supabase confirmation pending; not pushed or deployed",
+    "flutter_tests_passed": 249,
+    "flutter_tests_failed": 0,
+    "analysis": "No issues found",
+    "web_build": "passed; final source after video reload/delete race fix",
+    "archive": "build/releases/night-owl-discovery-web-release.zip",
+    "archive_files": 63,
+    "archive_bytes": 21570854,
+    "archive_sha256": "b128e3928070977013765a0267338eef59de09f21ea1c4b858b1ec1f8daa6ea4",
+    "main_dart_js_sha256": "aba655cc8daed7b3c143c67f8db97f916d49f680ab8ddf6d7f0028216b761ab9",
+    "server_sql_sha256": "f7d38356841ccca05cb465de49af69c27f241f74c15c272592a699fcaa1095a6",
+    "database_fixture": "PostgreSQL 18.3 through official PGlite 0.5.8; synthetic data; atomic prerequisite+feature rollout, repeatability, authorization, banned-user protection and expiry passed",
+    "server_applied": false,
+    "server_confirmation": "Supabase SQL Editor Potential issue detected; awaiting explicit confirmation",
+    "public_browser_verification": "Pending server migration and deployment",
+    "coverage": [
+      "Explore day/night, 320px at 1.5x text, reduced motion, scroll and map-camera preservation",
+      "Only selected events public; ordinary-user admin access blocked; server-confirmed selection/removal and retry",
+      "Video query before limit, legacy/array media, loading/error/empty",
+      "Selected video identity, older video lookup, lifecycle/route pause, stale refresh cannot restore deleted video"
+    ],
+    "current_public_runtime_commit": "7c277c713d59217da24116f7c227f6ddf4d1c8ba"
   }
 }

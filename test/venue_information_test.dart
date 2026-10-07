@@ -7,6 +7,7 @@ import 'package:night_owl_ub/core/theme/app_theme.dart';
 import 'package:night_owl_ub/features/auth/providers/auth_provider.dart';
 import 'package:night_owl_ub/features/map/providers/venue_provider.dart';
 import 'package:night_owl_ub/features/map/screens/explore_screen.dart';
+import 'package:night_owl_ub/features/map/screens/map_screen.dart';
 import 'package:night_owl_ub/features/map/widgets/venue_information_sheet.dart';
 import 'package:night_owl_ub/models/venue.dart';
 
@@ -210,7 +211,8 @@ void main() {
     expect(
         find.textContaining('Сервертэй холбогдож чадсангүй'), findsOneWidget);
     expect(find.text('Чиглэл авах'), findsNothing);
-    await tester.tap(find.text('Дахин оролдох'));
+    await tester.tap(find.descendant(
+        of: find.byType(MapScreen), matching: find.text('Дахин оролдох')));
     await tester.pumpAndSettle();
     expect(retried, 1);
     expect(tester.takeException(), isNull);

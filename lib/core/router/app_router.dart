@@ -39,6 +39,7 @@ import '../../features/search/screens/search_screen.dart';
 import '../../features/feed/screens/saved_posts_screen.dart';
 import '../../features/admin/screens/admin_reports_screen.dart';
 import '../../features/admin/screens/admin_panel_screen.dart';
+import '../../features/admin/screens/admin_featured_events_screen.dart';
 import '../../features/admin/screens/admin_users_screen.dart';
 import '../../features/profile/screens/invite_screen.dart';
 import '../../features/live/screens/go_live_entry.dart';
@@ -96,6 +97,7 @@ abstract class AppRoutes {
   static const search = '/search';
   static const saved = '/saved';
   static const adminPanel = '/admin';
+  static const adminFeaturedEvents = '/admin/featured-events';
   static const adminReports = '/admin/reports';
   static const adminUsers = '/admin/users';
 
@@ -279,7 +281,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                   _fadePage(ctx, s, const ExploreScreen())),
           GoRoute(
               path: AppRoutes.reels,
-              pageBuilder: (ctx, s) => _fadePage(ctx, s, const ReelsScreen())),
+              pageBuilder: (ctx, s) => _fadePage(ctx, s,
+                  ReelsScreen(initialReelId: s.uri.queryParameters['id']))),
           GoRoute(
               path: AppRoutes.profile,
               pageBuilder: (ctx, s) =>
@@ -395,6 +398,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           path: AppRoutes.saved,
           pageBuilder: (ctx, s) =>
               _slidePage(ctx, s, const SavedPostsScreen())),
+      GoRoute(
+          path: AppRoutes.adminFeaturedEvents,
+          pageBuilder: (ctx, s) =>
+              _slidePage(ctx, s, const AdminFeaturedEventsScreen())),
       GoRoute(
           path: AppRoutes.adminPanel,
           pageBuilder: (ctx, s) =>

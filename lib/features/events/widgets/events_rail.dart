@@ -65,6 +65,15 @@ class EventsRail extends ConsumerWidget {
   }
 }
 
+/// Shared poster and real RSVP details for curated and regular event lists.
+class EventPosterCard extends StatelessWidget {
+  final EventItem event;
+  const EventPosterCard({super.key, required this.event});
+
+  @override
+  Widget build(BuildContext context) => _EventCard(event: event);
+}
+
 // ─── Ачаалж байх үеийн skeleton мөр (постер хэмжээтэй) ───
 class _RailSkeleton extends StatelessWidget {
   const _RailSkeleton();
