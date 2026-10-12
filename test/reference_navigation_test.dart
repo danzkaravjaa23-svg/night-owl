@@ -1,3 +1,4 @@
+import 'dart:ui' show Tristate;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -91,6 +92,65 @@ void main() {
       expect(find.text('destination /story/create'), findsOneWidget);
       expect(tester.takeException(), isNull);
       await tester.pumpWidget(const SizedBox());
+    });
+  }
+
+  for (final mode in [
+    'animated',
+    'disableAnimations',
+    'accessibleNavigation'
+  ]) {
+    testWidgets(
+        'rapid footer switches finish on Profile and become idle: $mode',
+        (tester) async {
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final semantics = tester.ensureSemantics();
+      final router = GoRouter(initialLocation: '/feed', routes: [
+        ShellRoute(builder: (_, __, child) => MainShell(child: child), routes: [
+          for (final path in ['/feed', '/explore', '/dm', '/profile'])
+            GoRoute(
+                path: path,
+                builder: (_, __) => Scaffold(body: Text('destination $path'))),
+        ]),
+      ]);
+      addTearDown(router.dispose);
+      await tester.pumpWidget(ProviderScope(
+          child: MaterialApp.router(
+        routerConfig: router,
+        builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(context).copyWith(
+                disableAnimations: mode == 'disableAnimations',
+                accessibleNavigation: mode == 'accessibleNavigation'),
+            child: child!),
+      )));
+      if (mode != 'animated') {
+        await tester.pump();
+        expect(tester.binding.hasScheduledFrame, isFalse);
+      }
+      await tester.pumpAndSettle();
+
+      // Switch before the previous selection transition can finish.
+      for (final label in ['Газрууд', 'Мессеж', 'Нийтлэл', 'Профайл']) {
+        await tester.tap(find.text(label));
+        await tester.pump(const Duration(milliseconds: 40));
+      }
+      await tester.pumpAndSettle();
+      expect(router.routeInformationProvider.value.uri.path, '/profile');
+      expect(find.text('destination /profile'), findsOneWidget);
+      final selectedLabels = tester.semantics
+          .simulatedAccessibilityTraversal()
+          .where((node) =>
+              node.getSemanticsData().flagsCollection.isSelected ==
+              Tristate.isTrue)
+          .map((node) => node.getSemanticsData().label);
+      expect(selectedLabels, orderedEquals(['Профайл']));
+      expect(tester.binding.hasScheduledFrame, isFalse);
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox());
+      semantics.dispose();
     });
   }
 }

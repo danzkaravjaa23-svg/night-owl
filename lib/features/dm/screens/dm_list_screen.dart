@@ -8,6 +8,7 @@ import '../../../core/widgets/app_avatar.dart';
 import '../../../core/widgets/glass_icon_button.dart';
 import '../../../core/widgets/owl_loading.dart';
 import '../../../core/widgets/skeleton.dart';
+import '../../../core/widgets/premium_surface.dart';
 import '../../../core/services/supabase_service.dart';
 import '../../../core/services/legacy_rpc_fallback.dart';
 import '../widgets/notes_row.dart';
@@ -253,7 +254,7 @@ class _DmListScreenState extends State<DmListScreen> {
       body: SafeArea(
           child: Column(children: [
         // ── Header — том "Чат" гарчиг + шилэн дугуй үйлдлүүд ──
-        Padding(
+        NightOwlAtmosphere(child: Padding(
           padding: const EdgeInsets.fromLTRB(20, 18, 20, 14),
           child: Row(children: [
             if (context.canPop()) ...[
@@ -294,7 +295,7 @@ class _DmListScreenState extends State<DmListScreen> {
                 tooltip: 'Дахин ачаалах',
                 onTap: _load),
           ]),
-        ),
+        )),
 
         // ── Search — апп даяарх нэгдсэн шилэн pill талбар (48) ──
         Padding(

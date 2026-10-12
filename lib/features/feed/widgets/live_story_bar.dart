@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/widgets/app_avatar.dart';
+import '../../../core/widgets/app_motion.dart';
 import '../../../core/widgets/night_owl_brand.dart';
 import '../../../models/story.dart';
 import '../../auth/providers/auth_provider.dart';
@@ -93,7 +94,8 @@ class _RingItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Padding(
         padding: const EdgeInsets.symmetric(horizontal: 6),
-        child: InkWell(
+        child: PressFeedback(
+            child: InkWell(
           onTap: onTap,
           borderRadius: BorderRadius.circular(14),
           child: Column(children: [
@@ -103,6 +105,15 @@ class _RingItem extends StatelessWidget {
               padding: const EdgeInsets.all(3.5),
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
+                gradient: unseen ? AppColors.purpleGradient : null,
+                boxShadow: unseen
+                    ? [
+                        BoxShadow(
+                            color: AppColors.accentStart.withValues(alpha: .25),
+                            blurRadius: 14,
+                            spreadRadius: -2)
+                      ]
+                    : [],
                 border: Border.all(
                     color: unseen ? AppColors.accentStart : AppColors.hairline2,
                     width: 1.8),
@@ -115,7 +126,7 @@ class _RingItem extends StatelessWidget {
             const SizedBox(height: 7),
             _StoryLabel(label),
           ]),
-        ),
+        )),
       );
 }
 

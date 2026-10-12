@@ -131,22 +131,25 @@ class AppRouteTransition extends StatelessWidget {
   }
 }
 
-/// One entrance for small result/empty cards; its child stays cached per frame.
+/// A bounded, staggered entrance; its child stays cached per frame.
 class AppEntrance extends StatelessWidget {
   final Widget child;
-  const AppEntrance({super.key, required this.child});
+  final int index;
+  const AppEntrance({super.key, required this.child, this.index = 0});
 
   @override
   Widget build(BuildContext context) {
     if (AppMotion.reduced(context)) return child;
+    final delay = index.clamp(0, 3) * 50;
+    final total = 420 + delay;
     return TweenAnimationBuilder<double>(
       tween: Tween(begin: 0, end: 1),
-      duration: AppMotion.enter,
-      curve: Curves.easeOutCubic,
+      duration: Duration(milliseconds: total),
+      curve: Interval(delay / total, 1, curve: Curves.easeOutCubic),
       builder: (_, value, content) => Opacity(
         opacity: value,
         child: Transform.translate(
-            offset: Offset(0, 8 * (1 - value)), child: content),
+            offset: Offset(0, 16 * (1 - value)), child: content),
       ),
       child: child,
     );

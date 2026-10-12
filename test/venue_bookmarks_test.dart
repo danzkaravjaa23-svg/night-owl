@@ -138,7 +138,7 @@ void main() {
                   .first)
               .backgroundColor,
           dark ? AppColors.bgBaseDark : AppColors.bgBaseLight);
-      expect(tester.widget<Text>(find.text('Explore')).style?.color,
+      expect(tester.widget<Text>(find.text('Өнөө орой')).style?.color,
           dark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight);
       final filter = tester
           .widget<ColorFiltered>(find

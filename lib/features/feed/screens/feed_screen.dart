@@ -17,6 +17,7 @@ import '../../../core/widgets/sculpted_icon.dart';
 import '../../../core/widgets/theme_toggle_button.dart';
 import '../../../core/widgets/owl_loading.dart';
 import '../../../core/widgets/app_motion.dart';
+import '../../../core/widgets/premium_surface.dart';
 import '../../../core/widgets/network_video.dart';
 import '../../../core/router/app_router.dart';
 import '../../auth/providers/auth_provider.dart';
@@ -112,7 +113,8 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
                 physics: const AlwaysScrollableScrollPhysics(),
                 scrollCacheExtent: const ScrollCacheExtent.pixels(1000),
                 slivers: [
-                  SliverToBoxAdapter(child: LiveStoryBar(rings: rings)),
+                  SliverToBoxAdapter(
+                      child: AppEntrance(child: LiveStoryBar(rings: rings))),
                   SliverToBoxAdapter(
                     child: _FeedToolbar(
                       followingOnly: _followingOnly,
@@ -187,7 +189,7 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
                             },
                           );
                           return !_introDone && postIdx < 4
-                              ? _Entrance(index: postIdx, child: card)
+                              ? AppEntrance(index: postIdx, child: card)
                               : card;
                         },
                       ),
@@ -225,11 +227,17 @@ class _FeedToolbar extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(16, 8, 12, 6),
         child: Row(children: [
           Expanded(
-              child: Text('Нийтлэл',
-                  style: AppTextStyles.h2.copyWith(
-                    fontSize: 21,
-                    fontWeight: FontWeight.w700,
-                  ))),
+              child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                Text('Нийтлэл',
+                    style: AppTextStyles.h2.copyWith(
+                        fontSize: 25,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: -.6)),
+                const SizedBox(height: 4),
+                Text('Хотын хэмнэл, таны мөчүүд.', style: AppTextStyles.bodyXs),
+              ])),
           IconButton(
             tooltip: 'Reels',
             onPressed: () => context.push(AppRoutes.reels),
@@ -318,37 +326,18 @@ class _FeedEventsSheet extends ConsumerWidget {
   }
 }
 
-// ─── Орох анимац: fade + 12px дээш гулсалт, 220ms easeOut, 40ms шатлал ───
-class _Entrance extends StatelessWidget {
-  final int index;
-  final Widget child;
-  const _Entrance({required this.index, required this.child});
-
-  @override
-  Widget build(BuildContext context) {
-    if (AppMotion.reduced(context)) return child;
-    final delay = index * 40;
-    final total = 220 + delay;
-    return TweenAnimationBuilder<double>(
-      tween: Tween(begin: 0, end: 1),
-      duration: Duration(milliseconds: total),
-      curve: Interval(delay / total, 1, curve: Curves.easeOut),
-      builder: (_, t, c) => Opacity(
-        opacity: t,
-        child: Transform.translate(offset: Offset(0, 12 * (1 - t)), child: c),
-      ),
-      child: child,
-    );
-  }
-}
-
 // ─── Top bar — нимгэн (56) IG-2025 маягийн бар: wordmark зүүн, icon кластер баруун ───
 class _FeedTopBar extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final unread = ref.watch(unreadNotifCountProvider);
-    return Container(
-      height: 64,
+    return NightOwlAtmosphere(
+        child: Container(
+      height: 72,
+      decoration: BoxDecoration(
+          border: Border(
+              bottom:
+                  BorderSide(color: AppColors.silver.withValues(alpha: .10)))),
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Row(children: [
         // Лого зай хүрэлцэхгүй (360px утас) үед багасна — overflow болохгүй
@@ -367,20 +356,20 @@ class _FeedTopBar extends ConsumerWidget {
           icon: SculptedIcon(Icons.notifications_rounded,
               color: AppColors.textPrimary, size: 22),
           tooltip: 'Мэдэгдэл',
-          bare: true,
+          bare: false,
           badgeCount: unread,
           onTap: () => context.push(AppRoutes.notifications),
         ),
         const SizedBox(width: 8),
         _TopIconBtn(
           tooltip: 'Мессеж',
-          bare: true,
+          bare: false,
           icon: SculptedIcon(Icons.chat_bubble_rounded,
               color: AppColors.textPrimary, size: 22),
           onTap: () => context.push(AppRoutes.dmList),
         ),
       ]),
-    );
+    ));
   }
 }
 
@@ -584,8 +573,10 @@ class _PostCardState extends ConsumerState<_PostCard>
     void openPost() => context.push('/post/${widget.post.id}');
     void openAuthor() => context.push('/creator/${widget.post.userId}');
 
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 18),
+    return Container(
+      margin: const EdgeInsets.fromLTRB(12, 4, 12, 20),
+      padding: const EdgeInsets.only(top: 6, bottom: 14),
+      decoration: PremiumSurface.card(),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         // ── Зохиогч: нэр · хугацаа / газар ──
         Padding(
@@ -722,7 +713,7 @@ class _PostCardState extends ConsumerState<_PostCard>
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: ClipRRect(
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(18),
             child: GestureDetector(
               onDoubleTap: _doubleTapLike,
               onTap: openPost,
@@ -890,7 +881,8 @@ class _PostCardState extends ConsumerState<_PostCard>
                           height: 44,
                           child: Center(
                             child: AnimatedSwitcher(
-                              duration: const Duration(milliseconds: 220),
+                              duration: AppMotion.duration(
+                                  context, AppMotion.release),
                               switchInCurve: Curves.easeOutBack,
                               transitionBuilder: (c, a) => ScaleTransition(
                                   scale: Tween(begin: 0.7, end: 1.0).animate(a),

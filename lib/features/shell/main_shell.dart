@@ -11,6 +11,8 @@ import '../../core/providers/user_settings_provider.dart';
 import '../../core/widgets/night_owl_brand.dart';
 import '../../core/widgets/sculpted_icon.dart';
 import '../../core/widgets/app_motion.dart';
+import '../../core/widgets/premium_surface.dart';
+import '../../core/widgets/navigation_spotlight.dart';
 
 /// Bottom nav shell — center-FAB template (Instagram/TikTok маягийн док)
 class MainShell extends ConsumerStatefulWidget {
@@ -113,47 +115,73 @@ class _BottomNav extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final index = _indexFromLocation(GoRouterState.of(context).uri.path);
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.bgBase,
-        border: Border(
-            top: BorderSide(color: AppColors.hairline.withValues(alpha: .08))),
-      ),
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    return ColoredBox(
+      color: AppColors.bgBase,
       child: SafeArea(
-          top: false,
-          child: SizedBox(
-            height: 72,
-            child: Row(children: [
-              _NavItem(
-                  icon: Icons.location_on_outlined,
-                  activeIcon: Icons.location_on_outlined,
-                  label: 'Газрууд',
-                  isActive: index == 0,
-                  onTap: () => context.go(AppRoutes.explore)),
-              _NavItem(
-                  icon: Icons.people_outline_rounded,
-                  activeIcon: Icons.people_outline_rounded,
-                  label: 'Нийтлэл',
-                  isActive: index == 1,
-                  onTap: () => context.go(AppRoutes.feed)),
-              Expanded(
-                  child: Center(
-                      child:
-                          _CreateFab(onTap: () => _showCreateSheet(context)))),
-              _NavItem(
-                  icon: Icons.chat_bubble_outline_rounded,
-                  activeIcon: Icons.chat_bubble_outline_rounded,
-                  label: 'Мессеж',
-                  isActive: index == 3,
-                  onTap: () => context.go(AppRoutes.dmList)),
-              _NavItem(
-                  icon: Icons.person_outline_rounded,
-                  activeIcon: Icons.person_outline_rounded,
-                  label: 'Профайл',
-                  isActive: index == 4,
-                  onTap: () => context.go(AppRoutes.profile)),
-            ]),
-          )),
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(12, 6, 12, 6),
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [AppColors.bgElevated, AppColors.bgBase]),
+              borderRadius: BorderRadius.circular(36),
+              border: Border.all(
+                  color: AppColors.silver.withValues(alpha: dark ? .22 : .16)),
+              boxShadow: [
+                BoxShadow(
+                    color: AppColors.accentStart
+                        .withValues(alpha: dark ? .12 : .06),
+                    blurRadius: 20,
+                    offset: const Offset(0, 5))
+              ],
+            ),
+            child: ClipRRect(
+                borderRadius: BorderRadius.circular(36),
+                child: SizedBox(
+                  height: 72,
+                  child: Stack(children: [
+                    Positioned.fill(
+                      child: NavigationSpotlight(selectedIndex: index),
+                    ),
+                    Row(children: [
+                      _NavItem(
+                          icon: Icons.location_on_outlined,
+                          activeIcon: Icons.location_on_rounded,
+                          label: 'Газрууд',
+                          isActive: index == 0,
+                          onTap: () => context.go(AppRoutes.explore)),
+                      _NavItem(
+                          icon: Icons.people_outline_rounded,
+                          activeIcon: Icons.people_rounded,
+                          label: 'Нийтлэл',
+                          isActive: index == 1,
+                          onTap: () => context.go(AppRoutes.feed)),
+                      Expanded(
+                          child: Center(
+                              child: _CreateFab(
+                                  onTap: () => _showCreateSheet(context)))),
+                      _NavItem(
+                          icon: Icons.chat_bubble_outline_rounded,
+                          activeIcon: Icons.chat_bubble_rounded,
+                          label: 'Мессеж',
+                          isActive: index == 3,
+                          onTap: () => context.go(AppRoutes.dmList)),
+                      _NavItem(
+                          icon: Icons.person_outline_rounded,
+                          activeIcon: Icons.person_rounded,
+                          label: 'Профайл',
+                          isActive: index == 4,
+                          onTap: () => context.go(AppRoutes.profile)),
+                    ]),
+                  ]),
+                )),
+          ),
+        ),
+      ),
     );
   }
 
@@ -268,42 +296,56 @@ class _NavItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Expanded(
-        child: Semantics(
-            selected: isActive,
-            child: PressFeedback(
-                pressedScale: .95,
-                child: TextButton(
-                  onPressed: onTap,
-                  style: TextButton.styleFrom(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
-                    minimumSize: const Size(48, 64),
-                    foregroundColor: isActive
-                        ? AppColors.accentStart
-                        : AppColors.textTertiary,
-                    shape: const RoundedRectangleBorder(),
-                  ),
-                  child: Column(mainAxisSize: MainAxisSize.min, children: [
-                    AnimatedContainer(
-                        duration:
-                            AppMotion.duration(context, AppMotion.release),
-                        curve: Curves.easeOutCubic,
-                        padding: const EdgeInsets.all(5),
-                        decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: isActive
-                                ? AppColors.accentStart.withValues(alpha: .12)
-                                : Colors.transparent),
-                        child: SculptedIcon(isActive ? activeIcon : icon,
-                            size: 24, active: isActive)),
-                    const SizedBox(height: 3),
-                    FittedBox(
-                        fit: BoxFit.scaleDown,
-                        child: Text(label,
-                            style: const TextStyle(
-                                fontSize: 10.5, fontWeight: FontWeight.w500))),
-                  ]),
-                ))),
+        child: MergeSemantics(
+            child: Semantics(
+                selected: isActive,
+                child: PressFeedback(
+                    pressedScale: .95,
+                    child: TextButton(
+                      onPressed: onTap,
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 4, vertical: 6),
+                        minimumSize: const Size(48, 64),
+                        foregroundColor: isActive
+                            ? AppColors.silver
+                            : AppColors.textTertiary,
+                        shape: const RoundedRectangleBorder(),
+                      ),
+                      child: Column(mainAxisSize: MainAxisSize.min, children: [
+                        SizedBox.square(
+                            dimension: 36,
+                            child: Center(
+                                child: AnimatedScale(
+                              scale: isActive ? 1.08 : 1,
+                              duration: AppMotion.duration(
+                                  context, AppMotion.release),
+                              curve: Curves.easeOutCubic,
+                              child: IconTheme.merge(
+                                data: IconThemeData(
+                                    shadows: isActive
+                                        ? [
+                                            Shadow(
+                                                color: AppColors.silver
+                                                    .withValues(alpha: .55),
+                                                blurRadius: 12)
+                                          ]
+                                        : const []),
+                                child: SculptedIcon(
+                                    isActive ? activeIcon : icon,
+                                    size: 24,
+                                    active: isActive),
+                              ),
+                            ))),
+                        const SizedBox(height: 3),
+                        FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text(label,
+                                style: const TextStyle(
+                                    fontSize: 10.5,
+                                    fontWeight: FontWeight.w500))),
+                      ]),
+                    )))),
       );
 }
 
@@ -329,36 +371,40 @@ class _CreateFabState extends State<_CreateFab> {
                 onTap: widget.onTap,
                 child: PressFeedback(
                   pressedScale: .94,
-                  child: Container(
-                    width: 48,
-                    height: 48,
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [
-                            Color(0xFF9879EC),
-                            Color(0xFF7654D6),
-                            Color(0xFF503294)
-                          ]),
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                          color: const Color(0xFFBCA6F8).withValues(alpha: .5)),
-                      boxShadow: [
-                        const BoxShadow(
-                            color: Color(0xFF493079),
-                            offset: Offset(0, 3),
-                            blurRadius: 0),
-                        BoxShadow(
-                            color: Colors.black.withValues(
-                                alpha: AppColors.isDarkMode ? .32 : .14),
-                            offset: const Offset(0, 5),
-                            blurRadius: 10),
-                      ],
+                  child: ActionSheen(
+                    radius: 48,
+                    child: Container(
+                      width: 48,
+                      height: 48,
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              Color(0xFF9879EC),
+                              Color(0xFF7654D6),
+                              Color(0xFF503294)
+                            ]),
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                            color:
+                                const Color(0xFFBCA6F8).withValues(alpha: .5)),
+                        boxShadow: [
+                          const BoxShadow(
+                              color: Color(0xFF493079),
+                              offset: Offset(0, 3),
+                              blurRadius: 0),
+                          BoxShadow(
+                              color: AppColors.accentStart.withValues(
+                                  alpha: AppColors.isDarkMode ? .32 : .14),
+                              offset: const Offset(0, 5),
+                              blurRadius: 22),
+                        ],
+                      ),
+                      child: const Center(
+                          child: SculptedIcon(Icons.auto_fix_high_rounded,
+                              color: Colors.white, size: 24, onDark: true)),
                     ),
-                    child: const Center(
-                        child: SculptedIcon(Icons.auto_fix_high_rounded,
-                            color: Colors.white, size: 24, onDark: true)),
                   ),
                 ),
               ),

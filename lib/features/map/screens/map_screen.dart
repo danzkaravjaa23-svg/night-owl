@@ -13,6 +13,8 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/widgets/night_owl_brand.dart';
 import '../../../core/widgets/app_motion.dart';
+import '../../../core/widgets/premium_surface.dart';
+import '../../../core/widgets/gradient_button.dart';
 import '../../../core/widgets/owl_loading.dart';
 import '../../../core/widgets/sculpted_icon.dart';
 import '../../../models/venue.dart';
@@ -373,8 +375,10 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                                 left: 12,
                                 right: 12,
                                 bottom: attributionGap,
-                                child: _detail(selected, cardHeight,
-                                    bookmarks.contains(selected.id))),
+                                child: AppEntrance(
+                                    key: ValueKey(selected.id),
+                                    child: _detail(selected, cardHeight,
+                                        bookmarks.contains(selected.id)))),
                         ]);
                       }),
                     ),
@@ -385,45 +389,51 @@ class _MapScreenState extends ConsumerState<MapScreen> {
             ])));
   }
 
-  Widget _header() => Padding(
-      padding: const EdgeInsets.fromLTRB(20, 8, 12, 12),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Row(children: [
-          if (!widget.embedded)
-            IconButton(
-                tooltip: 'Буцах',
-                color: _foreground,
-                onPressed: () => context.canPop()
-                    ? context.pop()
-                    : context.go(AppRoutes.explore),
-                icon: SculptedIcon(Icons.arrow_back_rounded,
-                    color: _foreground, onDark: _dark)),
-          Expanded(
-              child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: FittedBox(
-                      fit: BoxFit.scaleDown,
-                      child: NightOwlBrand(size: 28, onDark: _dark)))),
-          IconButton(
-              tooltip: _showList
-                  ? 'Газрын зураг харах'
-                  : 'Бүх газрыг жагсаалтаар харах',
-              color: _muted,
-              onPressed: () => setState(() => _showList = !_showList),
-              icon: SculptedIcon(
-                  _showList
-                      ? Icons.map_outlined
-                      : Icons.format_list_bulleted_rounded,
+  Widget _header() => NightOwlAtmosphere(
+      child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 8, 12, 12),
+          child:
+              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Row(children: [
+              if (!widget.embedded)
+                IconButton(
+                    tooltip: 'Буцах',
+                    color: _foreground,
+                    onPressed: () => context.canPop()
+                        ? context.pop()
+                        : context.go(AppRoutes.explore),
+                    icon: SculptedIcon(Icons.arrow_back_rounded,
+                        color: _foreground, onDark: _dark)),
+              Expanded(
+                  child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: NightOwlBrand(size: 28, onDark: _dark)))),
+              IconButton(
+                  tooltip: _showList
+                      ? 'Газрын зураг харах'
+                      : 'Бүх газрыг жагсаалтаар харах',
                   color: _muted,
-                  onDark: _dark)),
-        ]),
-        const SizedBox(height: 8),
-        Text('Explore',
-            style: AppTextStyles.h1.copyWith(color: _foreground, fontSize: 28)),
-        const SizedBox(height: 4),
-        Text('Өнөө орой шинэ газруудыг нээ.',
-            style: AppTextStyles.bodySm.copyWith(color: _muted)),
-      ]));
+                  onPressed: () => setState(() => _showList = !_showList),
+                  icon: SculptedIcon(
+                      _showList
+                          ? Icons.map_outlined
+                          : Icons.format_list_bulleted_rounded,
+                      color: _muted,
+                      onDark: _dark)),
+            ]),
+            const SizedBox(height: 8),
+            Text('Өнөө орой',
+                style: AppTextStyles.h1.copyWith(
+                    color: _foreground,
+                    fontSize: 30,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: -.8)),
+            const SizedBox(height: 4),
+            Text('Өнөө орой шинэ газруудыг нээ.',
+                style: AppTextStyles.bodySm.copyWith(color: _muted)),
+          ])));
   Widget _searchField() => Padding(
       padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
       child: TextField(
@@ -455,16 +465,15 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                       });
                     }),
             filled: true,
-            fillColor:
-                _dark ? const Color(0xFF202433) : AppColors.bgSurfaceLight,
+            fillColor: _dark ? const Color(0xFF1E1C32) : Colors.white,
             contentPadding:
                 const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
             border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(28),
-                borderSide: BorderSide.none),
+                borderSide: BorderSide(color: _line)),
             enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(28),
-                borderSide: BorderSide.none),
+                borderSide: BorderSide(color: _line)),
             focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(28),
                 borderSide: BorderSide(color: _accent)),
@@ -500,29 +509,48 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   Widget _pill(String label, bool selected, VoidCallback onTap,
           {IconData? icon}) =>
       PressFeedback(
-          child: Material(
-              color: selected ? _violet : _background,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(24),
-                  side: BorderSide(color: selected ? _violet : _line)),
-              child: InkWell(
-                  onTap: onTap,
-                  borderRadius: BorderRadius.circular(24),
-                  child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 7),
-                      child: Row(mainAxisSize: MainAxisSize.min, children: [
-                        if (icon != null) ...[
-                          SculptedIcon(icon,
-                              size: 16,
-                              color: selected ? _light : _muted,
-                              onDark: selected || _dark),
-                          const SizedBox(width: 5)
-                        ],
-                        Text(label,
-                            style: AppTextStyles.bodySm
-                                .copyWith(color: selected ? _light : _muted)),
-                      ])))));
+          child: AnimatedContainer(
+              duration: AppMotion.duration(context, AppMotion.release),
+              curve: Curves.easeOutCubic,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                    colors: selected
+                        ? const [Color(0xFF9879EC), _violet, Color(0xFF5838A3)]
+                        : [_surface, _background]),
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(
+                    color: selected
+                        ? AppColors.silverNeon.withValues(alpha: .5)
+                        : _line),
+                boxShadow: selected
+                    ? [
+                        BoxShadow(
+                            color: _violet.withValues(alpha: .22),
+                            blurRadius: 12,
+                            offset: const Offset(0, 3))
+                      ]
+                    : [],
+              ),
+              child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                      onTap: onTap,
+                      borderRadius: BorderRadius.circular(24),
+                      child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 7),
+                          child: Row(mainAxisSize: MainAxisSize.min, children: [
+                            if (icon != null) ...[
+                              SculptedIcon(icon,
+                                  size: 16,
+                                  color: selected ? _light : _muted,
+                                  onDark: selected || _dark),
+                              const SizedBox(width: 5)
+                            ],
+                            Text(label,
+                                style: AppTextStyles.bodySm.copyWith(
+                                    color: selected ? _light : _muted)),
+                          ]))))));
   Widget _locationButton() => Material(
       color: _control,
       shape: const CircleBorder(),
@@ -700,203 +728,212 @@ class _MapScreenState extends ConsumerState<MapScreen> {
         (description.isLoading
             ? 'Мэдээлэл ачаалж байна…'
             : 'Тайлбар хараахан нэмэгдээгүй.');
-    return Material(
-        color: _dark ? _sheet : Colors.white,
-        elevation: 12,
-        shadowColor: Colors.black54,
-        borderRadius: BorderRadius.circular(24),
-        clipBehavior: Clip.antiAlias,
-        child: ConstrainedBox(
-            constraints: BoxConstraints(maxHeight: height),
-            child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 14),
-                child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Center(
-                          child: Container(
-                              width: 36,
-                              height: 4,
-                              decoration: BoxDecoration(
-                                  color: const Color(0xFFC5C3D9),
-                                  borderRadius: BorderRadius.circular(8)))),
-                      const SizedBox(height: 10),
-                      Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            GestureDetector(
-                                onTap: () => _openVenue(venue),
-                                child: _photo(venue, 72)),
-                            const SizedBox(width: 12),
-                            Expanded(
-                                child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                  Row(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Expanded(
-                                            child: GestureDetector(
-                                                onTap: () => _openVenue(venue),
-                                                child: Text(venue.name,
-                                                    maxLines: 2,
-                                                    overflow:
-                                                        TextOverflow.ellipsis,
-                                                    style: AppTextStyles.h3
-                                                        .copyWith(
-                                                            color: _ink,
-                                                            fontSize: 18,
-                                                            fontWeight:
-                                                                FontWeight
-                                                                    .w700)))),
-                                        IconButton(
-                                            tooltip: 'Сонголт хаах',
-                                            visualDensity:
-                                                VisualDensity.compact,
-                                            constraints: const BoxConstraints(
-                                                minWidth: 36, minHeight: 36),
-                                            padding: EdgeInsets.zero,
-                                            onPressed: () => setState(() {
-                                                  _selectedId = null;
-                                                  _dismissedSelection = true;
-                                                }),
-                                            icon: const SculptedIcon(
-                                                Icons.close_rounded,
-                                                size: 18,
-                                                color: Color(0xFF68677F))),
-                                      ]),
-                                  Text(
-                                      [
-                                        venue.typeLabel,
-                                        if (venue.district?.trim().isNotEmpty ==
-                                            true)
-                                          venue.district!
-                                      ].join(' · '),
-                                      style: AppTextStyles.bodySm.copyWith(
-                                          color: const Color(0xFF68677F))),
-                                  const SizedBox(height: 4),
-                                  Wrap(
-                                      spacing: 5,
-                                      crossAxisAlignment:
-                                          WrapCrossAlignment.center,
-                                      children: [
-                                        if (venue.rating.isFinite &&
-                                            venue.rating > 0 &&
-                                            venue.rating <= 5) ...[
-                                          const SculptedIcon(Icons.star_rounded,
-                                              size: 16, color: _ink),
-                                          Text(venue.rating.toStringAsFixed(1),
-                                              style: AppTextStyles.bodySm
-                                                  .copyWith(color: _ink)),
-                                        ] else
-                                          Text(
-                                              venue.communityEnabled
-                                                  ? 'Үнэлгээ хараахан алга'
-                                                  : 'Газрын мэдээлэл',
-                                              style: AppTextStyles.bodyXs
-                                                  .copyWith(
-                                                      color: const Color(
-                                                          0xFF68677F))),
-                                        if (venue.verified)
-                                          const SculptedIcon(
-                                              Icons.verified_rounded,
-                                              size: 16,
-                                              color: _violet,
-                                              active: true),
-                                      ]),
-                                ])),
-                          ]),
-                      const SizedBox(height: 12),
-                      Text(text,
-                          maxLines: 4,
-                          overflow: TextOverflow.ellipsis,
-                          style: AppTextStyles.bodySm
-                              .copyWith(color: _ink, height: 1.4)),
-                      if (venue.sourceLabel != null) ...[
-                        const SizedBox(height: 5),
-                        Text(venue.sourceLabel!,
-                            style: AppTextStyles.bodyXs
-                                .copyWith(color: const Color(0xFF68677F))),
-                      ],
-                      const SizedBox(height: 14),
-                      Row(children: [
-                        Expanded(
-                            child: FilledButton(
-                                onPressed: () => _directions(venue),
-                                style: FilledButton.styleFrom(
-                                    backgroundColor: _violet,
-                                    foregroundColor: Colors.white,
-                                    minimumSize: const Size(0, 48),
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 12),
-                                    shape: RoundedRectangleBorder(
-                                        borderRadius:
-                                            BorderRadius.circular(28))),
-                                child: const Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      SculptedIcon(Icons.directions_outlined,
-                                          size: 20,
-                                          color: Colors.white,
-                                          onDark: true),
-                                      SizedBox(width: 8),
-                                      Flexible(
-                                          child: Text('Чиглэл авах',
-                                              overflow: TextOverflow.ellipsis)),
-                                    ]))),
-                        const SizedBox(width: 12),
-                        IconButton.filledTonal(
-                            tooltip: saved
-                                ? 'Хадгалсан газраас хасах'
-                                : 'Газар хадгалах',
-                            onPressed: _saving ? null : () => _save(venue),
-                            style: IconButton.styleFrom(
-                                backgroundColor: const Color(0xFFE5E3F0),
-                                foregroundColor: saved ? _violet : _ink,
-                                minimumSize: const Size(48, 48)),
-                            icon: _saving
-                                ? const SizedBox(
-                                    width: 18,
-                                    height: 18,
-                                    child: OwlLoading(size: 18, compact: true))
-                                : SculptedIcon(
-                                    saved
-                                        ? Icons.bookmark_rounded
-                                        : Icons.bookmark_border_rounded,
-                                    size: 23,
-                                    color: saved ? _violet : _ink,
-                                    active: saved)),
-                      ]),
-                      TextButton.icon(
-                          onPressed: () => _showInformation(venue),
-                          style: TextButton.styleFrom(
-                              foregroundColor: const Color(0xFF6550AD)),
-                          icon:
-                              const Icon(Icons.info_outline_rounded, size: 17),
-                          label: const Text('Мэдээлэл, Google Maps, холбоос')),
-                      if (venueWebsiteUrl(
-                              venue.sourceUrl ?? venue.locationSourceUrl) !=
-                          null)
-                        TextButton.icon(
-                            onPressed: () => _openExternal(venueWebsiteUrl(
-                                venue.sourceUrl ?? venue.locationSourceUrl)!),
-                            style: TextButton.styleFrom(
-                                foregroundColor: const Color(0xFF6550AD),
-                                padding: EdgeInsets.zero,
-                                visualDensity: VisualDensity.compact),
-                            icon: const SculptedIcon(Icons.open_in_new_rounded,
-                                size: 13, color: Color(0xFF6550AD)),
-                            label: const Text('Байршлын эх сурвалж'))
-                      else
-                        Padding(
-                            padding: const EdgeInsets.only(top: 10),
-                            child: Text(
-                                'Байршил баталгаажаагүй · очихын өмнө шалгаарай',
+    return DecoratedBox(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(28),
+          border:
+              Border.all(color: AppColors.silverNeon.withValues(alpha: .45)),
+          boxShadow: [
+            BoxShadow(
+                color: _violet.withValues(alpha: .18),
+                blurRadius: 28,
+                offset: const Offset(0, 10))
+          ],
+        ),
+        child: Material(
+            color: _dark ? _sheet : Colors.white,
+            elevation: 12,
+            shadowColor: Colors.black54,
+            borderRadius: BorderRadius.circular(24),
+            clipBehavior: Clip.antiAlias,
+            child: ConstrainedBox(
+                constraints: BoxConstraints(maxHeight: height),
+                child: SingleChildScrollView(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 14),
+                    child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Center(
+                              child: Container(
+                                  width: 36,
+                                  height: 4,
+                                  decoration: BoxDecoration(
+                                      color: const Color(0xFFC5C3D9),
+                                      borderRadius: BorderRadius.circular(8)))),
+                          const SizedBox(height: 10),
+                          Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                GestureDetector(
+                                    onTap: () => _openVenue(venue),
+                                    child: _photo(venue, 72)),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                    child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                      Row(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Expanded(
+                                                child: GestureDetector(
+                                                    onTap: () =>
+                                                        _openVenue(venue),
+                                                    child: Text(venue.name,
+                                                        maxLines: 2,
+                                                        overflow: TextOverflow
+                                                            .ellipsis,
+                                                        style: AppTextStyles.h3
+                                                            .copyWith(
+                                                                color: _ink,
+                                                                fontSize: 18,
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .w700)))),
+                                            IconButton(
+                                                tooltip: 'Сонголт хаах',
+                                                visualDensity:
+                                                    VisualDensity.compact,
+                                                constraints:
+                                                    const BoxConstraints(
+                                                        minWidth: 36,
+                                                        minHeight: 36),
+                                                padding: EdgeInsets.zero,
+                                                onPressed: () => setState(() {
+                                                      _selectedId = null;
+                                                      _dismissedSelection =
+                                                          true;
+                                                    }),
+                                                icon: const SculptedIcon(
+                                                    Icons.close_rounded,
+                                                    size: 18,
+                                                    color: Color(0xFF68677F))),
+                                          ]),
+                                      Text(
+                                          [
+                                            venue.typeLabel,
+                                            if (venue.district
+                                                    ?.trim()
+                                                    .isNotEmpty ==
+                                                true)
+                                              venue.district!
+                                          ].join(' · '),
+                                          style: AppTextStyles.bodySm.copyWith(
+                                              color: const Color(0xFF68677F))),
+                                      const SizedBox(height: 4),
+                                      Wrap(
+                                          spacing: 5,
+                                          crossAxisAlignment:
+                                              WrapCrossAlignment.center,
+                                          children: [
+                                            if (venue.rating.isFinite &&
+                                                venue.rating > 0 &&
+                                                venue.rating <= 5) ...[
+                                              const SculptedIcon(
+                                                  Icons.star_rounded,
+                                                  size: 16,
+                                                  color: _ink),
+                                              Text(
+                                                  venue.rating
+                                                      .toStringAsFixed(1),
+                                                  style: AppTextStyles.bodySm
+                                                      .copyWith(color: _ink)),
+                                            ] else
+                                              Text(
+                                                  venue.communityEnabled
+                                                      ? 'Үнэлгээ хараахан алга'
+                                                      : 'Газрын мэдээлэл',
+                                                  style: AppTextStyles.bodyXs
+                                                      .copyWith(
+                                                          color: const Color(
+                                                              0xFF68677F))),
+                                            if (venue.verified)
+                                              const SculptedIcon(
+                                                  Icons.verified_rounded,
+                                                  size: 16,
+                                                  color: _violet,
+                                                  active: true),
+                                          ]),
+                                    ])),
+                              ]),
+                          const SizedBox(height: 12),
+                          Text(text,
+                              maxLines: 4,
+                              overflow: TextOverflow.ellipsis,
+                              style: AppTextStyles.bodySm
+                                  .copyWith(color: _ink, height: 1.4)),
+                          if (venue.sourceLabel != null) ...[
+                            const SizedBox(height: 5),
+                            Text(venue.sourceLabel!,
                                 style: AppTextStyles.bodyXs
-                                    .copyWith(color: const Color(0xFF68677F)))),
-                    ]))));
+                                    .copyWith(color: const Color(0xFF68677F))),
+                          ],
+                          const SizedBox(height: 14),
+                          Row(children: [
+                            Expanded(
+                                child: GradientButton(
+                                    label: 'Чиглэл авах',
+                                    height: 48,
+                                    borderRadius: 28,
+                                    icon: const Icon(Icons.directions_outlined,
+                                        size: 20),
+                                    onPressed: () => _directions(venue))),
+                            const SizedBox(width: 12),
+                            IconButton.filledTonal(
+                                tooltip: saved
+                                    ? 'Хадгалсан газраас хасах'
+                                    : 'Газар хадгалах',
+                                onPressed: _saving ? null : () => _save(venue),
+                                style: IconButton.styleFrom(
+                                    backgroundColor: const Color(0xFFE5E3F0),
+                                    foregroundColor: saved ? _violet : _ink,
+                                    minimumSize: const Size(48, 48)),
+                                icon: _saving
+                                    ? const SizedBox(
+                                        width: 18,
+                                        height: 18,
+                                        child:
+                                            OwlLoading(size: 18, compact: true))
+                                    : SculptedIcon(
+                                        saved
+                                            ? Icons.bookmark_rounded
+                                            : Icons.bookmark_border_rounded,
+                                        size: 23,
+                                        color: saved ? _violet : _ink,
+                                        active: saved)),
+                          ]),
+                          TextButton.icon(
+                              onPressed: () => _showInformation(venue),
+                              style: TextButton.styleFrom(
+                                  foregroundColor: const Color(0xFF6550AD)),
+                              icon: const Icon(Icons.info_outline_rounded,
+                                  size: 17),
+                              label:
+                                  const Text('Мэдээлэл, Google Maps, холбоос')),
+                          if (venueWebsiteUrl(
+                                  venue.sourceUrl ?? venue.locationSourceUrl) !=
+                              null)
+                            TextButton.icon(
+                                onPressed: () => _openExternal(venueWebsiteUrl(
+                                    venue.sourceUrl ??
+                                        venue.locationSourceUrl)!),
+                                style: TextButton.styleFrom(
+                                    foregroundColor: const Color(0xFF6550AD),
+                                    padding: EdgeInsets.zero,
+                                    visualDensity: VisualDensity.compact),
+                                icon: const SculptedIcon(Icons.open_in_new_rounded,
+                                    size: 13, color: Color(0xFF6550AD)),
+                                label: const Text('Байршлын эх сурвалж'))
+                          else
+                            Padding(
+                                padding: const EdgeInsets.only(top: 10),
+                                child: Text(
+                                    'Байршил баталгаажаагүй · очихын өмнө шалгаарай',
+                                    style: AppTextStyles.bodyXs
+                                        .copyWith(color: const Color(0xFF68677F)))),
+                        ])))));
   }
 }

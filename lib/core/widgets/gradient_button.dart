@@ -4,6 +4,7 @@ import '../theme/app_text_styles.dart';
 import 'sculpted_icon.dart';
 import 'app_motion.dart';
 import 'owl_loading.dart';
+import 'premium_surface.dart';
 
 Widget _dimensionalButtonIcon(Widget child, {bool primary = false}) {
   if (child is Icon && child.icon != null) {
@@ -62,118 +63,123 @@ class GradientButton extends StatelessWidget {
     final effective = (busy || disabled) ? null : onPressed;
     return PressFeedback(
       enabled: effective != null,
-      child: SizedBox(
-        width: fullWidth ? double.infinity : null,
-        child: AnimatedContainer(
-          constraints: BoxConstraints(minHeight: h),
-          duration: AppMotion.duration(context, AppMotion.exit),
-          curve: Curves.easeOut,
-          decoration: BoxDecoration(
-            gradient: !disabled
-                ? const LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                        Color(0xFF8661DC),
-                        Color(0xFF7654D6),
-                        Color(0xFF5D3AAB)
-                      ])
-                : LinearGradient(
-                    colors: [AppColors.dynBgSurface, AppColors.dynBgSurface]),
-            borderRadius: BorderRadius.circular(borderRadius),
-            // Шилэн ирмэг — дээд гэрлийн нарийн hairline
-            border: Border.all(
-                color: !disabled
-                    ? Colors.white.withValues(alpha: 0.14)
-                    : AppColors.dynHairline),
-            // Неон glow — magenta ойрын + pink холын давхар сүүдэр
-            boxShadow: !disabled
-                ? [
-                    const BoxShadow(
-                        color: Color(0xFF49307B),
-                        offset: Offset(0, 3),
-                        blurRadius: 0),
-                    BoxShadow(
-                      color: AppColors.accentStart
-                          .withValues(alpha: busy ? 0.10 : 0.16),
-                      blurRadius: 22,
-                      spreadRadius: -2,
-                      offset: const Offset(0, 8),
-                    ),
-                    BoxShadow(
-                      color: AppColors.accentEnd
-                          .withValues(alpha: busy ? 0.06 : 0.08),
-                      blurRadius: 32,
-                      spreadRadius: 0,
-                      offset: const Offset(0, 4),
-                    ),
-                  ]
-                : const [],
-          ),
-          child: ElevatedButton(
-            onPressed: effective,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.transparent,
-              // busy үед onPressed=null дамждаг тул M3-ийн disabled саарал
-              // gradient-ийг дардаг байв — үндсэн CTA хүлээж байхдаа
-              // идэвхгүй мэт харагдана. Тунгалаг болгож gradient-ийг хэвээр үлдээв.
-              disabledBackgroundColor: Colors.transparent,
-              disabledForegroundColor: Colors.white,
-              shadowColor: Colors.transparent,
-              minimumSize: Size(fullWidth ? double.infinity : 0, h),
-              padding:
-                  EdgeInsets.symmetric(horizontal: md ? 16 : 20, vertical: 8),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(borderRadius),
-              ),
-            ),
-            // Спиннер ↔ label солигдоход зөөлөн fade + scale шилжилт
-            child: AnimatedSwitcher(
+      child: ActionSheen(
+          radius: borderRadius,
+          enabled: effective != null,
+          child: SizedBox(
+            width: fullWidth ? double.infinity : null,
+            child: AnimatedContainer(
+              constraints: BoxConstraints(minHeight: h),
               duration: AppMotion.duration(context, AppMotion.exit),
-              switchInCurve: Curves.easeOut,
-              switchOutCurve: Curves.easeIn,
-              transitionBuilder: (child, anim) => FadeTransition(
-                opacity: anim,
-                child: ScaleTransition(
-                    scale: Tween(begin: 0.92, end: 1.0).animate(anim),
-                    child: child),
+              curve: Curves.easeOut,
+              decoration: BoxDecoration(
+                gradient: !disabled
+                    ? const LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                            Color(0xFF8661DC),
+                            Color(0xFF7654D6),
+                            Color(0xFF5D3AAB)
+                          ])
+                    : LinearGradient(colors: [
+                        AppColors.dynBgSurface,
+                        AppColors.dynBgSurface
+                      ]),
+                borderRadius: BorderRadius.circular(borderRadius),
+                // Шилэн ирмэг — дээд гэрлийн нарийн hairline
+                border: Border.all(
+                    color: !disabled
+                        ? Colors.white.withValues(alpha: 0.14)
+                        : AppColors.dynHairline),
+                // Неон glow — magenta ойрын + pink холын давхар сүүдэр
+                boxShadow: !disabled
+                    ? [
+                        const BoxShadow(
+                            color: Color(0xFF49307B),
+                            offset: Offset(0, 3),
+                            blurRadius: 0),
+                        BoxShadow(
+                          color: AppColors.accentStart
+                              .withValues(alpha: busy ? 0.10 : 0.16),
+                          blurRadius: 22,
+                          spreadRadius: -2,
+                          offset: const Offset(0, 8),
+                        ),
+                        BoxShadow(
+                          color: AppColors.accentEnd
+                              .withValues(alpha: busy ? 0.06 : 0.08),
+                          blurRadius: 32,
+                          spreadRadius: 0,
+                          offset: const Offset(0, 4),
+                        ),
+                      ]
+                    : const [],
               ),
-              child: busy
-                  ? OwlLoading(
-                      key: const ValueKey('busy'),
-                      size: md ? 18 : 24,
-                      compact: true,
-                      onDark: true,
-                      message: '$label: түр хүлээнэ үү')
-                  : Row(
-                      key: const ValueKey('label'),
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        if (icon != null) ...[
-                          _dimensionalButtonIcon(icon!, primary: true),
-                          const SizedBox(width: 8)
-                        ],
-                        Flexible(
-                            child: Text(label,
-                                maxLines: 2,
-                                textAlign: TextAlign.center,
-                                overflow: TextOverflow.ellipsis,
-                                style: !disabled
-                                    ? labelStyle
-                                    // Идэвхгүй товч бүдэг label-тай — disabled гэдэг нь илт
-                                    : labelStyle.copyWith(
-                                        color: AppColors.dynTextTertiary))),
-                        if (trailing != null) ...[
-                          const SizedBox(width: 8),
-                          trailing!
-                        ],
-                      ],
-                    ),
+              child: ElevatedButton(
+                onPressed: effective,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.transparent,
+                  // busy үед onPressed=null дамждаг тул M3-ийн disabled саарал
+                  // gradient-ийг дардаг байв — үндсэн CTA хүлээж байхдаа
+                  // идэвхгүй мэт харагдана. Тунгалаг болгож gradient-ийг хэвээр үлдээв.
+                  disabledBackgroundColor: Colors.transparent,
+                  disabledForegroundColor: Colors.white,
+                  shadowColor: Colors.transparent,
+                  minimumSize: Size(fullWidth ? double.infinity : 0, h),
+                  padding: EdgeInsets.symmetric(
+                      horizontal: md ? 16 : 20, vertical: 8),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(borderRadius),
+                  ),
+                ),
+                // Спиннер ↔ label солигдоход зөөлөн fade + scale шилжилт
+                child: AnimatedSwitcher(
+                  duration: AppMotion.duration(context, AppMotion.exit),
+                  switchInCurve: Curves.easeOut,
+                  switchOutCurve: Curves.easeIn,
+                  transitionBuilder: (child, anim) => FadeTransition(
+                    opacity: anim,
+                    child: ScaleTransition(
+                        scale: Tween(begin: 0.92, end: 1.0).animate(anim),
+                        child: child),
+                  ),
+                  child: busy
+                      ? OwlLoading(
+                          key: const ValueKey('busy'),
+                          size: md ? 18 : 24,
+                          compact: true,
+                          onDark: true,
+                          message: '$label: түр хүлээнэ үү')
+                      : Row(
+                          key: const ValueKey('label'),
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (icon != null) ...[
+                              _dimensionalButtonIcon(icon!, primary: true),
+                              const SizedBox(width: 8)
+                            ],
+                            Flexible(
+                                child: Text(label,
+                                    maxLines: 2,
+                                    textAlign: TextAlign.center,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: !disabled
+                                        ? labelStyle
+                                        // Идэвхгүй товч бүдэг label-тай — disabled гэдэг нь илт
+                                        : labelStyle.copyWith(
+                                            color: AppColors.dynTextTertiary))),
+                            if (trailing != null) ...[
+                              const SizedBox(width: 8),
+                              trailing!
+                            ],
+                          ],
+                        ),
+                ),
+              ),
             ),
-          ),
-        ),
-      ),
+          )),
     );
   }
 }

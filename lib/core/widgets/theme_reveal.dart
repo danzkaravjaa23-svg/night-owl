@@ -26,10 +26,17 @@ class ThemeReveal extends StatefulWidget {
 class ThemeRevealState extends State<ThemeReveal>
     with SingleTickerProviderStateMixin {
   final _boundaryKey = GlobalKey();
-  late final AnimationController _c = AnimationController(
-    vsync: this,
-    duration: const Duration(milliseconds: 680),
-  );
+  late final AnimationController _c;
+
+  @override
+  void initState() {
+    super.initState();
+    // Create the ticker while the element is active, even if run is never used.
+    _c = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 680),
+    );
+  }
 
   ui.Image? _snapshot;
   Offset _origin = Offset.zero;
