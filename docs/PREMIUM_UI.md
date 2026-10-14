@@ -67,3 +67,5 @@ Preview нь анх 390px өргөнөөр харагдана. `?theme=light` н
 
 Бодит утсан дээрх FPS benchmark болон store build энэ UI ажлын хүрээнд
 хэмжигдээгүй. Өөрчлөлтийг commit/push хийгээгүй.
+
+2026-10-12-ны дараагийн сайжруулалт: [UI refinement тайлан](UI_REFINEMENT.md).

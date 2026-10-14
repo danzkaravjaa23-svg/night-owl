@@ -32,6 +32,7 @@ class _DmListScreenState extends State<DmListScreen> {
   List<Map<String, dynamic>> _groups = [];
   bool _loading = true;
   bool _error = false;
+  bool _loadInFlight = false;
   final _notesKey = GlobalKey<NotesRowState>();
 
   @override
@@ -47,9 +48,13 @@ class _DmListScreenState extends State<DmListScreen> {
   }
 
   Future<void> _load() async {
-    if (!mounted) return;
+    if (!mounted || _loadInFlight) return;
+    _loadInFlight = true;
     // Анхны ачаалалд л skeleton харуулна — refresh үед хуучин жагсаалт хэвээр
-    if (_convos.isEmpty && _groups.isEmpty) setState(() => _loading = true);
+    setState(() {
+      if (_convos.isEmpty && _groups.isEmpty) _loading = true;
+      _error = false;
+    });
     // Notes мөрийг зэрэг сэргээнэ
     _notesKey.currentState?.reload();
     try {
@@ -129,9 +134,8 @@ class _DmListScreenState extends State<DmListScreen> {
         _loading = false;
         _error = true;
       });
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Ачаалж чадсангүй. Дахин оролдоно уу.'),
-          backgroundColor: AppColors.error));
+    } finally {
+      _loadInFlight = false;
     }
   }
 
@@ -208,12 +212,14 @@ class _DmListScreenState extends State<DmListScreen> {
       Padding(
           padding: EdgeInsets.fromLTRB(20, top, 20, 10),
           child: Row(children: [
-            Text(t, style: AppTextStyles.sectionLabel),
+            Text(t,
+                style: AppTextStyles.sectionLabel
+                    .copyWith(fontSize: 12, color: AppColors.textSecondary)),
             const Spacer(),
             if (trailing != null)
               Text(trailing,
-                  style: AppTextStyles.labelSm
-                      .copyWith(color: AppColors.neonCyan)),
+                  style: AppTextStyles.bodySm.copyWith(
+                      color: AppColors.neonCyan, fontWeight: FontWeight.w600)),
           ]));
 
   Future<void> _newGroup() async {
@@ -254,7 +260,8 @@ class _DmListScreenState extends State<DmListScreen> {
       body: SafeArea(
           child: Column(children: [
         // ── Header — том "Чат" гарчиг + шилэн дугуй үйлдлүүд ──
-        NightOwlAtmosphere(child: Padding(
+        NightOwlAtmosphere(
+            child: Padding(
           padding: const EdgeInsets.fromLTRB(20, 18, 20, 14),
           child: Row(children: [
             if (context.canPop()) ...[
@@ -276,7 +283,7 @@ class _DmListScreenState extends State<DmListScreen> {
                     style: AppTextStyles.h1),
                 if (unreadCount > 0)
                   Text('$unreadCount шинэ',
-                      style: AppTextStyles.bodyXs.copyWith(
+                      style: AppTextStyles.bodySm.copyWith(
                           color: AppColors.neonCyan,
                           fontWeight: FontWeight.w700)),
               ],
@@ -319,16 +326,25 @@ class _DmListScreenState extends State<DmListScreen> {
                 // Notes / online rail — контенттой хамт гүйлгэгдэнэ (Instagram-маяг)
                 _sectionHeader('ШӨНИЙН NOTES', top: 10),
                 NotesRow(key: _notesKey),
+                if (_error && (_convos.isNotEmpty || _groups.isNotEmpty))
+                  _RefreshError(onRetry: _load),
                 if (_loading)
                   const _ListSkeleton()
                 else if (_error && _convos.isEmpty && _groups.isEmpty)
-                  SizedBox(
-                      height: MediaQuery.of(context).size.height * 0.4,
+                  ConstrainedBox(
+                      constraints: BoxConstraints(
+                          minHeight: MediaQuery.of(context).size.height * 0.4),
                       child: _ErrorState(onRetry: _load))
                 else if (_filtered.isEmpty && _groups.isEmpty)
-                  SizedBox(
-                      height: MediaQuery.of(context).size.height * 0.45,
-                      child: _EmptyState())
+                  ConstrainedBox(
+                      constraints: BoxConstraints(
+                          minHeight: MediaQuery.of(context).size.height * 0.45),
+                      child: _EmptyState(
+                          isSearching: _search.isNotEmpty,
+                          onClearSearch: () {
+                            _searchCtrl.clear();
+                            setState(() => _search = '');
+                          }))
                 else ...[
                   if (_groups.isNotEmpty) ...[
                     _sectionHeader('ГРУПП ЧАТ', trailing: '${_groups.length}'),
@@ -527,7 +543,7 @@ class _ConvoTile extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                 Text(username,
-                    style: AppTextStyles.labelMd.copyWith(
+                    style: AppTextStyles.labelLg.copyWith(
                         fontWeight:
                             isRead ? FontWeight.w600 : FontWeight.w700)),
                 const SizedBox(height: 3),
@@ -545,8 +561,10 @@ class _ConvoTile extends StatelessWidget {
           Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
             Text(time,
                 style: AppTextStyles.bodyXs.copyWith(
-                    color:
-                        isRead ? AppColors.textTertiary : AppColors.accentStart,
+                    fontSize: 12,
+                    color: isRead
+                        ? AppColors.textSecondary
+                        : AppColors.accentStart,
                     fontWeight: isRead ? FontWeight.w400 : FontWeight.w600)),
             const SizedBox(height: 5),
             if (!isRead)
@@ -603,6 +621,10 @@ class _OptTile extends StatelessWidget {
 }
 
 class _EmptyState extends StatelessWidget {
+  final bool isSearching;
+  final VoidCallback onClearSearch;
+  const _EmptyState({required this.isSearching, required this.onClearSearch});
+
   @override
   Widget build(BuildContext context) => Center(
           child: Padding(
@@ -627,13 +649,26 @@ class _EmptyState extends StatelessWidget {
                     size: 42, color: AppColors.neonCyan)),
           ),
           const SizedBox(height: 20),
-          Text('Мессеж алга байна',
+          Text(isSearching ? 'Тохирох мессеж олдсонгүй' : 'Мессеж алга байна',
               style: AppTextStyles.h3, textAlign: TextAlign.center),
           const SizedBox(height: 8),
-          Text('Хэрэглэгчийн профайлаас яриа эхлүүлээрэй.',
+          Text(
+              isSearching
+                  ? 'Хэрэглэгчийн нэр эсвэл мессежийн өөр үгээр хайгаарай.'
+                  : 'Найзаа хайж, профайлаас нь мессеж бичээрэй.',
               style:
                   AppTextStyles.bodyMd.copyWith(color: AppColors.textSecondary),
               textAlign: TextAlign.center),
+          const SizedBox(height: 14),
+          TextButton.icon(
+              onPressed:
+                  isSearching ? onClearSearch : () => context.push('/search'),
+              icon: Icon(
+                  isSearching ? Icons.close_rounded : Icons.search_rounded,
+                  size: 20),
+              label: Text(isSearching ? 'Хайлтыг цэвэрлэх' : 'Хүн хайх',
+                  style: AppTextStyles.btnSm
+                      .copyWith(color: AppColors.accentStart))),
         ]),
       ));
 }
@@ -650,7 +685,46 @@ class _ErrorState extends StatelessWidget {
                 size: 56,
                 state: OwlLoadingState.error,
                 message: 'Ачаалж чадсангүй',
+                detail: 'Холболтоо шалгаад дахин оролдоорой.',
                 onRetry: onRetry)),
+      );
+}
+
+/// Сэргээх хүсэлт бүтэлгүйтсэн ч өмнөх яриануудыг ашиглах боломжтой.
+class _RefreshError extends StatelessWidget {
+  final VoidCallback onRetry;
+  const _RefreshError({required this.onRetry});
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+        liveRegion: true,
+        child: Container(
+          margin: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+          padding: const EdgeInsets.fromLTRB(14, 12, 14, 4),
+          decoration: BoxDecoration(
+              color: AppColors.bgSurface,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: AppColors.hairline)),
+          child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Icon(Icons.cloud_off_outlined,
+                size: 20, color: AppColors.textSecondary),
+            const SizedBox(width: 10),
+            Expanded(
+                child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                  Text('Шинэчилж чадсангүй', style: AppTextStyles.labelLg),
+                  const SizedBox(height: 3),
+                  Text('Өмнөх ярианууд хэвээр байна.',
+                      style: AppTextStyles.bodySm),
+                  TextButton(
+                      onPressed: onRetry,
+                      child: Text('Дахин оролдох',
+                          style: AppTextStyles.btnSm
+                              .copyWith(color: AppColors.accentStart))),
+                ])),
+          ]),
+        ),
       );
 }
 
@@ -761,7 +835,7 @@ class _GroupTile extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                 Text(name,
-                    style: AppTextStyles.labelMd
+                    style: AppTextStyles.labelLg
                         .copyWith(fontWeight: FontWeight.w700)),
                 const SizedBox(height: 3),
                 Text(last ?? 'Группийн яриа эхлүүлээрэй',

@@ -94,7 +94,9 @@ void main() {
   });
 
   Future<void> pumpExplore(WidgetTester tester, List<Venue> venues,
-      {bool dark = true}) async {
+      {bool dark = true,
+      bool disableAnimations = false,
+      bool accessibleNavigation = false}) async {
     AppColors.isDarkMode = dark;
     tester.view.physicalSize = const Size(320, 844);
     tester.view.devicePixelRatio = 1;
@@ -111,8 +113,10 @@ void main() {
         child: MaterialApp(
             theme: dark ? AppTheme.dark : AppTheme.light,
             builder: (context, child) => MediaQuery(
-                data: MediaQuery.of(context)
-                    .copyWith(textScaler: const TextScaler.linear(1.5)),
+                data: MediaQuery.of(context).copyWith(
+                    textScaler: const TextScaler.linear(1.5),
+                    disableAnimations: disableAnimations,
+                    accessibleNavigation: accessibleNavigation),
                 child: child!),
             home: const ExploreScreen())));
     await tester.pumpAndSettle();
@@ -172,17 +176,21 @@ void main() {
     });
 
     testWidgets(
-        'selected venue card scrolls, saves and closes at 320px in ${dark ? 'night' : 'day'} mode',
+        'compact venue details expand, reset, save and close at 320px in ${dark ? 'night' : 'day'} mode',
         (tester) async {
+      var descriptionRequests = 0;
       await Supabase.initialize(
           url: 'https://example.test',
           anonKey: 'test-only-anon-key',
           debug: false,
-          httpClient: MockClient((request) async => http.Response(
-              '{"description":"An actual test description loaded from the fixture."}',
-              200,
-              headers: {'content-type': 'application/json'},
-              request: request)),
+          httpClient: MockClient((request) async {
+            if (request.url.path.endsWith('/venues')) descriptionRequests++;
+            return http.Response(
+                '{"description":"An actual test description loaded from the fixture."}',
+                200,
+                headers: {'content-type': 'application/json'},
+                request: request);
+          }),
           authOptions: const FlutterAuthClientOptions(
               autoRefreshToken: false,
               detectSessionInUri: false,
@@ -196,18 +204,141 @@ void main() {
           lng: 106.9174,
           address: 'Test address',
           createdAt: DateTime(2026));
-      await pumpExplore(tester, [venue], dark: dark);
+      final other = Venue(
+          id: 'another',
+          name: 'Another test venue',
+          type: 'cafe',
+          lat: 47.919,
+          lng: 106.919,
+          sourceLabel: 'OpenStreetMap',
+          sourceUrl: 'https://www.openstreetmap.org/node/123',
+          websiteUrl: 'https://example.test/venue',
+          createdAt: DateTime(2026));
+      await pumpExplore(tester, [venue, other], dark: dark);
+      final mapState = tester.state(find.byType(GoogleMapView));
+      final controller =
+          tester.widget<FlutterMap>(find.byType(FlutterMap)).mapController!;
+      final cameraCenter = controller.camera.center;
+      final cameraZoom = controller.camera.zoom;
+      const cardKey = ValueKey('selected-venue-card');
+      final collapsedHeight = tester.getSize(find.byKey(cardKey)).height;
       expect(find.text('Үнэлгээ хараахан алга'), findsOneWidget);
       expect(find.byIcon(Icons.verified_rounded), findsNothing);
+      expect(find.text('Дэлгэрэнгүй'), findsOneWidget);
+      expect(find.text('Мэдээлэл, Google Maps, холбоос'), findsNothing);
+      expect(descriptionRequests, 0,
+          reason: 'A collapsed summary should not request hidden description.');
+      const warning = 'Байршил баталгаажаагүй · очихын өмнө шалгаарай';
+      expect(find.text(warning), findsOneWidget);
+      expect(
+          tester
+              .getRect(find.byKey(cardKey))
+              .contains(tester.getCenter(find.text(warning))),
+          isTrue);
+      expect(
+          tester.widget<Text>(find.text('Long test venue name')).style?.color,
+          dark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight);
       await tester.ensureVisible(find.byTooltip('Газар хадгалах'));
+      await tester.pumpAndSettle();
       await tester.tap(find.byTooltip('Газар хадгалах'));
       await tester.pumpAndSettle();
       final prefs = await SharedPreferences.getInstance();
       expect(prefs.getStringList('venue_bookmarks.test-account'), ['located']);
+      // The real save confirmation covers the bottom of the card while shown.
+      // Advance its normal duration before testing the next visible action.
+      await tester.pump(const Duration(seconds: 4));
+      await tester.pumpAndSettle();
+      expect(find.byType(SnackBar), findsNothing);
+
+      await tester.ensureVisible(find.text('Дэлгэрэнгүй'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Дэлгэрэнгүй'));
+      await tester.pumpAndSettle();
+      expect(find.text('Хураах'), findsOneWidget);
+      expect(find.text('An actual test description loaded from the fixture.'),
+          findsOneWidget);
+      expect(find.text('Мэдээлэл, Google Maps, холбоос'), findsOneWidget);
+      expect(descriptionRequests, 1);
+      expect(tester.getSize(find.byKey(cardKey)).height,
+          greaterThan(collapsedHeight));
+      expect(tester.state(find.byType(GoogleMapView)), same(mapState));
+      expect(controller.camera.center, cameraCenter);
+      expect(controller.camera.zoom, cameraZoom);
+
+      await tester.ensureVisible(find.text('Хураах'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Хураах'));
+      await tester.pumpAndSettle();
+      expect(find.text('An actual test description loaded from the fixture.'),
+          findsNothing);
+      expect(find.text(warning), findsOneWidget);
+      expect(tester.getSize(find.byKey(cardKey)).height, collapsedHeight);
+
+      await tester.ensureVisible(find.text('Дэлгэрэнгүй'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Дэлгэрэнгүй'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('Бүх газрыг жагсаалтаар харах'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Another test venue'));
+      await tester.pumpAndSettle();
+      expect(find.text('Дэлгэрэнгүй'), findsOneWidget);
+      expect(find.text('Хураах'), findsNothing);
+      expect(find.text('Мэдээлэл, Google Maps, холбоос'), findsNothing);
+      expect(find.text('Вэбсайт нээх'), findsNothing);
+      expect(find.text('Байршлын эх сурвалж'), findsNothing);
+      expect(find.text('Байршлын эх сурвалжтай · очихын өмнө шалгаарай'),
+          findsOneWidget);
+      expect(
+          tester.widget<GoogleMapView>(find.byType(GoogleMapView)).selectedId,
+          'another');
+      await tester.ensureVisible(find.text('Дэлгэрэнгүй'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Дэлгэрэнгүй'));
+      await tester.pumpAndSettle();
+      expect(find.text('Вэбсайт нээх'), findsOneWidget);
+      expect(find.text('Байршлын эх сурвалж'), findsOneWidget);
       await tester.ensureVisible(find.byTooltip('Сонголт хаах'));
+      await tester.pumpAndSettle();
       await tester.tap(find.byTooltip('Сонголт хаах'));
       await tester.pumpAndSettle();
       expect(find.text('Чиглэл авах'), findsNothing);
+      expect(tester.takeException(), isNull);
+    });
+  }
+
+  for (final accessible in [false, true]) {
+    testWidgets(
+        'venue expands without a size ticker when ${accessible ? 'accessible navigation' : 'animations disabled'}',
+        (tester) async {
+      final venue = Venue(
+          id: 'public-place',
+          name: 'Accessible test venue',
+          type: 'cafe',
+          lat: 47.9152,
+          lng: 106.9174,
+          address: 'Accessible venue address',
+          communityEnabled: false,
+          createdAt: DateTime(2026));
+      await pumpExplore(tester, [venue],
+          disableAnimations: !accessible, accessibleNavigation: accessible);
+      const cardKey = ValueKey('selected-venue-card');
+      Finder sizeAnimation() => find.ancestor(
+          of: find.byKey(cardKey), matching: find.byType(AnimatedSize));
+      expect(sizeAnimation(), findsNothing);
+      await tester.ensureVisible(find.text('Дэлгэрэнгүй'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Дэлгэрэнгүй'));
+      await tester.pumpAndSettle();
+      expect(find.text('Accessible venue address'), findsOneWidget);
+      expect(sizeAnimation(), findsNothing);
+      expect(tester.takeException(), isNull);
+      await tester.ensureVisible(find.text('Хураах'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Хураах'));
+      await tester.pumpAndSettle();
+      expect(find.text('Accessible venue address'), findsNothing);
+      expect(sizeAnimation(), findsNothing);
       expect(tester.takeException(), isNull);
     });
   }

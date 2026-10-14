@@ -22,6 +22,7 @@ import 'package:night_owl_ub/features/notifications/providers/notification_provi
 import 'package:night_owl_ub/features/profile/screens/profile_screen.dart';
 import 'package:night_owl_ub/features/dm/screens/dm_list_screen.dart';
 import 'package:night_owl_ub/features/shell/main_shell.dart';
+import 'package:night_owl_ub/features/search/screens/search_screen.dart';
 import 'package:night_owl_ub/models/user_profile.dart';
 import 'package:night_owl_ub/models/venue.dart';
 
@@ -43,14 +44,29 @@ final _posts = [
 ];
 
 class _PreviewClient extends http.BaseClient {
+  final bool messagesFail;
+  _PreviewClient({this.messagesFail = false});
+
   @override
   Future<http.StreamedResponse> send(http.BaseRequest request) async {
-    // All mutations fail locally. The client never forwards a network request.
+    // Only GET and named read RPCs are supported; mutations stay local/blocked.
     final path = request.url.path;
     final feedRead =
         request.method == 'POST' && path.endsWith('/rpc/get_feed_cursor');
-    if (request.method != 'GET' && !feedRead) {
+    final messageRead =
+        request.method == 'POST' && path.endsWith('/rpc/dm_conversations');
+    if (request.method != 'GET' && !feedRead && !messageRead) {
       return http.StreamedResponse(Stream.value(utf8.encode('{}')), 405,
+          request: request);
+    }
+    if (messageRead && messagesFail) {
+      return http.StreamedResponse(
+          Stream.value(utf8.encode(jsonEncode({
+            'message': 'Жишээ ачааллын алдаа',
+            'code': 'PREVIEW_UNAVAILABLE',
+          }))),
+          503,
+          headers: {'content-type': 'application/json; charset=utf-8'},
           request: request);
     }
     final Object body = path.endsWith('/posts') || feedRead ? _posts : [];
@@ -67,7 +83,8 @@ Future<void> main() async {
     url: 'https://preview.invalid',
     anonKey: 'local-preview-only',
     debug: false,
-    httpClient: _PreviewClient(),
+    httpClient: _PreviewClient(
+        messagesFail: Uri.base.queryParameters['messages'] == 'error'),
     authOptions: const FlutterAuthClientOptions(
       autoRefreshToken: false,
       detectSessionInUri: false,
@@ -160,6 +177,7 @@ class _PreviewAppState extends ConsumerState<_PreviewApp> {
             builder: (_, __) => const Scaffold(
                 body: Center(child: Text('Дизайны урьдчилсан харагдац')))),
     ]),
+    GoRoute(path: '/search', builder: (_, __) => const SearchScreen()),
     GoRoute(
         path: '/:section/:action',
         builder: (context, __) => Scaffold(

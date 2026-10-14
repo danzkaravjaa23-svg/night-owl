@@ -305,7 +305,7 @@ class _NavItem extends StatelessWidget {
                       onPressed: onTap,
                       style: TextButton.styleFrom(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 4, vertical: 6),
+                            horizontal: 4, vertical: 4),
                         minimumSize: const Size(48, 64),
                         foregroundColor: isActive
                             ? AppColors.silver
@@ -314,7 +314,7 @@ class _NavItem extends StatelessWidget {
                       ),
                       child: Column(mainAxisSize: MainAxisSize.min, children: [
                         SizedBox.square(
-                            dimension: 36,
+                            dimension: 32,
                             child: Center(
                                 child: AnimatedScale(
                               scale: isActive ? 1.08 : 1,
@@ -327,8 +327,8 @@ class _NavItem extends StatelessWidget {
                                         ? [
                                             Shadow(
                                                 color: AppColors.silver
-                                                    .withValues(alpha: .55),
-                                                blurRadius: 12)
+                                                    .withValues(alpha: .42),
+                                                blurRadius: 8)
                                           ]
                                         : const []),
                                 child: SculptedIcon(
@@ -337,13 +337,13 @@ class _NavItem extends StatelessWidget {
                                     active: isActive),
                               ),
                             ))),
-                        const SizedBox(height: 3),
+                        const SizedBox(height: 2),
                         FittedBox(
                             fit: BoxFit.scaleDown,
                             child: Text(label,
                                 style: const TextStyle(
-                                    fontSize: 10.5,
-                                    fontWeight: FontWeight.w500))),
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600))),
                       ]),
                     )))),
       );
@@ -402,8 +402,11 @@ class _CreateFabState extends State<_CreateFab> {
                         ],
                       ),
                       child: const Center(
-                          child: SculptedIcon(Icons.auto_fix_high_rounded,
-                              color: Colors.white, size: 24, onDark: true)),
+                          child: SculptedIcon(Icons.add_rounded,
+                              color: Colors.white,
+                              size: 28,
+                              onDark: true,
+                              dimensional: true)),
                     ),
                   ),
                 ),

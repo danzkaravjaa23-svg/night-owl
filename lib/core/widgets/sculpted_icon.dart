@@ -2,21 +2,23 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show listEquals;
 import '../theme/app_colors.dart';
 
-/// A small dimensional glyph. The owning button supplies its accessible label.
-/// Keeping the original IconData preserves familiar actions and tap targets.
+/// Crisp glyphs for secondary controls; depth is reserved for a primary action.
+/// The owning button supplies its accessible label and tap target.
 class SculptedIcon extends StatelessWidget {
   final IconData icon;
   final double size;
   final Color? color;
   final bool active;
   final bool onDark;
+  final bool dimensional;
 
   const SculptedIcon(this.icon,
       {super.key,
       this.size = 24,
       this.color,
       this.active = false,
-      this.onDark = false});
+      this.onDark = false,
+      this.dimensional = false});
 
   @override
   Widget build(BuildContext context) {
@@ -27,6 +29,9 @@ class SculptedIcon extends StatelessWidget {
             : (dark
                 ? AppColors.textSecondaryDark
                 : AppColors.textSecondaryLight));
+    if (!dimensional) {
+      return ExcludeSemantics(child: Icon(icon, size: size, color: face));
+    }
     final edge = Color.lerp(face, const Color(0xFF241442), dark ? .54 : .38)!;
     final highlight = Color.lerp(face, Colors.white, dark ? .38 : .18)!;
     final depth = size * .065;

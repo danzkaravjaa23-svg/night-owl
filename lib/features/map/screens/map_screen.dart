@@ -93,10 +93,7 @@ class MapScreen extends ConsumerStatefulWidget {
 }
 
 class _MapScreenState extends ConsumerState<MapScreen> {
-  static const _light = Color(0xFFF5F5FC),
-      _violet = Color(0xFF7654D6),
-      _sheet = Color(0xFFF3F1FB),
-      _ink = Color(0xFF19172B);
+  static const _light = Color(0xFFF5F5FC), _violet = Color(0xFF7654D6);
   bool get _dark => Theme.of(context).brightness == Brightness.dark;
   Color get _background => _dark ? AppColors.bgBaseDark : AppColors.bgBaseLight;
   Color get _foreground =>
@@ -113,6 +110,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   String _query = '';
   String? _type;
   String? _selectedId;
+  String? _expandedVenueId;
   bool _dismissedSelection = false, _showList = false, _onlySaved = false;
   LatLng? _myLocation;
   bool _locating = false, _saving = false;
@@ -206,6 +204,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     }
     setState(() {
       _showList = false;
+      if (_selectedId != venue.id) _expandedVenueId = null;
       _selectedId = venue.id;
       _dismissedSelection = false;
     });
@@ -287,8 +286,15 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                     enabled: !_showList,
                     child: RepaintBoundary(
                       child: LayoutBuilder(builder: (context, constraints) {
-                        final cardHeight =
-                            math.min(280.0, constraints.maxHeight * .68);
+                        final expanded =
+                            selected != null && _expandedVenueId == selected.id;
+                        final textGrowth = math.max(0.0,
+                            MediaQuery.textScalerOf(context).scale(13) - 13);
+                        // Leave streets visible; large text can scroll within
+                        // either card without moving or rebuilding the map.
+                        final cardHeight = math.min(
+                            expanded ? 420.0 : 232.0 + textGrowth * 7,
+                            constraints.maxHeight * (expanded ? .82 : .62));
                         final attributionGap = 12 +
                             MediaQuery.textScalerOf(context).scale(10) * 1.4;
                         return Stack(children: [
@@ -441,6 +447,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
           onChanged: (value) => setState(() {
                 _query = value;
                 _selectedId = null;
+                _expandedVenueId = null;
                 _dismissedSelection = false;
               }),
           style: AppTextStyles.bodyMd.copyWith(color: _foreground),
@@ -461,6 +468,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                       setState(() {
                         _query = '';
                         _selectedId = null;
+                        _expandedVenueId = null;
                         _dismissedSelection = false;
                       });
                     }),
@@ -494,6 +502,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                       () => setState(() {
                             _type = entry.key;
                             _selectedId = null;
+                            _expandedVenueId = null;
                             _dismissedSelection = false;
                           }))),
             _pill(
@@ -502,6 +511,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                 () => setState(() {
                       _onlySaved = !_onlySaved;
                       _selectedId = null;
+                      _expandedVenueId = null;
                       _dismissedSelection = false;
                     }),
                 icon: Icons.bookmark_border_rounded),
@@ -720,7 +730,8 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   }
 
   Widget _detail(Venue venue, double height, bool saved) {
-    final description = venue.communityEnabled
+    final expanded = _expandedVenueId == venue.id;
+    final description = expanded && venue.communityEnabled
         ? ref.watch(_venueDescriptionProvider(venue.id))
         : const AsyncValue<String?>.data(null);
     final text = description.valueOrNull ??
@@ -728,168 +739,177 @@ class _MapScreenState extends ConsumerState<MapScreen> {
         (description.isLoading
             ? 'Мэдээлэл ачаалж байна…'
             : 'Тайлбар хараахан нэмэгдээгүй.');
-    return DecoratedBox(
+    final secondary =
+        _dark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
+    final source = venueWebsiteUrl(venue.sourceUrl ?? venue.locationSourceUrl);
+    final website = venueWebsiteUrl(venue.websiteUrl);
+    final card = DecoratedBox(
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(28),
-          border:
-              Border.all(color: AppColors.silverNeon.withValues(alpha: .45)),
+          gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: _dark
+                  ? const [Color(0xFF201E35), Color(0xFF111522)]
+                  : const [Colors.white, Color(0xFFF4F1FA)]),
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: _line),
           boxShadow: [
             BoxShadow(
-                color: _violet.withValues(alpha: .18),
-                blurRadius: 28,
-                offset: const Offset(0, 10))
+                color: Colors.black.withValues(alpha: _dark ? .24 : .08),
+                blurRadius: 22,
+                offset: const Offset(0, 8))
           ],
         ),
         child: Material(
-            color: _dark ? _sheet : Colors.white,
-            elevation: 12,
-            shadowColor: Colors.black54,
+            color: Colors.transparent,
             borderRadius: BorderRadius.circular(24),
             clipBehavior: Clip.antiAlias,
             child: ConstrainedBox(
+                key: const ValueKey('selected-venue-card'),
                 constraints: BoxConstraints(maxHeight: height),
                 child: SingleChildScrollView(
-                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 14),
+                    key: ValueKey('${venue.id}:$expanded'),
+                    padding: const EdgeInsets.fromLTRB(14, 12, 10, 10),
                     child: Column(
                         mainAxisSize: MainAxisSize.min,
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Center(
-                              child: Container(
-                                  width: 36,
-                                  height: 4,
-                                  decoration: BoxDecoration(
-                                      color: const Color(0xFFC5C3D9),
-                                      borderRadius: BorderRadius.circular(8)))),
-                          const SizedBox(height: 10),
                           Row(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                GestureDetector(
-                                    onTap: () => _openVenue(venue),
-                                    child: _photo(venue, 72)),
-                                const SizedBox(width: 12),
                                 Expanded(
-                                    child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                      Row(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Expanded(
-                                                child: GestureDetector(
-                                                    onTap: () =>
-                                                        _openVenue(venue),
-                                                    child: Text(venue.name,
+                                    child: InkWell(
+                                        onTap: () => _openVenue(venue),
+                                        borderRadius: BorderRadius.circular(12),
+                                        child: Row(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              _photo(venue, 48),
+                                              const SizedBox(width: 10),
+                                              Expanded(
+                                                  child: Column(
+                                                      crossAxisAlignment:
+                                                          CrossAxisAlignment
+                                                              .start,
+                                                      children: [
+                                                    Text(venue.name,
                                                         maxLines: 2,
                                                         overflow: TextOverflow
                                                             .ellipsis,
                                                         style: AppTextStyles.h3
                                                             .copyWith(
-                                                                color: _ink,
-                                                                fontSize: 18,
+                                                                color:
+                                                                    _foreground,
+                                                                fontSize: 17,
                                                                 fontWeight:
                                                                     FontWeight
-                                                                        .w700)))),
-                                            IconButton(
-                                                tooltip: 'Сонголт хаах',
-                                                visualDensity:
-                                                    VisualDensity.compact,
-                                                constraints:
-                                                    const BoxConstraints(
-                                                        minWidth: 36,
-                                                        minHeight: 36),
-                                                padding: EdgeInsets.zero,
-                                                onPressed: () => setState(() {
-                                                      _selectedId = null;
-                                                      _dismissedSelection =
-                                                          true;
-                                                    }),
-                                                icon: const SculptedIcon(
-                                                    Icons.close_rounded,
-                                                    size: 18,
-                                                    color: Color(0xFF68677F))),
-                                          ]),
-                                      Text(
-                                          [
-                                            venue.typeLabel,
-                                            if (venue.district
-                                                    ?.trim()
-                                                    .isNotEmpty ==
-                                                true)
-                                              venue.district!
-                                          ].join(' · '),
-                                          style: AppTextStyles.bodySm.copyWith(
-                                              color: const Color(0xFF68677F))),
-                                      const SizedBox(height: 4),
-                                      Wrap(
-                                          spacing: 5,
-                                          crossAxisAlignment:
-                                              WrapCrossAlignment.center,
-                                          children: [
-                                            if (venue.rating.isFinite &&
-                                                venue.rating > 0 &&
-                                                venue.rating <= 5) ...[
-                                              const SculptedIcon(
-                                                  Icons.star_rounded,
-                                                  size: 16,
-                                                  color: _ink),
-                                              Text(
-                                                  venue.rating
-                                                      .toStringAsFixed(1),
-                                                  style: AppTextStyles.bodySm
-                                                      .copyWith(color: _ink)),
-                                            ] else
-                                              Text(
-                                                  venue.communityEnabled
-                                                      ? 'Үнэлгээ хараахан алга'
-                                                      : 'Газрын мэдээлэл',
-                                                  style: AppTextStyles.bodyXs
-                                                      .copyWith(
-                                                          color: const Color(
-                                                              0xFF68677F))),
-                                            if (venue.verified)
-                                              const SculptedIcon(
-                                                  Icons.verified_rounded,
-                                                  size: 16,
-                                                  color: _violet,
-                                                  active: true),
-                                          ]),
-                                    ])),
+                                                                        .w700)),
+                                                    const SizedBox(height: 3),
+                                                    Text(
+                                                        [
+                                                          venue.typeLabel,
+                                                          if (venue.district
+                                                                  ?.trim()
+                                                                  .isNotEmpty ==
+                                                              true)
+                                                            venue.district!
+                                                        ].join(' · '),
+                                                        maxLines: 2,
+                                                        overflow: TextOverflow
+                                                            .ellipsis,
+                                                        style: AppTextStyles
+                                                            .bodySm
+                                                            .copyWith(
+                                                                color:
+                                                                    secondary)),
+                                                    const SizedBox(height: 3),
+                                                    Wrap(
+                                                        spacing: 4,
+                                                        crossAxisAlignment:
+                                                            WrapCrossAlignment
+                                                                .center,
+                                                        children: [
+                                                          if (venue.rating
+                                                                  .isFinite &&
+                                                              venue.rating >
+                                                                  0 &&
+                                                              venue.rating <=
+                                                                  5) ...[
+                                                            Icon(
+                                                                Icons
+                                                                    .star_rounded,
+                                                                size: 15,
+                                                                color: _accent),
+                                                            Text(
+                                                                venue.rating
+                                                                    .toStringAsFixed(
+                                                                        1),
+                                                                style: AppTextStyles
+                                                                    .bodySm
+                                                                    .copyWith(
+                                                                        color:
+                                                                            _foreground)),
+                                                          ] else
+                                                            Text(
+                                                                venue.communityEnabled
+                                                                    ? 'Үнэлгээ хараахан алга'
+                                                                    : 'Газрын мэдээлэл',
+                                                                style: AppTextStyles
+                                                                    .bodyXs
+                                                                    .copyWith(
+                                                                        color:
+                                                                            secondary)),
+                                                          if (venue.verified)
+                                                            Icon(
+                                                                Icons
+                                                                    .verified_rounded,
+                                                                size: 16,
+                                                                color: _accent),
+                                                        ]),
+                                                  ])),
+                                            ]))),
+                                IconButton(
+                                    tooltip: 'Сонголт хаах',
+                                    constraints: const BoxConstraints(
+                                        minWidth: 44, minHeight: 44),
+                                    padding: EdgeInsets.zero,
+                                    onPressed: () => setState(() {
+                                          _selectedId = null;
+                                          _expandedVenueId = null;
+                                          _dismissedSelection = true;
+                                        }),
+                                    icon: Icon(Icons.close_rounded,
+                                        size: 19, color: secondary)),
                               ]),
-                          const SizedBox(height: 12),
-                          Text(text,
-                              maxLines: 4,
-                              overflow: TextOverflow.ellipsis,
-                              style: AppTextStyles.bodySm
-                                  .copyWith(color: _ink, height: 1.4)),
-                          if (venue.sourceLabel != null) ...[
-                            const SizedBox(height: 5),
-                            Text(venue.sourceLabel!,
-                                style: AppTextStyles.bodyXs
-                                    .copyWith(color: const Color(0xFF68677F))),
-                          ],
-                          const SizedBox(height: 14),
+                          const SizedBox(height: 9),
+                          Text(
+                              source == null
+                                  ? 'Байршил баталгаажаагүй · очихын өмнө шалгаарай'
+                                  : 'Байршлын эх сурвалжтай · очихын өмнө шалгаарай',
+                              style: AppTextStyles.bodyXs
+                                  .copyWith(color: secondary, height: 1.4)),
+                          const SizedBox(height: 10),
                           Row(children: [
                             Expanded(
                                 child: GradientButton(
                                     label: 'Чиглэл авах',
-                                    height: 48,
-                                    borderRadius: 28,
+                                    height: 44,
+                                    size: GradientButtonSize.md,
+                                    borderRadius: 16,
                                     icon: const Icon(Icons.directions_outlined,
                                         size: 20),
                                     onPressed: () => _directions(venue))),
-                            const SizedBox(width: 12),
+                            const SizedBox(width: 10),
                             IconButton.filledTonal(
                                 tooltip: saved
                                     ? 'Хадгалсан газраас хасах'
                                     : 'Газар хадгалах',
                                 onPressed: _saving ? null : () => _save(venue),
                                 style: IconButton.styleFrom(
-                                    backgroundColor: const Color(0xFFE5E3F0),
-                                    foregroundColor: saved ? _violet : _ink,
+                                    backgroundColor: _surface,
+                                    foregroundColor:
+                                        saved ? _accent : _foreground,
                                     minimumSize: const Size(48, 48)),
                                 icon: _saving
                                     ? const SizedBox(
@@ -897,43 +917,76 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                                         height: 18,
                                         child:
                                             OwlLoading(size: 18, compact: true))
-                                    : SculptedIcon(
+                                    : Icon(
                                         saved
                                             ? Icons.bookmark_rounded
                                             : Icons.bookmark_border_rounded,
                                         size: 23,
-                                        color: saved ? _violet : _ink,
-                                        active: saved)),
+                                        color: saved ? _accent : _foreground)),
                           ]),
-                          TextButton.icon(
-                              onPressed: () => _showInformation(venue),
-                              style: TextButton.styleFrom(
-                                  foregroundColor: const Color(0xFF6550AD)),
-                              icon: const Icon(Icons.info_outline_rounded,
-                                  size: 17),
-                              label:
-                                  const Text('Мэдээлэл, Google Maps, холбоос')),
-                          if (venueWebsiteUrl(
-                                  venue.sourceUrl ?? venue.locationSourceUrl) !=
-                              null)
+                          Semantics(
+                              value: expanded
+                                  ? 'Дэлгэрэнгүй мэдээлэл нээлттэй'
+                                  : 'Дэлгэрэнгүй мэдээлэл хураасан',
+                              child: TextButton.icon(
+                                  onPressed: () => setState(() =>
+                                      _expandedVenueId =
+                                          expanded ? null : venue.id),
+                                  style: TextButton.styleFrom(
+                                      foregroundColor: _accent,
+                                      minimumSize: const Size(0, 44),
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 4)),
+                                  icon: Icon(
+                                      expanded
+                                          ? Icons.expand_less_rounded
+                                          : Icons.expand_more_rounded,
+                                      size: 20),
+                                  label: Text(
+                                      expanded ? 'Хураах' : 'Дэлгэрэнгүй'))),
+                          if (expanded) ...[
+                            Divider(color: _line, height: 16),
+                            Text(text,
+                                style: AppTextStyles.bodySm
+                                    .copyWith(color: _foreground, height: 1.5)),
+                            if (venue.sourceLabel != null) ...[
+                              const SizedBox(height: 6),
+                              Text(venue.sourceLabel!,
+                                  style: AppTextStyles.bodyXs
+                                      .copyWith(color: secondary)),
+                            ],
+                            const SizedBox(height: 8),
                             TextButton.icon(
-                                onPressed: () => _openExternal(venueWebsiteUrl(
-                                    venue.sourceUrl ??
-                                        venue.locationSourceUrl)!),
+                                onPressed: () => _showInformation(venue),
                                 style: TextButton.styleFrom(
-                                    foregroundColor: const Color(0xFF6550AD),
-                                    padding: EdgeInsets.zero,
-                                    visualDensity: VisualDensity.compact),
-                                icon: const SculptedIcon(Icons.open_in_new_rounded,
-                                    size: 13, color: Color(0xFF6550AD)),
-                                label: const Text('Байршлын эх сурвалж'))
-                          else
-                            Padding(
-                                padding: const EdgeInsets.only(top: 10),
-                                child: Text(
-                                    'Байршил баталгаажаагүй · очихын өмнө шалгаарай',
-                                    style: AppTextStyles.bodyXs
-                                        .copyWith(color: const Color(0xFF68677F)))),
+                                    foregroundColor: _accent),
+                                icon: const Icon(Icons.info_outline_rounded,
+                                    size: 17),
+                                label: const Text(
+                                    'Мэдээлэл, Google Maps, холбоос')),
+                            if (website != null)
+                              TextButton.icon(
+                                  onPressed: () => _openExternal(website),
+                                  style: TextButton.styleFrom(
+                                      foregroundColor: _accent),
+                                  icon: const Icon(Icons.language_rounded,
+                                      size: 17),
+                                  label: const Text('Вэбсайт нээх')),
+                            if (source != null)
+                              TextButton.icon(
+                                  onPressed: () => _openExternal(source),
+                                  style: TextButton.styleFrom(
+                                      foregroundColor: _accent),
+                                  icon: const Icon(Icons.open_in_new_rounded,
+                                      size: 15),
+                                  label: const Text('Байршлын эх сурвалж')),
+                          ],
                         ])))));
+    if (AppMotion.reduced(context)) return card;
+    return AnimatedSize(
+        duration: AppMotion.enter,
+        curve: Curves.easeOutCubic,
+        alignment: Alignment.bottomCenter,
+        child: card);
   }
 }

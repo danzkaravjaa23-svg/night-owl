@@ -15,7 +15,8 @@ void main() {
             for (var i = 0; i < 16; i++)
               const Padding(
                   padding: EdgeInsets.all(12),
-                  child: SculptedIcon(Icons.chat_bubble_rounded)),
+                  child: SculptedIcon(Icons.chat_bubble_rounded,
+                      dimensional: true)),
           ]))));
       expect(find.byType(SculptedIcon), findsNWidgets(16));
       expect(tester.layers.whereType<ShaderMaskLayer>(), isEmpty,

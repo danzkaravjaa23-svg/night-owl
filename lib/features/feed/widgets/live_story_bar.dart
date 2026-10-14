@@ -38,19 +38,19 @@ class LiveStoryBar extends ConsumerWidget {
     final labelPainter = TextPainter(
       text: TextSpan(
           text: 'Таны story',
-          style: AppTextStyles.bodyXs.copyWith(fontSize: 11, height: 1.2)),
+          style: AppTextStyles.bodyXs.copyWith(fontSize: 12, height: 1.2)),
       textScaler: MediaQuery.textScalerOf(context),
       textDirection: TextDirection.ltr,
       maxLines: 1,
     )..layout(maxWidth: 68);
     final railHeight =
-        89.0 + (labelPainter.height > 21 ? labelPainter.height : 21.0);
+        78.0 + (labelPainter.height > 18 ? labelPainter.height : 18.0);
     labelPainter.dispose();
     return SizedBox(
       height: railHeight,
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
+        padding: const EdgeInsets.fromLTRB(10, 4, 10, 4),
         itemCount: others.length + 1,
         itemBuilder: (_, index) {
           if (index == 0) {
@@ -123,7 +123,7 @@ class _RingItem extends StatelessWidget {
                   initial: label.isEmpty ? '?' : label[0],
                   size: 56),
             ),
-            const SizedBox(height: 7),
+            const SizedBox(height: 6),
             _StoryLabel(label),
           ]),
         )),
@@ -190,7 +190,7 @@ class _MyStoryItem extends StatelessWidget {
                   ),
                 )),
           ]),
-          const SizedBox(height: 7),
+          const SizedBox(height: 6),
           InkWell(onTap: onTap, child: const _StoryLabel('Таны story')),
         ]),
       );
@@ -209,7 +209,7 @@ class _StoryLabel extends StatelessWidget {
           overflow: TextOverflow.ellipsis,
           textAlign: TextAlign.center,
           style: AppTextStyles.bodyXs.copyWith(
-              fontSize: 11, height: 1.2, color: AppColors.textSecondary),
+              fontSize: 12, height: 1.2, color: AppColors.textSecondary),
         ),
       );
 }

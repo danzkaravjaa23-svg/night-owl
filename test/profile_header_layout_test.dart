@@ -73,9 +73,14 @@ void main() {
                                         ])))))))));
         await tester.pumpAndSettle();
         expect(tester.takeException(), isNull);
-        expect(find.text('actual_username'), findsOneWidget);
-        expect(tester.widget<Text>(find.text('actual_username')).style?.color,
+        expect(find.text('@actual_username'), findsOneWidget);
+        expect(tester.widget<Text>(find.text('@actual_username')).style?.color,
+            AppColors.textSecondary);
+        expect(
+            tester.widget<Text>(find.text('Actual profile name')).style?.color,
             AppColors.textPrimary);
+        expect(tester.getRect(find.text('Actual profile name')).top,
+            lessThan(tester.getRect(find.text('@actual_username')).top));
         expect(tester.widget<Scaffold>(find.byType(Scaffold)).backgroundColor,
             AppColors.bgBase);
         // Controls over the cover stay legible in either theme; body controls adapt.
@@ -150,6 +155,57 @@ void main() {
       });
     }
   }
+  for (final identity in [
+    (
+      UserProfile(id: 'handle-only', username: ' @actual_username ', name: ' '),
+      '@actual_username'
+    ),
+    (UserProfile(id: 'empty-identity', username: ' ', name: ' '), 'Профайл'),
+  ]) {
+    testWidgets('profile identity falls back cleanly for ${identity.$1.id}',
+        (tester) async {
+      await tester.pumpWidget(_identityFixture(identity.$1));
+      await tester.pumpAndSettle();
+      expect(find.text(identity.$2), findsOneWidget);
+      expect(tester.widget<Text>(find.text(identity.$2)).style?.fontSize, 22);
+      expect(find.text('@@actual_username'), findsNothing);
+      expect(tester.takeException(), isNull);
+    });
+  }
+  testWidgets('long profile identity stays complete at 320px with doubled text',
+      (tester) async {
+    tester.view.physicalSize = const Size(320, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final profile = UserProfile(
+        id: 'long-identity',
+        name: 'Улаанбаатарын үдшийн хөгжим болон хотын амьдралын тэмдэглэл',
+        username: 'night_owl_ub_long_profile_handle',
+        bio:
+            'Хөгжим, шинэ газрууд болон хотын амьдралын тухай бодит тэмдэглэл.',
+        interests: ['Live Music', 'Хотын амьдрал'],
+        isVerified: true);
+    var coverEdits = 0;
+    await tester.pumpWidget(
+        _identityFixture(profile, scale: 2, onEditCover: () => coverEdits++));
+    await tester.pumpAndSettle();
+    expect(find.text(profile.name!), findsOneWidget);
+    expect(find.text('@${profile.username}'), findsOneWidget);
+    expect(find.text(profile.bio!), findsOneWidget);
+    expect(find.byTooltip('Баталгаажсан профайл'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+    final avatar = tester.getRect(find.byType(CircleAvatar));
+    final cover = tester.getRect(find.byType(Image));
+    expect(avatar.top, lessThan(cover.bottom));
+    expect(avatar.bottom, greaterThan(cover.bottom));
+    // The lower part of this target crosses the overlapping cover edge.
+    final camera = tester.getRect(find.byTooltip('Нүүр зураг солих'));
+    await tester.tapAt(Offset(camera.center.dx, camera.bottom - 2));
+    expect(coverEdits, 1);
+    await tester.ensureVisible(find.text('Профайл засах'));
+    expect(tester.takeException(), isNull);
+  });
   testWidgets('verification is shown only for verified profile data',
       (tester) async {
     await tester.pumpWidget(MaterialApp(
@@ -171,3 +227,24 @@ void main() {
     expect(find.text('Story highlights'), findsNothing);
   });
 }
+
+Widget _identityFixture(UserProfile profile,
+        {double scale = 1, VoidCallback? onEditCover}) =>
+    MaterialApp(
+        home: Scaffold(
+            body: MediaQuery(
+                data: MediaQueryData(
+                    padding: const EdgeInsets.only(top: 44),
+                    disableAnimations: true,
+                    textScaler: TextScaler.linear(scale)),
+                child: SingleChildScrollView(
+                    child: ProfileHeader(
+                        profile: profile,
+                        avatar: const CircleAvatar(child: Text('A')),
+                        onEdit: () {},
+                        onShare: () {},
+                        onEditCover: onEditCover ?? () {},
+                        onSettings: () {},
+                        onActions: () {},
+                        onFollowers: () {},
+                        onFollowing: () {})))));

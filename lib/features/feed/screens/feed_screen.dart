@@ -224,20 +224,11 @@ class _FeedToolbar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.fromLTRB(16, 8, 12, 6),
+        padding: const EdgeInsets.fromLTRB(16, 0, 12, 4),
         child: Row(children: [
           Expanded(
-              child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                Text('Нийтлэл',
-                    style: AppTextStyles.h2.copyWith(
-                        fontSize: 25,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: -.6)),
-                const SizedBox(height: 4),
-                Text('Хотын хэмнэл, таны мөчүүд.', style: AppTextStyles.bodyXs),
-              ])),
+              child: Text('Нийтлэл',
+                  style: AppTextStyles.h2.copyWith(fontSize: 20))),
           IconButton(
             tooltip: 'Reels',
             onPressed: () => context.push(AppRoutes.reels),
@@ -326,14 +317,14 @@ class _FeedEventsSheet extends ConsumerWidget {
   }
 }
 
-// ─── Top bar — нимгэн (56) IG-2025 маягийн бар: wordmark зүүн, icon кластер баруун ───
+// ─── Compact brand bar with the existing notification and message controls ───
 class _FeedTopBar extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final unread = ref.watch(unreadNotifCountProvider);
     return NightOwlAtmosphere(
         child: Container(
-      height: 72,
+      height: 60,
       decoration: BoxDecoration(
           border: Border(
               bottom:
@@ -653,8 +644,8 @@ class _PostCardState extends ConsumerState<_PostCard>
                             : '${widget.post.timeAgo} · $venueName',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: AppTextStyles.bodyXs
-                            .copyWith(color: AppColors.textTertiary),
+                        style: AppTextStyles.bodyXs.copyWith(
+                            fontSize: 12, color: AppColors.textSecondary),
                       ),
                     ),
                   ),
