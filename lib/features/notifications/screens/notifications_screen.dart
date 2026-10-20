@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:cached_network_image/cached_network_image.dart';
+import '../../../core/widgets/authorized_media.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/widgets/owl_loading.dart';
@@ -200,7 +200,8 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                 onTap: () => context.pop()),
               const SizedBox(width: 10),
             ],
-            Text('Мэдэгдэл', style: AppTextStyles.h1),
+            Flexible(child:Text('Мэдэгдэл', style: AppTextStyles.h1)),
+            IconButton(tooltip:'Дагах хүсэлтүүд',icon:const Icon(Icons.person_add_outlined),onPressed:()=>context.push('/privacy')),
             if (unread > 0) ...[
               const SizedBox(width: 10),
               Container(
@@ -448,7 +449,7 @@ class _PostThumb extends StatelessWidget {
     }
     return ClipRRect(
       borderRadius: BorderRadius.circular(10),
-      child: CachedNetworkImage(
+      child: AuthorizedImage(
         imageUrl: url!, width: 44, height: 44, fit: BoxFit.cover,
         memCacheWidth: 120, // жижиг decode — жагсаалт хурдан
         fadeInDuration: const Duration(milliseconds: 150),

@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/services/supabase_service.dart';
 import '../../auth/providers/auth_provider.dart';
+import '../../discovery/services/discovery_service.dart';
 import '../../../models/story.dart';
 import '../../../models/user_profile.dart';
 
@@ -8,6 +9,7 @@ import '../../../models/user_profile.dart';
 final storiesProvider = FutureProvider<List<StoryRing>>((ref) async {
   // Зөвхөн дагадаг хүмүүс + өөрийн story (500к scale дээр global fetch болохгүй)
   final me = ref.watch(sessionUserIdProvider);
+  ref.watch(socialVersionProvider);
 
   List<String> targetIds = [];
   if (me != null) {
@@ -25,7 +27,7 @@ final storiesProvider = FutureProvider<List<StoryRing>>((ref) async {
 
   var query = SupabaseService.client
       .from('stories')
-      .select('*, profiles!user_id (id, username, avatar_url, is_verified), venues!venue_id (name)')
+      .select('*, profiles!user_id (id, username, avatar_url, is_verified), venues!venue_id (name), venue_catalog!venue_ref(name)')
       // Хугацаа дууссан story-г сервер талд шүүнэ (200 мөрийн limit үрэхгүй)
       .gt('expires_at', DateTime.now().toUtc().toIso8601String());
   if (targetIds.isNotEmpty) query = query.inFilter('user_id', targetIds);
@@ -93,6 +95,7 @@ class StoryService {
     String? caption,
     int duration = 5,
     String? venueId,
+    String? venueRef,
     List<String> mentions = const [],
     String? musicUrl,
     String? musicTitle,
@@ -109,6 +112,7 @@ class StoryService {
         // Видеоны бодит урт (create талд хэмжсэн), зураг 5с
         'duration':   duration.clamp(1, 120),
         if (venueId != null) 'venue_id': venueId,
+        if (venueRef != null) 'venue_ref': venueRef,
         if (mentions.isNotEmpty) 'mentions': mentions,
         if (musicUrl != null) 'music_url': musicUrl,
         if (musicTitle != null) 'music_title': musicTitle,

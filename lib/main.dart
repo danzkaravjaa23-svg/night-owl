@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'dart:async';
+import 'core/utils/auth_return.dart';
+import 'features/discovery/services/discovery_service.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -31,6 +34,7 @@ Future<void> main() async {
 
   // Supabase
   await SupabaseService.initialize();
+  await AuthReturn.restore();
 
   // Утасны хүрээ дотор preview (зөвхөн веб debug; утас болон release-д унтарна).
   // Унтраах:  flutter run -d chrome --dart-define=DEVICE_PREVIEW=false
@@ -53,12 +57,14 @@ class NightOwlApp extends ConsumerStatefulWidget {
   ConsumerState<NightOwlApp> createState() => _NightOwlAppState();
 }
 
-class _NightOwlAppState extends ConsumerState<NightOwlApp> {
+class _NightOwlAppState extends ConsumerState<NightOwlApp> with WidgetsBindingObserver {
   final _messengerKey = GlobalKey<ScaffoldMessengerState>();
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    unawaited(DiscoveryService().activity('session'));
     authCallbackError.addListener(_showAuthCallbackError);
     _showAuthCallbackError();
   }
@@ -78,8 +84,13 @@ class _NightOwlAppState extends ConsumerState<NightOwlApp> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     authCallbackError.removeListener(_showAuthCallbackError);
     super.dispose();
+  }
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state){
+    if(state==AppLifecycleState.resumed)unawaited(DiscoveryService().activity('session'));
   }
 
   @override
@@ -91,6 +102,7 @@ class _NightOwlAppState extends ConsumerState<NightOwlApp> {
     // cache-ийг цэвэрлэнэ — өөр хаягийн дата харагдахаас сэргийлнэ.
     ref.listen(authUserProvider, (prev, next) {
       if (prev?.valueOrNull?.id != next.valueOrNull?.id) {
+        if(next.valueOrNull!=null)unawaited(DiscoveryService().activity('session'));
         ref.invalidate(feedProvider);
         ref.invalidate(savedPostIdsProvider);
         // currentProfileProvider нь authUserProvider-ийг watch хийдэг тул

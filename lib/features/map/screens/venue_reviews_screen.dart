@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:cached_network_image/cached_network_image.dart';
+import '../../../core/widgets/authorized_media.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_radii.dart';
 import '../../../core/theme/app_text_styles.dart';
@@ -201,7 +201,7 @@ class _VenueDetailScreenState extends ConsumerState<VenueDetailScreen> {
                 child: SizedBox(height: 280,
                   child: Stack(fit: StackFit.expand, children: [
                     cover != null
-                      ? CachedNetworkImage(imageUrl: cover, fit: BoxFit.cover,
+                      ? AuthorizedImage(imageUrl: cover, fit: BoxFit.cover,
                           errorWidget: (_, __, ___) => _coverFallback(type))
                       : _coverFallback(type),
                     // Доод scrim — хөвөгч карт руу зөөлөн уусна.
@@ -528,7 +528,7 @@ class _VenueDetailScreenState extends ConsumerState<VenueDetailScreen> {
             left: Radius.circular(AppRadii.lg)),
           child: SizedBox(width: 74, height: 74,
             child: e['cover_url'] != null
-              ? CachedNetworkImage(imageUrl: e['cover_url'] as String, fit: BoxFit.cover,
+              ? AuthorizedImage(imageUrl: e['cover_url'] as String, fit: BoxFit.cover,
                   errorWidget: (_,__,___) => _evPlaceholder())
               : _evPlaceholder())),
         const SizedBox(width: 12),

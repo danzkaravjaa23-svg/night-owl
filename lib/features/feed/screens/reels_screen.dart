@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import '../../discovery/services/discovery_service.dart';
+import '../../auth/providers/auth_provider.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -13,8 +15,10 @@ import '../../../core/widgets/app_motion.dart';
 import '../../../core/services/supabase_service.dart';
 import '../providers/saved_provider.dart';
 import '../providers/reels_provider.dart';
+import '../providers/feed_provider.dart';
 import '../widgets/story_video.dart';
 import '../../profile/utils/app_links.dart' show appOrigin;
+import '../../profile/widgets/block_report_sheet.dart';
 
 class ReelsScreen extends ConsumerStatefulWidget {
   final String? initialReelId;
@@ -28,9 +32,11 @@ class _ReelsScreenState extends ConsumerState<ReelsScreen>
   List<Map<String, dynamic>> _reels = [];
   bool _loading = true;
   String? _error;
-  bool _canCreate = false; // зөвхөн venue эзэн оруулна
+  bool _canCreate = false;
   final Set<String> _liked = {};
+  final Set<String> _liking = {};
   final Set<String> _savedIds = {};
+  final Set<String> _saving = {};
   final Set<String> _followingIds = {};
   bool _forYou = true; // Танд / Дагадаг таб
   final PageController _pageCtrl = PageController();
@@ -43,10 +49,7 @@ class _ReelsScreenState extends ConsumerState<ReelsScreen>
 
   String get _myId => SupabaseService.currentUser?.id ?? '';
 
-  // Идэвхтэй табын жагсаалт: Танд = бүгд, Дагадаг = дагадаг хүмүүсийнх
-  List<Map<String, dynamic>> get _visible => _forYou
-      ? _reels
-      : _reels.where((r) => _followingIds.contains(r['user_id'])).toList();
+  List<Map<String, dynamic>> get _visible => _reels;
 
   @override
   void initState() {
@@ -54,10 +57,7 @@ class _ReelsScreenState extends ConsumerState<ReelsScreen>
     WidgetsBinding.instance.addObserver(this);
     _load();
     _checkOwner();
-    // Хадгалсан постуудын эхний төлөв
-    ref.read(savedPostIdsProvider.future).then((v) {
-      if (mounted) setState(() => _savedIds.addAll(v));
-    }).catchError((_) {});
+    _loadSaves();
   }
 
   @override
@@ -79,31 +79,41 @@ class _ReelsScreenState extends ConsumerState<ReelsScreen>
   void didUpdateWidget(covariant ReelsScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.initialReelId != widget.initialReelId) {
+      _forYou = true;
       _loading = true;
       _load();
     }
   }
 
   Future<void> _checkOwner() async {
-    if (_myId.isEmpty) return;
+    if (mounted) setState(() => _canCreate = _myId.isNotEmpty);
+  }
+
+  Future<void> _loadSaves() async {
+    final account = _myId;
     try {
-      final r = await SupabaseService.client
-          .from('venues')
-          .select('id')
-          .eq('owner_id', _myId)
-          .limit(1)
-          .maybeSingle();
-      if (mounted) setState(() => _canCreate = r != null);
+      final ids = await ref.read(savedPostIdsProvider.future);
+      if (mounted &&
+          account == _myId &&
+          ref.read(sessionUserIdProvider) == account) {
+        setState(() => _savedIds
+          ..clear()
+          ..addAll(ids));
+      }
     } catch (_) {}
   }
 
   Future<void> _load({bool openNewest = false}) async {
     final generation = ++_loadGeneration;
+    if (openNewest) _forYou = true;
+    final forYou = _forYou;
     try {
-      final reels = (await ref.read(reelsProvider.future))
+      final provider = forYou ? reelsProvider : followingReelsProvider;
+      final reels = (await ref.read(provider.future))
           .map((row) => Map<String, dynamic>.from(row))
           .toList();
-      final selectedId = openNewest ? null : widget.initialReelId;
+      if (!mounted || generation != _loadGeneration) return;
+      final selectedId = openNewest || !forYou ? null : widget.initialReelId;
       if (selectedId != null && !reels.any((r) => r['id'] == selectedId)) {
         final selected =
             await ReelsRepository(SupabaseService.client).find(selectedId);
@@ -119,7 +129,7 @@ class _ReelsScreenState extends ConsumerState<ReelsScreen>
         reels.insert(0, selected);
       }
       if (!mounted || generation != _loadGeneration) return;
-      // Дагадаг хүмүүсийн id (Дагадаг таб + Дагах pill-ийн төлөв)
+      // This query is for follow-button state, never for filtering the feed.
       if (_myId.isNotEmpty) {
         try {
           final f = await SupabaseService.client
@@ -153,7 +163,6 @@ class _ReelsScreenState extends ConsumerState<ReelsScreen>
       final selectedIndex = reels.indexWhere((r) => r['id'] == selectedId);
       setState(() {
         _reels = reels;
-        _forYou = true;
         _page = selectedIndex < 0 ? 0 : selectedIndex;
         _loading = false;
         _error = null;
@@ -163,12 +172,12 @@ class _ReelsScreenState extends ConsumerState<ReelsScreen>
           _pageCtrl.jumpToPage(_page);
         }
       });
-    } catch (_) {
+    } catch (error) {
       // Сүлжээний алдааг "контент алга" гэж худал харуулахгүй
       if (mounted && generation == _loadGeneration) {
         setState(() {
           _loading = false;
-          _error = 'Сүлжээний алдаа. Холболтоо шалгана уу.';
+          _error = discoveryError(error);
         });
       }
     }
@@ -179,7 +188,7 @@ class _ReelsScreenState extends ConsumerState<ReelsScreen>
       _loading = true;
       _error = null;
     });
-    ref.invalidate(reelsProvider);
+    ref.invalidate(_forYou ? reelsProvider : followingReelsProvider);
     _load();
   }
 
@@ -188,18 +197,32 @@ class _ReelsScreenState extends ConsumerState<ReelsScreen>
     setState(() {
       _forYou = forYou;
       _page = 0;
+      _loading = true;
+      _error = null;
     });
-    if (_pageCtrl.hasClients) _pageCtrl.jumpToPage(0);
+    // Recheck accepted follows before the server applies its video limit.
+    if (!forYou) ref.invalidate(followingReelsProvider);
+    _load();
   }
 
   // Дээр нь дэлгэц нээхдээ идэвхтэй видеог зогсооно (дуу нь цааш явахгүй)
   Future<void> _pushCovered(String route) async {
+    final socialVersion = ref.read(socialVersionProvider);
     setState(() => _covered = true);
     try {
       await context.push(route);
       if (mounted && route == '/reels/create') {
         ref.invalidate(reelsProvider);
+        ref.invalidate(followingReelsProvider);
         await _load(openNewest: true);
+      } else if (mounted && socialVersion != ref.read(socialVersionProvider)) {
+        setState(() {
+          _loading = true;
+          _error = null;
+        });
+        ref.invalidate(reelsProvider);
+        ref.invalidate(followingReelsProvider);
+        await _load();
       }
     } finally {
       if (mounted) setState(() => _covered = false);
@@ -209,7 +232,7 @@ class _ReelsScreenState extends ConsumerState<ReelsScreen>
   Future<void> _toggleLike(Map<String, dynamic> reel) async {
     final id = reel['id'] as String;
     final user = _myId;
-    if (user.isEmpty) return;
+    if (user.isEmpty || !_liking.add(id)) return;
     final wasLiked = _liked.contains(id);
     setState(() {
       if (wasLiked) {
@@ -232,6 +255,15 @@ class _ReelsScreenState extends ConsumerState<ReelsScreen>
             .from('likes')
             .insert({'user_id': user, 'post_id': id});
       }
+      if (mounted) {
+        for (final provider in [feedProvider, followingFeedProvider]) {
+          if (ref.exists(provider)) {
+            ref
+                .read(provider.notifier)
+                .syncLikeState(id, !wasLiked, reel['likes_count'] as int? ?? 0);
+          }
+        }
+      }
     } catch (_) {
       // Алдаа гарвал optimistic төлөвийг буцаана
       if (mounted) {
@@ -245,22 +277,74 @@ class _ReelsScreenState extends ConsumerState<ReelsScreen>
           }
         });
       }
+    } finally {
+      _liking.remove(id);
     }
   }
 
   Future<void> _toggleSave(String id) async {
-    if (_myId.isEmpty) return;
-    final was = _savedIds.contains(id);
-    setState(() {
-      was ? _savedIds.remove(id) : _savedIds.add(id);
-    });
-    await SavedService.toggle(id, was);
-    ref.invalidate(savedPostIdsProvider);
-    if (!was && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Хадгаллаа'),
-          behavior: SnackBarBehavior.floating,
-          duration: Duration(seconds: 1)));
+    final account = _myId;
+    if (account.isEmpty ||
+        ref.read(sessionUserIdProvider) != account ||
+        !_saving.add(id)) {
+      return;
+    }
+    var wrote = false;
+    try {
+      if (ref.read(savedPostIdsProvider).hasError) {
+        ref.invalidate(savedPostIdsProvider);
+      }
+      final saves = await ref.read(savedPostIdsProvider.future);
+      if (!mounted ||
+          account != _myId ||
+          ref.read(sessionUserIdProvider) != account) {
+        return;
+      }
+      final was = saves.contains(id);
+      setState(() {
+        was ? _savedIds.remove(id) : _savedIds.add(id);
+      });
+      final error = await SavedService.toggle(id, was);
+      if (!mounted ||
+          account != _myId ||
+          ref.read(sessionUserIdProvider) != account) {
+        return;
+      }
+      if (error != null) {
+        setState(() {
+          was ? _savedIds.add(id) : _savedIds.remove(id);
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(error), backgroundColor: AppColors.error));
+        return;
+      }
+      wrote = true;
+      ref.invalidate(savedPostIdsProvider);
+      final refreshed = await ref.read(savedPostIdsProvider.future);
+      if (!mounted ||
+          account != _myId ||
+          ref.read(sessionUserIdProvider) != account) {
+        return;
+      }
+      setState(() {
+        refreshed.contains(id) ? _savedIds.add(id) : _savedIds.remove(id);
+      });
+      if (!was && refreshed.contains(id)) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('Хадгаллаа'),
+            behavior: SnackBarBehavior.floating,
+            duration: Duration(seconds: 1)));
+      }
+    } catch (_) {
+      if (mounted &&
+          account == _myId &&
+          ref.read(sessionUserIdProvider) == account) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(wrote ? savedPostRefreshError : savedPostReadError),
+            backgroundColor: AppColors.error));
+      }
+    } finally {
+      _saving.remove(id);
     }
   }
 
@@ -270,9 +354,11 @@ class _ReelsScreenState extends ConsumerState<ReelsScreen>
     }
     setState(() => _followingIds.add(userId));
     try {
-      await SupabaseService.client
-          .from('follows')
-          .insert({'follower_id': _myId, 'following_id': userId});
+      final result = await DiscoveryService().follow(userId, true);
+      if (mounted && result != 'following') {
+        setState(() => _followingIds.remove(userId));
+      }
+      ref.read(socialVersionProvider.notifier).state++;
     } catch (_) {
       if (mounted) {
         setState(() => _followingIds.remove(userId));
@@ -296,49 +382,55 @@ class _ReelsScreenState extends ConsumerState<ReelsScreen>
 
   // Sheet/диалог нь энгийн UI гадаргуу — theme-ийг дагана
   // (зөвхөн reels канвас өөрөө үргэлж харанхуй, *Dark const-ууд)
-  void _moreSheet(Map<String, dynamic> reel) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: AppColors.bgElevated,
-      shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (s) => _themedNavBar(
-          s,
-          SafeArea(
-              child: Column(mainAxisSize: MainAxisSize.min, children: [
-            const SizedBox(height: 10),
-            Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                    color: AppColors.hairline2,
-                    borderRadius: BorderRadius.circular(2))),
-            const SizedBox(height: 6),
-            ListTile(
-                leading:
-                    Icon(Icons.link_rounded, color: AppColors.textSecondary),
-                title: Text('Линк хуулах',
-                    style: AppTextStyles.bodyMd
-                        .copyWith(color: AppColors.textPrimary)),
-                onTap: () {
-                  Navigator.pop(s);
-                  _shareReel(reel);
-                }),
-            ListTile(
-                leading:
-                    const Icon(Icons.flag_outlined, color: AppColors.error),
-                title: Text('Мэдэгдэх',
-                    style:
-                        AppTextStyles.bodyMd.copyWith(color: AppColors.error)),
-                onTap: () {
-                  Navigator.pop(s);
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                      content: Text('Мэдэгдлийг хүлээн авлаа. Баярлалаа'),
-                      behavior: SnackBarBehavior.floating));
-                }),
-            const SizedBox(height: 8),
-          ]))),
-    );
+  Future<void> _moreSheet(Map<String, dynamic> reel) async {
+    setState(() => _covered = true);
+    try {
+      final action = await showModalBottomSheet<String>(
+        context: context,
+        backgroundColor: AppColors.bgElevated,
+        shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+        builder: (s) => _themedNavBar(
+            s,
+            SafeArea(
+                child: Column(mainAxisSize: MainAxisSize.min, children: [
+              const SizedBox(height: 10),
+              Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                      color: AppColors.hairline2,
+                      borderRadius: BorderRadius.circular(2))),
+              const SizedBox(height: 6),
+              ListTile(
+                  leading:
+                      Icon(Icons.link_rounded, color: AppColors.textSecondary),
+                  title: Text('Линк хуулах',
+                      style: AppTextStyles.bodyMd
+                          .copyWith(color: AppColors.textPrimary)),
+                  onTap: () {
+                    Navigator.pop(s);
+                    _shareReel(reel);
+                  }),
+              ListTile(
+                  leading:
+                      const Icon(Icons.flag_outlined, color: AppColors.error),
+                  title: Text('Мэдэгдэх',
+                      style: AppTextStyles.bodyMd
+                          .copyWith(color: AppColors.error)),
+                  onTap: () {
+                    Navigator.pop(s, 'report');
+                  }),
+              const SizedBox(height: 8),
+            ]))),
+      );
+      if (action == 'report' && mounted) {
+        await showReportSheet(context,
+            targetType: 'post', targetId: reel['id'] as String);
+      }
+    } finally {
+      if (mounted) setState(() => _covered = false);
+    }
   }
 
   // Sheet theme-ийг дагадаг тул доод системийн дүрс ч дагана (reels region-ийг дарна)
@@ -396,6 +488,7 @@ class _ReelsScreenState extends ConsumerState<ReelsScreen>
       // Its late response must not replace the confirmed local deletion.
       _loadGeneration++;
       container.invalidate(reelsProvider);
+      container.invalidate(followingReelsProvider);
       if (mounted) {
         setState(() {
           _loading = false;
@@ -422,6 +515,36 @@ class _ReelsScreenState extends ConsumerState<ReelsScreen>
 
   @override
   Widget build(BuildContext context) {
+    ref.listen(savedPostIdsProvider, (_, next) {
+      if (next.isLoading ||
+          next.hasError ||
+          !next.hasValue ||
+          ref.read(sessionUserIdProvider) != _myId) {
+        return;
+      }
+      setState(() {
+        final pending = {for (final id in _saving) id: _savedIds.contains(id)};
+        _savedIds
+          ..clear()
+          ..addAll(next.value!);
+        for (final entry in pending.entries) {
+          entry.value ? _savedIds.add(entry.key) : _savedIds.remove(entry.key);
+        }
+      });
+    });
+    ref.listen(sessionUserIdProvider, (_, __) {
+      setState(() {
+        _reels = [];
+        _liked.clear();
+        _savedIds.clear();
+        _followingIds.clear();
+        _loading = true;
+        _error = null;
+        _canCreate = _myId.isNotEmpty;
+      });
+      _load();
+      _loadSaves();
+    });
     final visible = _visible;
     final canPlay = _foreground &&
         !_covered &&
@@ -548,7 +671,7 @@ class _ReelsScreenState extends ConsumerState<ReelsScreen>
 
   Widget _empty(BuildContext context) {
     // Дагадаг таб хоосон ч нийт контент байгаа эсэхийг ялгана
-    final followingEmpty = !_forYou && _reels.isNotEmpty;
+    final followingEmpty = !_forYou;
     return SafeArea(
         child: Stack(children: [
       Center(
@@ -568,7 +691,7 @@ class _ReelsScreenState extends ConsumerState<ReelsScreen>
                 ? 'Дагасан хүмүүс бичлэг оруулаагүй байна'
                 : _canCreate
                     ? 'Эхний бичлэгээ хуваалцаарай!'
-                    : 'Venue эзэд богино видео нийтэлдэг',
+                    : 'Нэвтэрч бичлэгээ хуваалцаарай',
             textAlign: TextAlign.center,
             style: AppTextStyles.bodyMd.copyWith(color: Colors.white54)),
         if (_canCreate && !followingEmpty) ...[
@@ -1138,6 +1261,30 @@ class _ReelPageState extends State<_ReelPage>
                       fontSize: 13.5,
                       height: 1.5,
                       shadows: [Shadow(color: Colors.black, blurRadius: 5)])),
+            ],
+            if (reel['venue_ref'] is String) ...[
+              const SizedBox(height: 8),
+              InkWell(
+                onTap: () => widget.onNavigate(
+                    '/place/${Uri.encodeComponent(reel['venue_ref'] as String)}'),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 6),
+                  child: Row(mainAxisSize: MainAxisSize.min, children: [
+                    const Icon(Icons.place_outlined,
+                        color: Colors.white, size: 18),
+                    const SizedBox(width: 6),
+                    Flexible(
+                      child: Text(
+                        (reel['venue_catalog'] as Map?)?['name'] as String? ??
+                            'Газрын дэлгэрэнгүй',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(color: Colors.white),
+                      ),
+                    ),
+                  ]),
+                ),
+              ),
             ],
             const SizedBox(height: 12),
             // Аудио мөр — TikTok шиг note icon + гүйдэг (marquee) текст

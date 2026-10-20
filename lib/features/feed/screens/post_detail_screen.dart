@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:cached_network_image/cached_network_image.dart';
+import '../../../core/widgets/authorized_media.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/widgets/owl_loading.dart';
@@ -13,6 +13,7 @@ import '../../../core/router/app_router.dart' show AppRoutes;
 import '../../../models/post.dart';
 import '../../../models/comment.dart';
 import '../../auth/providers/auth_provider.dart';
+import '../../discovery/services/discovery_service.dart';
 import '../providers/comment_provider.dart';
 import '../providers/feed_provider.dart';
 import '../providers/saved_provider.dart';
@@ -22,7 +23,7 @@ import '../../profile/utils/app_links.dart' show appOrigin;
 /// Сэтгэгдлийн input-д харуулах өөрийн mini профайл (avatar + username)
 final _myMiniProfileProvider =
     FutureProvider<Map<String, dynamic>?>((ref) async {
-  final me = SupabaseService.currentUser?.id;
+  final me = ref.watch(sessionUserIdProvider);
   if (me == null) return null;
   try {
     return await SupabaseService.client
@@ -44,19 +45,22 @@ class PostDetailScreen extends ConsumerStatefulWidget {
 }
 
 class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
-  final _commentCtrl  = TextEditingController();
-  final _scrollCtrl   = ScrollController();
-  final _focusNode    = FocusNode();
-  bool  _sending      = false;
+  final _commentCtrl = TextEditingController();
+  final _scrollCtrl = ScrollController();
+  final _focusNode = FocusNode();
+  bool _sending = false;
+  bool _liking = false;
   Post? _post;
-  bool  _postLoading  = true;
-  bool  _postError    = false; // сүлжээний алдаа ≠ пост олдсонгүй
+  bool _postLoading = true;
+  bool _postError = false; // сүлжээний алдаа ≠ пост олдсонгүй
   Comment? _replyTo;
+  (String?, String, int)? _scope;
+  int _postRequest = 0;
 
   @override
   void initState() {
     super.initState();
-    _fetchPost();
+    _fetchPost(notify: false);
   }
 
   @override
@@ -67,20 +71,60 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
     super.dispose();
   }
 
-  Future<void> _fetchPost() async {
-    if (mounted && (!_postLoading || _postError)) {
-      setState(() { _postLoading = true; _postError = false; });
+  bool _isCurrent(int request) =>
+      mounted &&
+      request == _postRequest &&
+      _scope ==
+          (
+            ref.read(sessionUserIdProvider),
+            widget.postId,
+            ref.read(socialVersionProvider)
+          );
+
+  Future<void> _fetchPost({bool notify = true}) async {
+    if (!mounted) return;
+    final scope = (
+      ref.read(sessionUserIdProvider),
+      widget.postId,
+      ref.read(socialVersionProvider)
+    );
+    final changed = _scope != null && _scope != scope;
+    _scope = scope;
+    final request = ++_postRequest;
+    void reset() {
+      _post = null;
+      _postLoading = true;
+      _postError = false;
+      if (changed) {
+        _commentCtrl.clear();
+        _replyTo = null;
+        _liking = false;
+        _sending = false;
+      }
+    }
+
+    if (notify) {
+      setState(reset);
+    } else {
+      reset();
     }
     try {
-      final me = SupabaseService.currentUser?.id;
+      final me = scope.$1;
+      final postId = scope.$2;
       // Постыг id-аар шууд татна (хуучин get_feed_posts(limit 1)-ийн оронд)
       final raw = await SupabaseService.client
           .from('posts')
           .select('*, profiles!user_id (id, username, avatar_url, is_verified)')
-          .eq('id', widget.postId)
+          .eq('id', postId)
           .maybeSingle();
+      if (!_isCurrent(request)) return;
       if (raw == null) {
-        if (mounted) setState(() { _post = null; _postLoading = false; });
+        if (mounted) {
+          setState(() {
+            _post = null;
+            _postLoading = false;
+          });
+        }
         return;
       }
       // isLikedByMe — нэг индекстэй query (likes unique(user_id,post_id))
@@ -89,66 +133,95 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
         final l = await SupabaseService.client
             .from('likes')
             .select('post_id')
-            .eq('post_id', widget.postId)
+            .eq('post_id', postId)
             .eq('user_id', me)
             .maybeSingle();
         liked = l != null;
       }
+      if (!_isCurrent(request)) return;
       final map = Map<String, dynamic>.from(raw as Map);
       map['is_liked_by_me'] = liked;
       if (mounted) {
-        setState(() { _post = Post.fromJson(map); _postLoading = false; });
+        setState(() {
+          _post = Post.fromJson(map);
+          _postLoading = false;
+        });
       }
     } catch (_) {
       // Сүлжээний алдаа — "олдсонгүй" гэж хуурахгүй, retry харуулна
-      if (mounted) setState(() { _postLoading = false; _postError = true; });
+      if (_isCurrent(request)) {
+        setState(() {
+          _postLoading = false;
+          _postError = true;
+        });
+      }
     }
   }
 
   /// Like — фийдэд байгаа эсэхээс үл хамааран DB-д бичигдэнэ
   Future<void> _toggleLike() async {
+    if (!_requireAccount()) return;
     final post = _post;
-    if (post == null) return;
+    if (post == null || _postLoading || _postError || _liking) return;
+    final request = _postRequest;
     final was = post.isLikedByMe;
+    final count = post.likesCount + (was ? -1 : 1);
     HapticFeedback.lightImpact();
     setState(() {
+      _liking = true;
       _post = post.copyWith(
         isLikedByMe: !was,
-        likesCount: post.likesCount + (was ? -1 : 1),
+        likesCount: count < 0 ? 0 : count,
       );
     });
-    final ok = await ref.read(feedProvider.notifier)
-        .toggleLikeById(widget.postId, was);
+    final ok =
+        await ref.read(feedProvider.notifier).toggleLikeById(post.id, was);
+    if (!_isCurrent(request)) return;
+    if (mounted) {
+      setState(() => _liking = false);
+      if (ok) {
+        for (final provider in [feedProvider, followingFeedProvider]) {
+          if (ref.exists(provider)) {
+            ref.read(provider.notifier).syncLike(_post!);
+          }
+        }
+      }
+    }
     if (!ok && mounted) {
       // Rollback + мэдэгдэнэ
       setState(() {
         _post = _post!.copyWith(
           isLikedByMe: was,
-          likesCount: _post!.likesCount + (was ? 1 : -1),
+          likesCount: post.likesCount,
         );
       });
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('Лайк илгээж чадсангүй'),
-        backgroundColor: AppColors.error));
+          content: Text('Лайк илгээж чадсангүй'),
+          backgroundColor: AppColors.error));
     }
   }
 
   Future<void> _sendComment() async {
+    if (_post == null || _postLoading || _postError) return;
+    if (!_requireAccount()) return;
     final text = _commentCtrl.text;
     if (text.trim().isEmpty || _sending) return;
+    final request = _postRequest;
 
     setState(() => _sending = true);
     // Reply бол эх сэтгэгдэлд (нэг түвшний thread): reply-д хариулбал эхэнд нь
-    final parentId = _replyTo == null
-        ? null
-        : (_replyTo!.parentId ?? _replyTo!.id);
+    final parentId =
+        _replyTo == null ? null : (_replyTo!.parentId ?? _replyTo!.id);
     final err = await CommentService.addComment(
-      postId:   widget.postId,
-      body:     text,
+      postId: widget.postId,
+      body: text,
       parentId: parentId,
     );
-    if (!mounted) return;
-    setState(() { _sending = false; _replyTo = null; });
+    if (!mounted || !_isCurrent(request)) return;
+    setState(() {
+      _sending = false;
+      _replyTo = null;
+    });
 
     if (err != null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -160,7 +233,7 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
     HapticFeedback.lightImpact();
     // Scroll to bottom after new comment
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_scrollCtrl.hasClients) {
+      if (_isCurrent(request) && _scrollCtrl.hasClients) {
         _scrollCtrl.animateTo(
           _scrollCtrl.position.maxScrollExtent,
           duration: const Duration(milliseconds: 300),
@@ -171,15 +244,26 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
   }
 
   void _startReply(Comment c) {
+    if (!_requireAccount()) return;
     setState(() => _replyTo = c);
     _focusNode.requestFocus();
   }
 
+  bool _requireAccount() {
+    final account = ref.read(sessionUserIdProvider);
+    if (account != null && account == SupabaseService.currentUser?.id) {
+      return true;
+    }
+    context.push('/auth?next=${Uri.encodeComponent('/post/${widget.postId}')}');
+    return false;
+  }
+
   Future<void> _deleteComment(Comment c) async {
+    final request = _postRequest;
     final err = await CommentService.deleteComment(c.id);
-    if (err != null && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(err), backgroundColor: AppColors.error));
+    if (err != null && mounted && _isCurrent(request)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(err), backgroundColor: AppColors.error));
     }
   }
 
@@ -216,11 +300,11 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
         (ctx, i) {
           final (comment, isReply) = flat[i];
           return _CommentTile(
-            comment:  comment,
-            isOwn:    comment.userId == me,
-            isReply:  isReply,
+            comment: comment,
+            isOwn: comment.userId == me,
+            isReply: isReply,
             onDelete: () => _deleteComment(comment),
-            onReply:  () => _startReply(comment),
+            onReply: () => _startReply(comment),
           );
         },
         childCount: flat.length,
@@ -230,22 +314,27 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
 
   /// Өөрийн пост дээрх засах/устгах sheet (хуучин AppBar action-оос зөөсөн)
   void _openOwnOptions() {
+    final post = _post;
+    if (post == null) return;
+    final request = _postRequest;
     showPostOptionsSheet(
       context,
-      postId: _post!.id,
-      authorId: _post!.userId,
-      authorUsername: _post!.author?.username?.replaceAll('@', '') ?? '',
+      postId: post.id,
+      authorId: post.userId,
+      authorUsername: post.author?.username?.replaceAll('@', '') ?? '',
       isOwn: true,
-      currentCaption: _post!.caption,
+      currentCaption: post.caption,
       onEditCaption: (text) async {
-        await ref.read(feedProvider.notifier)
-            .editCaption(_post!.id, text);
-        if (mounted) setState(() => _post = _post!.copyWith(caption: text));
+        if (!_isCurrent(request)) throw StateError('Пост өөрчлөгдсөн байна');
+        await ref.read(feedProvider.notifier).editCaption(post.id, text);
+        if (_isCurrent(request)) {
+          setState(() => _post = _post!.copyWith(caption: text));
+        }
       },
       onDelete: () async {
-        final ok = await ref.read(feedProvider.notifier)
-            .deletePost(_post!.id);
-        if (!mounted || !context.mounted) return ok;
+        if (!_isCurrent(request)) return false;
+        final ok = await ref.read(feedProvider.notifier).deletePost(post.id);
+        if (!mounted || !_isCurrent(request)) return ok;
         if (ok) {
           // Профайлын ПОСТ тоо + grid шинэчлэгдэнэ (posts_count trigger ажилласан)
           ref.read(postsVersionProvider.notifier).state++;
@@ -260,9 +349,15 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final commentsAsync = ref.watch(commentsProvider(widget.postId));
-    final me = SupabaseService.currentUser?.id;
-    final myProfile = ref.watch(_myMiniProfileProvider).valueOrNull;
+    final me = ref.watch(sessionUserIdProvider);
+    final scope = (me, widget.postId, ref.watch(socialVersionProvider));
+    if (scope != _scope) _fetchPost(notify: false);
+    final canInteract = !_postLoading && !_postError && _post != null;
+    final commentsAsync = canInteract
+        ? ref.watch(commentsProvider(widget.postId))
+        : const AsyncValue<List<Comment>>.data([]);
+    final profileAsync = ref.watch(_myMiniProfileProvider);
+    final myProfile = profileAsync.isLoading ? null : profileAsync.valueOrNull;
 
     return Scaffold(
       backgroundColor: AppColors.bgBase,
@@ -287,63 +382,69 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
                               : _PostHeader(
                                   post: _post!,
                                   // Header тоолуур realtime сэтгэгдлийн урсгалаас
-                                  commentCount:
-                                      commentsAsync.valueOrNull?.length,
+                                  commentCount: commentsAsync.isLoading
+                                      ? null
+                                      : commentsAsync.valueOrNull?.length,
                                   onLike: _toggleLike,
                                   onComment: () => _focusNode.requestFocus(),
                                 ),
                 ),
 
                 // ── Comments header — жижиг том үсэг, tertiary (нэгдсэн хэв маяг) ──
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 18, 20, 8),
-                    child: Row(children: [
-                      Text('СЭТГЭГДЛҮҮД', style: AppTextStyles.sectionLabel),
-                      const SizedBox(width: 8),
-                      commentsAsync.when(
-                        data: (c) => _CountBadge(count: c.length),
-                        loading: () => const SizedBox.shrink(),
-                        error: (_, __) => const SizedBox.shrink(),
-                      ),
-                    ]),
+                if (canInteract) ...[
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 18, 20, 8),
+                      child: Row(children: [
+                        Text('СЭТГЭГДЛҮҮД', style: AppTextStyles.sectionLabel),
+                        const SizedBox(width: 8),
+                        commentsAsync.when(
+                          skipLoadingOnRefresh: false,
+                          data: (c) => _CountBadge(count: c.length),
+                          loading: () => const SizedBox.shrink(),
+                          error: (_, __) => const SizedBox.shrink(),
+                        ),
+                      ]),
+                    ),
                   ),
-                ),
 
-                // ── Comments list ──
-                commentsAsync.when(
-                  loading: () => const SliverToBoxAdapter(
-                    child: Padding(
-                      padding: EdgeInsets.all(32),
-                      child: Center(child: OwlLoading(
-                          size: 40, message: 'Сэтгэгдэл ачаалж байна')),
+                  // ── Comments list ──
+                  commentsAsync.when(
+                    skipLoadingOnRefresh: false,
+                    loading: () => const SliverToBoxAdapter(
+                      child: Padding(
+                        padding: EdgeInsets.all(32),
+                        child: Center(
+                            child: OwlLoading(
+                                size: 40, message: 'Сэтгэгдэл ачаалж байна')),
+                      ),
                     ),
-                  ),
-                  error: (e, _) => SliverToBoxAdapter(
-                    child: Padding(
-                      padding: const EdgeInsets.all(24),
-                      child: Text('Алдаа: $e',
-                          style: AppTextStyles.bodyXs.copyWith(
-                              color: AppColors.textTertiary)),
+                    error: (e, _) => SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.all(24),
+                        child: Text(discoveryError(e),
+                            style: AppTextStyles.bodyXs
+                                .copyWith(color: AppColors.textTertiary)),
+                      ),
                     ),
+                    data: (comments) => comments.isEmpty
+                        ? SliverToBoxAdapter(
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                  vertical: 32, horizontal: 24),
+                              child: Column(children: [
+                                const Text('💬',
+                                    style: TextStyle(fontSize: 36)),
+                                const SizedBox(height: 12),
+                                Text('Эхний сэтгэгдлийг үлдээгээрэй',
+                                    style: AppTextStyles.bodyMd.copyWith(
+                                        color: AppColors.textSecondary)),
+                              ]),
+                            ),
+                          )
+                        : _buildCommentSliver(comments, me),
                   ),
-                  data: (comments) => comments.isEmpty
-                      ? SliverToBoxAdapter(
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(
-                                vertical: 32, horizontal: 24),
-                            child: Column(children: [
-                              const Text('💬',
-                                  style: TextStyle(fontSize: 36)),
-                              const SizedBox(height: 12),
-                              Text('Эхний сэтгэгдлийг үлдээгээрэй',
-                                  style: AppTextStyles.bodyMd.copyWith(
-                                      color: AppColors.textSecondary)),
-                            ]),
-                          ),
-                        )
-                      : _buildCommentSliver(comments, me),
-                ),
+                ],
 
                 const SliverToBoxAdapter(child: SizedBox(height: 16)),
               ],
@@ -351,30 +452,46 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
           ),
 
           // ── Comment input ──
-          _CommentInput(
-            controller: _commentCtrl,
-            focusNode:  _focusNode,
-            sending:    _sending,
-            onSend:     _sendComment,
-            replyingTo: _replyTo?.author?.username,
-            onCancelReply: () => setState(() => _replyTo = null),
-            avatarUrl:  myProfile?['avatar_url'] as String?,
-            initial: ((myProfile?['username'] as String?)?.trim().isNotEmpty == true
-                    ? (myProfile!['username'] as String).trim()[0]
-                    : SupabaseService.currentUser?.email?[0] ?? 'U')
-                .toUpperCase(),
-          ),
+          if (me == null)
+            SafeArea(
+              top: false,
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: FilledButton.icon(
+                  icon: const Icon(Icons.login),
+                  label: const Text('Нэвтэрч оролцох'),
+                  onPressed: _requireAccount,
+                ),
+              ),
+            )
+          else if (canInteract)
+            _CommentInput(
+              controller: _commentCtrl,
+              focusNode: _focusNode,
+              sending: _sending,
+              onSend: _sendComment,
+              replyingTo: _replyTo?.author?.username,
+              onCancelReply: () => setState(() => _replyTo = null),
+              avatarUrl: myProfile?['avatar_url'] as String?,
+              initial:
+                  ((myProfile?['username'] as String?)?.trim().isNotEmpty ==
+                              true
+                          ? (myProfile!['username'] as String).trim()[0]
+                          : SupabaseService.currentUser?.email?[0] ?? 'U')
+                      .toUpperCase(),
+            ),
         ]),
 
         // ── Хөвөгч glass удирдлага — медиа дээгүүр давхарлана ──
-        SafeArea(child: Padding(
+        SafeArea(
+            child: Padding(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
           child: Row(children: [
             _GlassCircleButton(
               icon: Icons.arrow_back_ios_new,
               // Линк/reload-оор нээгдсэн бол pop хийх хуудас байхгүй
-              onTap: () => context.canPop()
-                  ? context.pop() : context.go(AppRoutes.feed),
+              onTap: () =>
+                  context.canPop() ? context.pop() : context.go(AppRoutes.feed),
             ),
             const Spacer(),
             // Өөрийн пост (live бичлэг ч мөн адил)-ыг засах/устгах
@@ -406,23 +523,24 @@ class _PressState extends State<_Press> {
 
   @override
   Widget build(BuildContext context) => MouseRegion(
-    cursor: widget.onTap == null
-        ? SystemMouseCursors.basic : SystemMouseCursors.click,
-    child: GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTapDown: widget.onTap == null
-          ? null : (_) => setState(() => _down = true),
-      onTapUp: (_) => setState(() => _down = false),
-      onTapCancel: () => setState(() => _down = false),
-      onTap: widget.onTap,
-      child: AnimatedScale(
-        scale: _down ? widget.scale : 1.0,
-        duration: const Duration(milliseconds: 120),
-        curve: Curves.easeOut,
-        child: widget.child,
-      ),
-    ),
-  );
+        cursor: widget.onTap == null
+            ? SystemMouseCursors.basic
+            : SystemMouseCursors.click,
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTapDown:
+              widget.onTap == null ? null : (_) => setState(() => _down = true),
+          onTapUp: (_) => setState(() => _down = false),
+          onTapCancel: () => setState(() => _down = false),
+          onTap: widget.onTap,
+          child: AnimatedScale(
+            scale: _down ? widget.scale : 1.0,
+            duration: const Duration(milliseconds: 120),
+            curve: Curves.easeOut,
+            child: widget.child,
+          ),
+        ),
+      );
 }
 
 // ─── 44px доод хүрэлтийн талбай — жижиг текст/icon товчийг тэлнэ ──────────────
@@ -433,13 +551,13 @@ class _TapTarget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => ConstrainedBox(
-    constraints: const BoxConstraints(minHeight: 44, minWidth: 44),
-    child: Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8),
-      // widthFactor/heightFactor — мөрийг сунгахгүй, контентоороо багтана
-      child: Center(widthFactor: 1, heightFactor: 1, child: child),
-    ),
-  );
+        constraints: const BoxConstraints(minHeight: 44, minWidth: 44),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          // widthFactor/heightFactor — мөрийг сунгахгүй, контентоороо багтана
+          child: Center(widthFactor: 1, heightFactor: 1, child: child),
+        ),
+      );
 }
 
 // ─── Хөвөгч glass дугуй товч (back / more) ────────────────────────────────────
@@ -450,20 +568,21 @@ class _GlassCircleButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => _Press(
-    scale: 0.9,
-    onTap: onTap,
-    child: Container(
-      width: 40, height: 40,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: Colors.black.withValues(alpha: 0.45),
-        // Медиа дээгүүр хөвдөг тул горимоос үл хамааран харанхуй glass хүрээ
-        border: Border.all(color: AppColors.hairline2Dark),
-        boxShadow: AppColors.shadowCard,
-      ),
-      child: Icon(icon, size: 17, color: Colors.white),
-    ),
-  );
+        scale: 0.9,
+        onTap: onTap,
+        child: Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: Colors.black.withValues(alpha: 0.45),
+            // Медиа дээгүүр хөвдөг тул горимоос үл хамааран харанхуй glass хүрээ
+            border: Border.all(color: AppColors.hairline2Dark),
+            boxShadow: AppColors.shadowCard,
+          ),
+          child: Icon(icon, size: 17, color: Colors.white),
+        ),
+      );
 }
 
 // ─── Пост ачаалах skeleton ────────────────────────────────────────────────────
@@ -472,41 +591,49 @@ class _PostHeaderSkeleton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => TweenAnimationBuilder<double>(
-    tween: Tween(begin: 0.5, end: 1.0),
-    duration: const Duration(milliseconds: 250),
-    curve: Curves.easeOut,
-    builder: (_, o, child) => Opacity(opacity: o, child: child),
-    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      // Full-bleed медиа placeholder + доод талд sheet булан
-      Stack(children: [
-        Container(height: 340, width: double.infinity,
-            color: AppColors.bgSurface),
-        const Positioned.fill(child: Center(
-            child: OwlLoading(message: 'Пост ачаалж байна'))),
-        const Positioned(left: 0, right: 0, bottom: 0, child: _SheetCap()),
-      ]),
-      Padding(
-        padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
-        child: Row(children: [
-          Container(width: 44, height: 44,
-              decoration: BoxDecoration(
-                  color: AppColors.bgSurface, shape: BoxShape.circle)),
-          const SizedBox(width: 12),
-          Container(width: 120, height: 12,
-              decoration: BoxDecoration(
-                  color: AppColors.bgSurface,
-                  borderRadius: BorderRadius.circular(6))),
+        tween: Tween(begin: 0.5, end: 1.0),
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeOut,
+        builder: (_, o, child) => Opacity(opacity: o, child: child),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          // Full-bleed медиа placeholder + доод талд sheet булан
+          Stack(children: [
+            Container(
+                height: 340,
+                width: double.infinity,
+                color: AppColors.bgSurface),
+            const Positioned.fill(
+                child: Center(child: OwlLoading(message: 'Пост ачаалж байна'))),
+            const Positioned(left: 0, right: 0, bottom: 0, child: _SheetCap()),
+          ]),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
+            child: Row(children: [
+              Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                      color: AppColors.bgSurface, shape: BoxShape.circle)),
+              const SizedBox(width: 12),
+              Container(
+                  width: 120,
+                  height: 12,
+                  decoration: BoxDecoration(
+                      color: AppColors.bgSurface,
+                      borderRadius: BorderRadius.circular(6))),
+            ]),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 4, 20, 8),
+            child: Container(
+                width: 160,
+                height: 12,
+                decoration: BoxDecoration(
+                    color: AppColors.bgSurface,
+                    borderRadius: BorderRadius.circular(6))),
+          ),
         ]),
-      ),
-      Padding(
-        padding: const EdgeInsets.fromLTRB(20, 4, 20, 8),
-        child: Container(width: 160, height: 12,
-            decoration: BoxDecoration(
-                color: AppColors.bgSurface,
-                borderRadius: BorderRadius.circular(6))),
-      ),
-    ]),
-  );
+      );
 }
 
 // ─── Пост татахад алдаа гарсан (олдсонгүйгээс тусдаа) ─────────────────────────
@@ -516,28 +643,28 @@ class _PostErrorBox extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => SizedBox(
-    height: 240,
-    child: Center(
-      child: Column(mainAxisSize: MainAxisSize.min, children: [
-        Icon(Icons.wifi_off_outlined,
-            color: AppColors.textTertiary, size: 40),
-        const SizedBox(height: 12),
-        Text('Алдаа гарлаа', style: AppTextStyles.labelLg),
-        const SizedBox(height: 6),
-        Text('Пост ачаалж чадсангүй',
-            style: AppTextStyles.bodySm.copyWith(
-                color: AppColors.textTertiary)),
-        const SizedBox(height: 16),
-        OutlinedButton(
-          onPressed: onRetry,
-          style: OutlinedButton.styleFrom(
-            side: BorderSide(color: AppColors.hairline),
-            foregroundColor: AppColors.accentStart),
-          child: const Text('Дахин оролдох'),
+        height: 240,
+        child: Center(
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            Icon(Icons.wifi_off_outlined,
+                color: AppColors.textTertiary, size: 40),
+            const SizedBox(height: 12),
+            Text('Алдаа гарлаа', style: AppTextStyles.labelLg),
+            const SizedBox(height: 6),
+            Text('Пост ачаалж чадсангүй',
+                style: AppTextStyles.bodySm
+                    .copyWith(color: AppColors.textTertiary)),
+            const SizedBox(height: 16),
+            OutlinedButton(
+              onPressed: onRetry,
+              style: OutlinedButton.styleFrom(
+                  side: BorderSide(color: AppColors.hairline),
+                  foregroundColor: AppColors.accentStart),
+              child: const Text('Дахин оролдох'),
+            ),
+          ]),
         ),
-      ]),
-    ),
-  );
+      );
 }
 
 // ─── Sheet-ийн дээд булан — медиаг 28px давхарлан бүрхэж "хуудас" мэдрэмж өгнө ─
@@ -546,18 +673,20 @@ class _SheetCap extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-    height: 28,
-    decoration: BoxDecoration(
-      color: AppColors.bgBase,
-      borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-    ),
-    child: Center(
-      child: Container(width: 44, height: 4,
-          decoration: BoxDecoration(
-            color: AppColors.hairline2,
-            borderRadius: BorderRadius.circular(2))),
-    ),
-  );
+        height: 28,
+        decoration: BoxDecoration(
+          color: AppColors.bgBase,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+        ),
+        child: Center(
+          child: Container(
+              width: 44,
+              height: 4,
+              decoration: BoxDecoration(
+                  color: AppColors.hairline2,
+                  borderRadius: BorderRadius.circular(2))),
+        ),
+      );
 }
 
 // ─── Post header (media + actions + caption) ──────────────────────────────────
@@ -579,28 +708,78 @@ class _PostHeader extends ConsumerStatefulWidget {
 
 class _PostHeaderState extends ConsumerState<_PostHeader> {
   bool? _savedOverride;
+  bool _saving = false;
 
-  bool get _saved => _savedOverride ??
-      (ref.watch(savedPostIdsProvider).valueOrNull
-              ?.contains(widget.post.id) ?? false);
+  bool get _saved {
+    final saves = ref.watch(savedPostIdsProvider);
+    if (!_saving && !saves.isLoading && !saves.hasError && saves.hasValue) {
+      return saves.value!.contains(widget.post.id);
+    }
+    return _savedOverride ??
+        saves.valueOrNull?.contains(widget.post.id) ??
+        false;
+  }
 
   Future<void> _toggleSave() async {
-    final was = _savedOverride ??
-        (ref.read(savedPostIdsProvider).valueOrNull
-                ?.contains(widget.post.id) ?? false);
-    setState(() => _savedOverride = !was);
-    HapticFeedback.lightImpact();
-    final err = await SavedService.toggle(widget.post.id, was);
-    if (!mounted) return;
-    if (err != null) {
-      setState(() => _savedOverride = was);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(err), backgroundColor: AppColors.error));
+    if (_saving) return;
+    if (SupabaseService.currentUser == null) {
+      context
+          .push('/auth?next=${Uri.encodeComponent('/post/${widget.post.id}')}');
       return;
     }
-    ref.invalidate(savedPostIdsProvider);
-    try { await ref.read(savedPostIdsProvider.future); } catch (_) {}
-    if (mounted) setState(() => _savedOverride = null);
+    _saving = true;
+    final owner = SupabaseService.currentUser!.id;
+    final postId = widget.post.id;
+    var wrote = false;
+    try {
+      if (ref.read(sessionUserIdProvider) != owner) return;
+      if (ref.read(savedPostIdsProvider).hasError) {
+        ref.invalidate(savedPostIdsProvider);
+      }
+      final saves = await ref.read(savedPostIdsProvider.future);
+      if (!mounted ||
+          SupabaseService.currentUser?.id != owner ||
+          ref.read(sessionUserIdProvider) != owner ||
+          widget.post.id != postId) {
+        return;
+      }
+      final was = saves.contains(postId);
+      setState(() => _savedOverride = !was);
+      HapticFeedback.lightImpact();
+      final err = await SavedService.toggle(postId, was);
+      if (!mounted ||
+          SupabaseService.currentUser?.id != owner ||
+          ref.read(sessionUserIdProvider) != owner ||
+          widget.post.id != postId) {
+        return;
+      }
+      if (err != null) {
+        setState(() => _savedOverride = was);
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(err), backgroundColor: AppColors.error));
+        return;
+      }
+      wrote = true;
+      ref.invalidate(savedPostIdsProvider);
+      await ref.read(savedPostIdsProvider.future);
+      if (mounted &&
+          SupabaseService.currentUser?.id == owner &&
+          ref.read(sessionUserIdProvider) == owner &&
+          widget.post.id == postId) {
+        setState(() => _savedOverride = null);
+      }
+    } catch (_) {
+      if (mounted &&
+          SupabaseService.currentUser?.id == owner &&
+          ref.read(sessionUserIdProvider) == owner &&
+          widget.post.id == postId) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(wrote ? savedPostRefreshError : savedPostReadError),
+            backgroundColor: AppColors.error));
+      }
+    } finally {
+      _saving = false;
+    }
   }
 
   Future<void> _share() async {
@@ -613,8 +792,7 @@ class _PostHeaderState extends ConsumerState<_PostHeader> {
     }
   }
 
-  String _fmt(int n) =>
-      n >= 1000 ? '${(n / 1000).toStringAsFixed(1)}k' : '$n';
+  String _fmt(int n) => n >= 1000 ? '${(n / 1000).toStringAsFixed(1)}k' : '$n';
 
   /// Full-bleed медиа (carousel / видео / зураг)
   Widget _media(Post post) {
@@ -624,16 +802,16 @@ class _PostHeaderState extends ConsumerState<_PostHeader> {
     if (isVideoUrl(post.mediaUrl?.split('?').first)) {
       return NetworkVideo(url: post.mediaUrl!);
     }
-    return CachedNetworkImage(
+    return AuthorizedImage(
       imageUrl: post.mediaUrl!,
       width: double.infinity,
       fit: BoxFit.cover,
-      placeholder: (_, __) => Container(
-          height: 360, color: AppColors.bgSurface),
+      placeholder: (_, __) =>
+          Container(height: 360, color: AppColors.bgSurface),
       errorWidget: (_, __, ___) => Container(
-        height: 300, color: AppColors.bgSurface,
-        child: const Center(child: Text('📸',
-            style: TextStyle(fontSize: 48))),
+        height: 300,
+        color: AppColors.bgSurface,
+        child: const Center(child: Text('📸', style: TextStyle(fontSize: 48))),
       ),
     );
   }
@@ -650,13 +828,18 @@ class _PostHeaderState extends ConsumerState<_PostHeader> {
         Stack(children: [
           _media(post),
           // Дээд scrim — хөвөгч glass товчнууд цайвар медиа дээр ч тод харагдана
-          Positioned(top: 0, left: 0, right: 0, child: IgnorePointer(
-            child: Container(height: 96,
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [Colors.black54, Colors.transparent]))))),
+          Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: IgnorePointer(
+                  child: Container(
+                      height: 96,
+                      decoration: const BoxDecoration(
+                          gradient: LinearGradient(
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                              colors: [Colors.black54, Colors.transparent]))))),
           const Positioned(left: 0, right: 0, bottom: 0, child: _SheetCap()),
         ])
       else
@@ -672,12 +855,14 @@ class _PostHeaderState extends ConsumerState<_PostHeader> {
             onTap: () => context.push('/creator/${post.userId}'),
             child: AppAvatar(
               imageUrl: author?.avatarUrl,
-              initial:  author?.initial ?? '?',
-              size: 44, showRing: true,
+              initial: author?.initial ?? '?',
+              size: 44,
+              showRing: true,
             ),
           ),
           const SizedBox(width: 12),
-          Expanded(child: MouseRegion(
+          Expanded(
+              child: MouseRegion(
             cursor: SystemMouseCursors.click,
             child: GestureDetector(
               behavior: HitTestBehavior.opaque,
@@ -694,28 +879,33 @@ class _PostHeaderState extends ConsumerState<_PostHeader> {
                     ],
                   ]),
                   if (post.venueName != null)
-                    Row(children: [
-                      const Icon(Icons.location_on,
-                          size: 10, color: AppColors.accentStart),
-                      const SizedBox(width: 2),
-                      Text(post.venueName!,
-                          style: AppTextStyles.bodyXs
-                              .copyWith(color: AppColors.textSecondary)),
-                    ]),
+                    InkWell(
+                        onTap: post.venueRef == null
+                            ? null
+                            : () => context.push(
+                                '/place/${Uri.encodeComponent(post.venueRef!)}'),
+                        child: Row(children: [
+                          const Icon(Icons.location_on,
+                              size: 10, color: AppColors.accentStart),
+                          const SizedBox(width: 2),
+                          Text(post.venueName!,
+                              style: AppTextStyles.bodyXs
+                                  .copyWith(color: AppColors.textSecondary)),
+                        ])),
                 ],
               ),
             ),
           )),
           // Хугацаа — micro pill
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-            decoration: BoxDecoration(
-              color: AppColors.bgElevated.withValues(alpha: 0.72),
-              borderRadius: BorderRadius.circular(999),
-              border: Border.all(color: AppColors.hairline)),
-            child: Text(post.timeAgo,
-                style: AppTextStyles.bodyXs.copyWith(
-                    color: AppColors.textTertiary))),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              decoration: BoxDecoration(
+                  color: AppColors.bgElevated.withValues(alpha: 0.72),
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(color: AppColors.hairline)),
+              child: Text(post.timeAgo,
+                  style: AppTextStyles.bodyXs
+                      .copyWith(color: AppColors.textTertiary))),
         ]),
       ),
 
@@ -736,15 +926,14 @@ class _PostHeaderState extends ConsumerState<_PostHeader> {
             child: Row(children: [
               Icon(
                 post.isLikedByMe ? Icons.favorite : Icons.favorite_border,
-                color: post.isLikedByMe
-                    ? AppColors.like
-                    : AppColors.textSecondary,
+                color:
+                    post.isLikedByMe ? AppColors.like : AppColors.textSecondary,
                 size: 24,
               ),
               const SizedBox(width: 6),
               Text(post.formattedLikes,
-                  style: AppTextStyles.labelSm.copyWith(
-                      color: AppColors.textSecondary)),
+                  style: AppTextStyles.labelSm
+                      .copyWith(color: AppColors.textSecondary)),
             ]),
           ),
           const SizedBox(width: 20),
@@ -756,8 +945,8 @@ class _PostHeaderState extends ConsumerState<_PostHeader> {
                   color: AppColors.textSecondary, size: 24),
               const SizedBox(width: 6),
               Text(_fmt(widget.commentCount ?? post.commentsCount),
-                  style: AppTextStyles.labelSm.copyWith(
-                      color: AppColors.textSecondary)),
+                  style: AppTextStyles.labelSm
+                      .copyWith(color: AppColors.textSecondary)),
             ]),
           ),
           const Spacer(),
@@ -772,8 +961,7 @@ class _PostHeaderState extends ConsumerState<_PostHeader> {
             scale: 0.85,
             onTap: _toggleSave,
             child: Icon(_saved ? Icons.bookmark : Icons.bookmark_border,
-                color: _saved
-                    ? AppColors.saved : AppColors.textSecondary,
+                color: _saved ? AppColors.saved : AppColors.textSecondary,
                 size: 24),
           ),
         ]),
@@ -786,8 +974,8 @@ class _PostHeaderState extends ConsumerState<_PostHeader> {
           child: RichText(
             text: TextSpan(style: AppTextStyles.bodyMd, children: [
               TextSpan(
-                text: '${author?.username ?? ''} ',
-                style: const TextStyle(fontWeight: FontWeight.w700)),
+                  text: '${author?.username ?? ''} ',
+                  style: const TextStyle(fontWeight: FontWeight.w700)),
               TextSpan(text: post.caption),
             ]),
           ),
@@ -842,11 +1030,22 @@ class _CommentTileState extends State<_CommentTile> {
   }
 
   Future<void> _toggleLike() async {
+    if (SupabaseService.currentUser == null) {
+      context.push(
+          '/auth?next=${Uri.encodeComponent('/post/${widget.comment.postId}')}');
+      return;
+    }
     final was = _liked;
-    setState(() { _liked = !was; _likes += was ? -1 : 1; });
+    setState(() {
+      _liked = !was;
+      _likes += was ? -1 : 1;
+    });
     final err = await CommentService.toggleLike(widget.comment.id, was);
     if (err != null && mounted) {
-      setState(() { _liked = was; _likes += was ? 1 : -1; });
+      setState(() {
+        _liked = was;
+        _likes += was ? 1 : -1;
+      });
     }
   }
 
@@ -863,20 +1062,20 @@ class _CommentTileState extends State<_CommentTile> {
           onTap: () => context.push('/creator/${comment.userId}'),
           child: AppAvatar(
             imageUrl: author?.avatarUrl,
-            initial:  author?.initial ?? '?',
+            initial: author?.initial ?? '?',
             size: widget.isReply ? 28 : 34,
           ),
         ),
         const SizedBox(width: 12),
         Expanded(
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          child:
+              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Row(children: [
-              Text(author?.username ?? '—',
-                  style: AppTextStyles.labelSm),
+              Text(author?.username ?? '—', style: AppTextStyles.labelSm),
               const SizedBox(width: 6),
               Text(comment.timeAgo,
-                  style: AppTextStyles.bodyXs.copyWith(
-                      color: AppColors.textTertiary)),
+                  style: AppTextStyles.bodyXs
+                      .copyWith(color: AppColors.textTertiary)),
             ]),
             const SizedBox(height: 3),
             Text(comment.body,
@@ -900,8 +1099,8 @@ class _CommentTileState extends State<_CommentTile> {
                   onTap: () => _confirmDelete(context),
                   child: _TapTarget(
                     child: Text('Устгах',
-                        style: AppTextStyles.bodyXs.copyWith(
-                            color: AppColors.textTertiary)),
+                        style: AppTextStyles.bodyXs
+                            .copyWith(color: AppColors.textTertiary)),
                   ),
                 ),
               ],
@@ -915,16 +1114,16 @@ class _CommentTileState extends State<_CommentTile> {
           child: SizedBox(
             width: 44,
             height: 44,
-            child: Column(mainAxisAlignment: MainAxisAlignment.center,
-                children: [
+            child:
+                Column(mainAxisAlignment: MainAxisAlignment.center, children: [
               Icon(_liked ? Icons.favorite : Icons.favorite_border,
                   color: _liked ? AppColors.like : AppColors.textTertiary,
                   size: 16),
               if (_likes > 0) ...[
                 const SizedBox(height: 2),
                 Text('$_likes',
-                    style: AppTextStyles.bodyXs.copyWith(
-                        color: AppColors.textTertiary)),
+                    style: AppTextStyles.bodyXs
+                        .copyWith(color: AppColors.textTertiary)),
               ],
             ]),
           ),
@@ -943,17 +1142,19 @@ class _CommentTileState extends State<_CommentTile> {
         child: Padding(
           padding: const EdgeInsets.all(20),
           child: Column(mainAxisSize: MainAxisSize.min, children: [
-            Container(width: 36, height: 4,
+            Container(
+                width: 36,
+                height: 4,
                 decoration: BoxDecoration(
                     color: AppColors.hairline,
                     borderRadius: BorderRadius.circular(2))),
             const SizedBox(height: 20),
-            Text('Сэтгэгдэл устгах уу?',
-                style: AppTextStyles.labelLg),
+            Text('Сэтгэгдэл устгах уу?', style: AppTextStyles.labelLg),
             const SizedBox(height: 8),
-            Text('"${widget.comment.body.length > 60 ? '${widget.comment.body.substring(0, 60)}…' : widget.comment.body}"',
-                style: AppTextStyles.bodyMd.copyWith(
-                    color: AppColors.textSecondary),
+            Text(
+                '"${widget.comment.body.length > 60 ? '${widget.comment.body.substring(0, 60)}…' : widget.comment.body}"',
+                style: AppTextStyles.bodyMd
+                    .copyWith(color: AppColors.textSecondary),
                 textAlign: TextAlign.center),
             const SizedBox(height: 20),
             Row(children: [
@@ -961,16 +1162,19 @@ class _CommentTileState extends State<_CommentTile> {
                 child: OutlinedButton(
                   onPressed: () => Navigator.pop(ctx),
                   style: OutlinedButton.styleFrom(
-                    side: BorderSide(color: AppColors.hairline)),
+                      side: BorderSide(color: AppColors.hairline)),
                   child: const Text('Болих'),
                 ),
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: ElevatedButton(
-                  onPressed: () { Navigator.pop(ctx); widget.onDelete(); },
+                  onPressed: () {
+                    Navigator.pop(ctx);
+                    widget.onDelete();
+                  },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.error),
+                      backgroundColor: AppColors.error),
                   child: const Text('Устгах'),
                 ),
               ),
@@ -1011,7 +1215,8 @@ class _CommentInput extends StatelessWidget {
     // болон дээд hairline нь индикаторын доогуур үргэлжилнэ.
     return Container(
       padding: EdgeInsets.only(
-        left: 16, right: 8,
+        left: 16,
+        right: 8,
         top: replyingTo != null ? 0 : 10,
         bottom: mq.viewInsets.bottom + mq.padding.bottom + 10,
       ),
@@ -1020,92 +1225,99 @@ class _CommentInput extends StatelessWidget {
         border: Border(top: BorderSide(color: AppColors.hairline)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.4),
-            blurRadius: 18, spreadRadius: -4,
-            offset: const Offset(0, -6)),
+              color: Colors.black.withValues(alpha: 0.4),
+              blurRadius: 18,
+              spreadRadius: -4,
+              offset: const Offset(0, -6)),
         ],
       ),
       child: Column(mainAxisSize: MainAxisSize.min, children: [
-      // Reply banner
-      if (replyingTo != null)
-        Padding(
-          padding: const EdgeInsets.only(right: 8, top: 8, bottom: 6),
-          child: Row(children: [
-            Icon(Icons.reply, size: 14, color: AppColors.textSecondary),
-            const SizedBox(width: 6),
-            Expanded(child: Text('@$replyingTo-д хариулж байна',
-                style: AppTextStyles.bodyXs.copyWith(
-                    color: AppColors.textSecondary))),
-            _Press(
-              onTap: onCancelReply,
-              child: Icon(Icons.close,
-                  size: 16, color: AppColors.textTertiary)),
-          ]),
-        ),
-      Row(children: [
-        AppAvatar(
-          imageUrl: avatarUrl,
-          initial: initial,
-          size: 32,
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          // Талбарын доод өндөр 48 — хуруугаар оногдоход тухтай
-          child: Container(
-            constraints: const BoxConstraints(minHeight: 48),
-            alignment: Alignment.center,
-            padding: const EdgeInsets.symmetric(horizontal: 14),
-            decoration: BoxDecoration(
-              color: AppColors.bgSurface.withValues(alpha: 0.65),
-              borderRadius: BorderRadius.circular(999),
-              border: Border.all(color: AppColors.hairline),
-            ),
-            child: TextField(
-              controller: controller,
-              focusNode:  focusNode,
-              maxLines:   4, minLines: 1,
-              maxLength:  500,
-              style: AppTextStyles.bodyMd,
-              decoration: InputDecoration(
-                hintText:     'Сэтгэгдэл бичих…',
-                hintStyle:    AppTextStyles.bodyMd.copyWith(
-                    color: AppColors.textTertiary),
-                border:       InputBorder.none,
-                counterText:  '',
-                isDense:      true,
-                contentPadding: const EdgeInsets.symmetric(vertical: 12),
+        // Reply banner
+        if (replyingTo != null)
+          Padding(
+            padding: const EdgeInsets.only(right: 8, top: 8, bottom: 6),
+            child: Row(children: [
+              Icon(Icons.reply, size: 14, color: AppColors.textSecondary),
+              const SizedBox(width: 6),
+              Expanded(
+                  child: Text('@$replyingTo-д хариулж байна',
+                      style: AppTextStyles.bodyXs
+                          .copyWith(color: AppColors.textSecondary))),
+              _Press(
+                  onTap: onCancelReply,
+                  child: Icon(Icons.close,
+                      size: 16, color: AppColors.textTertiary)),
+            ]),
+          ),
+        Row(children: [
+          AppAvatar(
+            imageUrl: avatarUrl,
+            initial: initial,
+            size: 32,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            // Талбарын доод өндөр 48 — хуруугаар оногдоход тухтай
+            child: Container(
+              constraints: const BoxConstraints(minHeight: 48),
+              alignment: Alignment.center,
+              padding: const EdgeInsets.symmetric(horizontal: 14),
+              decoration: BoxDecoration(
+                color: AppColors.bgSurface.withValues(alpha: 0.65),
+                borderRadius: BorderRadius.circular(999),
+                border: Border.all(color: AppColors.hairline),
+              ),
+              child: TextField(
+                controller: controller,
+                focusNode: focusNode,
+                maxLines: 4,
+                minLines: 1,
+                maxLength: 500,
+                style: AppTextStyles.bodyMd,
+                decoration: InputDecoration(
+                  hintText: 'Сэтгэгдэл бичих…',
+                  hintStyle: AppTextStyles.bodyMd
+                      .copyWith(color: AppColors.textTertiary),
+                  border: InputBorder.none,
+                  counterText: '',
+                  isDense: true,
+                  contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                ),
               ),
             ),
           ),
-        ),
-        const SizedBox(width: 8),
-        _Press(
-          scale: 0.88,
-          onTap: sending ? null : onSend,
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            width: 44, height: 44,
-            // Primary CTA — неон glow сүүдэр
-            decoration: BoxDecoration(
-              gradient: sending ? null : AppColors.accentGradient,
-              color: sending ? AppColors.bgSurface : null,
-              shape: BoxShape.circle,
-              boxShadow: sending ? null : [
-                BoxShadow(
-                  color: AppColors.accentStart.withValues(alpha: 0.35),
-                  blurRadius: 18, spreadRadius: -2),
-              ],
+          const SizedBox(width: 8),
+          _Press(
+            scale: 0.88,
+            onTap: sending ? null : onSend,
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              width: 44, height: 44,
+              // Primary CTA — неон glow сүүдэр
+              decoration: BoxDecoration(
+                gradient: sending ? null : AppColors.accentGradient,
+                color: sending ? AppColors.bgSurface : null,
+                shape: BoxShape.circle,
+                boxShadow: sending
+                    ? null
+                    : [
+                        BoxShadow(
+                            color:
+                                AppColors.accentStart.withValues(alpha: 0.35),
+                            blurRadius: 18,
+                            spreadRadius: -2),
+                      ],
+              ),
+              child: sending
+                  ? const Padding(
+                      padding: EdgeInsets.all(13),
+                      child: CircularProgressIndicator(
+                          color: AppColors.accentStart, strokeWidth: 2))
+                  : const Icon(Icons.send_rounded,
+                      color: Colors.white, size: 20),
             ),
-            child: sending
-                ? const Padding(
-                    padding: EdgeInsets.all(13),
-                    child: CircularProgressIndicator(
-                        color: AppColors.accentStart, strokeWidth: 2))
-                : const Icon(Icons.send_rounded,
-                    color: Colors.white, size: 20),
           ),
-        ),
-      ]),
+        ]),
       ]),
     );
   }
@@ -1118,15 +1330,15 @@ class _CountBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-    decoration: BoxDecoration(
-      color: AppColors.accentStart.withValues(alpha: 0.12),
-      borderRadius: BorderRadius.circular(12),
-    ),
-    child: Text('$count',
-        style: AppTextStyles.bodyXs.copyWith(
-            color: AppColors.accentStart, fontWeight: FontWeight.w700)),
-  );
+        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+        decoration: BoxDecoration(
+          color: AppColors.accentStart.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Text('$count',
+            style: AppTextStyles.bodyXs.copyWith(
+                color: AppColors.accentStart, fontWeight: FontWeight.w700)),
+      );
 }
 
 // ─── Олон зурагтай пост carousel (detail) ───
@@ -1161,7 +1373,7 @@ class _DetailCarouselState extends State<_DetailCarousel> {
             if (isVideoUrl(url.split('?').first)) {
               return NetworkVideo(url: url, height: 400);
             }
-            return CachedNetworkImage(
+            return AuthorizedImage(
               imageUrl: url,
               width: double.infinity,
               fit: BoxFit.cover,
@@ -1175,28 +1387,39 @@ class _DetailCarouselState extends State<_DetailCarousel> {
           },
         ),
         // Тоолуур — хөвөгч back товчтой давхцахгүй байрлалд
-        Positioned(top: 64, right: 16, child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-          decoration: BoxDecoration(
-            color: Colors.black54, borderRadius: BorderRadius.circular(20)),
-          child: Text('${_page + 1}/${widget.urls.length}',
-            style: const TextStyle(color: Colors.white, fontSize: 11,
-              fontWeight: FontWeight.w600)),
-        )),
+        Positioned(
+            top: 64,
+            right: 16,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                  color: Colors.black54,
+                  borderRadius: BorderRadius.circular(20)),
+              child: Text('${_page + 1}/${widget.urls.length}',
+                  style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600)),
+            )),
         // Цэгүүд — sheet булангийн дээгүүр харагдана
-        Positioned(bottom: 40, left: 0, right: 0, child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            for (var i = 0; i < widget.urls.length; i++)
-              Container(
-                width: 6, height: 6,
-                margin: const EdgeInsets.symmetric(horizontal: 3),
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: i == _page ? Colors.white : Colors.white38),
-              ),
-          ],
-        )),
+        Positioned(
+            bottom: 40,
+            left: 0,
+            right: 0,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                for (var i = 0; i < widget.urls.length; i++)
+                  Container(
+                    width: 6,
+                    height: 6,
+                    margin: const EdgeInsets.symmetric(horizontal: 3),
+                    decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: i == _page ? Colors.white : Colors.white38),
+                  ),
+              ],
+            )),
       ]),
     );
   }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/night_owl_brand.dart';
@@ -203,6 +204,10 @@ class _VenueInformationSheetState extends State<VenueInformationSheet> {
                       minimumSize: const Size(0, 48)),
                 )),
           ),
+          TextButton.icon(icon:const Icon(Icons.photo_library_outlined),label:const Text('Нийтлэл, газрын дэлгэрэнгүй'),onPressed:(){
+            Navigator.of(context).pop();
+            context.push('/place/${Uri.encodeComponent(venue.id)}');
+          }),
           if (website != null || phone != null) ...[
             const SizedBox(height: 10),
             Wrap(spacing: 10, runSpacing: 8, children: [

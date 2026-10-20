@@ -14,6 +14,7 @@ import '../../feed/providers/feed_provider.dart';
 import '../utils/post_media.dart';
 import '../../map/providers/venue_provider.dart';
 import '../../../core/widgets/owl_loading.dart';
+import '../../../models/venue.dart';
 
 const int _maxImages = 10;
 // Файлын дээд хэмжээ — placeholder дээр амласантай нийцнэ
@@ -37,6 +38,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
 
   final _captionCtrl = TextEditingController();
   String? _venueName;
+  Venue? _selectedVenue;
   bool _loading = false;
   String? _error;
   double? _uploadProgress;
@@ -196,6 +198,8 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
         'media_urls': urls,
         'media_type': _isVideoPost ? 'video' : 'image',
         if (_venueName != null) 'venue_name': _venueName,
+        if (_selectedVenue != null) 'venue_ref': _selectedVenue!.id,
+        if (_selectedVenue?.communityEnabled == true) 'venue_id': _selectedVenue!.id,
       });
 
       container.read(feedProvider.notifier).loadFeed(refresh: true);
@@ -379,7 +383,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                     ? AppColors.textPrimary : AppColors.textTertiary))),
             if (_venueName != null)
               _Press(
-                onTap: () => setState(() => _venueName = null),
+                onTap: () => setState(() { _venueName = null; _selectedVenue=null; }),
                 child: Icon(Icons.close,
                     color: AppColors.textTertiary, size: 18))
             else
@@ -517,7 +521,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
       builder: (_) => _VenuePicker(
-        onSelect: (name) => setState(() => _venueName = name),
+        onSelect: (venue) => setState(() { _venueName = venue.name; _selectedVenue=venue; }),
       ),
     );
   }
@@ -627,7 +631,7 @@ class _PickerPlaceholder extends StatelessWidget {
 
 // ─── Venue picker bottom sheet with search ───
 class _VenuePicker extends ConsumerStatefulWidget {
-  final ValueChanged<String> onSelect;
+  final ValueChanged<Venue> onSelect;
   const _VenuePicker({required this.onSelect});
   @override
   ConsumerState<_VenuePicker> createState() => _VenuePickerState();
@@ -660,7 +664,7 @@ class _VenuePickerState extends ConsumerState<_VenuePicker> {
             return ListTile(leading: Text(venue.emoji, style: const TextStyle(fontSize: 24)),
               title: Text(venue.name), subtitle: Text([if (venue.district != null) venue.district!, venue.typeLabel].join(' · ')),
               trailing: const Icon(Icons.chevron_right), onTap: () {
-                widget.onSelect(venue.name); Navigator.pop(context);
+                widget.onSelect(venue); Navigator.pop(context);
               });
           });
         })),

@@ -16,6 +16,17 @@ import 'package:night_owl_ub/features/feed/screens/feed_screen.dart';
 import 'package:night_owl_ub/features/notifications/providers/notification_provider.dart';
 import 'package:night_owl_ub/core/widgets/tonight_card.dart';
 import 'package:night_owl_ub/core/theme/app_colors.dart';
+import 'package:night_owl_ub/features/feed/providers/feed_provider.dart';
+import 'package:night_owl_ub/models/post.dart';
+
+class _FollowingFixture extends FeedNotifier {
+  _FollowingFixture():super(followingOnly:true);
+  @override
+  Future<void> loadFeed({bool refresh=false})async{
+    state=AsyncValue.data([Post.fromJson({'id':'post-beta','user_id':'beta','caption':'fixture caption beta',
+      'created_at':DateTime.now().toUtc().toIso8601String(),'profiles':{'id':'beta','username':'fixture_beta'}})]);
+  }
+}
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -73,6 +84,7 @@ void main() {
           storiesProvider.overrideWith((_) async => []),
           savedPostIdsProvider.overrideWith((_) async => {}),
           feedFollowingIdsProvider.overrideWith((_) async => {'beta'}),
+          followingFeedProvider.overrideWith((_)=>_FollowingFixture()),
           upcomingEventsProvider.overrideWith((_) async => []),
           unreadNotifCountProvider.overrideWithValue(0),
         ],

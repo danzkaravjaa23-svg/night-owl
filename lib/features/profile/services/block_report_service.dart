@@ -1,10 +1,12 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../auth/providers/auth_provider.dart';
+import '../../discovery/services/discovery_service.dart';
 import '../../../core/services/supabase_service.dart';
 
 /// Block / Report үйлчилгээ
 class BlockReportService {
-  static final _c = SupabaseService.client;
+  static SupabaseClient get _c => SupabaseService.client;
 
   /// Хэрэглэгчийг блоклох
   static Future<String?> block(String userId) async {
@@ -61,7 +63,8 @@ class BlockReportService {
     final me = SupabaseService.currentUser?.id;
     if (me == null) return {};
     try {
-      final res = await _c.from('blocks').select('blocked_id').eq('blocker_id', me);
+      final res =
+          await _c.from('blocks').select('blocked_id').eq('blocker_id', me);
       return (res as List)
           .map((e) => e['blocked_id']?.toString())
           .whereType<String>()
@@ -95,13 +98,13 @@ class BlockReportService {
       await _c.from('reports').insert({
         'reporter_id': me,
         'target_type': targetType,
-        'target_id':   targetId,
-        'reason':      reason,
+        'target_id': targetId,
+        'reason': reason,
         if (details != null && details.isNotEmpty) 'details': details,
       });
       return null;
     } catch (e) {
-      return e.toString();
+      return discoveryError(e);
     }
   }
 }

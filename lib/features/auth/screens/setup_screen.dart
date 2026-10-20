@@ -1,4 +1,5 @@
 import 'dart:async';
+import '../../../core/utils/auth_return.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
@@ -270,6 +271,7 @@ class _SetupScreenState extends State<SetupScreen> {
   }
 
   Future<void> _save() async {
+    final destination=AuthReturn.destination;
     // Enter дарж давхар илгээхээс сэргийлнэ
     if (!_canEdit) return;
     // Хэрэглэгчийн нэрийн алдаа талбарын доор inline харагдана
@@ -341,7 +343,7 @@ class _SetupScreenState extends State<SetupScreen> {
             const SnackBar(content: Text('Профайл хадгалагдлаа')));
         context.canPop() ? context.pop() : context.go(AppRoutes.profile);
       } else {
-        context.go(AppRoutes.feed);
+        context.go(destination);
       }
     } on PostgrestException catch (e) {
       if (!mounted || !_isSetupUser(savedUser)) return;

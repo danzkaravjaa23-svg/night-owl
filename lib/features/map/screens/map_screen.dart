@@ -1,10 +1,10 @@
 import 'dart:convert';
+import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/router/app_router.dart';
@@ -19,61 +19,14 @@ import '../../../core/widgets/owl_loading.dart';
 import '../../../core/widgets/sculpted_icon.dart';
 import '../../../models/venue.dart';
 import '../../auth/providers/auth_provider.dart';
+import '../../discovery/services/discovery_service.dart';
 import '../providers/venue_provider.dart';
+import '../providers/venue_bookmarks_provider.dart';
 import '../services/location_service.dart';
 import '../widgets/google_map_view.dart';
 import '../widgets/map_controller.dart';
 import '../widgets/venue_information_sheet.dart';
 
-/// Bookmarks belong to this device and account. No server table is assumed.
-class VenueBookmarksNotifier extends StateNotifier<AsyncValue<Set<String>>> {
-  final String? userId;
-  late final Future<void> ready;
-  bool _saving = false;
-  VenueBookmarksNotifier(this.userId) : super(const AsyncValue.loading()) {
-    ready = _load();
-  }
-  String get storageKey => 'venue_bookmarks.${userId ?? 'guest'}';
-  Future<void> _load() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final ids = prefs.getStringList(storageKey) ?? <String>[];
-      if (mounted) state = AsyncValue.data(ids.toSet());
-    } catch (error, stack) {
-      if (mounted) state = AsyncValue.error(error, stack);
-    }
-  }
-
-  Future<void> toggle(String venueId) async {
-    await ready;
-    if (!mounted) return;
-    if (!state.hasValue) {
-      await _load();
-      if (!mounted) return;
-      if (!state.hasValue) {
-        throw StateError('Stored venue bookmarks could not be read');
-      }
-    }
-    if (_saving) throw StateError('A venue save is already in progress');
-    _saving = true;
-    try {
-      final next = {...?state.valueOrNull};
-      if (!next.remove(venueId)) next.add(venueId);
-      final prefs = await SharedPreferences.getInstance();
-      if (!await prefs.setStringList(storageKey, next.toList()..sort())) {
-        throw StateError('Venue bookmark was not saved');
-      }
-      if (mounted) state = AsyncValue.data(next);
-    } finally {
-      _saving = false;
-    }
-  }
-}
-
-final venueBookmarksProvider = StateNotifierProvider.autoDispose<
-    VenueBookmarksNotifier, AsyncValue<Set<String>>>((ref) {
-  return VenueBookmarksNotifier(ref.watch(sessionUserIdProvider));
-});
 final _venueDescriptionProvider =
     FutureProvider.autoDispose.family<String?, String>((ref, id) async {
   final row = await SupabaseService.client
@@ -155,21 +108,26 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     }
   }
 
-  Future<void> _openExternal(Uri uri) async {
+  Future<bool> _openExternal(Uri uri) async {
     try {
-      if (!await launchUrl(uri, mode: LaunchMode.externalApplication) &&
-          mounted) {
+      final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
+      if (!opened && mounted) {
         _message('Холбоос нээж чадсангүй. Дахин оролдоно уу.');
       }
+      return opened;
     } catch (_) {
       if (mounted) _message('Холбоос нээж чадсангүй.');
+      return false;
     }
   }
 
   Future<void> _directions(Venue venue) async {
     if (!venue.hasLocation) return;
-    await _openExternal(Uri.https('www.google.com', '/maps/dir/',
+    final opened = await _openExternal(Uri.https('www.google.com', '/maps/dir/',
         {'api': '1', 'destination': '${venue.lat},${venue.lng}'}));
+    if (opened) {
+      unawaited(DiscoveryService().activity('directions', target: venue.id));
+    }
   }
 
   Future<void> _save(Venue venue) async {
@@ -184,7 +142,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
           ref.read(venueBookmarksProvider).valueOrNull?.contains(venue.id) ??
               false;
       _message(
-          saved ? 'Энэ төхөөрөмж дээр хадгаллаа' : 'Хадгалсан газраас хаслаа');
+          saved ? 'Газар хадгаллаа' : 'Хадгалсан газраас хаслаа');
     } catch (_) {
       if (mounted) _message('Газар хадгалж чадсангүй. Дахин оролдоно уу.');
     } finally {
@@ -218,11 +176,8 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   }
 
   void _openVenue(Venue venue) {
-    if (venue.communityEnabled) {
-      context.push('/venue/reviews/${Uri.encodeComponent(venue.id)}');
-      return;
-    }
-    _showInformation(venue);
+    if(!venue.communityEnabled){_showInformation(venue);return;}
+    context.push('/place/${Uri.encodeComponent(venue.id)}');
   }
 
   void _showInformation(Venue venue) {
@@ -416,6 +371,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                       child: FittedBox(
                           fit: BoxFit.scaleDown,
                           child: NightOwlBrand(size: 28, onDark: _dark)))),
+              IconButton(tooltip:'Хүмүүс, шалгасан газрууд',onPressed:()=>context.push('/discovery'),icon:const Icon(Icons.travel_explore)),
               IconButton(
                   tooltip: _showList
                       ? 'Газрын зураг харах'
@@ -774,6 +730,11 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                         mainAxisSize: MainAxisSize.min,
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
+                          Text(source == null
+                              ? 'Байршил баталгаажаагүй · очихын өмнө шалгаарай'
+                              : 'Байршлын эх сурвалжтай · очихын өмнө шалгаарай',
+                              style:AppTextStyles.bodyXs.copyWith(color:secondary,height:1.4)),
+                          const SizedBox(height:9),
                           Row(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
@@ -883,12 +844,6 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                                         size: 19, color: secondary)),
                               ]),
                           const SizedBox(height: 9),
-                          Text(
-                              source == null
-                                  ? 'Байршил баталгаажаагүй · очихын өмнө шалгаарай'
-                                  : 'Байршлын эх сурвалжтай · очихын өмнө шалгаарай',
-                              style: AppTextStyles.bodyXs
-                                  .copyWith(color: secondary, height: 1.4)),
                           const SizedBox(height: 10),
                           Row(children: [
                             Expanded(

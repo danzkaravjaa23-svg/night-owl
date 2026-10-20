@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/services/supabase_service.dart';
 import '../../auth/providers/auth_provider.dart';
+import '../../discovery/services/discovery_service.dart';
 
 // ─── Is following a user ──────────────────────────────────────────────────────
 final isFollowingProvider =
@@ -26,8 +27,9 @@ class FollowNotifier extends StateNotifier<AsyncValue<bool>> {
   /// (Провайдер өөрөө snackbar харуулж чадахгүй тул дээд давхарга бүртгэнэ.)
   void Function()? onFailure;
   bool _busy = false;
+  final void Function()? onChanged;
 
-  FollowNotifier(this.targetUserId) : super(const AsyncValue.loading()) {
+  FollowNotifier(this.targetUserId,{this.onChanged}) : super(const AsyncValue.loading()) {
     _init();
   }
 
@@ -61,18 +63,9 @@ class FollowNotifier extends StateNotifier<AsyncValue<bool>> {
     state = AsyncValue.data(!current);
 
     try {
-      if (!current) {
-        await SupabaseService.client.from('follows').insert({
-          'follower_id':  me,
-          'following_id': targetUserId,
-        });
-      } else {
-        await SupabaseService.client
-            .from('follows')
-            .delete()
-            .eq('follower_id', me)
-            .eq('following_id', targetUserId);
-      }
+      final result=await DiscoveryService().follow(targetUserId,!current);
+      if(mounted)state=AsyncValue.data(result=='following');
+      onChanged?.call();
       return true;
     } catch (_) {
       // Rollback + UI-д мэдэгдэх
@@ -87,7 +80,7 @@ final followProvider =
     StateNotifierProvider.family<FollowNotifier, AsyncValue<bool>, String>(
         (ref, userId) {
           ref.watch(sessionUserIdProvider);
-          return FollowNotifier(userId);
+          return FollowNotifier(userId,onChanged:()=>ref.read(socialVersionProvider.notifier).state++);
         });
 
 // ─── Follower / following counts ─────────────────────────────────────────────
@@ -163,17 +156,12 @@ class FollowService {
   static Future<void> follow(String userId) async {
     final me = SupabaseService.currentUser?.id;
     if (me == null || me == userId) return;
-    await SupabaseService.client.from('follows').insert({
-      'follower_id': me, 'following_id': userId,
-    });
+    await DiscoveryService().follow(userId,true);
   }
 
   static Future<void> unfollow(String userId) async {
     final me = SupabaseService.currentUser?.id;
     if (me == null) return;
-    await SupabaseService.client.from('follows')
-        .delete()
-        .eq('follower_id', me)
-        .eq('following_id', userId);
+    await DiscoveryService().follow(userId,false);
   }
 }

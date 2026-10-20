@@ -4,14 +4,17 @@ import '../../../core/services/supabase_service.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../../models/post.dart';
+import '../../discovery/services/discovery_service.dart';
 
 // ─── Feed posts (paginated, RPC-based for correct isLikedByMe) ───────────────
 class FeedNotifier extends StateNotifier<AsyncValue<List<Post>>> {
-  FeedNotifier() : super(const AsyncValue.loading()) {
+  final bool followingOnly;
+  FeedNotifier({this.followingOnly=false}) : super(const AsyncValue.loading()) {
     loadFeed();
   }
 
   DateTime? _cursor; // сүүлд татсан постын created_at (keyset pagination)
+  String? _cursorId;
   bool _hasMore = true;
   bool _loading = false;
   Future<void>? _inflight;
@@ -54,6 +57,7 @@ class FeedNotifier extends StateNotifier<AsyncValue<List<Post>>> {
   Future<void> _doLoad({required bool refresh}) async {
     if (refresh) {
       _cursor = null;
+      _cursorId = null;
       _hasMore = true;
       // Хуучин дата байвал skeleton flash хийхгүй — RefreshIndicator л хангалттай
       if (state.valueOrNull == null) state = const AsyncValue.loading();
@@ -69,15 +73,20 @@ class FeedNotifier extends StateNotifier<AsyncValue<List<Post>>> {
       if (userId != null) {
         // RPC: cursor (keyset) — offset scan байхгүй, давхардахгүй
         final data = await SupabaseService.client.rpc(
-          'get_feed_cursor',
+          'get_discovery_feed',
           params: {
-            'p_user_id': userId,
+            'p_following': followingOnly,
             'p_limit': AppConstants.feedPageSize,
             'p_before': _cursor?.toIso8601String(),
+            'p_before_id': _cursorId,
           },
         );
         rows = (data as List).cast<Map<String, dynamic>>();
       } else {
+        if(followingOnly){
+          if(mounted){state=const AsyncValue.data([]);_hasMore=false;hasMore.value=false;}
+          return;
+        }
         // Fallback: plain query with cursor
         var q = SupabaseService.client.from('posts').select(
             '*, profiles!user_id (id, username, avatar_url, is_verified)');
@@ -93,7 +102,7 @@ class FeedNotifier extends StateNotifier<AsyncValue<List<Post>>> {
       final fetched = rows.map((j) => Post.fromJson(j)).toList();
       if (!mounted) return;
       _hasMore = fetched.length == AppConstants.feedPageSize;
-      if (fetched.isNotEmpty) _cursor = fetched.last.createdAt;
+      if (fetched.isNotEmpty) { _cursor = fetched.last.createdAt; _cursorId = fetched.last.id; }
 
       // Давхардлаас сэргийлэх (cursor хилийн ижил timestamp edge case)
       final existing = refresh ? <Post>[] : (state.valueOrNull ?? []);
@@ -119,7 +128,7 @@ class FeedNotifier extends StateNotifier<AsyncValue<List<Post>>> {
 
   // ── Optimistic like toggle (фийдэд байгаа пост) ─────────────────────────────
   /// true = амжилттай, false = DB бичилт бүтэлгүйтэж rollback хийсэн
-  Future<bool> toggleLike(String postId) async {
+  Future<bool> toggleLike(String postId, {bool? currentlyLiked}) async {
     final user = SupabaseService.currentUser;
     if (user == null || !mounted || !_liking.add(postId)) return false;
 
@@ -131,12 +140,15 @@ class FeedNotifier extends StateNotifier<AsyncValue<List<Post>>> {
     }
 
     final post = current[idx];
-    final nowLiked = !post.isLikedByMe;
+    // Details may have a fresher snapshot than the already-loaded feed.
+    final nowLiked = !(currentlyLiked ?? post.isLikedByMe);
+    final delta = post.isLikedByMe == nowLiked ? 0 : (nowLiked ? 1 : -1);
+    final count = post.likesCount + delta;
 
     // Optimistic update
     current[idx] = post.copyWith(
       isLikedByMe: nowLiked,
-      likesCount: post.likesCount + (nowLiked ? 1 : -1),
+      likesCount: count < 0 ? 0 : count,
     );
     state = AsyncValue.data(current);
 
@@ -148,7 +160,12 @@ class FeedNotifier extends StateNotifier<AsyncValue<List<Post>>> {
       // Rollback
       final rollback = List<Post>.from(state.valueOrNull ?? []);
       final i = rollback.indexWhere((p) => p.id == postId);
-      if (i != -1) rollback[i] = post;
+      if (i != -1) {
+        rollback[i] = rollback[i].copyWith(
+          isLikedByMe: post.isLikedByMe,
+          likesCount: post.likesCount,
+        );
+      }
       state = AsyncValue.data(rollback);
       return false;
     } finally {
@@ -161,19 +178,29 @@ class FeedNotifier extends StateNotifier<AsyncValue<List<Post>>> {
   /// true = амжилттай (caller optimistic state-ээ хадгална), false = rollback хий.
   Future<bool> toggleLikeById(String postId, bool currentlyLiked) async {
     final user = SupabaseService.currentUser;
-    if (user == null) return false;
+    if (user == null || !mounted) return false;
 
     // Фийдэд байвал optimistic toggle (feed картууд ч мөн шинэчлэгдэнэ)
     if ((state.valueOrNull ?? []).any((p) => p.id == postId)) {
-      return toggleLike(postId);
+      return toggleLike(postId, currentlyLiked: currentlyLiked);
     }
     // Фийдэд байхгүй — DB рүү шууд бичнэ
+    if (!_liking.add(postId)) return false;
     try {
       await _writeLike(user.id, postId, !currentlyLiked);
       return true;
     } catch (_) {
       return false;
+    } finally {
+      _liking.remove(postId);
     }
+  }
+  void syncLike(Post post){
+    syncLikeState(post.id, post.isLikedByMe, post.likesCount);
+  }
+  void syncLikeState(String id, bool liked, int count) {
+    if(!mounted||!state.hasValue)return;
+    state=AsyncValue.data(state.value!.map((p)=>p.id==id?p.copyWith(isLikedByMe:liked,likesCount:count<0?0:count):p).toList());
   }
 
   Future<void> _writeLike(String userId, String postId, bool like) async {
@@ -255,5 +282,11 @@ class FeedNotifier extends StateNotifier<AsyncValue<List<Post>>> {
 final feedProvider =
     StateNotifierProvider<FeedNotifier, AsyncValue<List<Post>>>((ref) {
   ref.watch(sessionUserIdProvider);
+  ref.watch(socialVersionProvider);
   return FeedNotifier();
+});
+final followingFeedProvider=StateNotifierProvider<FeedNotifier,AsyncValue<List<Post>>>((ref) {
+  ref.watch(sessionUserIdProvider);
+  ref.watch(socialVersionProvider);
+  return FeedNotifier(followingOnly:true);
 });

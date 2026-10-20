@@ -1,7 +1,8 @@
 import 'dart:async';
+import '../../discovery/services/discovery_service.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:cached_network_image/cached_network_image.dart';
+import '../../../core/widgets/authorized_media.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/widgets/owl_loading.dart';
@@ -90,14 +91,12 @@ class _SearchScreenState extends State<SearchScreen> {
           .select('id, username, full_name, avatar_url, is_verified')
           .or('username.ilike.%$safe%,full_name.ilike.%$safe%')
           .eq('is_banned', false).limit(20);
-      final v = await SupabaseService.client.from('venues')
-          .select('id, name, district, venue_type')
-          .ilike('name', '%$safe%').limit(20);
+      final v = await DiscoveryService().catalog(query:safe);
       // Race guard — хариу ирэхэд query өөрчлөгдсөн бол хуучин үр дүнг хаяна
       if (!mounted || q.trim() != _ctrl.text.trim()) return;
       setState(() {
         _users = (u as List).cast<Map<String, dynamic>>().where((p) => p['id'] != _myId).toList();
-        _venues = (v as List).cast<Map<String, dynamic>>();
+        _venues = v.map((row)=>{...row,'id':row['ref']}).toList();
         _loading = false;
         _searchError = false;
       });
@@ -286,7 +285,7 @@ class _SearchScreenState extends State<SearchScreen> {
   }
 
   Widget _venueTile(Map<String, dynamic> v) => InkWell(
-    onTap: () => context.push('/venue/reviews/${v['id']}'),
+    onTap: () => context.push('/place/${Uri.encodeComponent(v['id'] as String)}'),
     child: Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
       child: Row(children: [
@@ -364,7 +363,7 @@ class _SearchScreenState extends State<SearchScreen> {
             borderRadius: BorderRadius.circular(14),
             child: Stack(fit: StackFit.expand, children: [
               if (url != null && !isVideo)
-                CachedNetworkImage(imageUrl: url, fit: BoxFit.cover,
+                AuthorizedImage(imageUrl: url, fit: BoxFit.cover,
                   memCacheWidth: 400, // grid thumbnail — жижиг decode, хурдан
                   fadeInDuration: const Duration(milliseconds: 150),
                   placeholder: (_, __) => Container(color: AppColors.bgSurface),

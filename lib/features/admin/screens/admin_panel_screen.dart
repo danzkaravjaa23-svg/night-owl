@@ -120,6 +120,7 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
               Text('УДИРДЛАГА', style: AppTextStyles.labelSm.copyWith(
                   color: AppColors.textSecondary, letterSpacing: 0.8)),
               const SizedBox(height: 8),
+              _tile(Icons.insights_outlined,'Эхний туршилт','Creator, газар, контент ба үр дүн',()=>context.push('/admin/pilot')),
               _tile(Icons.auto_awesome_rounded, 'Онцгой эвентүүд',
                   'Газрууд хэсэгт харагдах эвентүүдийг сонгох',
                   () => context.push(AppRoutes.adminFeaturedEvents)),

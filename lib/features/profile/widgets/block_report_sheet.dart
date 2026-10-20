@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../discovery/services/discovery_service.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../services/block_report_service.dart';
@@ -15,6 +17,12 @@ const _reasons = <String, String>{
 void _toast(BuildContext context, String msg) {
   ScaffoldMessenger.of(context).showSnackBar(
     SnackBar(content: Text(msg), duration: const Duration(seconds: 2)));
+}
+
+void _blockChanged(BuildContext context) {
+  final container = ProviderScope.containerOf(context, listen: false);
+  container.read(socialVersionProvider.notifier).state++;
+  container.invalidate(blockedIdsProvider);
 }
 
 /// Report шалтгаан сонгох sheet
@@ -101,6 +109,7 @@ Future<void> showUserOptionsSheet(
               if (ok != true) return;
               final err = await BlockReportService.block(userId);
               if (context.mounted) {
+                if (err == null) _blockChanged(context);
                 _toast(context, err == null
                   ? '@$username блоклогдлоо' : 'Алдаа: $err');
               }
@@ -203,6 +212,7 @@ Future<void> showPostOptionsSheet(
               if (ok != true) return;
               final err = await BlockReportService.block(authorId);
               if (context.mounted) {
+                if (err == null) _blockChanged(context);
                 _toast(context, err == null
                   ? '@$authorUsername блоклогдлоо' : 'Алдаа: $err');
               }

@@ -1,10 +1,14 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/services/supabase_service.dart';
+import '../../auth/providers/auth_provider.dart';
+import '../../discovery/services/discovery_service.dart';
 import '../../../models/comment.dart';
 
 // ─── Comments for a post (realtime stream) ───────────────────────────────────
 final commentsProvider =
     StreamProvider.family<List<Comment>, String>((ref, postId) {
+  final me = ref.watch(sessionUserIdProvider);
+  ref.watch(socialVersionProvider);
   return SupabaseService.client
       .from('comments')
       .stream(primaryKey: ['id'])
@@ -19,7 +23,6 @@ final commentsProvider =
         // Enrich with author profiles in one batch query
         if (comments.isEmpty) return comments;
         final userIds = comments.map((c) => c.userId).toSet().toList();
-        final me = SupabaseService.currentUser?.id;
 
         // Аль сэтгэгдлийг би лайк хийсэн бэ?
         final Set<String> likedIds = {};

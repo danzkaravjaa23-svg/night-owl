@@ -5,7 +5,7 @@ import 'package:flutter/gestures.dart' show PointerDeviceKind;
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:cached_network_image/cached_network_image.dart';
+import '../../../core/widgets/authorized_media.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/theme/app_radii.dart';
@@ -64,7 +64,10 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
   void _onScroll() {
     if (_scrollCtrl.position.pixels >=
         _scrollCtrl.position.maxScrollExtent - 300) {
-      ref.read(feedProvider.notifier).loadFeed();
+      ref
+          .read(
+              (_followingOnly ? followingFeedProvider : feedProvider).notifier)
+          .loadFeed();
     }
   }
 
@@ -77,7 +80,9 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
   }
 
   Future<void> _refresh() async {
-    await ref.read(feedProvider.notifier).loadFeed(refresh: true);
+    await ref
+        .read((_followingOnly ? followingFeedProvider : feedProvider).notifier)
+        .loadFeed(refresh: true);
     if (!mounted) return;
     ref.invalidate(storiesProvider);
     ref.invalidate(feedFollowingIdsProvider);
@@ -86,17 +91,12 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final feedAsync = ref.watch(feedProvider);
+    final activeFeed = _followingOnly ? followingFeedProvider : feedProvider;
+    final feedAsync = ref.watch(activeFeed);
     final rings = ref.watch(storiesProvider).valueOrNull ?? [];
-    final following = ref.watch(feedFollowingIdsProvider);
     final posts = feedAsync.valueOrNull ?? [];
-    final visiblePosts = _followingOnly
-        ? posts
-            .where(
-                (post) => following.valueOrNull?.contains(post.userId) ?? false)
-            .toList()
-        : posts;
-    final notifier = ref.read(feedProvider.notifier);
+    final visiblePosts = posts;
+    final notifier = ref.read(activeFeed.notifier);
 
     return Scaffold(
       backgroundColor: AppColors.bgBase,
@@ -143,24 +143,6 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
                             onRetry: _refresh,
                           )),
                     )
-                  else if (_followingOnly && following.isLoading)
-                    const SliverToBoxAdapter(
-                        child: Padding(
-                      padding: EdgeInsets.all(40),
-                      child: Center(
-                          child: OwlLoading(
-                              size: 40,
-                              message: 'Дагаж буй хүмүүсийг ачаалж байна')),
-                    ))
-                  else if (_followingOnly && following.hasError)
-                    SliverToBoxAdapter(
-                        child: SizedBox(
-                            height: 300,
-                            child: _ErrorView(
-                              message: 'Дагаж буй хүмүүсийг ачаалж чадсангүй.',
-                              onRetry: () =>
-                                  ref.invalidate(feedFollowingIdsProvider),
-                            )))
                   else ...[
                     if (visiblePosts.isEmpty)
                       SliverToBoxAdapter(
@@ -179,6 +161,19 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
                             isLast: postIdx == visiblePosts.length - 1,
                             onLike: () async {
                               final ok = await notifier.toggleLike(post.id);
+                              if (ok && mounted) {
+                                final updated = ref
+                                    .read(activeFeed)
+                                    .valueOrNull
+                                    ?.where((p) => p.id == post.id)
+                                    .firstOrNull;
+                                final other = _followingOnly
+                                    ? feedProvider
+                                    : followingFeedProvider;
+                                if (updated != null && ref.exists(other)) {
+                                  ref.read(other.notifier).syncLike(updated);
+                                }
+                              }
                               if (!ok && context.mounted) {
                                 ScaffoldMessenger.of(context)
                                     .showSnackBar(const SnackBar(
@@ -342,6 +337,10 @@ class _FeedTopBar extends ConsumerWidget {
           ),
         ),
         const ThemeToggleButton(),
+        IconButton(
+            tooltip: 'Хүн, газар нээх',
+            onPressed: () => context.push('/discovery'),
+            icon: const Icon(Icons.search)),
         const SizedBox(width: 4),
         _TopIconBtn(
           icon: SculptedIcon(Icons.notifications_rounded,
@@ -477,6 +476,7 @@ class _PostCardState extends ConsumerState<_PostCard>
   late Animation<double> _heartAnim;
   bool _showHeart = false;
   bool? _savedOverride; // optimistic; null бол provider-оос уншина
+  bool _saving = false;
   bool _hidden = false;
   bool _captionOpen = false; // урт тайлбарыг тэр дор нь дэлгэсэн эсэх
 
@@ -501,32 +501,78 @@ class _PostCardState extends ConsumerState<_PostCard>
 
   /// Хадгалсан эсэх: optimistic override эсвэл нийтлэг provider-оос
   /// (бүх карт нэг л query хуваалцана — N+1 байхгүй)
-  bool get _saved =>
-      _savedOverride ??
-      (ref.watch(savedPostIdsProvider).valueOrNull?.contains(widget.post.id) ??
-          false);
+  bool get _saved {
+    final saves = ref.watch(savedPostIdsProvider);
+    if (!_saving && !saves.isLoading && !saves.hasError && saves.hasValue) {
+      return saves.value!.contains(widget.post.id);
+    }
+    return _savedOverride ??
+        saves.valueOrNull?.contains(widget.post.id) ??
+        false;
+  }
 
   Future<void> _toggleSave() async {
-    final was = _savedOverride ??
-        (ref.read(savedPostIdsProvider).valueOrNull?.contains(widget.post.id) ??
-            false);
-    setState(() => _savedOverride = !was);
-    HapticFeedback.lightImpact();
-    final err = await SavedService.toggle(widget.post.id, was);
-    if (!mounted) return;
-    if (err != null) {
-      // Бүтэлгүйтвэл rollback + мэдэгдэнэ (чимээгүй алдахгүй)
-      setState(() => _savedOverride = was);
-      ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(err), backgroundColor: AppColors.error));
-      return;
-    }
-    // Refetch дуустал override-оо барина — icon буцаж анивчихгүй
-    ref.invalidate(savedPostIdsProvider);
+    if (_saving) return;
+    _saving = true;
+    final owner = SupabaseService.currentUser?.id;
+    final postId = widget.post.id;
+    var wrote = false;
     try {
+      if (owner == null) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text('Нэвтэрнэ үү')));
+        return;
+      }
+      if (ref.read(sessionUserIdProvider) != owner) return;
+      if (ref.read(savedPostIdsProvider).hasError) {
+        ref.invalidate(savedPostIdsProvider);
+      }
+      final saves = await ref.read(savedPostIdsProvider.future);
+      if (!mounted ||
+          SupabaseService.currentUser?.id != owner ||
+          ref.read(sessionUserIdProvider) != owner ||
+          widget.post.id != postId) {
+        return;
+      }
+      final was = saves.contains(postId);
+      setState(() => _savedOverride = !was);
+      HapticFeedback.lightImpact();
+      final err = await SavedService.toggle(postId, was);
+      if (!mounted ||
+          SupabaseService.currentUser?.id != owner ||
+          ref.read(sessionUserIdProvider) != owner ||
+          widget.post.id != postId) {
+        return;
+      }
+      if (err != null) {
+        // Бүтэлгүйтвэл rollback + мэдэгдэнэ (чимээгүй алдахгүй)
+        setState(() => _savedOverride = was);
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(err), backgroundColor: AppColors.error));
+        return;
+      }
+      wrote = true;
+      // Refetch дуустал override-оо барина — icon буцаж анивчихгүй
+      ref.invalidate(savedPostIdsProvider);
       await ref.read(savedPostIdsProvider.future);
-    } catch (_) {}
-    if (mounted) setState(() => _savedOverride = null);
+      if (mounted &&
+          SupabaseService.currentUser?.id == owner &&
+          ref.read(sessionUserIdProvider) == owner &&
+          widget.post.id == postId) {
+        setState(() => _savedOverride = null);
+      }
+    } catch (_) {
+      if (mounted &&
+          SupabaseService.currentUser?.id == owner &&
+          ref.read(sessionUserIdProvider) == owner &&
+          widget.post.id == postId) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(wrote ? savedPostRefreshError : savedPostReadError),
+            backgroundColor: AppColors.error));
+      }
+    } finally {
+      _saving = false;
+    }
   }
 
   @override
@@ -629,15 +675,15 @@ class _PostCardState extends ConsumerState<_PostCard>
                   ),
                   const SizedBox(height: 2),
                   MouseRegion(
-                    cursor: widget.post.venueId == null
+                    cursor: widget.post.venueRef == null
                         ? MouseCursor.defer
                         : SystemMouseCursors.click,
                     child: GestureDetector(
                       behavior: HitTestBehavior.opaque,
-                      onTap: widget.post.venueId == null
+                      onTap: widget.post.venueRef == null
                           ? null
-                          : () => context
-                              .push('/venue/reviews/${widget.post.venueId}'),
+                          : () => context.push(
+                              '/place/${Uri.encodeComponent(widget.post.venueRef!)}'),
                       child: Text(
                         venueName == null
                             ? widget.post.timeAgo
@@ -723,7 +769,7 @@ class _PostCardState extends ConsumerState<_PostCard>
                       // өөрчилж фийд үсрэхгүй (placeholder ч мөн адил хайрцагт)
                       : AspectRatio(
                           aspectRatio: 3 / 2,
-                          child: CachedNetworkImage(
+                          child: AuthorizedImage(
                             imageUrl: mediaUrl,
                             width: double.infinity,
                             fit: BoxFit.cover,
@@ -1049,7 +1095,7 @@ class _PostCarouselState extends State<_PostCarousel> {
               if (_isVideoUrl(url)) {
                 return NetworkVideo(url: url, cover: true);
               }
-              return CachedNetworkImage(
+              return AuthorizedImage(
                 imageUrl: url,
                 width: double.infinity,
                 fit: BoxFit.cover,

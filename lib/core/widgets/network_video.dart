@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'authorized_media.dart';
 import 'video_view_stub.dart'
     if (dart.library.io) 'video_view_io.dart'
     if (dart.library.html) 'video_view_web.dart';
@@ -40,7 +41,7 @@ class NetworkVideo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) =>
-      VideoView(url: url, posterOnly: posterOnly, height: height,
+      AuthorizedMedia(url: url, builder: (source) => VideoView(url: source, posterOnly: posterOnly, height: height,
           autoplay: autoplay, showPosterIcon: showPosterIcon,
-          active: active, progress: progress, cover: cover);
+          active: active, progress: progress, cover: cover));
 }

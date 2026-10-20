@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:cached_network_image/cached_network_image.dart';
+import '../../../core/widgets/authorized_media.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_radii.dart';
 import '../../../core/theme/app_text_styles.dart';
@@ -202,7 +202,7 @@ class _EventCard extends StatelessWidget {
           child: Stack(fit: StackFit.expand, children: [
             // ── Бүтэн зураг (full-bleed постер) ──
             event.coverUrl != null
-              ? CachedNetworkImage(imageUrl: event.coverUrl!, fit: BoxFit.cover,
+              ? AuthorizedImage(imageUrl: event.coverUrl!, fit: BoxFit.cover,
                   memCacheWidth: 1000, // постер хэмжээний decode
                   fadeInDuration: const Duration(milliseconds: 180),
                   placeholder: (_, __) => _coverPlaceholder(),

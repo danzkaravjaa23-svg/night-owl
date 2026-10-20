@@ -12,6 +12,7 @@ class Story {
   final DateTime createdAt;
   final UserProfile? author;
   final String? venueId;
+  final String? venueRef;
   final String? venueName;
   final List<String> mentions;
   final String? musicUrl;
@@ -30,6 +31,7 @@ class Story {
     required this.createdAt,
     this.author,
     this.venueId,
+    this.venueRef,
     this.venueName,
     this.mentions = const [],
     this.musicUrl,
@@ -52,7 +54,8 @@ class Story {
     createdAt: DateTime.tryParse(json['created_at']?.toString() ?? '') ?? DateTime.now(),
     author:    _parseProfile(json['profiles']),
     venueId:   json['venue_id'] as String?,
-    venueName: (json['venues'] as Map?)?['name'] as String?,
+    venueRef:  (json['venue_ref'] ?? json['venue_id']) as String?,
+    venueName: ((json['venue_catalog'] as Map?)?['name'] ?? (json['venues'] as Map?)?['name']) as String?,
     mentions:  (json['mentions'] as List?)?.map((e) => e.toString()).toList()
                  ?? const [],
     musicUrl:    json['music_url'] as String?,

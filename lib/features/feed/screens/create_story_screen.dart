@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import '../../discovery/widgets/venue_picker.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart' show SystemUiOverlayStyle;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -159,6 +160,7 @@ class _CreateStoryScreenState extends ConsumerState<CreateStoryScreen> {
   bool _filterBar = false;
 
   String? _venueId;
+  String? _venueRef;
   String? _venueName;
   final List<Map<String, dynamic>> _mentions = [];
   bool _busy = false;
@@ -343,15 +345,9 @@ class _CreateStoryScreenState extends ConsumerState<CreateStoryScreen> {
   }
 
   Future<void> _pickVenue() async {
-    final v = await showModalBottomSheet<Map<String, dynamic>>(
-      context: context, backgroundColor: AppColors.bgElevated,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (_) => const _PickerSheet(mode: _PickerMode.venue),
-    );
+    final v = await pickDiscoveryVenue(context);
     if (v != null && mounted) {
-      setState(() { _venueId = v['id'] as String; _venueName = v['name'] as String; });
+      setState(() { _venueId = v['venue_id'] as String?; _venueRef=v['ref'] as String; _venueName = v['name'] as String; });
     }
   }
 
@@ -523,6 +519,7 @@ class _CreateStoryScreenState extends ConsumerState<CreateStoryScreen> {
         // Видео бодит уртаараа тоглоно (5с дээр тайрахгүй)
         duration: _isVideo ? _videoDurationSecs : 5,
         venueId: _venueId,
+        venueRef: _venueRef,
         mentions: _mentions.map((m) => m['id'] as String).toList(),
         musicUrl: _songUrl,
         musicTitle: _songTitle,
@@ -800,7 +797,7 @@ class _CreateStoryScreenState extends ConsumerState<CreateStoryScreen> {
                     children: [
                       if (_venueName != null)
                         _selChip(Icons.location_on, _venueName!,
-                          () => setState(() { _venueId = null; _venueName = null; })),
+                          () => setState(() { _venueId = null; _venueRef=null; _venueName = null; })),
                       ..._mentions.map((m) => _selChip(Icons.alternate_email_rounded,
                         (m['username'] as String).replaceAll('@', ''),
                         () => setState(() => _mentions.remove(m)))),

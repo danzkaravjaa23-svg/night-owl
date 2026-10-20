@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/utils/auth_return.dart';
 import '../../../core/services/supabase_service.dart' show passwordJustReset;
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -62,6 +63,7 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _signIn() async {
+    final destination=AuthReturn.destination;
     // Enter дарж давхар илгээхээс сэргийлнэ
     if (_loading) return;
     if (!_formKey.currentState!.validate()) return;
@@ -82,7 +84,7 @@ class _LoginScreenState extends State<LoginScreen> {
         setState(() => _error = 'Нэвтрэх боломжгүй. И-мэйл баталгаажаагүй байж магадгүй.');
         return;
       }
-      context.go(AppRoutes.feed);
+      context.go(destination);
     } on AuthException catch (e) {
       if (!mounted) return;
       // Supabase-ийн тодорхой алдааг ойлгомжтой болгох

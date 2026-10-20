@@ -12,6 +12,7 @@ import 'package:night_owl_ub/core/theme/app_theme.dart';
 import 'package:night_owl_ub/core/widgets/sculpted_icon.dart';
 import 'package:night_owl_ub/features/auth/providers/auth_provider.dart';
 import 'package:night_owl_ub/features/map/providers/venue_provider.dart';
+import 'package:night_owl_ub/features/map/providers/venue_bookmarks_provider.dart';
 import 'package:night_owl_ub/features/map/screens/explore_screen.dart';
 import 'package:night_owl_ub/features/map/screens/map_screen.dart';
 import 'package:night_owl_ub/features/map/widgets/venue_map_view.dart';
@@ -234,7 +235,7 @@ void main() {
           tester
               .getRect(find.byKey(cardKey))
               .contains(tester.getCenter(find.text(warning))),
-          isTrue);
+          isTrue,reason:'card=${tester.getRect(find.byKey(cardKey))}; warning=${tester.getRect(find.text(warning))}');
       expect(
           tester.widget<Text>(find.text('Long test venue name')).style?.color,
           dark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight);
@@ -277,6 +278,8 @@ void main() {
       await tester.ensureVisible(find.text('Дэлгэрэнгүй'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Дэлгэрэнгүй'));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.byTooltip('Бүх газрыг жагсаалтаар харах'));
       await tester.pumpAndSettle();
       await tester.tap(find.byTooltip('Бүх газрыг жагсаалтаар харах'));
       await tester.pumpAndSettle();

@@ -185,6 +185,39 @@ void main() {
   });
 
   group('Native OAuth error stream', () {
+    test('a replacement client gets its own shared auth stream', () async {
+      SharedPreferences.setMockInitialValues({});
+      final client = MockClient((request) async {
+        throw StateError('No network request expected');
+      });
+      addTearDown(client.close);
+      Future<void> initialize() => Supabase.initialize(
+            url: 'https://example.test',
+            anonKey: 'test-only-anon-key',
+            debug: false,
+            httpClient: client,
+            authOptions: const FlutterAuthClientOptions(
+              autoRefreshToken: false,
+              detectSessionInUri: false,
+              localStorage: EmptyLocalStorage(),
+            ),
+          );
+      await initialize();
+      final first = SupabaseService.authStream;
+      expect(SupabaseService.authStream, same(first));
+      await Supabase.instance.dispose();
+      await initialize();
+      addTearDown(() => Supabase.instance.dispose());
+      final replacement = SupabaseService.authStream;
+      expect(replacement, isNot(same(first)));
+      expect(SupabaseService.authStream, same(replacement));
+      final signedOut = replacement
+          .firstWhere((state) => state.event == AuthChangeEvent.signedOut);
+      await Supabase.instance.client.auth.signOut();
+      expect((await signedOut.timeout(const Duration(seconds: 2))).session,
+          isNull);
+    });
+
     test(
         'SDK errors are sanitized once, auth events continue and late subscribers retain replay',
         () async {

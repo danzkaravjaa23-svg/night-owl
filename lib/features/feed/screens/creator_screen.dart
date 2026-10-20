@@ -1,6 +1,6 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
-import 'package:cached_network_image/cached_network_image.dart';
+import '../../../core/widgets/authorized_media.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' show PostgrestException;
@@ -17,6 +17,7 @@ import '../../auth/providers/auth_provider.dart' show currentProfileProvider;
 import '../../profile/services/block_report_service.dart';
 import '../../profile/widgets/block_report_sheet.dart';
 import '../providers/feed_provider.dart';
+import '../../discovery/services/discovery_service.dart';
 
 class CreatorScreen extends ConsumerStatefulWidget {
   final String creatorId;
@@ -38,6 +39,8 @@ class _CreatorScreenState extends ConsumerState<CreatorScreen> {
   bool _error = false;     // профайл татаж чадсангүй — retry харуулна
   int _loadGen = 0;        // давхар _load-ийн хуучин хариуг хаяна
   bool _isFollowing = false;
+  bool _followRequested=false;
+  bool _canView=false;
   bool _followLoading = false;
   bool _isBlocked = false;
   bool _unblocking = false;
@@ -99,13 +102,19 @@ class _CreatorScreenState extends ConsumerState<CreatorScreen> {
           BlockReportService.isBlocked(widget.creatorId)
         else
           Future<dynamic>.value(false),
+        DiscoveryService().relationship(widget.creatorId),
       ]);
       await pages;
       if (!mounted || gen != _loadGen) return;
+      DiscoveryService().activity('profile_view',target:widget.creatorId);
       setState(() {
         _profile     = results[0] as Map<String, dynamic>?;
         _isFollowing = results[1] != null;
         _isBlocked   = results[2] == true;
+        final relation=results[3] as SocialRelationship;
+        _isFollowing=relation.following;
+        _followRequested=relation.requested;
+        _canView=relation.canView;
         _loading     = false;
         _error       = false;
       });
@@ -226,31 +235,28 @@ class _CreatorScreenState extends ConsumerState<CreatorScreen> {
     if (me == null) {
       // Shared линкээр нэвтрээгүй орсон — чимээгүй биш, нэвтрэхийг санал болгоно
       _toast('Дагахын тулд нэвтэрнэ үү');
-      context.push(AppRoutes.authLanding);
+      context.push('/auth?next=${Uri.encodeComponent('/creator/${widget.creatorId}')}');
       return;
     }
     if (_followLoading) return;
     final was = _isFollowing;
     setState(() => _followLoading = true);
     try {
-      if (was) {
-        await SupabaseService.client.from('follows').delete()
-            .eq('follower_id', me).eq('following_id', widget.creatorId);
-      } else {
-        await SupabaseService.client.from('follows')
-            .insert({'follower_id': me, 'following_id': widget.creatorId});
-      }
+      final result=await DiscoveryService().follow(widget.creatorId,!(was||_followRequested));
       if (!mounted) return;
       // Шууд ±1 харуулаад, серверийн яг тоогоор солино (trigger аль хэдийн ажилласан)
       final c = (_profile?['followers_count'] as num?)?.toInt() ?? 0;
       setState(() {
-        _isFollowing = !was;
+        _isFollowing = result=='following';
+        _followRequested=result=='requested';
         _profile = {
           ...?_profile,
-          'followers_count': was ? math.max(0, c - 1) : c + 1,
+          'followers_count': was ? math.max(0, c - 1) : result=='following'?c+1:c,
         };
       });
       ref.invalidate(currentProfileProvider); // миний "ДАГАЖ БУЙ" тоо
+      ref.read(socialVersionProvider.notifier).state++;
+      if(_followRequested)_toast('Дагах хүсэлт илгээлээ');
       await _refreshCounts();
     } on PostgrestException catch (e) {
       if (!mounted) return;
@@ -281,6 +287,7 @@ class _CreatorScreenState extends ConsumerState<CreatorScreen> {
     });
     if (err == null) {
       ref.invalidate(blockedIdsProvider);
+      ref.read(socialVersionProvider.notifier).state++;
       _toast('Блок цуцлагдлаа');
     } else {
       _toast('Блок цуцалж чадсангүй', error: true);
@@ -547,6 +554,7 @@ class _CreatorScreenState extends ConsumerState<CreatorScreen> {
                           Expanded(
                             child: _FollowBtn(
                                 isFollowing: _isFollowing,
+                                requested:_followRequested,
                                 loading: _followLoading,
                                 onTap: _toggleFollow),
                           ),
@@ -585,7 +593,10 @@ class _CreatorScreenState extends ConsumerState<CreatorScreen> {
               ),
 
               // ── Posts grid — нягт 2px завсартай, cursor хуудаслалттай ──
-              ..._gridSlivers(isMe),
+              SliverToBoxAdapter(child:Padding(padding:const EdgeInsets.symmetric(horizontal:20),child:OutlinedButton.icon(
+                icon:const Icon(Icons.collections_bookmark_outlined),label:const Text('Газрын цуглуулга'),onPressed:()=>context.push('/collections/${widget.creatorId}')))),
+              if(!_canView&&!isMe)const SliverToBoxAdapter(child:Padding(padding:EdgeInsets.all(32),child:Column(children:[Icon(Icons.lock_outline,size:40),SizedBox(height:12),Text('Хувийн профайл · Дагах хүсэлт илгээгээрэй')]))),
+              if(_canView||isMe)..._gridSlivers(isMe),
             ]),
       ),
     );
@@ -710,7 +721,7 @@ class _CreatorScreenState extends ConsumerState<CreatorScreen> {
             NetworkVideo(url: url,
                 posterOnly: true, showPosterIcon: false)
           else if (url != null)
-            CachedNetworkImage(
+            AuthorizedImage(
               imageUrl: url, fit: BoxFit.cover,
               memCacheWidth: 400,
               fadeInDuration:
@@ -833,7 +844,7 @@ class _CreatorCover extends StatelessWidget {
       width: double.infinity,
       child: Stack(fit: StackFit.expand, children: [
         if (url != null && url!.isNotEmpty)
-          CachedNetworkImage(
+          AuthorizedImage(
             imageUrl: url!,
             fit: BoxFit.cover,
             memCacheWidth: 900,
@@ -1008,10 +1019,12 @@ class _GlassPillBtn extends StatelessWidget {
 /// Дагах / Дагасан — бүтэн өргөн pill (gradient ↔ glass)
 class _FollowBtn extends StatelessWidget {
   final bool isFollowing;
+  final bool requested;
   final bool loading;
   final VoidCallback onTap;
   const _FollowBtn({
     required this.isFollowing,
+    this.requested=false,
     required this.loading,
     required this.onTap,
   });
@@ -1049,7 +1062,7 @@ class _FollowBtn extends StatelessWidget {
             Icon(isFollowing ? Icons.check : Icons.person_add_alt_1,
               size: 16, color: filled ? Colors.white : AppColors.textPrimary),
             const SizedBox(width: 7),
-            Text(isFollowing ? 'Дагасан' : 'Дагах',
+            Text(requested?'Хүсэлттэй':isFollowing ? 'Дагасан' : 'Дагах',
                 style: AppTextStyles.btn.copyWith(
                     color: filled ? Colors.white : AppColors.textPrimary)),
           ],

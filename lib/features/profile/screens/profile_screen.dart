@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:cached_network_image/cached_network_image.dart';
+import '../../../core/widgets/authorized_media.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
@@ -204,6 +204,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       child: ProfileContentTabs(
                           selected: _tab,
                           onChanged: (tab) => setState(() => _tab = tab))),
+                  SliverToBoxAdapter(child:Padding(padding:const EdgeInsets.symmetric(horizontal:20),child:OutlinedButton.icon(
+                    icon:const Icon(Icons.collections_bookmark_outlined),label:const Text('Газрын цуглуулга'),onPressed:()=>context.push('/collections/${profile.id}')))),
                   SliverPadding(
                       padding: const EdgeInsets.fromLTRB(2, 2, 2, 0),
                       sliver: _PostsGrid(
@@ -732,7 +734,7 @@ class _PostsGridState extends State<_PostsGrid> {
           borderRadius: BorderRadius.circular(2),
           child: Stack(fit: StackFit.expand, children: [
             if (mediaUrl != null && !isVideo)
-              CachedNetworkImage(
+              AuthorizedImage(
                 imageUrl: mediaUrl,
                 fit: BoxFit.cover,
                 memCacheWidth: 400, // grid thumbnail — жижиг decode, хурдан

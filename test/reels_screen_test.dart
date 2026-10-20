@@ -12,6 +12,27 @@ import 'package:night_owl_ub/features/feed/providers/reels_provider.dart';
 import 'package:night_owl_ub/features/feed/providers/saved_provider.dart';
 import 'package:night_owl_ub/features/feed/screens/reels_screen.dart';
 import 'package:night_owl_ub/features/feed/widgets/story_video.dart';
+import 'package:night_owl_ub/features/discovery/services/discovery_service.dart';
+
+Map<String, dynamic> _authSession(String me) {
+  final payload = base64Url
+      .encode(utf8.encode(jsonEncode({
+        'sub': me,
+        'exp': DateTime.now().millisecondsSinceEpoch ~/ 1000 + 3600,
+      })))
+      .replaceAll('=', '');
+  return {
+    'access_token': 'fixture.$payload.fixture',
+    'refresh_token': 'fixture-refresh',
+    'token_type': 'bearer',
+    'expires_in': 3600,
+    'user': {
+      'id': me,
+      'aud': 'authenticated',
+      'created_at': '2026-10-05T00:00:00Z'
+    },
+  };
+}
 
 Map<String, dynamic> _reel(String id) => {
       'id': id,
@@ -42,7 +63,11 @@ void main() {
   tearDown(() async => Supabase.instance.dispose());
 
   Future<GoRouter> render(WidgetTester tester,
-      {String selected = 'clip-2'}) async {
+      {String selected = 'clip-2',
+      Future<List<Map<String, dynamic>>> Function()? following,
+      Future<List<Map<String, dynamic>>> Function()? all,
+      Set<String> saved = const {},
+      Widget? coveredPage}) async {
     tester.view.physicalSize = const Size(390, 900);
     tester.view.devicePixelRatio = 1;
     addTearDown(() {
@@ -56,16 +81,20 @@ void main() {
               ReelsScreen(initialReelId: state.uri.queryParameters['id'])),
       GoRoute(
           path: '/search',
-          builder: (_, __) => const Scaffold(body: Text('Covered screen'))),
+          builder: (_, __) =>
+              coveredPage ?? const Scaffold(body: Text('Covered screen'))),
       GoRoute(
           path: '/reels/create',
           builder: (_, __) => const Scaffold(body: Text('Create screen'))),
     ]);
     addTearDown(router.dispose);
     await tester.pumpWidget(ProviderScope(overrides: [
-      reelsProvider
-          .overrideWith((_) async => List.generate(3, (i) => _reel('clip-$i'))),
-      savedPostIdsProvider.overrideWith((_) async => <String>{}),
+      reelsProvider.overrideWith((_) =>
+          all?.call() ??
+          Future.value(List.generate(3, (i) => _reel('clip-$i')))),
+      followingReelsProvider.overrideWith(
+          (_) => following?.call() ?? Future.value([_reel('followed-old')])),
+      savedPostIdsProvider.overrideWith((_) async => saved),
     ], child: MaterialApp.router(routerConfig: router)));
     // The selected page jumps after the async data frame; don't settle an
     // intentionally animated video screen's music-disc ticker.
@@ -79,6 +108,259 @@ void main() {
       .widgetList<StoryVideoView>(
           find.byType(StoryVideoView, skipOffstage: false))
       .toList();
+
+  testWidgets(
+      'Following shows its server results without injecting a shared ID',
+      (tester) async {
+    await render(tester);
+    await tester.tap(find.text('Дагадаг'));
+    for (var frame = 0; frame < 5; frame++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+    expect(players(tester).where((video) => video.active).single.url,
+        'https://media.test/followed-old.mp4');
+    expect(find.text('Caption for followed-old').hitTestable(), findsOneWidget);
+    expect(players(tester).any((video) => video.url.endsWith('clip-2.mp4')),
+        isFalse);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump();
+  });
+
+  testWidgets('a late Following response cannot replace the For You tab',
+      (tester) async {
+    final pending = Completer<List<Map<String, dynamic>>>();
+    await render(tester, following: () => pending.future);
+    await tester.tap(find.text('Дагадаг'));
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(players(tester), isEmpty);
+    await tester.tap(find.text('Танд'));
+    for (var frame = 0; frame < 4; frame++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+    pending.complete([_reel('late-followed')]);
+    for (var frame = 0; frame < 4; frame++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+    expect(players(tester).where((video) => video.active).single.url,
+        'https://media.test/clip-2.mp4');
+    expect(
+        players(tester).any((video) => video.url.endsWith('late-followed.mp4')),
+        isFalse);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump();
+  });
+
+  testWidgets('Following retry keeps its tab and never shows unrelated clips',
+      (tester) async {
+    var attempts = 0;
+    await render(tester, following: () async {
+      if (++attempts == 1) throw StateError('Offline');
+      return [_reel('retried-followed')];
+    });
+    await tester.tap(find.text('Дагадаг'));
+    for (var frame = 0; frame < 4; frame++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+    expect(find.text('Ачаалж чадсангүй'), findsOneWidget);
+    expect(players(tester), isEmpty);
+    await tester.tap(find.text('Дахин оролдох'));
+    for (var frame = 0; frame < 4; frame++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+    expect(attempts, 2);
+    expect(players(tester).where((video) => video.active).single.url,
+        'https://media.test/retried-followed.mp4');
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump();
+  });
+
+  testWidgets('returning after a privacy change rechecks cached reels',
+      (tester) async {
+    var restricted = false;
+    var loads = 0;
+    await render(tester, all: () async {
+      loads++;
+      return restricted ? [] : List.generate(3, (i) => _reel('clip-$i'));
+    },
+        coveredPage: Consumer(
+            builder: (context, ref, _) => Scaffold(
+                  body: TextButton(
+                      onPressed: () {
+                        restricted = true;
+                        ref.read(socialVersionProvider.notifier).state++;
+                        context.pop();
+                      },
+                      child: const Text('Fixture privacy change')),
+                )));
+    await tester.tap(find.byIcon(Icons.search));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.tap(find.text('Fixture privacy change'));
+    for (var frame = 0; frame < 5; frame++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+    expect(loads, 2);
+    expect(players(tester), isEmpty);
+    expect(find.text('Энэ бичлэг устгагдсан эсвэл харах боломжгүй байна.'),
+        findsOneWidget);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump();
+  });
+
+  for (final denied in [false, true]) {
+    testWidgets('Reel report reaches the server and preserves denial=$denied',
+        (tester) async {
+      final reported = <Map<String, dynamic>>[];
+      final submitted = Completer<http.Response>();
+      http.Request? reportRequest;
+      reply = (request) async {
+        if (request.url.path == '/auth/v1/token') {
+          return http.Response(jsonEncode(_authSession('fixture-viewer')), 200,
+              headers: {'content-type': 'application/json'}, request: request);
+        }
+        if (request.url.path == '/rest/v1/reports') {
+          reportRequest = request;
+          reported
+              .add(Map<String, dynamic>.from(jsonDecode(request.body) as Map));
+          return submitted.future;
+        }
+        return http.Response('[]', 200,
+            headers: {'content-type': 'application/json'}, request: request);
+      };
+      await Supabase.instance.client.auth.signInWithPassword(
+          email: 'fixture@example.test', password: 'fixture-password');
+      await render(tester);
+      await tester.tap(find.byIcon(Icons.more_horiz).hitTestable());
+      for (var frame = 0; frame < 5; frame++) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+      expect(players(tester).every((video) => !video.active), isTrue);
+      await tester.tap(find.text('Мэдэгдэх'));
+      for (var frame = 0; frame < 5; frame++) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+      expect(find.text('Юунд мэдээлэх вэ?'), findsOneWidget);
+      expect(reported, isEmpty);
+      await tester.tap(find.text('Спам / хуурамч'));
+      for (var frame = 0; frame < 5; frame++) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+      expect(reported, [
+        {
+          'reporter_id': 'fixture-viewer',
+          'target_type': 'post',
+          'target_id': 'clip-2',
+          'reason': 'spam',
+        }
+      ]);
+      expect(find.textContaining('Мэдээлэл хүлээн авлаа'), findsNothing);
+      submitted.complete(denied
+          ? http.Response('{"code":"42501","message":"Denied"}', 403,
+              headers: {'content-type': 'application/json'},
+              request: reportRequest)
+          : http.Response('', 204, request: reportRequest));
+      for (var frame = 0; frame < 30; frame++) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+      // Initial progress toast lasts two seconds, then the server result.
+      expect(find.textContaining('PostgrestException'), findsNothing);
+      expect(find.textContaining('Мэдэгдлийг хүлээн авлаа'), findsNothing);
+      if (denied) {
+        expect(find.textContaining('Энэ үйлдлийг хийх эрхгүй'), findsOneWidget);
+      } else {
+        expect(find.textContaining('Мэдээлэл хүлээн авлаа'), findsOneWidget);
+      }
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox());
+      await tester.pump();
+    });
+  }
+
+  for (final initiallySaved in [false, true]) {
+    for (final denied in [false, true]) {
+      testWidgets(
+          'Reel save initially=$initiallySaved denied=$denied guards duplicate taps',
+          (tester) async {
+        final saved = {if (initiallySaved) 'clip-2'};
+        final pending = Completer<http.Response>();
+        http.Request? heldRequest;
+        var writes = 0;
+        reply = (request) async {
+          if (request.url.path == '/auth/v1/token') {
+            return http.Response(
+                jsonEncode(_authSession('fixture-viewer')), 200,
+                headers: {'content-type': 'application/json'},
+                request: request);
+          }
+          if (request.url.path == '/rest/v1/saved_posts' &&
+              request.method != 'GET') {
+            writes++;
+            heldRequest = request;
+            final response = await pending.future;
+            if (!denied) {
+              initiallySaved ? saved.remove('clip-2') : saved.add('clip-2');
+            }
+            return response;
+          }
+          return http.Response('[]', 200,
+              headers: {'content-type': 'application/json'}, request: request);
+        };
+        await Supabase.instance.client.auth.signInWithPassword(
+            email: 'fixture@example.test', password: 'fixture-password');
+        await render(tester, saved: saved);
+        await tester.tap(find
+            .byIcon(initiallySaved ? Icons.bookmark : Icons.bookmark_border)
+            .hitTestable());
+        for (var frame = 0; frame < 5; frame++) {
+          await tester.pump(const Duration(milliseconds: 100));
+        }
+        await tester.tap(find
+            .byIcon(initiallySaved ? Icons.bookmark_border : Icons.bookmark)
+            .hitTestable());
+        await tester.pump();
+        expect(writes, 1);
+        expect(heldRequest!.method, initiallySaved ? 'DELETE' : 'POST');
+        if (initiallySaved) {
+          expect(heldRequest!.url.queryParameters['post_id'], 'eq.clip-2');
+          expect(
+              heldRequest!.url.queryParameters['user_id'], 'eq.fixture-viewer');
+        } else {
+          expect(jsonDecode(heldRequest!.body),
+              {'user_id': 'fixture-viewer', 'post_id': 'clip-2'});
+        }
+        expect(find.text('Хадгаллаа'), findsNothing);
+        pending.complete(denied
+            ? http.Response('{"code":"42501","message":"Denied"}', 403,
+                headers: {'content-type': 'application/json'},
+                request: heldRequest)
+            : http.Response('', 204, request: heldRequest));
+        for (var frame = 0; frame < 5; frame++) {
+          await tester.pump(const Duration(milliseconds: 100));
+        }
+        final expectedSaved = denied ? initiallySaved : !initiallySaved;
+        expect(
+            find
+                .byIcon(expectedSaved ? Icons.bookmark : Icons.bookmark_border)
+                .hitTestable(),
+            findsOneWidget);
+        if (denied) {
+          expect(find.text('Хадгаллаа'), findsNothing);
+          expect(
+              find.text(initiallySaved
+                  ? 'Хадгалснаа хасаж чадсангүй'
+                  : 'Хадгалж чадсангүй. Дахин оролдоно уу'),
+              findsOneWidget);
+        }
+        expect(tester.takeException(), isNull);
+        await tester.pumpWidget(const SizedBox());
+        await tester.pump();
+      });
+    }
+  }
 
   testWidgets(
       'selected preview ID is the visible playing page, not the first reel',
@@ -173,23 +455,7 @@ void main() {
     reply = (request) async {
       dynamic body = [];
       if (request.url.path == '/auth/v1/token') {
-        final payload = base64Url
-            .encode(utf8.encode(jsonEncode({
-              'sub': me,
-              'exp': DateTime.now().millisecondsSinceEpoch ~/ 1000 + 3600,
-            })))
-            .replaceAll('=', '');
-        body = {
-          'access_token': 'fixture.$payload.fixture',
-          'refresh_token': 'fixture-refresh',
-          'token_type': 'bearer',
-          'expires_in': 3600,
-          'user': {
-            'id': me,
-            'aud': 'authenticated',
-            'created_at': '2026-10-05T00:00:00Z'
-          },
-        };
+        body = _authSession(me);
       } else if (request.url.path == '/rest/v1/venues') {
         body = [
           {'id': 'owned-venue'}

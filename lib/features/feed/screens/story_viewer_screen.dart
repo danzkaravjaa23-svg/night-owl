@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import '../../discovery/services/discovery_service.dart';
 import 'package:flutter/services.dart';
-import 'package:cached_network_image/cached_network_image.dart';
+import '../../../core/widgets/authorized_media.dart';
 import '../../../core/utils/web_audio.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/app_avatar.dart';
@@ -153,11 +155,7 @@ class _StoryViewerScreenState extends State<StoryViewerScreen>
     _replyCtrl.clear();
     _replyFocus.unfocus();
     try {
-      await SupabaseService.client.from('messages').insert({
-        'sender_id': _myId, 'receiver_id': authorId,
-        'body': text, 'is_read': false,
-        'story_media_url': _currentStory.mediaUrl, // story-д хариулсан тэмдэг
-      });
+      await DiscoveryService().send(authorId,text,story:_currentStory.id);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
           content: Text('Илгээлээ ✓'),
@@ -340,7 +338,7 @@ class _StoryViewerScreenState extends State<StoryViewerScreen>
               onDuration: _onVideoDuration,
               onEnded: _onVideoEnded)
           else
-            CachedNetworkImage(
+            AuthorizedImage(
               imageUrl: story.mediaUrl,
               fit: BoxFit.cover,
               placeholder: (_, __) => const _ShimmerBox(),
@@ -531,7 +529,7 @@ class _StoryViewerScreenState extends State<StoryViewerScreen>
                         alignment: WrapAlignment.center, spacing: 8, runSpacing: 6,
                         children: [
                           if (story.venueName != null)
-                            _storyPill(Icons.location_on, story.venueName!),
+                            InkWell(onTap:story.venueRef==null?null:()=>context.push('/place/${Uri.encodeComponent(story.venueRef!)}'),child:_storyPill(Icons.location_on, story.venueName!)),
                           if (story.mentions.isNotEmpty)
                             _storyPill(Icons.alternate_email_rounded,
                                 '${story.mentions.length} хүн'),

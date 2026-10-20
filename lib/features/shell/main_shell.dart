@@ -242,7 +242,7 @@ class _BottomNav extends ConsumerWidget {
             _CreateOption(
               icon: Icons.explore_outlined,
               label: 'Богино видео',
-              subtitle: 'Зөвхөн газрын эзэд нийтэлнэ',
+              subtitle: 'Өөрийн туршлага, дуртай газраа хуваалцах',
               gradient: AppColors.accentGradient,
               onTap: () {
                 Navigator.pop(context);

@@ -22,6 +22,42 @@ Apple sign-in now has native iOS nonce/identity-token authentication, web/Androi
 
 ## Development
 
+### Social discovery work (2026-10-16, not yet deployed)
+
+This checkout includes private accounts and follow approvals, a guarded one-message DM request, creator video publishing, compound-cursor Following, shared source-backed venue references, creator discovery, public content links with login return, account-synced venue saves, place collections, reviewed venue details, and an administrator pilot dashboard. The pilot starts empty: 10–15 creators, 20–30 reviewed places and 60–100 reviewed posts are targets, not seeded accomplishments. Creators and ordinary testers are separate cohorts in the dashboard; only enrolled participants produce discovery measurements. Activation uses the first 24 hours after pilot enrollment, D7 uses hours 168–192, and only matured participants enter each denominator. Repeated publishing requires different UTC dates. Directions count unique participant/place/UTC-day combinations after enrollment.
+
+Deploy `supabase/migrations/202610160001_social_discovery.sql`, then `202610160002_osm_catalog.sql` on a staging copy first. The second migration imports the existing attributed 270 OSM records without marking any business reviewed. UUID community venues keep their existing IDs; OSM references never enter UUID columns. Venue approval requires a cover, address, hours and budget. Use **Админ панел → Эхний туршилт** to enroll real creators/testers, prepare and approve places, and select visible venue-linked posts. No person has been recruited or real user content approved by this change.
+
+Before deployment, run `tools/deployment/tests/social_discovery_preflight.sql` as the staging database owner. It is read-only, rejects incompatible column types or API roles that bypass RLS/create public objects, and lists existing content-reading SECURITY DEFINER RPCs for manual review. A passing preflight is not a complete security audit: inspect those RPCs and existing hosted policies, then perform the real-account checks before production.
+
+The first migration tightens existing RLS and switches the `posts` and `stories` buckets to private. Active post/story image/video renderers request authorized five-minute signed links for this backend's Storage objects. External media links remain subject to their host's visibility; previously downloaded/publicly cached copies cannot be revoked. Coordinate the client deployment with this migration: old clients still using public media URLs will need the new version. Verify the hosted schema, existing Storage policies and the latest hosted role grants before applying; offline fixtures are not evidence that the migration is installed on production. Do not reapply older public-bucket setup SQL afterward.
+
+DM permissions refresh every 15 seconds only while that conversation is visible and the app is active, and refresh immediately on resume. Failed permission checks disable sending without dropping the draft. Legacy device bookmarks import in one account-bound transaction; obsolete place IDs are ignored and imports do not count as new pilot saves. Ordinary saves remain server-authoritative even if the device cache cannot be updated.
+
+Following Reels use the invoker/RLS-protected `get_following_reels` RPC, filtering accepted follows and valid video candidates before the 50-video limit rather than filtering the global newest page. Switching tabs ignores late responses; returning after a social/privacy change rechecks the cached clips. Reel reports now use the existing server-backed reporting flow instead of a local success toast. Reel save/remove failures restore the prior state and duplicate taps cannot issue concurrent writes. Place details and the map share one account-scoped bookmark provider; denied writes preserve the current state, bookmark read failures do not hide public place information, and switching accounts removes old place posts while fresh data loads.
+
+Existing block pairs are cleaned up during the migration as well as on new blocks. Expired stories/check-ins are hidden from other accounts by RLS, not just by UI filters. Owners can still read their own historical rows; expiration is not a Storage deletion job.
+
+Place details and collection pages discard cached rows while reloading after account or social/privacy changes. Reusing the collections route for another profile fetches that profile's lists, and collection actions are gated to the current owner. Place pull-to-refresh failures stay in the error/retry view instead of escaping the refresh callback.
+
+Post details and comment streams are account/social-scoped; the comment mini-profile cache follows the account. A different account, privacy state or shared post route clears the old post, comments and reply draft while access is rechecked. Late fetch, like, comment and own-post action results cannot change a newer view. Unavailable posts do not expose cached comments or the comment input. Reaction writes honor the caller's visible state even if the feed cache is stale, off-feed duplicate writes are guarded, counts stay nonnegative, and a failed reaction does not undo a caption saved while it was pending.
+
+Feed and post-detail save/remove actions now serialize duplicate taps through the write and saved-ID refresh, release their guard after failures, and ignore late results for another account or post. The saved-post grid is account/social-scoped: account changes, sign-out and privacy changes remove the old list immediately, and late index/media responses cannot restore it. Pull-to-refresh failure remains retryable.
+
+Post-save ID reads preserve failures instead of treating them as an empty list and time out after 15 seconds. Feed, Details and Reels wait for a successful read before choosing save/remove, retry failed reads, and ignore actions that outlive their account. A confirmed write remains visible if its readback fails, with a separate retryable notice. Fresh reads synchronize the shared saved state without overwriting pending writes. The shared auth stream follows the active Supabase client rather than retaining a disposed client's session stream.
+
+Local verification on 2026-10-16: 372 Flutter tests, the isolated social SQL/preflight fixture, 11 client-configuration tests and 7 web-startup tests pass; Flutter analyze reports no issues and the release web build succeeds. Reactions in post details/Reels update already-loaded Following/All feed caches, and duplicate detail/reel taps are guarded. These results do not verify hosted migrations, native devices or real-account behavior.
+
+The approved local implementation and regression pass are complete. Release gates remain outside this checkout: review the hosted RPCs/roles/Storage policies with the read-only preflight on staging, explicitly authorize and test the two migrations there, run two real-account/device privacy/follow/block/DM/media checks, and supply real consenting creators, reviewed places and content for the pilot. Only review promotion/partnership experiments after real cohort results. No migration, production write, remote push, account creation or paid promotion was performed by the local continuation.
+
+SQL verification (official `@electric-sql/pglite@0.5.8`, installed outside the checkout):
+
+```sh
+node tools/deployment/tests/run_social_discovery_fixture.mjs /absolute/path/to/@electric-sql/pglite/dist/index.js
+```
+
+`flutter run -d web-server --web-port 5557 -t test/support/discovery_preview.dart` is an isolated visual fixture with synthetic accounts and a mocked HTTP client. It never uses the live backend and is not a production demonstration. Normal development still runs `lib/main.dart`. Production migration, two real-account/device checks, actual partner recruitment and publishing require their real environments and data. Do not start paid venue promotion or creator partnerships until the pilot results have been reviewed; this batch does not activate advertising or billing.
+
 Use Flutter 3.44.0 (Dart 3.12.0) with the committed lockfile.
 
 ```sh

@@ -11,7 +11,8 @@ import '../../../core/utils/image_uploader.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../providers/feed_provider.dart';
 import '../widgets/story_video.dart';
-import '../../map/providers/venue_provider.dart' show isVenueOwnerProvider;
+import '../../discovery/widgets/venue_picker.dart';
+import '../../discovery/services/discovery_service.dart';
 
 class CreateReelScreen extends ConsumerStatefulWidget {
   const CreateReelScreen({super.key});
@@ -26,6 +27,7 @@ class _CreateReelScreenState extends ConsumerState<CreateReelScreen> {
   final _captionCtrl = TextEditingController();
   bool _busy = false;
   String? _error;
+  JsonRow? _venue;
 
   String _contentType(String ext) => switch (ext) {
     'webm' => 'video/webm',
@@ -89,6 +91,7 @@ class _CreateReelScreenState extends ConsumerState<CreateReelScreen> {
         'caption': _captionCtrl.text.trim(),
         'media_url': url,
         'media_type': 'video',
+        if(_venue!=null) 'venue_ref':_venue!['ref'],
       });
       // Пост аль хэдийн орсон — дэлгэц хаагдсан ч feed, профайлын grid,
       // ПОСТ тоо (posts_count trigger) шинэчлэгдэх ёстой
@@ -113,7 +116,6 @@ class _CreateReelScreenState extends ConsumerState<CreateReelScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isOwner = ref.watch(isVenueOwnerProvider).valueOrNull;
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: AppBar(
@@ -124,26 +126,12 @@ class _CreateReelScreenState extends ConsumerState<CreateReelScreen> {
         leading: IconButton(onPressed: () => context.canPop()
             ? context.pop() : context.go('/reels'),
           icon: const Icon(Icons.close, color: Colors.white)),
-        title: Text('Шинэ Discovery', style: AppTextStyles.labelLg.copyWith(color: Colors.white)),
+        title: Text('Богино видео', style: AppTextStyles.labelLg.copyWith(color: Colors.white)),
       ),
-      body: isOwner == null
-          // Эрх шалгаж дуустал л loader — эзэн биш хэрэглэгчид create UI гарахгүй
-          ? const Center(child: CircularProgressIndicator(
-              color: Colors.white, strokeWidth: 2))
-          : isOwner == false
-          ? Center(child: Padding(
-              padding: const EdgeInsets.all(32),
-              child: Column(mainAxisSize: MainAxisSize.min, children: [
-                const Icon(Icons.storefront_outlined, color: Colors.white38, size: 64),
-                const SizedBox(height: 16),
-                Text('Зөвхөн venue эзэд', style: AppTextStyles.h2.copyWith(color: Colors.white)),
-                const SizedBox(height: 8),
-                Text('Discovery контентыг зөвхөн газрын эзэд оруулна. '
-                    'Та эхлээд газраа бүртгүүлнэ үү.',
-                  textAlign: TextAlign.center,
-                  style: AppTextStyles.bodyMd.copyWith(color: Colors.white54)),
-              ])))
-          : Column(children: [
+      body: Column(children: [
+        ListTile(leading:const Icon(Icons.place_outlined,color:Colors.white),
+          title:Text(_venue?['name'] as String? ?? 'Газар сонгох',style:const TextStyle(color:Colors.white)),
+          onTap:_busy?null:() async {final venue=await pickDiscoveryVenue(context);if(mounted&&venue!=null)setState(()=>_venue=venue);}),
         Expanded(child: Center(child: _bytes == null
           ? _Pressable(
               onTap: _pick,

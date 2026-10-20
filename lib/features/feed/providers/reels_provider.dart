@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/services/supabase_service.dart';
 import '../../../core/widgets/network_video.dart' show isVideoUrl;
 import '../../auth/providers/auth_provider.dart';
+import '../../discovery/services/discovery_service.dart';
 
 /// Filter before the limit, so a run of recent photo posts cannot hide videos.
 /// Legacy live recordings sometimes have media_type=image; their URL still
@@ -13,7 +14,8 @@ class ReelsRepository {
 
   static const _columns =
       'id, user_id, caption, media_url, media_urls, media_type, '
-      'likes_count, comments_count, created_at, '
+      'likes_count, comments_count, created_at, venue_ref, '
+      'venue_catalog!venue_ref (name), '
       'profiles!user_id (username, avatar_url)';
   static const _videoFilter = 'media_type.eq.video,'
       'media_url.ilike.%.mp4*,media_url.ilike.%.webm*,'
@@ -65,6 +67,15 @@ class ReelsRepository {
     return rows.map(normalize).whereType<Map<String, dynamic>>().toList();
   }
 
+  Future<List<Map<String, dynamic>>> loadFollowing() async {
+    final data =
+        await client.rpc('get_following_reels', params: {'p_limit': 50});
+    return (data as List)
+        .map((row) => normalize(Map<String, dynamic>.from(row as Map)))
+        .whereType<Map<String, dynamic>>()
+        .toList();
+  }
+
   Future<Map<String, dynamic>?> find(String id) async {
     final row =
         await client.from('posts').select(_columns).eq('id', id).maybeSingle();
@@ -75,5 +86,15 @@ class ReelsRepository {
 final reelsProvider = FutureProvider<List<Map<String, dynamic>>>((ref) async {
   ref.watch(sessionUserIdProvider);
   ref.watch(postsVersionProvider);
+  ref.watch(socialVersionProvider);
   return ReelsRepository(SupabaseService.client).load();
+});
+
+final followingReelsProvider =
+    FutureProvider<List<Map<String, dynamic>>>((ref) async {
+  final account = ref.watch(sessionUserIdProvider);
+  ref.watch(postsVersionProvider);
+  ref.watch(socialVersionProvider);
+  if (account == null) return [];
+  return ReelsRepository(SupabaseService.client).loadFollowing();
 });

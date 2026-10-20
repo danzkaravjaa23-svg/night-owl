@@ -181,11 +181,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       _GlassCard(children: [
                         // 'Хувийн данс' — profiles.is_private багана серверт байхгүй тул
                         // одоохондоо идэвхгүй ("тун удахгүй") болгосон.
-                        const _SettingRow(
+                        _SettingRow(
                           icon: Icons.lock_person_outlined,
-                          label: 'Хувийн данс',
-                          trailingValue: 'Тун удахгүй',
-                          disabled: true,
+                          label: 'Нууцлал, хүсэлтүүд',
+                          onTap:()=>context.push('/privacy'),
+                          disabled:profileAsync.isLoading,
                         ),
                         const _RowDivider(),
                         _SettingRow(

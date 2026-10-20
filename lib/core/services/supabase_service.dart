@@ -19,6 +19,7 @@ bool passwordJustReset = false;
 /// Supabase client singleton
 class SupabaseService {
   SupabaseService._();
+  static SupabaseClient? _authStreamClient;
   static Stream<AuthState>? _authStream;
   static Object? _lastAuthStreamError;
 
@@ -112,14 +113,22 @@ class SupabaseService {
 
   // Native OAuth failures are emitted as stream errors by the SDK. Handle
   // them once, without discarding a valid session or exposing raw payloads.
-  static Stream<AuthState> get authStream =>
-      _authStream ??= client.auth.onAuthStateChange.handleError((Object error) {
+  static Stream<AuthState> get authStream {
+    final activeClient = client;
+    if (!identical(_authStreamClient, activeClient)) {
+      _authStreamClient = activeClient;
+      _lastAuthStreamError = null;
+      _authStream =
+          activeClient.auth.onAuthStateChange.handleError((Object error) {
         if (identical(error, _lastAuthStreamError)) return;
         _lastAuthStreamError = error;
         authCallbackError.value = oauthCallbackErrorMessage(
           error is AuthException ? error.code : null,
         );
       });
+    }
+    return _authStream!;
+  }
 }
 
 /// Supabase table names

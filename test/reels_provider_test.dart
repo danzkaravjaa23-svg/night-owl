@@ -62,6 +62,44 @@ void main() {
         'https://media.test/clip.webm');
   });
 
+  test('Following uses a guarded server query, not the global newest page',
+      () async {
+    final client = SupabaseClient('https://example.test', 'test-key',
+        authOptions: const AuthClientOptions(autoRefreshToken: false),
+        httpClient: MockClient((request) async {
+      expect(request.url.path, '/rest/v1/rpc/get_following_reels');
+      expect(jsonDecode(request.body), {'p_limit': 50});
+      return http.Response(
+          jsonEncode([
+            reel('followed-old', 'https://media.test/old.mp4'),
+            reel('bad-media', 'https://media.test/photo.jpg'),
+          ]),
+          200,
+          headers: {'content-type': 'application/json'},
+          request: request);
+    }));
+    addTearDown(client.dispose);
+    final rows = await ReelsRepository(client).loadFollowing();
+    expect(rows.map((row) => row['id']), ['followed-old']);
+  });
+
+  test('a failed Following query never falls back to unrelated public clips',
+      () async {
+    var requests = 0;
+    final client = SupabaseClient('https://example.test', 'test-key',
+        authOptions: const AuthClientOptions(autoRefreshToken: false),
+        httpClient: MockClient((request) async {
+      requests++;
+      expect(request.url.path, '/rest/v1/rpc/get_following_reels');
+      return http.Response('{"code":"42501","message":"Denied"}', 403,
+          headers: {'content-type': 'application/json'}, request: request);
+    }));
+    addTearDown(client.dispose);
+    await expectLater(ReelsRepository(client).loadFollowing(),
+        throwsA(isA<PostgrestException>()));
+    expect(requests, 1);
+  });
+
   test('selected ID fetch finds an older clip outside the latest-page query',
       () async {
     late Uri requested;

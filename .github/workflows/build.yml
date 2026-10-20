@@ -22,6 +22,14 @@ jobs:
       - run: flutter pub get
       - run: flutter analyze
       - run: flutter test
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check social privacy and pilot SQL on an isolated database
+        run: |
+          mkdir -p "$RUNNER_TEMP/nightowl-social-sql"
+          npm install --prefix "$RUNNER_TEMP/nightowl-social-sql" @electric-sql/pglite@0.5.8 --ignore-scripts --no-audit --no-fund
+          node tools/deployment/tests/run_social_discovery_fixture.mjs "$RUNNER_TEMP/nightowl-social-sql/node_modules/@electric-sql/pglite/dist/index.js"
       - run: python3 -m unittest discover -s tools/deployment/tests -v
       - run: python3 -m unittest discover -s tools/migration/tests -v
       - run: python3 -m unittest discover -s backend/tests -v

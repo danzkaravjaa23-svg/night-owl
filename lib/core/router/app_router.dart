@@ -1,4 +1,11 @@
 import 'package:flutter/material.dart';
+import '../utils/auth_return.dart';
+import '../../features/discovery/screens/discovery_screen.dart';
+import '../../features/discovery/screens/place_screen.dart';
+import '../../features/discovery/screens/collections_screen.dart';
+import '../../features/discovery/screens/privacy_screen.dart';
+import '../../features/discovery/screens/pilot_screen.dart';
+import '../../features/discovery/screens/review_place_screen.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -129,7 +136,8 @@ abstract class AppRoutes {
     resetPassword,
   };
 
-  static bool isPublic(String location) => _publicRoutes.contains(location);
+  static bool isPublic(String location) => _publicRoutes.contains(location)||location=='/discovery'||
+    (RegExp(r'^/(creator|post|place|collections)/[^/]+$').hasMatch(location)&&location!='/post/create');
 }
 
 final _rootKey = GlobalKey<NavigatorState>(debugLabel: 'root');
@@ -186,6 +194,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     redirect: (context, state) {
       final loggedIn = Supabase.instance.client.auth.currentUser != null;
       final loc = state.uri.path; // ?code=... гэх мэт query-г үл тоомсорло
+      if(loc.startsWith('/auth'))AuthReturn.remember(state.uri.queryParameters['next']);
       const authPages = {
         AppRoutes.splash,
         AppRoutes.authLanding,
@@ -195,7 +204,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       };
 
       if (!loggedIn) {
-        return AppRoutes.isPublic(loc) ? null : AppRoutes.authLanding;
+        if(AppRoutes.isPublic(loc))return null;
+        return Uri(path:AppRoutes.authLanding,queryParameters:{'next':state.uri.toString()}).toString();
       }
       // Нэвтэрсэн + нууц үг сэргээх горимд — шинэ нууц үгийн дэлгэц
       if (authGate.recovery) {
@@ -207,14 +217,21 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       }
       // Бүрэн — нэвтрэлт/splash/setup дээр байвал апп руу
       if (authPages.contains(loc) || loc == AppRoutes.setup) {
-        return AppRoutes.feed;
+        return AuthReturn.destination;
       }
+      if(AuthReturn.hasDestination&&state.uri.toString()==AuthReturn.destination)AuthReturn.clear();
       return null;
     },
 
     refreshListenable: authGate,
 
     routes: [
+      GoRoute(path:'/discovery',pageBuilder:(ctx,s)=>_fadePage(ctx,s,const DiscoveryScreen())),
+      GoRoute(path:'/place/:ref',pageBuilder:(ctx,s)=>_slidePage(ctx,s,PlaceScreen(venueRef:s.pathParameters['ref']!))),
+      GoRoute(path:'/collections/:id',pageBuilder:(ctx,s)=>_slidePage(ctx,s,CollectionsScreen(userId:s.pathParameters['id']!,collectionId:s.uri.queryParameters['list']))),
+      GoRoute(path:'/privacy',pageBuilder:(ctx,s)=>_slidePage(ctx,s,const PrivacyScreen())),
+      GoRoute(path:'/admin/pilot',pageBuilder:(ctx,s)=>_slidePage(ctx,s,const PilotScreen())),
+      GoRoute(path:'/place-review/:ref',pageBuilder:(ctx,s)=>_slidePage(ctx,s,ReviewPlaceScreen(venueRef:s.pathParameters['ref']!))),
       // ── Onboarding ──
       GoRoute(
           path: AppRoutes.splash,

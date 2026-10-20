@@ -6,6 +6,7 @@ class Post {
   final String id;
   final String userId;
   final String? venueId;
+  final String? venueRef;
   final String? caption;
   final String? mediaUrl;
   final List<String> mediaUrls; // carousel — олон зураг (1+)
@@ -24,6 +25,7 @@ class Post {
     required this.id,
     required this.userId,
     this.venueId,
+    this.venueRef,
     this.caption,
     this.mediaUrl,
     this.mediaUrls = const [],
@@ -70,6 +72,7 @@ class Post {
       id:            json['id'] as String,
       userId:        (json['user_id'] ?? json['author_id']) as String,
       venueId:       json['venue_id'] as String?,
+      venueRef:      (json['venue_ref'] ?? json['venue_id']) as String?,
       caption:       json['caption'] as String?,
       mediaUrl:      mediaUrl,
       mediaUrls:     mediaUrls,
@@ -90,7 +93,7 @@ class Post {
     int? commentsCount,
     String? caption,
   }) => Post(
-    id: id, userId: userId, venueId: venueId,
+    id: id, userId: userId, venueId: venueId, venueRef: venueRef,
     caption: caption ?? this.caption, mediaUrl: mediaUrl, mediaUrls: mediaUrls,
     mediaType: mediaType,
     likesCount:    likesCount    ?? this.likesCount,

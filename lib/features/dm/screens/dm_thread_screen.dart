@@ -11,6 +11,9 @@ import '../../../core/widgets/gradient_button.dart';
 import '../../../core/services/supabase_service.dart';
 import '../../../core/constants/stickers.dart';
 import '../widgets/chat_tokens.dart';
+import '../../discovery/services/discovery_service.dart';
+import '../../profile/widgets/block_report_sheet.dart';
+import '../../../core/widgets/authorized_media.dart';
 
 class DmThreadScreen extends StatefulWidget {
   final String threadId; // partner's user_id
@@ -20,7 +23,8 @@ class DmThreadScreen extends StatefulWidget {
   State<DmThreadScreen> createState() => _DmThreadScreenState();
 }
 
-class _DmThreadScreenState extends State<DmThreadScreen> {
+class _DmThreadScreenState extends State<DmThreadScreen>
+    with WidgetsBindingObserver {
   final _ctrl = TextEditingController();
   final _scroll = ScrollController();
 
@@ -32,6 +36,11 @@ class _DmThreadScreenState extends State<DmThreadScreen> {
   Map<String, dynamic>? _partner;
   bool _loading = true;
   bool _sending = false;
+  SocialRelationship _relationship=const SocialRelationship();
+  bool _relationshipError=false;
+  Future<void>? _relationshipRequest;
+  bool _responding = false;
+  Timer? _relationshipTimer;
   bool _showEmoji = false;
   bool _streamError = false; // realtime stream алдаа гарсан эсэх
   bool _firstLoad =
@@ -48,25 +57,98 @@ class _DmThreadScreenState extends State<DmThreadScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     final n = widget.replyNote?.trim();
     if (n != null && n.isNotEmpty) _pendingNote = n;
     _ctrl.addListener(_syncCanSend);
     _loadPartner();
     _subscribe();
+    _relationshipTimer = Timer.periodic(const Duration(seconds: 15), (_) {
+      final lifecycle = WidgetsBinding.instance.lifecycleState;
+      if (mounted &&
+          SupabaseService.currentUser != null &&
+          (lifecycle == null || lifecycle == AppLifecycleState.resumed) &&
+          ModalRoute.of(context)?.isCurrent == true) {
+        _loadPartner();
+      }
+    });
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed &&
+        SupabaseService.currentUser != null &&
+        ModalRoute.of(context)?.isCurrent == true) {
+      _loadPartner();
+    }
   }
 
   // Composer хоосон эсэхээс илгээх товчны төлөв хамаарна
-  void _syncCanSend() => _canSend.value = _ctrl.text.trim().isNotEmpty;
+  void _syncCanSend() => _canSend.value = _relationship.canSend && _ctrl.text.trim().isNotEmpty;
 
-  Future<void> _loadPartner() async {
+  Future<void> _loadPartner({bool force = false}) async {
+    final pending = _relationshipRequest;
+    if (pending != null) {
+      await pending;
+      if (!force) return;
+    }
+    if (!mounted) return;
+    final request = _fetchPartner();
+    _relationshipRequest = request;
+    try {
+      await request;
+    } finally {
+      if (identical(_relationshipRequest, request)) _relationshipRequest = null;
+    }
+  }
+
+  Future<void> _fetchPartner() async {
     try {
       final p = await SupabaseService.client
           .from('profiles')
           .select('id, username, avatar_url, last_seen_at')
           .eq('id', widget.threadId)
-          .maybeSingle();
-      if (mounted) setState(() => _partner = p);
-    } catch (_) {}
+          .maybeSingle().timeout(const Duration(seconds: 15));
+      final relation=await DiscoveryService().relationship(widget.threadId);
+      if (mounted) {
+        final wasBlocked = _relationship.blocked;
+        setState(() {
+          _partner = p;
+          _relationship = relation;
+          _relationshipError = false;
+          if (relation.blocked) {
+            _msgs = [];
+            _loading = false;
+          }
+        });
+        _syncCanSend();
+        if (relation.dmState == 'accepted') _markRead();
+        if (wasBlocked && !relation.blocked) _retrySubscribe();
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _relationshipError = true;
+          _relationship = const SocialRelationship();
+        });
+        _syncCanSend();
+      }
+    }
+  }
+  Future<void> _respond(bool accept) async {
+    if (_responding) return;
+    setState(() => _responding = true);
+    try {
+      await DiscoveryService().respondMessage(widget.threadId, accept);
+      await _loadPartner(force: true);
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(discoveryError(error))));
+      }
+    } finally {
+      if (mounted) setState(() => _responding = false);
+    }
   }
 
   void _subscribe() {
@@ -80,7 +162,7 @@ class _DmThreadScreenState extends State<DmThreadScreen> {
         .order('created_at')
         .listen((data) {
           if (!mounted) return;
-          final msgs = (data as List).cast<Map<String, dynamic>>().toList()
+          final msgs = (_relationship.blocked ? <Map<String, dynamic>>[] : (data as List).cast<Map<String, dynamic>>().toList())
             ..sort((a, b) => (a['created_at'] as String? ?? '')
                 .compareTo(b['created_at'] as String? ?? ''));
           final prevLen = _msgs.length;
@@ -154,6 +236,7 @@ class _DmThreadScreenState extends State<DmThreadScreen> {
 
   // Партнёроос ирсэн мессежийг "уншсан" болгож тэмдэглэнэ
   Future<void> _markRead() async {
+    if(_relationship.dmState!='accepted')return;
     final me = _myId;
     if (me.isEmpty) return;
     try {
@@ -256,7 +339,7 @@ class _DmThreadScreenState extends State<DmThreadScreen> {
 
   Future<void> _sendText(String raw) async {
     final text = raw.trim();
-    if (text.isEmpty || _sending) return;
+    if (text.isEmpty || _sending || !_relationship.canSend) return;
     _ctrl.clear();
     final noteRef = _pendingNote; // эхний мессежид л note ишлэлийг хавсаргана
     setState(() {
@@ -264,21 +347,17 @@ class _DmThreadScreenState extends State<DmThreadScreen> {
       _pendingNote = null;
     });
     try {
-      await SupabaseService.client.from('messages').insert({
-        'sender_id': _myId,
-        'receiver_id': widget.threadId,
-        'body': text,
-        'is_read': false,
-        if (noteRef != null) 'note_text': noteRef,
-      });
-    } catch (_) {
+      await DiscoveryService().send(widget.threadId,text,note:noteRef);
+      await _loadPartner(force: true);
+    } catch (error) {
       // Илгээж чадаагүй — текст + note ишлэлийг сэргээж, мэдэгдэнэ
       if (mounted) {
         _ctrl.text = text;
         setState(() => _pendingNote = noteRef);
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text('Илгээж чадсангүй. Дахин оролдоно уу.'),
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(discoveryError(error)),
             backgroundColor: AppColors.error));
+        await _loadPartner(force: true);
       }
     }
     if (mounted) setState(() => _sending = false);
@@ -296,6 +375,8 @@ class _DmThreadScreenState extends State<DmThreadScreen> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _relationshipTimer?.cancel();
     _sub?.cancel();
     _ctrl.removeListener(_syncCanSend);
     _ctrl.dispose();
@@ -469,6 +550,14 @@ class _DmThreadScreenState extends State<DmThreadScreen> {
                   top: false,
                   child: Column(mainAxisSize: MainAxisSize.min, children: [
                     const SizedBox(height: 10),
+                    if(_relationshipError)ListTile(title:const Text('Мессежийн эрхийг шалгаж чадсангүй'),trailing:IconButton(tooltip:'Дахин шалгах',onPressed:_loadPartner,icon:const Icon(Icons.refresh))),
+                    if(_relationship.dmState=='new')const ListTile(leading:Icon(Icons.mark_chat_unread_outlined),title:Text('Эхний мессеж хүсэлт болж очно')),
+                    if(_relationship.dmState=='requested')const ListTile(leading:Icon(Icons.hourglass_empty),title:Text('Хүсэлт илгээгдсэн · Зөвшөөрөл хүлээж байна')),
+                    if(_relationship.dmState=='incoming')ListTile(title:const Text('Мессежийн хүсэлт'),trailing:Row(mainAxisSize:MainAxisSize.min,children:[
+                      IconButton(tooltip:'Татгалзах',onPressed:_responding ? null : ()=>_respond(false),icon:const Icon(Icons.close)),
+                      IconButton(tooltip:'Зөвшөөрөх',onPressed:_responding ? null : ()=>_respond(true),icon:const Icon(Icons.check)),
+                      IconButton(tooltip:'Блоклох, мэдээлэх',onPressed:()=>showUserOptionsSheet(context,userId:widget.threadId,username:username,onBlocked:(){_loadPartner();_retrySubscribe();}),icon:const Icon(Icons.shield_outlined))])),
+                    if(!_relationshipError&&{'blocked','closed'}.contains(_relationship.dmState))const ListTile(leading:Icon(Icons.lock_outline),title:Text('Нууцлалын тохиргоогоор мессеж хязгаарлагдсан')),
                     // Note-д хариулж байгаа бол ишлэл харуулна
                     if (_pendingNote != null)
                       Container(
@@ -1267,9 +1356,9 @@ class _Bubble extends StatelessWidget {
                 child: SizedBox(
                     width: 30,
                     height: 42,
-                    child: Image.network(storyMediaUrl!,
+                    child: AuthorizedImage(imageUrl:storyMediaUrl!,
                         fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => Container(
+                        errorWidget: (_, __, ___) => Container(
                             color: AppColors.bgSurface,
                             child: SculptedIcon(Icons.auto_stories,
                                 size: 16, color: AppColors.textTertiary)))),
