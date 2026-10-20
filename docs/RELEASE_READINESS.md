@@ -1,5 +1,22 @@
 # Night Owl — release бэлтгэл
 
+## 2026-10-20 Production backend засвар
+
+Эзэмшигчийн шууд зөвшөөрлөөр одоогийн `night owl / main Production` Supabase дээр social discovery, OSM каталог, hosted client RPC гэсэн 3 migration-ийг нэг transaction-аар суулгав. Endpoint, Supabase provider болон Auth/Storage/Realtime хэвээр. Тестэлсэн ба ажиллуулсан SQL багцын SHA256: `11f50f8f9c8d92c297e8511c1b25ac0633fd218235cd9f495a2c0b8064d9846c`. SQL Editor амжилттай дууссан; metadata-only postflight нь `PASS: hosted RPC, RLS, private media and pilot grants` гэж баталсан.
+
+- Дутуу Feed/Following, follow/DM хүсэлт, creator discovery, газрын хадгалалт/цуглуулга, туршилтын RPC болон серверийн `create_group`, `check_in_venue` нэмэгдсэн. Хуучин schema-д байгаагүй `venues.address` талбарыг нэмж нийцүүлсэн. Өмнө суусан featured-event болон profile-flag хамгаалалтыг сольж ажиллуулаагүй.
+- Шинэ social хүснэгтүүдийн хэт өргөн API эрхийг нарийсгаж, хэмжилт/туршилтын хүснэгтийг зөвхөн RPC-ээр ашиглана. Группийн гишүүн биш хүн унших, дур мэдэн өөрийгөө нэмэхийг хаасан; owner урилга, гишүүний гарах/бичих урсгалыг тусгаарласан fixture-д шалгасан.
+- Posts/Stories bucket private болсон. Шинэ клиент зөвшөөрөгдсөн signed URL авна; хуучин аппыг шинэчилж нээх шаардлагатай. Өмнө татсан эсвэл гаднын cache-д үлдсэн файлыг буцаан нууцалж чадахгүй.
+- Суулгахын өмнө 26 public хүснэгтийн 998 мөр, schema metadata болон bucket тохиргооны хязгаарлагдмал хувийн snapshot-ийг Git-ээс гадна хадгалсан. Auth, медиа binary, Vault болон бүх серверийн тохиргоо ороогүй тул бүрэн database backup биш. Blocked-follow хос 0 байсан; wrapper нь шинэ ийм хос гарвал нөөцлөөгүй устгал хийхгүйгээр зогсооно. Аккаунт, пост, мессеж, медиа binary устгаагүй.
+
+Локал баталгаа: 381 Flutter тест, analyze, тусгаарласан social/featured-event/hosted-RPC SQL шалгалтууд, 11 client-config, 7 web-startup тест болон JavaScript release build амжилттай. Production-оос авсан хоосон public schema/policy/application-function хуулбар дээр бүтэн багц болон rollback guard-ийг туршсан; Auth/Storage mock учраас бүрэн restore эсвэл бодит аккаунтын E2E шалгалт биш. Web `main.dart.js` SHA256: `79bb58f9c5e311ba9e8a9973476ee1a25f613d80b5d9f9e4056267d2cd8741a3`, өмнөх шалгасан live клиенттэй ижил. Wasm build биш; dependency-ийн өмнөх Wasm dry-run анхааруулга хэвээр.
+
+Live браузерт All/Following feed, зөвшөөрөгдсөн медиа, creator/газрын discovery, газрын хуудас, DM жагсаалт болон хоосон туршилтын самбар ачаалсан. Бодит мессеж/follow/check-in/pilot өөрчлөлт submit хийгээгүй. Accessibility идэвхтэй browser smoke-ийн шууд hash холбоосоор шилжихэд GoRouter registry-ийн null exception бүртгэгдсэн ч зорьсон самбар нээгдсэн; энэ нь RPC биш клиент навигацын тусдаа үлдсэн асуудал. Бүх browser log алдаагүй эсвэл бүх апп E2E баталгаатай гэж үзэхгүй.
+
+Үлдсэн: хоёр бодит аккаунт/төхөөрөмжөөр private follow approval, block/DM, upload болон зэрэгцээ check-in; Apple/native/store шаардлага; зөвшөөрөлтэй бодит creator, шалгасан газар, контент бүрдүүлэх. 270 OSM газар нь эх сурвалжтай каталог болохоос шалгасан түнш эсвэл бүрдсэн pilot биш. Төлбөртэй үйлчилгээ, реклам, шинэ сервер эхлүүлээгүй. Энэ багцыг дахин эсвэл хуучин public-bucket setup SQL-ийг дараа нь бүү ажиллуул.
+
+Доорх dated хэсгүүд тухайн үеийн түүхэн төлөв; дээрх production засвар нь өмнөх hosted social/check-in суулгаагүй гэсэн саадыг шинэчилнэ.
+
 ## 2026-10-20 DM нууцлалын засвар
 
 Supabase/PostgreSQL, Auth, Storage, Realtime болон одоогийн endpoint хэвээр байна. Тусдаа сервер авах, database нүүлгэх ажил хойшлогдсон. Энэ release зөвхөн DM клиент ба регрессийн тестүүдийг хамарна; database migration, hosted эрх/өгөгдөл өөрчлөхгүй.

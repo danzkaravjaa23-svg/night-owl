@@ -60,6 +60,11 @@ begin
         v_column.table_name,v_column.column_name,v_column.type_name,coalesce(v_actual::text,'missing');
     end if;
   end loop;
+  select atttypid::regtype into v_actual from pg_attribute
+    where attrelid='public.venues'::regclass and attname='address' and attnum>0 and not attisdropped;
+  if found and v_actual is distinct from 'text'::regtype then
+    raise exception 'Schema mismatch: venues.address must be text when present, found %',v_actual;
+  end if;
   if to_regclass('storage.objects') is null or to_regclass('storage.buckets') is null then
     raise exception 'Supabase Storage schema is required';
   end if;

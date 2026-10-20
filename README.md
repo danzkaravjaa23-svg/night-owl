@@ -4,7 +4,7 @@ Flutter social discovery app for Ulaanbaatar nightlife, using Supabase for authe
 
 ## Current delivery
 
-Backend decision (2026-10-20): keep the existing managed Supabase/PostgreSQL database, Auth, Storage and Realtime. Independent-host migration and paid server provisioning are deferred; the retained preparation tools are not an active migration plan. Continue local privacy/security audits and regression tests without changing production data, schema or endpoints.
+Backend decision (2026-10-20): keep the existing managed Supabase/PostgreSQL database, Auth, Storage and Realtime. Independent-host migration and paid server provisioning are deferred; the retained preparation tools are not an active migration plan. The owner subsequently approved the scoped hosted repair below; this does not authorize unrelated production writes or endpoint changes.
 
 The current release is a free app: no active billing, subscriptions, premium unlocks or in-app purchases. QPay and payment history are removed; legacy QPay links open the corresponding post. Invitations are free sharing links with no reward or unlock promise. There are no paid-content entitlements requiring a payment migration. Payment integration is deferred until after deployment and is not a blocker for this free release. Venue and event admission prices, when shown, are information from their organizers; they do not mean that the app charges users or that every venue/event is free. An RSVP records interest or attendance and is not a ticket or payment.
 
@@ -26,13 +26,27 @@ Apple sign-in now has native iOS nonce/identity-token authentication, web/Androi
 
 Independent PostgreSQL migration is deferred by the owner. The [server/API setup and controlled migration sequence](docs/POSTGRES_START_HERE.md) is retained for future reference only. Server provisioning, live migration and endpoint changes have not been performed by this preparation.
 
-### Managed-backend audit (2026-10-20, local only)
+### Hosted backend repair (2026-10-20, applied)
+
+With explicit owner approval, the existing `night owl / main Production` project received the social-discovery, attributed OSM-catalog and `202610200001_hosted_client_rpcs.sql` migrations in one transaction. The exact reviewed bundle SHA256 is `11f50f8f9c8d92c297e8511c1b25ac0633fd218235cd9f495a2c0b8064d9846c`. Supabase reported success and the read-only [hosted postflight](tools/deployment/tests/hosted_backend_postflight.sql) returned `PASS: hosted RPC, RLS, private media and pilot grants`.
+
+The repair adds the missing feed/Following, follow/DM, creator discovery, venue saves/collections, pilot, group-creation and check-in RPCs. It also supplies the legacy hosted schema's missing `venues.address`, narrows inherited API grants, makes post/story media private and prevents strangers from self-joining groups. Existing featured-event RPCs and profile-flag guards were already present and were not replaced. No Auth accounts, posts, messages or media binaries were deleted; no paid service or independent database was created. The 270 attributed OSM entries are not approved businesses or an enrolled pilot cohort.
+
+Before application, a consistent scoped snapshot of 26 public tables (998 rows), public schema metadata and bucket settings was saved outside Git with private permissions. This is not a complete database/Auth/media backup. The atomic wrapper refuses unbacked blocked-follow cleanup; the pre-install source had zero such pairs. Do not replay this bundle or older public-bucket setup SQL: unknown existing group/check-in RPCs deliberately stop reapplication.
+
+Verification: 381 Flutter tests, analyze, isolated social/featured-event/hosted-RPC fixtures, 11 client-config tests, 7 web-startup tests and the JavaScript release build passed. The empty-table trial of the captured hosted schema uses mocked Auth/Storage, not restored user data or a full entitlement audit. The live browser loaded All/Following feeds and authorized media, creator/place discovery, place details, the DM list and the empty pilot dashboard. No real messages, follows, check-ins or pilot entries were submitted. Two-account/device follow approval, block/DM, upload, concurrent check-in and native/Auth checks remain necessary. Browser smoke also logged a GoRouter registry null exception during direct hash navigation; the target subsequently loaded. That separate client issue is not fixed by this SQL-only repair. See [release status](docs/RELEASE_READINESS.md).
+
+`tools/deployment/hosted_backend_release.mjs` only builds the reviewable SQL and hash manifest under ignored `build/hosted-backend-repair`; it never connects to or changes a database. The hosted-RPC fixture is included in CI. Optional schema-only compatibility testing takes an explicit private catalog path and never reads the public-row backup.
+
+### Managed-backend audit (2026-10-20, earlier local work)
 
 A regression fixture reproduced a DM thread retaining the previous account's private message history after an account switch. Direct-message state is now keyed by account and partner: history, composer draft, permission state, subscriptions and polling are discarded on account/route changes; sign-out removes the thread/composer. Reply-note text is not carried to another account. Late profile, message, permission and failed-send results cannot restore an old chat or authorize the new account. Same-account session updates preserve the draft.
 
 Nine new mocked-HTTP tests cover these boundaries. All 381 Flutter tests, Flutter analyze, the isolated social SQL/preflight fixture, 11 client-configuration tests and 7 web-startup tests pass; the JavaScript release web build succeeds with the existing Supabase configuration. The dependency's existing WebAssembly dry-run incompatibility warning remains; this was not a Wasm build. These checks do not verify hosted policies or real-account/device behavior. No production schema/data/endpoint changes, push or deployment were performed.
 
-### Social discovery work (2026-10-16, not yet deployed)
+### Social discovery work (2026-10-16 implementation; deployed 2026-10-20)
+
+The following describes the original implementation and release gates. Hosted installation has since completed as recorded above; real-account/device and pilot-content gates remain.
 
 This checkout includes private accounts and follow approvals, a guarded one-message DM request, creator video publishing, compound-cursor Following, shared source-backed venue references, creator discovery, public content links with login return, account-synced venue saves, place collections, reviewed venue details, and an administrator pilot dashboard. The pilot starts empty: 10–15 creators, 20–30 reviewed places and 60–100 reviewed posts are targets, not seeded accomplishments. Creators and ordinary testers are separate cohorts in the dashboard; only enrolled participants produce discovery measurements. Activation uses the first 24 hours after pilot enrollment, D7 uses hours 168–192, and only matured participants enter each denominator. Repeated publishing requires different UTC dates. Directions count unique participant/place/UTC-day combinations after enrollment.
 
@@ -78,7 +92,7 @@ flutter run -d chrome --dart-define=DEVICE_PREVIEW=false
 sh tools/deployment/build_web.sh --no-pub
 ```
 
-With the current hosted backend, the check-in client requires `supabase/migrations/202610050001_check_in_venue.sql` before release. The independent target uses the reviewed [target RPC patch](backend/patches/README.md) after restore/ownership review. Deploy and test the delete-account function separately. Do not put service-role keys, signing passwords or Apple provider keys into the client or repository.
+The current hosted check-in contract was installed by `supabase/migrations/202610200001_hosted_client_rpcs.sql`; do not overwrite it with the older check-in setup migration. The independent target uses the reviewed [target RPC patch](backend/patches/README.md) after restore/ownership review. Deploy and test the delete-account function separately. Do not put service-role keys, signing passwords or Apple provider keys into the client or repository.
 
 Production configuration supports `PUBLIC_APP_URL`, `MAP_TILE_URL`, `MAP_ATTRIBUTION`, `MAP_ATTRIBUTION_URL` via Dart defines. Map pins use source-linked reviewed corrections only for exact legacy seed positions; owner edits are preserved. Load-test rows are hidden without deleting server data.
 

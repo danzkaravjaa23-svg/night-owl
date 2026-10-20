@@ -6,6 +6,8 @@ alter table public.profiles add column if not exists dm_policy text not null def
   check (dm_policy in ('requests','following','nobody','everyone'));
 alter table public.checkins add column if not exists audience text not null default 'self'
   check (audience in ('self','followers','public'));
+-- Older hosted schemas have district/coordinates but no street-address field.
+alter table public.venues add column if not exists address text;
 
 create or replace function public.social_admin() returns boolean
 language sql stable security definer set search_path=public,pg_temp as $$
