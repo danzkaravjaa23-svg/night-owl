@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/sculpted_icon.dart';
@@ -13,17 +14,64 @@ import '../../../core/constants/stickers.dart';
 import '../widgets/chat_tokens.dart';
 import '../../discovery/services/discovery_service.dart';
 import '../../profile/widgets/block_report_sheet.dart';
+import '../../auth/providers/auth_provider.dart';
 import '../../../core/widgets/authorized_media.dart';
 
-class DmThreadScreen extends StatefulWidget {
+class DmThreadScreen extends ConsumerStatefulWidget {
   final String threadId; // partner's user_id
   final String? replyNote; // note-д хариулж байгаа бол түүний текст
   const DmThreadScreen({super.key, required this.threadId, this.replyNote});
   @override
-  State<DmThreadScreen> createState() => _DmThreadScreenState();
+  ConsumerState<DmThreadScreen> createState() => _DmThreadScopeState();
 }
 
-class _DmThreadScreenState extends State<DmThreadScreen>
+class _DmThreadScopeState extends ConsumerState<DmThreadScreen> {
+  late String? _replyOwner;
+
+  @override
+  void initState() {
+    super.initState();
+    _replyOwner = ref.read(sessionUserIdProvider);
+  }
+
+  @override
+  void didUpdateWidget(covariant DmThreadScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.threadId != widget.threadId ||
+        oldWidget.replyNote != widget.replyNote) {
+      _replyOwner = ref.read(sessionUserIdProvider);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final account = ref.watch(sessionUserIdProvider);
+    if (account == null) {
+      return const Scaffold(
+          body: Center(child: Text('Мессеж үзэхийн тулд нэвтэрнэ үү.')));
+    }
+    // A reused route or a new account must never inherit another chat's state.
+    return _ScopedDmThread(
+        key: ValueKey((account, widget.threadId)),
+        accountId: account,
+        threadId: widget.threadId,
+        replyNote: account == _replyOwner ? widget.replyNote : null);
+  }
+}
+
+class _ScopedDmThread extends StatefulWidget {
+  final String accountId, threadId;
+  final String? replyNote;
+  const _ScopedDmThread(
+      {super.key,
+      required this.accountId,
+      required this.threadId,
+      this.replyNote});
+  @override
+  State<_ScopedDmThread> createState() => _DmThreadScreenState();
+}
+
+class _DmThreadScreenState extends State<_ScopedDmThread>
     with WidgetsBindingObserver {
   final _ctrl = TextEditingController();
   final _scroll = ScrollController();
@@ -52,7 +100,9 @@ class _DmThreadScreenState extends State<DmThreadScreen>
   StreamSubscription? _sub;
   String? _pendingNote; // note-д хариулж байгаа эсэх
 
-  String get _myId => SupabaseService.currentUser?.id ?? '';
+  String get _myId => widget.accountId;
+  bool get _isCurrent =>
+      mounted && SupabaseService.currentUser?.id == widget.accountId;
 
   @override
   void initState() {
@@ -65,8 +115,7 @@ class _DmThreadScreenState extends State<DmThreadScreen>
     _subscribe();
     _relationshipTimer = Timer.periodic(const Duration(seconds: 15), (_) {
       final lifecycle = WidgetsBinding.instance.lifecycleState;
-      if (mounted &&
-          SupabaseService.currentUser != null &&
+      if (_isCurrent &&
           (lifecycle == null || lifecycle == AppLifecycleState.resumed) &&
           ModalRoute.of(context)?.isCurrent == true) {
         _loadPartner();
@@ -77,14 +126,15 @@ class _DmThreadScreenState extends State<DmThreadScreen>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed &&
-        SupabaseService.currentUser != null &&
+        _isCurrent &&
         ModalRoute.of(context)?.isCurrent == true) {
       _loadPartner();
     }
   }
 
   // Composer хоосон эсэхээс илгээх товчны төлөв хамаарна
-  void _syncCanSend() => _canSend.value = _relationship.canSend && _ctrl.text.trim().isNotEmpty;
+  void _syncCanSend() => _canSend.value =
+      _isCurrent && _relationship.canSend && _ctrl.text.trim().isNotEmpty;
 
   Future<void> _loadPartner({bool force = false}) async {
     final pending = _relationshipRequest;
@@ -92,7 +142,7 @@ class _DmThreadScreenState extends State<DmThreadScreen>
       await pending;
       if (!force) return;
     }
-    if (!mounted) return;
+    if (!_isCurrent) return;
     final request = _fetchPartner();
     _relationshipRequest = request;
     try {
@@ -109,8 +159,9 @@ class _DmThreadScreenState extends State<DmThreadScreen>
           .select('id, username, avatar_url, last_seen_at')
           .eq('id', widget.threadId)
           .maybeSingle().timeout(const Duration(seconds: 15));
+      if (!_isCurrent) return;
       final relation=await DiscoveryService().relationship(widget.threadId);
-      if (mounted) {
+      if (_isCurrent) {
         final wasBlocked = _relationship.blocked;
         setState(() {
           _partner = p;
@@ -126,7 +177,7 @@ class _DmThreadScreenState extends State<DmThreadScreen>
         if (wasBlocked && !relation.blocked) _retrySubscribe();
       }
     } catch (_) {
-      if (mounted) {
+      if (_isCurrent) {
         setState(() {
           _relationshipError = true;
           _relationship = const SocialRelationship();
@@ -136,22 +187,23 @@ class _DmThreadScreenState extends State<DmThreadScreen>
     }
   }
   Future<void> _respond(bool accept) async {
-    if (_responding) return;
+    if (!_isCurrent || _responding) return;
     setState(() => _responding = true);
     try {
       await DiscoveryService().respondMessage(widget.threadId, accept);
       await _loadPartner(force: true);
     } catch (error) {
-      if (mounted) {
+      if (mounted && _isCurrent) {
         ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text(discoveryError(error))));
       }
     } finally {
-      if (mounted) setState(() => _responding = false);
+      if (_isCurrent) setState(() => _responding = false);
     }
   }
 
   void _subscribe() {
+    if (!_isCurrent) return;
     final me = _myId;
     // conversation_id-р scope — бүх messages хүснэгтийг sub хийхгүй
     final cid = ([me, widget.threadId]..sort()).join('_');
@@ -161,7 +213,7 @@ class _DmThreadScreenState extends State<DmThreadScreen>
         .eq('conversation_id', cid)
         .order('created_at')
         .listen((data) {
-          if (!mounted) return;
+          if (!_isCurrent) return;
           final msgs = (_relationship.blocked ? <Map<String, dynamic>>[] : (data as List).cast<Map<String, dynamic>>().toList())
             ..sort((a, b) => (a['created_at'] as String? ?? '')
                 .compareTo(b['created_at'] as String? ?? ''));
@@ -188,7 +240,7 @@ class _DmThreadScreenState extends State<DmThreadScreen>
           _firstLoad = false;
         }, onError: (e) {
           // Stream алдаа — мөнхийн spinner-ээс сэргийлж error төлөв рүү шилжинэ
-          if (mounted) {
+          if (_isCurrent) {
             setState(() {
               _loading = false;
               _streamError = true;
@@ -198,6 +250,7 @@ class _DmThreadScreenState extends State<DmThreadScreen>
   }
 
   void _retrySubscribe() {
+    if (!_isCurrent) return;
     _sub?.cancel();
     setState(() {
       _loading = true;
@@ -236,7 +289,7 @@ class _DmThreadScreenState extends State<DmThreadScreen>
 
   // Партнёроос ирсэн мессежийг "уншсан" болгож тэмдэглэнэ
   Future<void> _markRead() async {
-    if(_relationship.dmState!='accepted')return;
+    if (!_isCurrent || _relationship.dmState != 'accepted') return;
     final me = _myId;
     if (me.isEmpty) return;
     try {
@@ -251,7 +304,7 @@ class _DmThreadScreenState extends State<DmThreadScreen>
 
   void _scrollToBottom() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_scroll.hasClients) {
+      if (_isCurrent && _scroll.hasClients) {
         _scroll.animateTo(_scroll.position.maxScrollExtent,
             duration: const Duration(milliseconds: 200), curve: Curves.easeOut);
       }
@@ -260,6 +313,7 @@ class _DmThreadScreenState extends State<DmThreadScreen>
 
   // Партнёрын мессежийг "уншаагүй" болгоно (жагсаалт руу буцахад тодрох)
   Future<void> _markUnread() async {
+    if (!_isCurrent) return;
     final me = _myId;
     if (me.isEmpty) return;
     _markedUnread =
@@ -270,13 +324,14 @@ class _DmThreadScreenState extends State<DmThreadScreen>
           .update({'is_read': false})
           .eq('sender_id', widget.threadId)
           .eq('receiver_id', me);
-      if (mounted) {
+      if (mounted && _isCurrent) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
             content: Text('Уншаагүй болголоо'),
             behavior: SnackBarBehavior.floating,
             duration: Duration(seconds: 2)));
       }
     } catch (_) {
+      if (!_isCurrent) return;
       _markedUnread = false; // амжилтгүй — авто-read-ийг дахин зөвшөөрнө
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
@@ -339,7 +394,7 @@ class _DmThreadScreenState extends State<DmThreadScreen>
 
   Future<void> _sendText(String raw) async {
     final text = raw.trim();
-    if (text.isEmpty || _sending || !_relationship.canSend) return;
+    if (!_isCurrent || text.isEmpty || _sending || !_relationship.canSend) return;
     _ctrl.clear();
     final noteRef = _pendingNote; // эхний мессежид л note ишлэлийг хавсаргана
     setState(() {
@@ -351,7 +406,7 @@ class _DmThreadScreenState extends State<DmThreadScreen>
       await _loadPartner(force: true);
     } catch (error) {
       // Илгээж чадаагүй — текст + note ишлэлийг сэргээж, мэдэгдэнэ
-      if (mounted) {
+      if (mounted && _isCurrent) {
         _ctrl.text = text;
         setState(() => _pendingNote = noteRef);
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -360,7 +415,7 @@ class _DmThreadScreenState extends State<DmThreadScreen>
         await _loadPartner(force: true);
       }
     }
-    if (mounted) setState(() => _sending = false);
+    if (_isCurrent) setState(() => _sending = false);
   }
 
   void _onEmojiTap(String e) {

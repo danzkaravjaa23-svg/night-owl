@@ -42,6 +42,24 @@ void main() {
       authOptions: const FlutterAuthClientOptions(
           autoRefreshToken: false, localStorage: EmptyLocalStorage()),
       httpClient: MockClient((request) async {
+        if (request.url.path == '/auth/v1/token') {
+          const id = '10000000-0000-0000-0000-000000000001';
+          final payload = base64Url.encode(utf8.encode(jsonEncode({
+            'sub': id,
+            'exp': DateTime.now().millisecondsSinceEpoch ~/ 1000 + 3600,
+          }))).replaceAll('=', '');
+          return http.Response(jsonEncode({
+            'access_token': 'fixture.$payload.fixture',
+            'refresh_token': 'fixture-refresh',
+            'token_type': 'bearer',
+            'expires_in': 3600,
+            'user': {
+              'id': id,
+              'aud': 'authenticated',
+              'created_at': '2026-10-20T00:00:00Z'
+            },
+          }), 200, headers: {'content-type': 'application/json'}, request: request);
+        }
         expect(request.method, 'GET',
             reason: 'Layout fixtures must never submit messages or groups');
         final rows = request.url.path.endsWith('/notes')
@@ -124,6 +142,10 @@ void main() {
         addTearDown(tester.view.resetPhysicalSize);
         addTearDown(tester.view.resetDevicePixelRatio);
         addTearDown(() => AppColors.isDarkMode = true);
+        if (!group) {
+          await Supabase.instance.client.auth.signInWithPassword(
+              email: 'fixture@example.test', password: 'fixture-password');
+        }
         final router = GoRouter(routes: [
           GoRoute(
               path: '/',
