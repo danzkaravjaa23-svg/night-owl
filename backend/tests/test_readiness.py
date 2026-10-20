@@ -116,6 +116,29 @@ class ReadinessTests(unittest.TestCase):
             self.assertNotIn("private-password-value", " ".join(run.call_args.args[0]))
             self.assertEqual(run.call_args.kwargs["env"]["PGUSER"], "nightowl_readiness")
 
+    def test_old_database_contract_cannot_claim_ready(self):
+        password = Path(self.temp.name) / "password"
+        password.write_text("private-password-value")
+        env = {"READINESS_PASSWORD_FILE": str(password), "PGHOST": "postgres", "PGPORT": "5432", "PGUSER": "nightowl_readiness", "PGDATABASE": "nightowl"}
+        for version in (None, "old-schema", "future-schema", 1):
+            with self.subTest(version=version):
+                payload = {"ready": True, "contract_version": version}
+                result = subprocess.CompletedProcess([], 0, stdout=json.dumps(payload))
+                with patch.object(readiness.subprocess, "run", return_value=result):
+                    report = readiness.database_inventory(env)
+                self.assertFalse(report["ready"])
+                self.assertEqual(report["error"], "database_contract_outdated")
+
+    def test_current_database_contract_is_accepted(self):
+        password = Path(self.temp.name) / "password"
+        password.write_text("private-password-value")
+        env = {"READINESS_PASSWORD_FILE": str(password), "PGHOST": "postgres", "PGPORT": "5432", "PGUSER": "nightowl_readiness", "PGDATABASE": "nightowl"}
+        payload = {"ready": True, "contract_version": "2026-10-20.social-discovery.1"}
+        result = subprocess.CompletedProcess([], 0, stdout=json.dumps(payload))
+        with patch.object(readiness.subprocess, "run", return_value=result):
+            report = readiness.database_inventory(env)
+        self.assertTrue(report["ready"])
+
 
 if __name__ == "__main__":
     unittest.main()

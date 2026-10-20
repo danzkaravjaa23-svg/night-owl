@@ -1,5 +1,9 @@
 # Standalone PostgreSQL deployment boundary
 
+Owner decision (2026-10-20): retain the current managed Supabase backend. This standalone-host preparation is deferred, not an active deployment plan. Do not provision a paid server or change the live backend as part of the ongoing local application audit.
+
+Start with [the server/API and migration preparation guide](../docs/POSTGRES_START_HERE.md) before buying infrastructure. No target host or production cutover is configured. The October 20 catalog contract includes the current social-discovery and featured-events release; the initial 25-table inventory alone is no longer sufficient.
+
 This scaffold runs **standalone PostgreSQL and PostgREST**, with Caddy preserving the app's existing API routes. It has not imported Night Owl's data, and it does not provide an authentication server, object store or realtime server. Those services still need to be selected, migrated, configured and tested. No self-hosted Supabase distribution is bundled or presented as a completed migration.
 
 Every API request is gated by readiness. Empty service settings, missing verification keys, incomplete database inventory, failed health checks or unapproved cutover return HTTP 503. The default listener is `127.0.0.1:8787`, with PostgreSQL and PostgREST unpublished. This permits preparation without redirecting the deployed app prematurely.
@@ -52,7 +56,7 @@ Initialization scripts run only against an empty PostgreSQL volume. Restore into
 
 The repository's SQL covers 18 of the 25 client tables. It does **not** define `event_rsvps`, `group_chats`, `group_members`, `group_messages`, `notes`, `live_streams` or `live_comments`, nor all their RPCs. Obtain an authoritative schema/data export; do not invent replacements and claim all data migrated.
 
-The private readiness query checks all **25 client tables**, enabled RLS and policy presence, authenticated SELECT grants, **7 RPC signatures/named inputs** and authenticated execution rights, `auth.users`, claim helpers, `pg_trgm`, and unsafe API-role attributes/memberships. A successful metadata result does not prove policy correctness, mutation permissions, trigger correctness or successful data transfer. It grants no additional table privileges.
+The private readiness query checks **37 tables**, enabled RLS, policies and authenticated SELECT for directly readable tables, **24 RPC signatures/named inputs** and authenticated execution rights, **30 required column types**, `auth.users`, claim helpers, `pg_trgm`, and unsafe API-role attributes/memberships/schema-CREATE privileges. RPC-only activity/pilot tables must remain inaccessible to API roles; they need neither direct grants nor a permissive policy. Featured events keep their narrow `event_id`/`rank` SELECT instead of needing a whole-table grant. The sidecar rejects an older/unversioned database inventory even if it reports `ready=true`. A successful metadata result does not prove policy correctness, return payloads, mutation permissions, private bucket configuration, trigger correctness or successful data transfer. It grants no additional table privileges.
 
 Restore reviewed table ownership, foreign keys, constraints, indexes, grants, policies, functions and triggers. Existing authorization includes ownership, participant membership, admin flags, bans and blocks; replacing it with blanket authenticated CRUD would expose private messages or privilege escalation. Review all restored `SECURITY DEFINER` functions and their search paths. Auth password hashes/identities require a chosen service-specific import plan, with forced reauthentication and a tested recovery path.
 
@@ -91,7 +95,15 @@ Generator tests: `python3 -m unittest discover -s tools/deployment/tests -v`. Ch
 python3 -m unittest discover -s backend/tests -v
 ```
 
-Run that command from the repository root. Thirteen offline tests cover fail-closed configuration, unavailable services/database, secret-safe diagnostics, cached success expiry, gateway health behavior and secret preflight error paths. The generator has eleven separate tests, including clean-checkout directory compatibility and unchanged source files.
+Run that command from the repository root. Fifteen offline tests cover fail-closed configuration, unavailable services/database, stale database-contract rejection, secret-safe diagnostics, cached success expiry, gateway health behavior and secret preflight error paths. The generator has eleven separate tests, including clean-checkout directory compatibility and unchanged source files.
+
+The isolated PGlite catalog fixture exercises all 37 tables/24 named RPCs/30 columns, a complete metadata-only positive case, and missing/wrong columns, named arguments, EXECUTE, RLS, narrow SELECT, RPC-only grant leaks and schema-CREATE regressions:
+
+```sh
+node backend/tests/run_readiness_fixture.mjs /absolute/path/to/@electric-sql/pglite/dist/index.js
+```
+
+It uses an in-memory database, empty synthetic tables and explicit RPC stubs, never live services/accounts or production data. It is not a restore, signed HTTP test, account server or proof of application RPC return shapes. The native bootstrap test now expects the current contract too; it must still run on the actual chosen PostgreSQL host before release. No bootstrap/contract upgrade has been applied remotely.
 
 Bootstrap and SQL integration checks also passed against an isolated local PostgreSQL 17.11 test database on 2026-10-05: missing 25 tables/7 RPCs fail readiness; API roles have no implicit table/RPC grants; private inventory execution stays restricted; missing/malformed claims cannot manufacture valid identities; the readiness role cannot read application rows; an API role with RLS bypass is detected. SQL probes run inside a transaction and roll back. They neither load nor test source data.
 

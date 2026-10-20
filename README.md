@@ -4,6 +4,8 @@ Flutter social discovery app for Ulaanbaatar nightlife, using Supabase for authe
 
 ## Current delivery
 
+Backend decision (2026-10-20): keep the existing managed Supabase/PostgreSQL database, Auth, Storage and Realtime. Independent-host migration and paid server provisioning are deferred; the retained preparation tools are not an active migration plan. Continue local privacy/security audits and regression tests without changing production data, schema or endpoints.
+
 The current release is a free app: no active billing, subscriptions, premium unlocks or in-app purchases. QPay and payment history are removed; legacy QPay links open the corresponding post. Invitations are free sharing links with no reward or unlock promise. There are no paid-content entitlements requiring a payment migration. Payment integration is deferred until after deployment and is not a blocker for this free release. Venue and event admission prices, when shown, are information from their organizers; they do not mean that the app charges users or that every venue/event is free. An RSVP records interest or attendance and is not a ticket or payment.
 
 The user-approved design board is now applied: round purple owl branding, a full-width five-action footer, an adaptive street map with lavender venue details, a clean story/photo feed, and a compact profile with real statistics and square photo tiles. Real account and venue data remain connected. Dimensional glyphs and buttons use gradients, shadows and press motion. The approved owl and layouts remain in place. See [approved reference](docs/BRAND_REFERENCE.md), [design comparison](docs/design-review.html), and [release status](docs/RELEASE_READINESS.md). Release commit `7c277c7` is pushed to `night-owl-features` and published at [nightowl-ub.netlify.app](https://nightowl-ub.netlify.app/). The public JavaScript matches the tested local build and immutable Netlify deploy `6ac415570767e000085a73fd`. PostgreSQL migration remains preparation only; the app continues using its existing hosted backend. Native binaries and store publishing remain incomplete.
@@ -21,6 +23,14 @@ Settings exposes Day / Night / System appearance choices; sun/moon actions on Fe
 Apple sign-in now has native iOS nonce/identity-token authentication, web/Android OAuth and a public provider-status check. The backend still reported Apple disabled on 2026-10-05, so successful login requires Apple Developer and Supabase configuration. See [Apple sign-in setup](docs/APPLE_SIGN_IN_SETUP.md) for exact identifiers/callbacks and server-only secret handling. No real Apple end-to-end or iOS device login has been verified.
 
 ## Development
+
+Independent PostgreSQL migration is deferred by the owner. The [server/API setup and controlled migration sequence](docs/POSTGRES_START_HERE.md) is retained for future reference only. Server provisioning, live migration and endpoint changes have not been performed by this preparation.
+
+### Managed-backend audit (2026-10-20, local only)
+
+A regression fixture reproduced a DM thread retaining the previous account's private message history after an account switch. Direct-message state is now keyed by account and partner: history, composer draft, permission state, subscriptions and polling are discarded on account/route changes; sign-out removes the thread/composer. Reply-note text is not carried to another account. Late profile, message, permission and failed-send results cannot restore an old chat or authorize the new account. Same-account session updates preserve the draft.
+
+Nine new mocked-HTTP tests cover these boundaries. All 381 Flutter tests, Flutter analyze, the isolated social SQL/preflight fixture, 11 client-configuration tests and 7 web-startup tests pass; the JavaScript release web build succeeds with the existing Supabase configuration. The dependency's existing WebAssembly dry-run incompatibility warning remains; this was not a Wasm build. These checks do not verify hosted policies or real-account/device behavior. No production schema/data/endpoint changes, push or deployment were performed.
 
 ### Social discovery work (2026-10-16, not yet deployed)
 

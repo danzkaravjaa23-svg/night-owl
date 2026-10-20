@@ -11,8 +11,10 @@ begin
   if (report->>'ready')::boolean then
     raise exception 'Empty destination incorrectly passed readiness';
   end if;
-  if jsonb_array_length(report->'missing_tables') <> 25 or
-     jsonb_array_length(report->'missing_rpc_contracts') <> 7 then
+  if report->>'contract_version' is distinct from '2026-10-20.social-discovery.1' or
+     jsonb_array_length(report->'missing_tables') <> 37 or
+     jsonb_array_length(report->'missing_rpc_contracts') <> 24 or
+     jsonb_array_length(report->'incompatible_columns') <> 30 then
     raise exception 'Authoritative missing table/RPC inventory is incomplete';
   end if;
   if (report->>'auth_users_present')::boolean then

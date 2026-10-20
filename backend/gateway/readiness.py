@@ -19,6 +19,7 @@ from urllib.request import HTTPRedirectHandler, Request, build_opener
 
 SERVICES = ("AUTH", "STORAGE", "REALTIME")
 TIMEOUT = 2
+DATABASE_CONTRACT_VERSION = "2026-10-20.social-discovery.1"
 
 
 def valid_origin(value: str) -> bool:
@@ -124,6 +125,8 @@ def database_inventory(env: dict[str, str]) -> dict:
         report = json.loads(result.stdout)
         if not isinstance(report, dict) or report.get("ready") is not True:
             return {"ready": False, "inventory": report}
+        if report.get("contract_version") != DATABASE_CONTRACT_VERSION:
+            return {"ready": False, "error": "database_contract_outdated"}
         return {"ready": True, "inventory": report}
     except (KeyError, OSError, ValueError, subprocess.SubprocessError):
         # Do not return credentials, connection strings, raw SQL errors or rows.
