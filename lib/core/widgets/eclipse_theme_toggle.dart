@@ -28,6 +28,11 @@ class EclipseThemeToggle extends StatefulWidget {
     this.height = 30,
   });
 
+  /// Харанхуй төлөвийн тасралтгүй плазм pumpAndSettle-ийг хэзээ ч дуусгахгүй
+  /// тул тест үүнийг унтраана (test/flutter_test_config.dart).
+  @visibleForTesting
+  static bool ambientFlow = true;
+
   @override
   State<EclipseThemeToggle> createState() => _EclipseThemeToggleState();
 }
@@ -78,7 +83,9 @@ class _EclipseThemeToggleState extends State<EclipseThemeToggle>
   // Плазм зөвхөн харанхуй төлөвт эсвэл шилжилтийн үед урсана.
   void _syncFlow() {
     if (!mounted) return;
-    final run = !_reduceMotion && (_target || _t.value > 0);
+    final run = !_reduceMotion &&
+        EclipseThemeToggle.ambientFlow &&
+        (_target || _t.value > 0);
     if (run && !_flow.isAnimating) {
       _flow.repeat();
     } else if (!run && _flow.isAnimating) {
@@ -108,9 +115,9 @@ class _EclipseThemeToggleState extends State<EclipseThemeToggle>
     return Semantics(
       button: true,
       toggled: _target,
-      label: 'Харанхуй горим',
+      label: 'Шөнийн горим',
       child: Tooltip(
-        message: _target ? 'Гэрэл горим руу шилжих' : 'Харанхуй горим руу шилжих',
+        message: _target ? 'Өдрийн горимд шилжих' : 'Шөнийн горимд шилжих',
         child: MouseRegion(
           cursor: enabled ? SystemMouseCursors.click : MouseCursor.defer,
           child: GestureDetector(
