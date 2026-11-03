@@ -12,6 +12,7 @@ import 'discovery_screen.dart';
 import '../../profile/utils/app_links.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../map/providers/venue_bookmarks_provider.dart';
+import '../../map/widgets/venue_operating_review.dart';
 
 class PlaceScreen extends ConsumerStatefulWidget {
   final String venueRef;
@@ -145,7 +146,19 @@ class _PlaceScreenState extends ConsumerState<PlaceScreen> {
                                     ListTile(
                                         contentPadding: EdgeInsets.zero,
                                         leading: const Icon(Icons.schedule),
-                                        title: Text(venue['hours'] as String)),
+                                        title: Text(venue['hours'] as String),
+                                        subtitle: Text(venue['source_label'] ==
+                                                'OpenStreetMap'
+                                            ? 'OpenStreetMap-д бүртгэсэн цаг'
+                                            : 'Бүртгэсэн ажиллах цаг')),
+                                  const SizedBox(height: 12),
+                                  VenueOperatingReview(
+                                    venueRefs: [
+                                      widget.venueRef,
+                                      if (venue['source_url'] is String)
+                                        venue['source_url'] as String
+                                    ],
+                                  ),
                                   if (venue['price_min'] != null)
                                     ListTile(
                                         contentPadding: EdgeInsets.zero,
@@ -240,7 +253,8 @@ class _PlaceScreenState extends ConsumerState<PlaceScreen> {
                                         contentPadding: EdgeInsets.zero,
                                         leading: const Icon(
                                             Icons.fact_check_outlined),
-                                        title: const Text('Night Owl шалгасан'),
+                                        title: const Text(
+                                            'Бүртгэлийн мэдээллийг хянасан'),
                                         subtitle: Text('${venue['reviewed_at']}'
                                             .split('T')
                                             .first)),

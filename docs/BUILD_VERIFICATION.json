@@ -1,6 +1,6 @@
 {
-  "current_record": "story_map_activity",
-  "historical_fields_notice": "Use story_map_activity for the current story/map feature verification. audit_repairs and other sections remain dated history; native/store gates still apply.",
+  "current_record": "venue_refresh",
+  "historical_fields_notice": "Use venue_refresh for the latest catalog/evidence update; story_map_activity documents the unchanged story API. Other dated sections remain historical; native/store gates still apply.",
   "admin_security": {
     "date": "2026-11-03",
     "timezone": "Asia/Ulaanbaatar",
@@ -1169,6 +1169,95 @@
       "Only canonical backend catalog locations can be attached; bundled-only OSM entries need backend hydration",
       "No production user story was published/deleted as a test; posting/session flows covered by synthetic regression tests",
       "Native signing, device validation, Apple setup, store release and independent PostgreSQL migration remain deferred"
+    ]
+  },
+  "venue_refresh": {
+    "date": "2026-11-03",
+    "timezone": "Asia/Ulaanbaatar",
+    "branch": "night-owl-features",
+    "status": "Source catalog refreshed; operating-evidence panel implemented and tested; canonical source metadata installed and verified. Public frontend runtime identity is recorded at /release.json; delivery receipt saved locally.",
+    "source": {
+      "retrieved_at": "2026-11-03T04:16:56.175846+00:00",
+      "venue_count": 270,
+      "raw_objects": 16227,
+      "added": 0,
+      "removed": 0,
+      "names_locations_hours_changed": 0,
+      "tracking_url_cleanups": 2,
+      "hours_known": 33,
+      "hours_unknown": 237,
+      "coverage": "Small central Ulaanbaatar bounding box; not citywide",
+      "raw_sha256": "a588f590e02d66eb20f2398ad744324102dc17da2c170b5f060e270a72a8dbe6"
+    },
+    "business_review": {
+      "exact_ids_reviewed": 9,
+      "dated_official_activity": 1,
+      "published_schedule_only": 2,
+      "needs_review": 6,
+      "unreviewed": 261,
+      "unreviewed_nightlife": 33,
+      "proposed_associations_not_applied": [
+        "UB Comedy Sant Asar",
+        "Grandkhaan Irish Pub"
+      ],
+      "open_now_confirmed": 0,
+      "permanent_closures_confirmed": 0,
+      "expiry_days": 30,
+      "asset": "assets/data/venue_operating_reviews.json"
+    },
+    "verification": {
+      "flutter_full_passed": 788,
+      "flutter_log": "build/audit/2026-11-03/venue-refresh/flutter-full.log",
+      "analysis": "No issues found",
+      "analysis_log": "build/audit/2026-11-03/venue-refresh/analysis.log",
+      "osm_converter_passed": 12,
+      "metadata_sql_fixture_groups_passed": 13,
+      "visual_captures": 4,
+      "visual_scope": "Actual panel, bundled review asset and Material icons, day/night390px and320px1.5x; not a native-device capture",
+      "web_build": "PASS",
+      "web_build_log": "build/audit/2026-11-03/venue-refresh/web-build.log",
+      "tested_main_dart_sha256": "f0c0a4689583ed5a01ea366505a27daf02bb252cbac7e035fd2e93d39c5d7be9"
+    },
+    "backend": {
+      "project_ref": "jbbdnpsvstwxtgtjoeru",
+      "migration": "supabase/migrations/202611030006_refresh_osm_source_metadata.sql",
+      "migration_sha256": "d1af43b9557502a5bb5346967e0f059a344a5a26eea48db8ab235e9608e30329",
+      "sql_result": "Success. No rows returned",
+      "postflight": {
+        "checked_at": "2026-11-03T04:28:42.853238+00:00",
+        "present_count": 270,
+        "eligible_count": 270,
+        "manifest_count": 270,
+        "at_target_retrieval": 270,
+        "cleaned_tracking_urls": 2,
+        "business_status_verified": false,
+        "eligible_older_or_missing": 0,
+        "newer_retrieval_preserved": 0,
+        "eligible_old_tracking_urls": 0,
+        "migration_result": "Success. No rows returned",
+        "source_characters": 9847,
+        "pasted_characters": 9847,
+        "postflight_characters": 8731,
+        "pasted_postflight_characters": 8731,
+        "migration_sha256": "d1af43b9557502a5bb5346967e0f059a344a5a26eea48db8ab235e9608e30329"
+      },
+      "scope": "Exact source IDs, source timestamps and two exact matching old tracking URLs only; no business details, rights, schema or open/closed status changes"
+    },
+    "delivery": {
+      "url": "https://nightowl-ub.netlify.app/",
+      "runtime_identity": "https://nightowl-ub.netlify.app/release.json",
+      "local_receipt": "build/audit/2026-11-03/venue-refresh/completion.json"
+    },
+    "resume": {
+      "mode": "Only when the user writes again",
+      "automation_created": false,
+      "handoff": "docs/VENUE_REVIEW_HANDOFF.md"
+    },
+    "limits": [
+      "Only 9 of 270 catalog businesses reviewed; 261 remain unverified",
+      "Mapped hours, dated events, website availability and story activity are not real-time door/occupancy confirmation",
+      "Conflicting Hops & Rocks and Rosewood evidence requires primary confirmation; no pins removed or moved",
+      "Store/native signing, Apple setup and independent PostgreSQL migration remain deferred"
     ]
   }
 }

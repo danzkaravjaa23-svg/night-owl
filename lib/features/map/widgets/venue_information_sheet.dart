@@ -6,6 +6,7 @@ import '../../../core/widgets/night_owl_brand.dart';
 import '../../../core/widgets/app_motion.dart';
 import '../../../core/widgets/owl_loading.dart';
 import '../../../models/venue.dart';
+import 'venue_operating_review.dart';
 
 /// Public venue links use the place name/address, never the user's position.
 Uri venueGoogleMapsUrl(Venue venue) {
@@ -184,8 +185,14 @@ class _VenueInformationSheetState extends State<VenueInformationSheet> {
             _info(Icons.language_rounded, 'Вэбсайт', website.host, foreground,
                 muted),
           const SizedBox(height: 12),
-          Text('Ажиллах цаг, хаягаа очихын өмнө шалгаарай.',
-              style: TextStyle(color: muted, fontSize: 12, height: 1.5)),
+          VenueOperatingReview(
+            venueRefs: [
+              venue.id,
+              ...venue.catalogAliases,
+              if (venue.sourceUrl != null) venue.sourceUrl!
+            ],
+            openUri: widget.openUri,
+          ),
           const SizedBox(height: 20),
           SizedBox(
             width: double.infinity,
@@ -204,10 +211,13 @@ class _VenueInformationSheetState extends State<VenueInformationSheet> {
                       minimumSize: const Size(0, 48)),
                 )),
           ),
-          TextButton.icon(icon:const Icon(Icons.photo_library_outlined),label:const Text('Нийтлэл, газрын дэлгэрэнгүй'),onPressed:(){
-            Navigator.of(context).pop();
-            context.push('/place/${Uri.encodeComponent(venue.id)}');
-          }),
+          TextButton.icon(
+              icon: const Icon(Icons.photo_library_outlined),
+              label: const Text('Нийтлэл, газрын дэлгэрэнгүй'),
+              onPressed: () {
+                Navigator.of(context).pop();
+                context.push('/place/${Uri.encodeComponent(venue.id)}');
+              }),
           if (website != null || phone != null) ...[
             const SizedBox(height: 10),
             Wrap(spacing: 10, runSpacing: 8, children: [

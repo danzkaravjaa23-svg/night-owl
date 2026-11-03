@@ -1,12 +1,12 @@
 {
   "kind": "nightowl-osm-supplemental-venue-catalog",
   "source": "OpenStreetMap",
-  "retrievedAt": "2026-10-05T04:34:47.342639+00:00",
+  "retrievedAt": "2026-11-03T04:16:56.175846+00:00",
   "osmDataTimestamp": null,
   "endpoint": "https://api.openstreetmap.org/api/0.6/map.json?bbox=106.908,47.912,106.925,47.925",
   "query": null,
   "inputFormat": "osm-api-map",
-  "sourceSha256": "c2eb51e4452f0687bceef050f6e1c058be5e3dd4a70a1fffbda3cd9552ffec79",
+  "sourceSha256": "a588f590e02d66eb20f2398ad744324102dc17da2c170b5f060e270a72a8dbe6",
   "bounds": [
     47.912,
     106.908,
@@ -17,7 +17,7 @@
   "licenseUrl": "https://opendatacommons.org/licenses/odbl/1-0/",
   "attribution": "© OpenStreetMap contributors",
   "attributionUrl": "https://www.openstreetmap.org/copyright",
-  "sourceObjectCount": 16194,
+  "sourceObjectCount": 16227,
   "namedLocatedCount": 276,
   "deduplicatedCount": 270,
   "venueCount": 270,
@@ -64,7 +64,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/6380522595",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "phone": "+976-11-88003506",
       "website_url": "https://www.facebook.com/hopsandrocksbrewery",
@@ -83,7 +83,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/6066788101",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "address": "Ерөнхий сайд Амарын гудамж 17th floor",
       "phone": "0097+11+310707",
@@ -102,7 +102,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/6452841082",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "website_url": "https://www.fatcatjazzclub.com/",
       "source_ids": [
@@ -119,7 +119,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/1477522457",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_opening_hours": "Mo-Th 12:00-01:00; Fr 12:00-02:00; Sa 14:00-01:00; Su 16:00-01:00",
       "source_ids": [
@@ -136,7 +136,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/3894653628",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:3894653628"
@@ -152,7 +152,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/4997686922",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:4997686922"
@@ -168,7 +168,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/11140275605",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:11140275605"
@@ -184,7 +184,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/3899304788",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:3899304788"
@@ -200,7 +200,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/3617059622",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:3617059622"
@@ -216,7 +216,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/3148656454",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:3148656454"
@@ -232,7 +232,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/3900952937",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:3900952937"
@@ -248,7 +248,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/11158663509",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:11158663509"
@@ -264,7 +264,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/3667041925",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:3667041925"
@@ -280,7 +280,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/11140275505",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:11140275505"
@@ -296,7 +296,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/3900932239",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:3900932239"
@@ -312,7 +312,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/4397420592",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "address": "Залуучуудын өргөн чөлөө",
       "source_ids": [
@@ -329,7 +329,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/2531717697",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:2531717697"
@@ -345,7 +345,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/way/244261881",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "geometry-bounds-center",
       "source_ids": [
         "osm:way:244261881"
@@ -361,7 +361,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/3900871989",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:3900871989"
@@ -377,7 +377,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/3669885826",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:3669885826"
@@ -393,7 +393,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/2293321286",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:2293321286"
@@ -409,7 +409,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/1784384900",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:1784384900"
@@ -425,7 +425,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/3904328243",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:3904328243"
@@ -441,7 +441,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/3667073128",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:3667073128"
@@ -457,7 +457,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/2514667763",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:2514667763"
@@ -473,7 +473,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/3900874549",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:3900874549"
@@ -489,7 +489,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/3673039625",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:3673039625"
@@ -505,7 +505,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/13369164710",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:13369164710"
@@ -521,7 +521,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/3902505438",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:3902505438"
@@ -537,7 +537,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/3674191925",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:3674191925"
@@ -553,7 +553,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/2321598633",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:2321598633"
@@ -569,7 +569,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/3902503193",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:3902503193"
@@ -585,7 +585,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/3902482359",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:3902482359"
@@ -601,7 +601,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/3900115346",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:3900115346"
@@ -617,7 +617,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/2514801014",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:2514801014"
@@ -633,7 +633,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/3913503159",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:3913503159"
@@ -649,7 +649,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/2514667790",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:2514667790"
@@ -665,7 +665,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/3887636695",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:3887636695"
@@ -681,7 +681,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/6066771481",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "address": "Central Tower 3rd floor",
       "phone": "+976-77151060",
@@ -701,7 +701,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/3886158498",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "address": "Seoul Street 14",
       "phone": "77770200",
@@ -721,7 +721,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/5248486522",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "address": "Жамъян гүний гудамж",
       "phone": "77001881",
@@ -741,7 +741,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/6066767487",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "address": "Ерөнхий сайд Амарын гудамж 17th floor",
       "phone": "00976+77131111",
@@ -760,7 +760,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/7001382885",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "address": "Олимпийн гудамж",
       "phone": "77113390",
@@ -779,7 +779,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/3674314326",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "address": "Их сургуулийн гудамж 4-22",
       "phone": "90205803",
@@ -798,7 +798,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/6066771483",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "address": "Ерөнхий сайд Амарын гудамж 17th floor",
       "phone": "+967-11-310707",
@@ -817,7 +817,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/5733425521",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "address": "Олимпийн гудамж 101",
       "phone": "77072611",
@@ -837,7 +837,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/3671250725",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "address": "Чингисийн өргөн чөлөө 10/1",
       "phone": "99118913",
@@ -856,7 +856,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/7494632585",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "address": "Олимпийн гудамж",
       "phone": "77061212",
@@ -875,7 +875,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/5248484023",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "address": "Олимпийн гудамж",
       "phone": "77034499",
@@ -894,7 +894,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/5928074486",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "address": "Сөүлийн гудамж 1",
       "phone": "77041111",
@@ -913,7 +913,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/5928074985",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "address": "Жуулчны гудамж 1",
       "phone": "77041111",
@@ -932,7 +932,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/2871910101",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "address": "Бага тойрог",
       "phone": "325808",
@@ -950,7 +950,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/3671246825",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "phone": "77180909",
       "source_opening_hours": "Mo-Fr 08:00-23:00 Sa-Su 09:00-22:00",
@@ -968,7 +968,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/3669998925",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "address": "Жуулчны гудамж 22",
       "source_opening_hours": "Su-Th 23:00-11:00; Fr-Sa 23:00-00:00",
@@ -986,7 +986,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/5811201356",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "phone": "77100060",
       "source_opening_hours": "Mo-Su 11:00-22:00",
@@ -1004,7 +1004,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/11635124352",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "phone": "77110195",
       "source_opening_hours": "Mo-Su 10:00-02:00",
@@ -1022,7 +1022,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/way/662430190",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "geometry-bounds-center",
       "address": "Олимпийн гудамж 19",
       "source_opening_hours": "Mo-Sa 12:00-00:00",
@@ -1040,7 +1040,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/7756958085",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "phone": "77073888",
       "source_opening_hours": "Mo-Sa 07:00-02:00",
@@ -1058,7 +1058,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/6066772586",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "address": "Олимпийн гудамж 3rd floor, mall",
       "source_opening_hours": "Mo-Su 09:00-24:00",
@@ -1076,7 +1076,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/13974096701",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "address": "Энх тайваны өргөн чөлөө",
       "source_ids": [
@@ -1093,7 +1093,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/2952191525",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_opening_hours": "Th-Tu 09:00-20:00; We 09:00-18:00",
       "source_ids": [
@@ -1110,7 +1110,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/14030823601",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "phone": "+97695501177",
       "source_ids": [
@@ -1127,7 +1127,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/3891278774",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_opening_hours": "24/7",
       "source_ids": [
@@ -1144,7 +1144,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/13089216342",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_opening_hours": "11:00-22:00",
       "source_ids": [
@@ -1161,7 +1161,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/13165749001",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "website_url": "https://namaste.mn/",
       "source_ids": [
@@ -1178,7 +1178,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/3894615949",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "phone": "+976 1131 6595",
       "source_ids": [
@@ -1195,7 +1195,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/3886158495",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "address": "Сөүлийн гудамж",
       "source_ids": [
@@ -1212,7 +1212,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/8087986164",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_opening_hours": "09:00-22:00",
       "source_ids": [
@@ -1229,7 +1229,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/3682095928",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "address": "Их сургуулийн гудамж",
       "source_ids": [
@@ -1246,7 +1246,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/14155437401",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:14155437401"
@@ -1262,7 +1262,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/14061407901",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:14061407901"
@@ -1278,7 +1278,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/14008238891",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:14008238891"
@@ -1294,7 +1294,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/13784253235",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:13784253235"
@@ -1310,7 +1310,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/3093536509",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:3093536509"
@@ -1326,7 +1326,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/3669882025",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:3669882025"
@@ -1342,7 +1342,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/4310060692",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:4310060692"
@@ -1358,7 +1358,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/3669561374",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:3669561374"
@@ -1374,7 +1374,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/4310331989",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:4310331989"
@@ -1390,7 +1390,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/3886158479",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:3886158479"
@@ -1406,7 +1406,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/11158654706",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:11158654706"
@@ -1422,7 +1422,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/3092049234",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:3092049234"
@@ -1438,7 +1438,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/3910207970",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:3910207970"
@@ -1454,7 +1454,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/3886060488",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:3886060488"
@@ -1470,7 +1470,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/3886060533",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:3886060533"
@@ -1486,7 +1486,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/3902589660",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:3902589660"
@@ -1502,7 +1502,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/3886158492",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:3886158492"
@@ -1518,7 +1518,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/2293341555",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:2293341555"
@@ -1534,7 +1534,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/3896158890",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:3896158890"
@@ -1550,7 +1550,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/3902591670",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:3902591670"
@@ -1566,7 +1566,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/3902583956",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:3902583956"
@@ -1582,7 +1582,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/11158664606",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:11158664606"
@@ -1598,7 +1598,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/6566561785",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:6566561785"
@@ -1614,7 +1614,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/11195429039",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:11195429039"
@@ -1630,7 +1630,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/4029481189",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:4029481189"
@@ -1646,7 +1646,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/3673293728",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:3673293728"
@@ -1662,7 +1662,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/4327660898",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:4327660898"
@@ -1678,7 +1678,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/3093535714",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:3093535714"
@@ -1694,7 +1694,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/12345212301",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:12345212301"
@@ -1710,7 +1710,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/2532391369",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:2532391369"
@@ -1726,7 +1726,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/3891276601",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:3891276601"
@@ -1742,7 +1742,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/2511108878",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:2511108878"
@@ -1758,7 +1758,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/3093532124",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:3093532124"
@@ -1774,7 +1774,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/2882186758",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:2882186758"
@@ -1790,7 +1790,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/11949581869",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:11949581869"
@@ -1806,7 +1806,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/3092061831",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:3092061831"
@@ -1822,7 +1822,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/11158664205",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:11158664205"
@@ -1838,7 +1838,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/11158654708",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:11158654708"
@@ -1854,7 +1854,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/11974488832",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:11974488832"
@@ -1870,7 +1870,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/11782344596",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:11782344596"
@@ -1886,7 +1886,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/3892322872",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:3892322872",
@@ -1903,7 +1903,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/1678362169",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:1678362169"
@@ -1919,7 +1919,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/2532391368",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:2532391368"
@@ -1935,7 +1935,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/way/244790560",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "geometry-bounds-center",
       "source_ids": [
         "osm:way:244790560"
@@ -1951,7 +1951,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/14026426284",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:14026426284"
@@ -1967,7 +1967,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/14003594106",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:14003594106"
@@ -1983,7 +1983,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/11158664407",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:11158664407"
@@ -1999,7 +1999,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/11113318505",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:11113318505"
@@ -2015,7 +2015,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/3092025632",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:3092025632"
@@ -2031,7 +2031,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/3886060509",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:3886060509"
@@ -2047,7 +2047,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/11158663708",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:11158663708"
@@ -2063,7 +2063,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/6760903185",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:6760903185"
@@ -2079,7 +2079,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/11158664409",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:11158664409"
@@ -2095,7 +2095,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/3092028446",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:3092028446"
@@ -2111,7 +2111,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/3895137758",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:3895137758"
@@ -2127,7 +2127,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/3673293028",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:3673293028"
@@ -2143,7 +2143,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/3673293727",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:3673293727"
@@ -2159,7 +2159,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/2506789934",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:2506789934"
@@ -2175,7 +2175,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/3617034309",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:3617034309"
@@ -2191,7 +2191,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/3886158490",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:3886158490"
@@ -2207,7 +2207,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/11158664408",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:11158664408"
@@ -2223,7 +2223,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/3894695000",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:3894695000"
@@ -2239,7 +2239,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/3617059620",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:3617059620"
@@ -2255,7 +2255,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/3886158496",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:3886158496"
@@ -2271,7 +2271,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/3909307967",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:3909307967"
@@ -2287,7 +2287,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/3904361575",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:3904361575"
@@ -2303,7 +2303,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/4029477189",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:4029477189"
@@ -2319,7 +2319,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/3671096425",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:3671096425"
@@ -2335,7 +2335,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/3891275402",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:3891275402"
@@ -2351,7 +2351,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/3846177957",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:3846177957",
@@ -2368,7 +2368,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/3902637209",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:3902637209"
@@ -2384,7 +2384,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/11158663505",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:11158663505"
@@ -2400,7 +2400,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/7656869688",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:7656869688"
@@ -2416,7 +2416,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/2321598630",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:2321598630"
@@ -2432,7 +2432,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/3886158475",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:3886158475"
@@ -2448,7 +2448,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/3092032978",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:3092032978"
@@ -2464,7 +2464,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/3091939327",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:3091939327"
@@ -2480,7 +2480,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/2293341567",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:2293341567"
@@ -2496,7 +2496,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/3673294128",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:3673294128"
@@ -2512,7 +2512,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/3092023784",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:3092023784"
@@ -2528,7 +2528,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/3669885525",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:3669885525"
@@ -2544,7 +2544,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/11782313992",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:11782313992"
@@ -2560,7 +2560,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/5955920486",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:5955920486"
@@ -2576,7 +2576,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/3902497620",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:3902497620"
@@ -2592,7 +2592,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/3674314327",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:3674314327"
@@ -2608,7 +2608,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/3902502463",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:3902502463"
@@ -2624,7 +2624,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/2492506196",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:2492506196"
@@ -2640,7 +2640,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/5036727023",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:5036727023"
@@ -2656,7 +2656,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/2293321275",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:2293321275"
@@ -2672,7 +2672,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/3902502577",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:3902502577"
@@ -2688,7 +2688,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/3908087450",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:3908087450"
@@ -2704,7 +2704,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/4029461993",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:4029461993"
@@ -2720,7 +2720,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/4029446695",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:4029446695"
@@ -2736,7 +2736,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/3900125417",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:3900125417"
@@ -2752,7 +2752,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/1533728072",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:1533728072"
@@ -2768,7 +2768,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/4423415597",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:4423415597"
@@ -2784,7 +2784,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/2321753376",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:2321753376"
@@ -2800,7 +2800,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/4029472991",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:4029472991"
@@ -2816,7 +2816,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/2505566060",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:2505566060"
@@ -2832,7 +2832,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/3904391170",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:3904391170"
@@ -2848,7 +2848,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/9735289619",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:9735289619"
@@ -2864,7 +2864,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/3904392041",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:3904392041"
@@ -2880,7 +2880,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/1732841389",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:1732841389"
@@ -2896,7 +2896,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/3904453771",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:3904453771"
@@ -2912,7 +2912,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/3913288464",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:3913288464"
@@ -2928,7 +2928,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/3904361574",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:3904361574"
@@ -2944,7 +2944,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/3902583954",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:3902583954"
@@ -2960,7 +2960,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/3673293227",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:3673293227"
@@ -2976,7 +2976,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/3904412708",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:3904412708"
@@ -2992,7 +2992,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/3090167271",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:3090167271"
@@ -3008,7 +3008,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/3912618483",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:3912618483"
@@ -3024,7 +3024,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/3912826423",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:3912826423"
@@ -3040,7 +3040,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/8032903275",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:8032903275"
@@ -3056,7 +3056,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/3092027965",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:3092027965"
@@ -3072,7 +3072,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/4334961291",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:4334961291"
@@ -3088,7 +3088,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/2520777875",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:2520777875"
@@ -3104,7 +3104,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/3092039505",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:3092039505"
@@ -3120,7 +3120,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/3899233604",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:3899233604"
@@ -3136,7 +3136,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/4327660790",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:4327660790"
@@ -3152,7 +3152,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/4327669289",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:4327669289"
@@ -3168,7 +3168,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/4331632100",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:4331632100"
@@ -3184,7 +3184,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/4334971289",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:4334971289"
@@ -3200,7 +3200,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/4029457357",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:4029457357"
@@ -3216,7 +3216,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/4299257493",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:4299257493"
@@ -3232,7 +3232,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/4423415596",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:4423415596"
@@ -3248,7 +3248,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/3902504976",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:3902504976"
@@ -3264,7 +3264,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/3918580935",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:3918580935"
@@ -3280,7 +3280,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/3666976351",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:3666976351"
@@ -3296,7 +3296,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/2531717710",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:2531717710"
@@ -3312,7 +3312,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/3895309450",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:3895309450"
@@ -3328,7 +3328,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/2532391370",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:2532391370"
@@ -3344,7 +3344,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/way/220239964",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "geometry-bounds-center",
       "source_ids": [
         "osm:way:220239964"
@@ -3360,7 +3360,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/way/220893093",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "geometry-bounds-center",
       "source_ids": [
         "osm:way:220893093"
@@ -3376,7 +3376,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/3091950389",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:3091950389"
@@ -3392,7 +3392,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/4873123021",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:4873123021"
@@ -3408,7 +3408,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/3092030625",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:3092030625"
@@ -3424,7 +3424,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/3091967288",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:3091967288"
@@ -3440,7 +3440,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/3902458755",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:3902458755"
@@ -3456,7 +3456,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/2520517045",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:2520517045"
@@ -3472,7 +3472,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/3093533172",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:3093533172"
@@ -3488,7 +3488,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/3669882725",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:3669882725"
@@ -3504,7 +3504,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/3904448685",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:3904448685"
@@ -3520,7 +3520,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/4327669189",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:4327669189"
@@ -3536,7 +3536,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/4327589589",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:4327589589"
@@ -3552,7 +3552,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/3902458756",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:3902458756"
@@ -3568,11 +3568,11 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/7611116886",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "address": "Бага Тойруу 5/2",
       "phone": "89934497",
-      "website_url": "https://www.facebook.com/centralkavezocoffeeshop/?ref=bookmarks",
+      "website_url": "https://www.facebook.com/centralkavezocoffeeshop/",
       "source_opening_hours": "Mo-Su 08:00-19:00",
       "source_ids": [
         "osm:node:7611116886"
@@ -3588,7 +3588,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/4928823022",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "address": "Д. Сүхбаатарын гудамж 6",
       "phone": "88108880",
@@ -3607,7 +3607,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/4971571722",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "address": "Бага Тойруу 42/1",
       "phone": "86090038",
@@ -3626,7 +3626,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/11635070329",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "phone": "88189646",
       "source_opening_hours": "Mo-Su 09:00-00:00",
@@ -3645,7 +3645,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/6031081588",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "phone": "9422-2363",
       "source_opening_hours": "Mo-Sa 10:00-12:00",
@@ -3663,7 +3663,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/14200550201",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "address": "Seoul Street 31",
       "website_url": "https://cohi.haus",
@@ -3681,7 +3681,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/3886141371",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "address": "Нэгдсэн Үндэсний Гудамж",
       "source_ids": [
@@ -3698,7 +3698,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/6619064485",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_opening_hours": "10:00-21:00",
       "source_ids": [
@@ -3715,7 +3715,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/2321491014",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "address": "Залуучуудын өргөн чөлөө",
       "source_ids": [
@@ -3732,9 +3732,9 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/3913307364",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
-      "website_url": "https://www.facebook.com/pages/Coffee-Bean-Shop-Bluemon-Center/211157819063969?fref=ts",
+      "website_url": "https://www.facebook.com/pages/Coffee-Bean-Shop-Bluemon-Center/211157819063969",
       "source_ids": [
         "osm:node:3913307364"
       ]
@@ -3749,7 +3749,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/3886060466",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:3886060466"
@@ -3765,7 +3765,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/3886114747",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:3886114747"
@@ -3781,7 +3781,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/3902580405",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:3902580405"
@@ -3797,7 +3797,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/11683919244",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:11683919244"
@@ -3813,7 +3813,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/13977386601",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:13977386601"
@@ -3829,7 +3829,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/3886060510",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:3886060510"
@@ -3845,7 +3845,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/5840933686",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:5840933686"
@@ -3861,7 +3861,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/3673023332",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:3673023332"
@@ -3877,7 +3877,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/11140275405",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:11140275405"
@@ -3893,7 +3893,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/4029443407",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:4029443407"
@@ -3909,7 +3909,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/3904175152",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:3904175152"
@@ -3925,7 +3925,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/4029404089",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:4029404089"
@@ -3941,7 +3941,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/11665397009",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:11665397009"
@@ -3957,7 +3957,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/5696519241",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:5696519241"
@@ -3973,7 +3973,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/3913309340",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:3913309340"
@@ -3989,7 +3989,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/11197862837",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:11197862837"
@@ -4005,7 +4005,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/3899307990",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:3899307990"
@@ -4021,7 +4021,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/3148647474",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:3148647474"
@@ -4037,7 +4037,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/2513546957",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:2513546957"
@@ -4053,7 +4053,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/3957977857",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:3957977857"
@@ -4069,7 +4069,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/1247498078",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:1247498078"
@@ -4085,7 +4085,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/7922616556",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:7922616556"
@@ -4101,7 +4101,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/11633777247",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:11633777247"
@@ -4117,7 +4117,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/14003594071",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:14003594071"
@@ -4133,7 +4133,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/12345212302",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:12345212302"
@@ -4149,7 +4149,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/3899326175",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:3899326175"
@@ -4165,7 +4165,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/11665410082",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:11665410082"
@@ -4181,7 +4181,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/6598255586",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:6598255586"
@@ -4197,7 +4197,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/6510601118",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:6510601118",
@@ -4214,7 +4214,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/4029417789",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:4029417789"
@@ -4230,7 +4230,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/2520683345",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:2520683345"
@@ -4246,7 +4246,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/2520627419",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:2520627419"
@@ -4262,7 +4262,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/4029418689",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:4029418689"
@@ -4278,7 +4278,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/3669887125",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:3669887125"
@@ -4294,7 +4294,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/3912619547",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:3912619547"
@@ -4310,7 +4310,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/3896158876",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:3896158876"
@@ -4326,7 +4326,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/2520627434",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:2520627434"
@@ -4342,7 +4342,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/3895308704",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:3895308704"
@@ -4358,7 +4358,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/3895305590",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:3895305590"
@@ -4374,7 +4374,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/3902576444",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:3902576444"
@@ -4390,7 +4390,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/2495869639",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:2495869639",
@@ -4407,7 +4407,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/3669885825",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:3669885825"
@@ -4423,7 +4423,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/2520627417",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:2520627417"
@@ -4439,7 +4439,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/3913314985",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:3913314985"
@@ -4455,7 +4455,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/3875836173",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:3875836173"
@@ -4471,7 +4471,7 @@
       "verified": false,
       "source_label": "OpenStreetMap",
       "source_url": "https://www.openstreetmap.org/node/4423415595",
-      "source_retrieved_at": "2026-10-05T04:34:47.342639+00:00",
+      "source_retrieved_at": "2026-11-03T04:16:56.175846+00:00",
       "source_location_kind": "mapped-node",
       "source_ids": [
         "osm:node:4423415595"

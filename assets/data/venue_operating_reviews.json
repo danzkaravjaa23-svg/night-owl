@@ -1,0 +1,162 @@
+{
+  "schema_version": 1,
+  "reviews": [
+    {
+      "venue_ref": "osm:node:6452841082",
+      "status": "evidence_recent_activity",
+      "summary": "Албан ёсны эх сурвалжаас 2026-10-16–29-ний арга хэмжээний мэдээлэл олдсон. Өнөөдрийн хөтөлбөрийг очихын өмнө шалгаарай.",
+      "checked_at": "2026-11-03T04:16:54Z",
+      "evidence_date": "2026-10-29",
+      "published_hours": {
+        "opens": "18:00",
+        "closes": "01:00",
+        "weekday_note": "Үйлчлэх өдрүүд, онцгой хуваарь тодорхойгүй."
+      },
+      "sources": [
+        {
+          "label": "Албан ёсны вэбсайт",
+          "kind": "official",
+          "url": "https://www.fatcatjazzclub.com/en/"
+        }
+      ]
+    },
+    {
+      "venue_ref": "osm:node:2321598633",
+      "status": "needs_review",
+      "summary": "Албан ёсны сайтад үйлчилгээ, захиалгын мэдээлэл бий. Өнөөдрийн арга хэмжээ болон ажиллах цагийг батлах огноотой мэдээлэл олдоогүй.",
+      "checked_at": "2026-11-03T04:16:54Z",
+      "evidence_date": null,
+      "published_hours": null,
+      "sources": [
+        {
+          "label": "Албан ёсны вэбсайт",
+          "kind": "official",
+          "url": "https://riversounds.mn/"
+        }
+      ]
+    },
+    {
+      "venue_ref": "osm:node:2293341567",
+      "status": "published_hours_only",
+      "summary": "Газрын меню хуудсанд цаг нийтэлсэн боловч шинэчилсэн огноо, долоо хоногийн өдрүүд нь тодорхойгүй. Бусад лавлахын амралтын өдрийн цагтай зөрж байна.",
+      "checked_at": "2026-11-03T04:16:54Z",
+      "evidence_date": null,
+      "published_hours": {
+        "opens": "12:00",
+        "closes": "00:00",
+        "weekday_note": "Үйлчлэх өдрүүд, онцгой хуваарь тодорхойгүй."
+      },
+      "sources": [
+        {
+          "label": "Газрын меню дахь мэдээлэл",
+          "kind": "business_menu",
+          "url": "https://qrmenu.mn/menu/MjMx/info"
+        }
+      ]
+    },
+    {
+      "venue_ref": "osm:node:6066788101",
+      "status": "needs_review",
+      "summary": "Барилгын түрээслэгчдийн лавлахад бүртгэлтэй. Ажиллах цагийн эх сурвалжууд зөрүүтэй, огноотой албан мэдээлэл олдоогүй тул очихын өмнө лавлаарай.",
+      "checked_at": "2026-11-03T04:16:54Z",
+      "evidence_date": null,
+      "published_hours": null,
+      "sources": [
+        {
+          "label": "Барилгын түрээслэгчдийн лавлах",
+          "kind": "tenant_directory",
+          "url": "https://www.pages.mn/shangrila/index.php/central/category/17"
+        }
+      ]
+    },
+    {
+      "venue_ref": "osm:node:6380522595",
+      "status": "needs_review",
+      "summary": "Лавлахууд дахь мэдээлэл зөрүүтэй байна. Энэ хаяг дахь пабын үйл ажиллагааг газрын эзэмшигчийн шинэ мэдээллээр баталгаажуулах шаардлагатай; хаагдсан гэж эцэслэн тогтоогоогүй.",
+      "checked_at": "2026-11-03T04:16:54Z",
+      "evidence_date": null,
+      "published_hours": null,
+      "sources": [
+        {
+          "label": "Wanderlog · хөндлөнгийн лавлах",
+          "kind": "secondary_directory",
+          "url": "https://wanderlog.com/place/details/1461931"
+        },
+        {
+          "label": "Top Rated · хөндлөнгийн лавлах",
+          "kind": "secondary_directory",
+          "url": "https://www.top-rated.online/cities/Ulaanbaatar/place/p/1792883/Hops%2B%26%2BRocks%2BCraft%2BPub"
+        }
+      ]
+    },
+    {
+      "venue_ref": "osm:node:3886158490",
+      "status": "needs_review",
+      "summary": "Вэбсайт болон лавлахуудаас одоогийн байршил, үйл ажиллагааг найдвартай тогтоож чадсангүй. Түр завсарласан эсвэл нүүсэн эсэхийг дахин нягтлах шаардлагатай.",
+      "checked_at": "2026-11-03T04:16:54Z",
+      "evidence_date": null,
+      "published_hours": null,
+      "sources": [
+        {
+          "label": "Хөндлөнгийн бизнесийн лавлах",
+          "kind": "secondary_directory",
+          "url": "https://www.restaurants10.com/MN/Ulaanbaatar/535697779784500/Rosewood-Kitchen-%2B-Enoteca"
+        },
+        {
+          "label": "Tripadvisor · хөндлөнгийн лавлах",
+          "kind": "secondary_directory",
+          "url": "https://www.tripadvisor.ie/Restaurant_Review-g293956-d2426827-Reviews-Rosewood_Kitchen_Enoteca-Ulaanbaatar.html"
+        }
+      ]
+    },
+    {
+      "venue_ref": "osm:node:1477522457",
+      "status": "needs_review",
+      "summary": "Өнөөдрийн ажиллах цаг, салбарын мэдээлэл албан ёсны эх сурвалжаар баталгаажаагүй. Зочдын оруулсан мэдээлэл дангаараа үйл ажиллагааг батлахгүй.",
+      "checked_at": "2026-11-03T04:16:54Z",
+      "evidence_date": null,
+      "published_hours": null,
+      "sources": [
+        {
+          "label": "Untappd · хэрэглэгчийн мэдээлэл",
+          "kind": "secondary_directory",
+          "url": "https://untappd.com/v/mb-beer-plus/1001133"
+        }
+      ]
+    },
+    {
+      "venue_ref": "osm:node:6066771481",
+      "status": "published_hours_only",
+      "summary": "Барилгын түрээслэгчдийн лавлахад нийтэлсэн цаг нь OpenStreetMap-ийн цагтай зөрж байна. Шинэчилсэн огноо болон үйлчлэх өдрүүд тодорхойгүй тул очихын өмнө лавлаарай.",
+      "checked_at": "2026-11-03T04:16:54Z",
+      "evidence_date": null,
+      "published_hours": {
+        "opens": "10:00",
+        "closes": "21:30",
+        "weekday_note": "Үйлчлэх өдрүүд, онцгой хуваарь тодорхойгүй."
+      },
+      "sources": [
+        {
+          "label": "Барилгын түрээслэгчдийн лавлах",
+          "kind": "tenant_directory",
+          "url": "https://www.pages.mn/shangrila/index.php/central/category/17"
+        }
+      ]
+    },
+    {
+      "venue_ref": "osm:node:14200550201",
+      "status": "needs_review",
+      "summary": "Албан ёсны вэбсайт байгаа боловч энэ байршлын өнөөдрийн цаг, үйл ажиллагааг батлах огноотой мэдээлэл олдоогүй.",
+      "checked_at": "2026-11-03T04:16:54Z",
+      "evidence_date": null,
+      "published_hours": null,
+      "sources": [
+        {
+          "label": "Албан ёсны вэбсайт",
+          "kind": "official",
+          "url": "https://cohi.haus/"
+        }
+      ]
+    }
+  ]
+}
