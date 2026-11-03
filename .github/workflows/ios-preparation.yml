@@ -10,6 +10,8 @@ on:
       - 'assets/**'
       - 'pubspec.*'
       - 'tools/deployment/ios_preflight.py'
+      - 'tools/deployment/ios_simulator_smoke.py'
+      - 'tools/deployment/ios_native_inventory.py'
       - 'tools/deployment/build_ios.sh'
 permissions:
   contents: read
@@ -39,8 +41,12 @@ jobs:
       - run: flutter pub get
       - name: Build unsigned iPhone application
         run: sh tools/deployment/build_ios.sh --no-pub
+      - name: Inventory native bundle and privacy manifests
+        run: python3 tools/deployment/ios_native_inventory.py
       - name: Build simulator application
         run: flutter build ios --simulator --debug --no-pub --dart-define=DEVICE_PREVIEW=false --dart-define-from-file=build/backend-defines.json
+      - name: Launch iPhone and iPad simulators
+        run: python3 tools/deployment/ios_simulator_smoke.py
       - name: Preserve native bundles
         run: |
           mkdir -p build/releases
