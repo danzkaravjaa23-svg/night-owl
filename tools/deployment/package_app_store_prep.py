@@ -6,6 +6,7 @@ Only Python's standard library and read-only Git commands are used.
 """
 
 import argparse
+import base64
 from datetime import datetime, timezone
 import hashlib
 import json
@@ -73,6 +74,14 @@ def validate_payload(path, data):
     pem_body = rb"-----BEGIN (?:[A-Z]+ )?PRIVATE KEY-----\r?\n(?:[A-Za-z0-9+/=]+\r?\n){2,}"
     if re.search(pem_body, data) or re.search(rb"\bsb_secret_[A-Za-z0-9_-]{20,}\b", data):
         raise ValueError(f"Credential-like material found; refuse packaging: {path}")
+    for token in re.findall(rb"\beyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\b", data):
+        try:
+            payload = token.split(b".")[1]
+            claims = json.loads(base64.urlsafe_b64decode(payload + b"=" * (-len(payload) % 4)))
+        except (ValueError, UnicodeError):
+            continue
+        if isinstance(claims, dict) and claims.get("role") == "service_role":
+            raise ValueError(f"Privileged JWT found; refuse packaging: {path}")
 
 
 def read_snapshot(commit):

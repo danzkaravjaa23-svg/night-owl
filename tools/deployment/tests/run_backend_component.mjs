@@ -76,7 +76,17 @@ function startProcess(command, args, {input, timeout = 120000, stage = command} 
   // A long-lived functions process is observed later; prevent an early
   // unhandled rejection while readiness polling supplies its own deadline.
   completion.catch(() => {});
-  return {child, completion};
+  return {child, completion, safeHttpTrace() {
+    return (output + '\n' + error).split('\n').flatMap(line => {
+      const match = line.match(/NIGHTOWL_COMPONENT_HTTP (\{[^\r\n]*\})/);
+      if (!match) return [];
+      try {
+        const value = JSON.parse(match[1]);
+        if (!/^(control_(lookup|prepare|status|claim|renew|failed|storage_inventory|storage_cleared|cleanup|completed|reconcile)|storage_(list|remove)|auth_(get|delete))$/.test(value.stage) || !Number.isInteger(value.status) || value.status < 100 || value.status > 599) return [];
+        return [{stage: value.stage, status: value.status, ...(typeof value.code === 'string' && /^[A-Za-z0-9_]{1,40}$/.test(value.code) ? {code: value.code} : {})}];
+      } catch { return []; }
+    }).slice(-100);
+  }};
 }
 async function run(command, args, options) { return startProcess(command, args, options).completion; }
 async function sql(query, stage = 'local application SQL') {
@@ -145,6 +155,32 @@ async function main() {
     config += '\n[functions.delete-account]\nverify_jwt = false\n';
     await writeFile(configPath, config, {mode: 0o600});
     await cp(path.join(repo, 'supabase/functions/delete-account'), path.join(workdir, 'supabase/functions/delete-account'), {recursive: true});
+    // Observe only operation names/status/error codes around the unchanged
+    // production implementation. No service is mocked and no header, key,
+    // token, path, account ID, response message or content is logged.
+    const functionDirectory = path.join(workdir, 'supabase/functions/delete-account');
+    await cp(path.join(functionDirectory, 'index.ts'), path.join(functionDirectory, 'component_implementation.ts'));
+    await writeFile(path.join(functionDirectory, 'index.ts'), `
+const componentFetch = globalThis.fetch;
+globalThis.fetch = async (input, init) => {
+ const response = await componentFetch(input, init);
+ let stage = '';
+ const pathname = new URL(typeof input === 'string' || input instanceof URL ? input : input.url).pathname;
+ if (pathname === '/rest/v1/rpc/account_erasure_control') {
+  try { const action = JSON.parse(String(init?.body ?? '{}')).p_action; if (['lookup','prepare','status','claim','renew','failed','storage_inventory','storage_cleared','cleanup','completed','reconcile'].includes(action)) stage='control_'+action; } catch {}
+ } else if (pathname.startsWith('/storage/v1/object/list/')) stage='storage_list';
+ else if (pathname.startsWith('/storage/v1/object/') && init?.method === 'DELETE') stage='storage_remove';
+ else if (pathname === '/auth/v1/user') stage='auth_get';
+ else if (pathname.startsWith('/auth/v1/admin/users/') && init?.method === 'DELETE') stage='auth_delete';
+ if (stage) {
+  let code;
+  if (response.status >= 400) { try { const value=await response.clone().json(); if (typeof value.code === 'string' && /^[A-Za-z0-9_]{1,40}$/.test(value.code)) code=value.code; } catch {} }
+  console.log('NIGHTOWL_COMPONENT_HTTP '+JSON.stringify({stage,status:response.status,...(code?{code}:{})}));
+ }
+ return response;
+};
+await import('./component_implementation.ts');
+`, {mode: 0o600});
     await run('supabase', ['start', '--workdir', workdir, '--exclude', 'studio,imgproxy,realtime,postgres-meta,logflare,vector,supavisor,mailpit'], {stage: 'start real local Supabase services', timeout: 12 * 60 * 1000});
     const status = JSON.parse(await run('supabase', ['status', '--workdir', workdir, '--output', 'json'], {stage: 'read generated local status'}));
     const credentials = validateLocalStatus(status);
@@ -245,6 +281,13 @@ async function main() {
     requireCase((await control('failed', activeLease)).status === 200, 'durable failure checkpoint could not be recorded');
     pass('real concurrent claims exclude a worker and freeze only the erasing member');
     const deleted = await edge({action: 'delete', receipt_token: receipt}, owner.token);
+    report.delete_response = {status: deleted.status, ...(typeof deleted.data?.code === 'string' && /^[A-Za-z0-9_]{1,40}$/.test(deleted.data.code) ? {code: deleted.data.code} : {}), cleanup_started: deleted.data?.cleanup_started === true};
+    if (deleted.status !== 200) report.erasure_checkpoint = await sqlJson(`select json_build_object(
+      'state',(select state from account_private.erasure_jobs where user_id=${quoted(owner.id)}),
+      'storage_cleared',(select storage_cleared_at is not null from account_private.erasure_jobs where user_id=${quoted(owner.id)}),
+      'database_cleared',(select database_cleared_at is not null from account_private.erasure_jobs where user_id=${quoted(owner.id)}),
+      'auth_present',exists(select 1 from auth.users where id=${quoted(owner.id)}),
+      'owned_objects',(select count(*) from storage.objects where owner_id=${quoted(owner.id)}::text))`);
     requireCase(deleted.status === 200 && deleted.data?.ok === true && deleted.data?.user_id === owner.id, 'real HTTP deletion did not resume and finish');
     pass('actual Edge resumes a durable failed job and hard-deletes through GoTrue');
     requireCase((await service(`/auth/v1/admin/users/${owner.id}`)).status === 404, 'erased Auth user still exists');
@@ -290,6 +333,10 @@ async function main() {
       try { await cleanup(workdir); } catch { report.cleanup = 'failed; workflow finalizer will retry'; process.exitCode = 1; }
     }
     report.elapsed_seconds = Math.round((Date.now() - started) / 1000);
+    if (functions) report.http_trace = functions.safeHttpTrace();
+    if (report.status === 'failed') for (const [label, value] of Object.entries({delete_response: report.delete_response, erasure_checkpoint: report.erasure_checkpoint, http_trace: report.http_trace?.slice(-30)})) {
+      if (value !== undefined) console.error(`DIAGNOSTIC ${label}: ${JSON.stringify(value)}`);
+    }
     report.passed_count = report.passed.length;
     await mkdir(path.dirname(evidence), {recursive: true});
     await writeFile(evidence, JSON.stringify(report, null, 2) + '\n');
