@@ -1,0 +1,67 @@
+name: Validate iOS before signing
+on:
+  workflow_dispatch:
+  push:
+    branches: [codex/app-store-preparation]
+    paths:
+      - '.github/workflows/ios-preparation.yml'
+      - 'ios/**'
+      - 'lib/**'
+      - 'assets/**'
+      - 'pubspec.*'
+      - 'tools/deployment/ios_preflight.py'
+      - 'tools/deployment/build_ios.sh'
+permissions:
+  contents: read
+concurrency:
+  group: ios-preparation-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  native:
+    runs-on: macos-15
+    timeout-minutes: 45
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.3.app/Contents/Developer
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.44.0'
+          channel: stable
+          cache: true
+      - name: Record native toolchain
+        run: |
+          mkdir -p build/native-evidence
+          xcodebuild -version | tee build/native-evidence/xcode.txt
+          xcrun --sdk iphoneos --show-sdk-version | tee build/native-evidence/iphoneos-sdk.txt
+          flutter --version | tee build/native-evidence/flutter.txt
+          git rev-parse HEAD > build/native-evidence/commit.txt
+      - run: flutter pub get
+      - name: Build unsigned iPhone application
+        run: sh tools/deployment/build_ios.sh --no-pub
+      - name: Build simulator application
+        run: flutter build ios --simulator --debug --no-pub --dart-define=DEVICE_PREVIEW=false --dart-define-from-file=build/backend-defines.json
+      - name: Preserve native bundles
+        run: |
+          mkdir -p build/releases
+          tar -czf build/releases/night-owl-iphoneos-unsigned.tar.gz -C build/ios/iphoneos Runner.app
+          tar -czf build/releases/night-owl-simulator.tar.gz -C build/ios/iphonesimulator Runner.app
+      - uses: actions/upload-artifact@v4
+        with:
+          name: night-owl-native-unsigned-${{ github.sha }}
+          retention-days: 14
+          if-no-files-found: error
+          path: |
+            build/releases/night-owl-iphoneos-unsigned.tar.gz
+            build/releases/night-owl-simulator.tar.gz
+            build/native-evidence
+      - name: Preserve build diagnostics on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: night-owl-native-diagnostics-${{ github.sha }}
+          retention-days: 14
+          if-no-files-found: warn
+          path: |
+            build/native-evidence
+            build/ios/**/*.xcresult

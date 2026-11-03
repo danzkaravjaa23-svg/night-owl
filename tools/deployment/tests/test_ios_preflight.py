@@ -77,6 +77,100 @@ class SourceTests(unittest.TestCase):
                 path.write_text(original.replace(old, new, 1))
                 self.assertFalse(self.checks()["Runner bundle ID / entitlement in all configurations"])
 
+    def test_deployment_target_rejects_old_missing_and_unresolved_values(self):
+        path = self.root / "ios/Runner.xcodeproj/project.pbxproj"
+        original = path.read_text()
+        for value in ("12.0", "$(CUSTOM_IOS_VERSION)", "invalid"):
+            with self.subTest(value=value):
+                path.write_text(original.replace("IPHONEOS_DEPLOYMENT_TARGET = 13.0;",
+                                                 f"IPHONEOS_DEPLOYMENT_TARGET = {value};", 1))
+                self.assertFalse(self.checks()["Runner minimum deployment target iOS 13+"])
+        path.write_text(original.replace("IPHONEOS_DEPLOYMENT_TARGET = 13.0;", ""))
+        self.assertFalse(self.checks()["Runner minimum deployment target iOS 13+"])
+
+    def test_target_override_can_raise_inherited_old_project_version(self):
+        path = self.root / "ios/Runner.xcodeproj/project.pbxproj"
+        source = path.read_text().replace("IPHONEOS_DEPLOYMENT_TARGET = 13.0;",
+                                         "IPHONEOS_DEPLOYMENT_TARGET = 12.0;")
+        source = source.replace("INFOPLIST_FILE = Runner/Info.plist;",
+                                "INFOPLIST_FILE = Runner/Info.plist;\n"
+                                "\t\t\t\tIPHONEOS_DEPLOYMENT_TARGET = 15.0;")
+        path.write_text(source)
+        self.assertTrue(self.checks()["Runner minimum deployment target iOS 13+"])
+
+    def test_target_override_cannot_lower_one_configuration(self):
+        path = self.root / "ios/Runner.xcodeproj/project.pbxproj"
+        source = path.read_text().replace("INFOPLIST_FILE = Runner/Info.plist;",
+                                         "INFOPLIST_FILE = Runner/Info.plist;\n"
+                                         "\t\t\t\tIPHONEOS_DEPLOYMENT_TARGET = 12.0;", 1)
+        path.write_text(source)
+        self.assertFalse(self.checks()["Runner minimum deployment target iOS 13+"])
+
+    def test_runner_configuration_reference_cannot_point_to_tests_or_missing_list(self):
+        path = self.root / "ios/Runner.xcodeproj/project.pbxproj"
+        original = path.read_text()
+        for target in ("331C8087294A63A400263BE5", "000000000000000000000000"):
+            with self.subTest(target=target):
+                path.write_text(original.replace(
+                    "buildConfigurationList = 97C147051CF9000F007C117D",
+                    "buildConfigurationList = " + target, 1))
+                self.assertFalse(self.checks()["Runner minimum deployment target iOS 13+"])
+
+    def test_conditional_old_deployment_target_is_blocked(self):
+        path = self.root / "ios/Runner.xcodeproj/project.pbxproj"
+        source = path.read_text().replace("INFOPLIST_FILE = Runner/Info.plist;",
+                                         "INFOPLIST_FILE = Runner/Info.plist;\n"
+                                         '\t\t\t\t"IPHONEOS_DEPLOYMENT_TARGET[sdk=iphoneos*]" = 12.0;', 1)
+        path.write_text(source)
+        self.assertFalse(self.checks()["Runner minimum deployment target iOS 13+"])
+
+    def test_combined_sdk_arch_conditions_cannot_hide_old_or_unknown_target(self):
+        path = self.root / "ios/Runner.xcodeproj/project.pbxproj"
+        original = path.read_text()
+        for value in ("12.0", '"$(UNRESOLVED_TARGET)"'):
+            with self.subTest(value=value):
+                source = original.replace(
+                    "INFOPLIST_FILE = Runner/Info.plist;",
+                    "INFOPLIST_FILE = Runner/Info.plist;\n"
+                    '\t\t\t\t"IPHONEOS_DEPLOYMENT_TARGET[sdk=iphoneos*][arch=arm64]" = '
+                    + value + ";", 1)
+                path.write_text(source)
+                self.assertFalse(self.checks()["Runner minimum deployment target iOS 13+"])
+
+    def test_icon_with_valid_png_but_wrong_catalog_dimensions_is_blocked(self):
+        directory = self.root / "ios/Runner/Assets.xcassets/AppIcon.appiconset"
+        path = directory / "Contents.json"
+        data = json.loads(path.read_text())
+        # The referenced image exists and is a valid opaque PNG, but is not
+        # the dimensions advertised by this catalog entry.
+        data["images"][0]["filename"] = "Icon-App-1024x1024@1x.png"
+        path.write_text(json.dumps(data))
+        self.assertFalse(self.checks()["App icon catalog / opaque 1024px PNG"])
+
+    def test_non_marketing_icon_requires_complete_crc_checked_png(self):
+        directory = self.root / "ios/Runner/Assets.xcassets/AppIcon.appiconset"
+        catalog = json.loads((directory / "Contents.json").read_text())
+        entry = next(item for item in catalog["images"] if item["idiom"] != "ios-marketing")
+        path = directory / entry["filename"]
+        original = path.read_bytes()
+        damaged = bytearray(original)
+        damaged[-5] ^= 1
+        for data in (original[:33], original[:-12], bytes(damaged), original + b"trailing"):
+            with self.subTest(length=len(data)):
+                path.write_bytes(data)
+                self.assertFalse(self.checks()["App icon catalog / opaque 1024px PNG"])
+
+    def test_invalid_icon_size_and_scale_are_reported_without_raising(self):
+        path = self.root / "ios/Runner/Assets.xcassets/AppIcon.appiconset/Contents.json"
+        original = path.read_text()
+        for field, value in (("size", None), ("size", "bad"), ("size", "0x0"),
+                             ("size", "20.2x20.2"), ("scale", "4x")):
+            with self.subTest(field=field, value=value):
+                data = json.loads(original)
+                data["images"][0][field] = value
+                path.write_text(json.dumps(data))
+                self.assertFalse(self.checks()["App icon catalog / opaque 1024px PNG"])
+
     def test_required_api_manifest_missing_or_unsupported_reason_is_blocked(self):
         path = self.root / "ios/Runner/PrivacyInfo.xcprivacy"
         original = plistlib.loads(path.read_bytes())

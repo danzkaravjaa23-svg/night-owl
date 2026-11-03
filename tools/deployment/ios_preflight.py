@@ -17,38 +17,46 @@ import zlib
 ROOT = Path(__file__).resolve().parents[2]
 FLUTTER_VERSION = "3.44.0"
 BUNDLE_ID = "com.nightowl.ub.nightOwlUb"
+MINIMUM_IOS_DEPLOYMENT_TARGET = (13, 0)
 
 
-def opaque_marketing_png(path):
+def png_dimensions(path, *, opaque_marketing=False):
+    """Read dimensions after complete chunk/CRC checks; no image decoder."""
     data = path.read_bytes()
     if data[:8] != b"\x89PNG\r\n\x1a\n":
-        return False
+        return None
     offset = 8
-    header = False
+    dimensions = None
     pixels = False
     while offset + 12 <= len(data):
         length = struct.unpack(">I", data[offset:offset + 4])[0]
         end = offset + length + 12
         if end > len(data):
-            return False
+            return None
         kind = data[offset + 4:offset + 8]
         payload = data[offset + 8:end - 4]
         crc = struct.unpack(">I", data[end - 4:end])[0]
-        if zlib.crc32(kind + payload) != crc or kind == b"tRNS":
-            return False
+        if zlib.crc32(kind + payload) != crc or (opaque_marketing and kind == b"tRNS"):
+            return None
         if kind == b"IHDR":
-            if header or offset != 8 or length != 13:
-                return False
+            if dimensions or offset != 8 or length != 13:
+                return None
             width, height, depth, color, _, _, _ = struct.unpack(">IIBBBBB", payload)
-            if (width, height, depth, color) != (1024, 1024, 8, 2):
-                return False
-            header = True
+            if not width or not height:
+                return None
+            if opaque_marketing and (width, height, depth, color) != (1024, 1024, 8, 2):
+                return None
+            dimensions = (width, height)
         if kind == b"IEND":
-            return header and pixels and length == 0 and end == len(data)
+            return dimensions if pixels and length == 0 and end == len(data) else None
         if kind == b"IDAT" and length:
             pixels = True
         offset = end
-    return False
+    return None
+
+
+def opaque_marketing_png(path):
+    return png_dimensions(path, opaque_marketing=True) == (1024, 1024)
 
 
 def source_checks(root):
@@ -112,6 +120,70 @@ def source_checks(root):
             names.append(name[1])
         return set(names) == {"Debug", "Profile", "Release"}
 
+    def minimum_deployment_target():
+        # Runner currently inherits its deployment target from PBXProject.
+        # Resolve the configuration lists, rather than accepting one matching
+        # 13.0 string elsewhere or rejecting a valid target-level override.
+        text = project_text()
+        objects = dict(re.findall(
+            r"^\t\t([0-9A-F]{24}) /\*[^\n]*\*/ = \{(.*?)^\t\t\};",
+            text, re.MULTILINE | re.DOTALL))
+
+        def configurations(owner):
+            owners = [block for block in objects.values()
+                      if f"isa = {owner};" in block
+                      and (owner == "PBXProject" or re.search(
+                          r'^\t\t\tname = Runner;', block, re.MULTILINE))]
+            if len(owners) != 1:
+                return {}
+            ref = re.search(r'buildConfigurationList = ([0-9A-F]{24})\b', owners[0])
+            config_list = objects.get(ref[1], "") if ref else ""
+            if "isa = XCConfigurationList;" not in config_list:
+                return {}
+            members = re.search(r'buildConfigurations = \((.*?)\);',
+                                config_list, re.DOTALL)
+            if not members:
+                return {}
+            result = {}
+            for ref in re.findall(r'([0-9A-F]{24}) /\*', members[1]):
+                block = objects.get(ref, "")
+                name = re.search(r'^\t\t\tname = (\w+);', block, re.MULTILINE)
+                if not name or name[1] in result or "isa = XCBuildConfiguration;" not in block:
+                    return {}
+                if owner == "PBXNativeTarget" and not re.search(
+                        r'INFOPLIST_FILE = "?Runner/Info\.plist"?;', block):
+                    return {}
+                result[name[1]] = block
+            return result
+
+        project = configurations("PBXProject")
+        runner = configurations("PBXNativeTarget")
+        if set(project) != {"Debug", "Profile", "Release"} or set(runner) != set(project):
+            return False
+
+        def targets(block):
+            return dict(re.findall(
+                r'^\s*"?IPHONEOS_DEPLOYMENT_TARGET((?:\[[^\]\n]+\])*)"?\s*=\s*"?([^";\n]+)"?;',
+                block, re.MULTILINE))
+
+        for name in runner:
+            target_settings = targets(runner[name])
+            project_settings = targets(project[name])
+            if '' in target_settings:
+                effective = target_settings
+            else:
+                effective = {**project_settings, **target_settings}
+            if '' not in effective:
+                return False
+            for raw in effective.values():
+                value = raw.strip()
+                if not re.fullmatch(r'\d+(?:\.\d+){0,2}', value):
+                    return False
+                version = tuple(int(part) for part in value.split('.'))
+                if (version + (0, 0))[:2] < MINIMUM_IOS_DEPLOYMENT_TARGET:
+                    return False
+        return True
+
     def privacy_reasons():
         entries = plist("PrivacyInfo.xcprivacy").get("NSPrivacyAccessedAPITypes")
         if not isinstance(entries, list):
@@ -157,6 +229,15 @@ def source_checks(root):
             path = (directory / entry["filename"]).resolve()
             if path.parent != directory.resolve() or not path.is_file():
                 return False
+            size, scale = entry["size"], entry["scale"]
+            if (not re.fullmatch(r"\d+(?:\.\d+)?x\d+(?:\.\d+)?", size)
+                    or not re.fullmatch(r"[1-3]x", scale)):
+                return False
+            expected = tuple(float(value) * int(scale[0]) for value in size.split("x"))
+            if any(value <= 0 or not value.is_integer() for value in expected):
+                return False
+            if png_dimensions(path) != tuple(int(value) for value in expected):
+                return False
         marketing = [entry for entry in images if entry.get("idiom") == "ios-marketing"
                      and entry.get("size") == "1024x1024" and entry.get("scale") == "1x"]
         return len(marketing) == 1 and opaque_marketing_png(directory / marketing[0]["filename"])
@@ -167,6 +248,7 @@ def source_checks(root):
     check("Apple entitlement (not provisioning proof)",
           lambda: plist("Runner.entitlements").get("com.apple.developer.applesignin") == ["Default"])
     check("Runner bundle ID / entitlement in all configurations", runner_configurations)
+    check("Runner minimum deployment target iOS 13+", minimum_deployment_target)
     check("App required-reason privacy API declarations", privacy_reasons)
     check("Privacy manifest in Runner resources", privacy_resource)
     check("App icon catalog / opaque 1024px PNG", icons)
