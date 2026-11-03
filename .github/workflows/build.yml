@@ -43,6 +43,7 @@ jobs:
           node tools/deployment/tests/run_discovery_analytics_consent_fixture.mjs "$RUNNER_TEMP/nightowl-social-sql/node_modules/@electric-sql/pglite/dist/index.js"
           node tools/deployment/tests/run_admin_console_fixture.mjs "$RUNNER_TEMP/nightowl-social-sql/node_modules/@electric-sql/pglite/dist/index.js"
           node tools/deployment/tests/run_interaction_boundaries_fixture.mjs "$RUNNER_TEMP/nightowl-social-sql/node_modules/@electric-sql/pglite/dist/index.js"
+          node tools/deployment/tests/run_security_restriction_fixture.mjs "$RUNNER_TEMP/nightowl-social-sql/node_modules/@electric-sql/pglite/dist/index.js"
           node backend/tests/run_readiness_fixture.mjs "$RUNNER_TEMP/nightowl-social-sql/node_modules/@electric-sql/pglite/dist/index.js"
       - run: python3 -m unittest discover -s tools/deployment/tests -v
       - run: python3 tools/deployment/ios_preflight.py --source-only
