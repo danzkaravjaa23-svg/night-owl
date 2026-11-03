@@ -960,7 +960,7 @@
   "audit_repairs": {
     "date": "2026-11-03",
     "timezone": "Asia/Ulaanbaatar",
-    "status": "17 re-audit findings repaired; frontend published and restrictions-only backend deployed; admin private-content access expansion withheld pending approval",
+    "status": "17 re-audit findings repaired; frontend published; full approved admin and interaction backend installed and verified in production",
     "branch": "night-owl-features",
     "base_commit": "230d9c30aaf787e6896540cda4f0c313dc4607ef",
     "scope": [
@@ -1022,12 +1022,13 @@
     "hosted_metadata": {
       "preflight": "build/audit/2026-11-03/release-fixes/hosted-preflight.csv",
       "recovery_schema": "build/audit/2026-11-03/release-fixes/hosted-schema-snapshot.json",
-      "scope": "Functions, policies, ACLs, triggers; no application row export"
+      "scope": "Functions, policies, ACLs, triggers; no application row export",
+      "admin_activation_recovery_schema": "build/audit/2026-11-03/admin-activation/before-schema.json"
     },
     "deployment": {
       "client_url": "https://nightowl-ub.netlify.app/",
-      "verified_app_commit": "5e8fdde247041a3e8a3fa7c9e771da38b62d25a0",
-      "netlify_deploy": "6ae949af64282558fc0f43d4",
+      "verified_app_commit": "6673147326f4e82167f90744166880a543922696",
+      "netlify_deploy": "6ae94df360692ac1ca8edf0c",
       "published": true,
       "public_js_sha256": "ea02e7657748a285f677d986450fe443a0680df6fae84e7b507af36b1d9e7b8e",
       "public_js_matches_local": true,
@@ -1043,31 +1044,66 @@
         "project": "night owl",
         "project_ref": "jbbdnpsvstwxtgtjoeru",
         "sql_editor_url": "https://supabase.com/dashboard/project/jbbdnpsvstwxtgtjoeru/sql/b011e3ee-1787-433a-8d83-e91b0c25052d",
-        "artifact": "build/audit/2026-11-03/re-audit/backend-release-separate/pending-restrictions-only.sql",
-        "sha256": "eaf4b46ced52973471e7a7d2acab5df59f66a13feaad80e8ea4889250e080478",
+        "artifact": "build/audit/2026-11-03/re-audit/backend-release/pending-security-repair.sql",
+        "sha256": "b9b1d72f012ecf3601f9cdf67a5d7732f7ff3327573f835b513cc7072804e55e",
         "ui_copy_matches_source": true,
         "result": "Success. No rows returned",
         "embedded_assertions": "All prerequisites and final assertions passed before COMMIT",
         "postflight": {
-          "captured_at": "2026-11-03T02:56:58.394085+00:00",
-          "notes_guard": true,
-          "rpc_only_checkins": true,
-          "media_read_unchanged": true,
-          "profile_identity_guard": true,
-          "interaction_policy_count": 25,
-          "no_public_table_truncate": true,
-          "admin_private_access_withheld": true,
-          "direct_profile_delete_blocked": true
+          "captured_at": "2026-11-03T03:15:43.098492+00:00",
+          "admin_rpc_count": 6,
+          "active_admin_count": 5,
+          "private_context_hidden": true,
+          "audit_direct_access_blocked": true,
+          "new_admin_identities_granted": false,
+          "interaction_assertions_passed": true,
+          "admin_catalog_assertions_passed": true,
+          "attached_private_post_media_review": true,
+          "synthetic_non_admin_denials_passed": 5,
+          "application_rows_mutated_for_verification": false
         },
-        "withheld": "003 admin read/action/private-media expansion; explicit approval pending"
+        "approval": "User explicitly approved private post/comment/attached-media moderation activation on 2026-11-03",
+        "installed_after": "Restrictions-only bundle eaf4b46c, verified compatible in local fixtures",
+        "anonymous_http": {
+          "probes": 7,
+          "all_denied": true,
+          "status": 401,
+          "postgres_code": "42501",
+          "evidence": "build/audit/2026-11-03/admin-activation/anon-probes.json"
+        },
+        "evidence": "build/audit/2026-11-03/admin-activation/",
+        "screenshot": "build/audit/2026-11-03/admin-activation/Night-Owl-admin-postflight-details.png"
       },
-      "git_push": "5e8fdde verified on origin/night-owl-features; final rollout documentation committed separately"
+      "git_push": "6673147 verified on origin/night-owl-features; admin activation documentation committed separately"
     },
     "limits": [
       "Synthetic regression tests and production metadata checks do not certify concurrent live-user Auth/Storage flows",
       "Apple provider setup, native signing/device verification and store submission are deferred",
       "Account deletion Edge Function remains disabled/unpublished; no real account deletion tested",
-      "Independent PostgreSQL migration remains deferred; existing hosted Supabase backend retained"
-    ]
+      "Independent PostgreSQL migration remains deferred; existing hosted Supabase backend retained",
+      "Production admin-positive moderation E2E not performed: current signed-in browser reaches community-rule setup; agent did not accept agreements or mutate user content"
+    ],
+    "restriction_only_rollout_history": {
+      "project": "night owl",
+      "project_ref": "jbbdnpsvstwxtgtjoeru",
+      "sql_editor_url": "https://supabase.com/dashboard/project/jbbdnpsvstwxtgtjoeru/sql/b011e3ee-1787-433a-8d83-e91b0c25052d",
+      "artifact": "build/audit/2026-11-03/re-audit/backend-release-separate/pending-restrictions-only.sql",
+      "sha256": "eaf4b46ced52973471e7a7d2acab5df59f66a13feaad80e8ea4889250e080478",
+      "ui_copy_matches_source": true,
+      "result": "Success. No rows returned",
+      "embedded_assertions": "All prerequisites and final assertions passed before COMMIT",
+      "postflight": {
+        "captured_at": "2026-11-03T02:56:58.394085+00:00",
+        "notes_guard": true,
+        "rpc_only_checkins": true,
+        "media_read_unchanged": true,
+        "profile_identity_guard": true,
+        "interaction_policy_count": 25,
+        "no_public_table_truncate": true,
+        "admin_private_access_withheld": true,
+        "direct_profile_delete_blocked": true
+      },
+      "withheld": "003 admin read/action/private-media expansion; explicit approval pending"
+    }
   }
 }
