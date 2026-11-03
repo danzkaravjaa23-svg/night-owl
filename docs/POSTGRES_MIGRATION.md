@@ -33,7 +33,7 @@ The scripts do not delete the source project, stop users writing, upload private
 
 ## Prerequisites and private configuration
 
-Install Python 3.10+ and psql, pg_dump, pg_dumpall, pg_restore. Use a matching PostgreSQL client release that supports the source version; the target must be the same PostgreSQL major version or newer. The local Postgres.app 17.11 runtime now provides these clients at /tmp/night-owl-postgres-runtime/Postgres.app/Contents/Versions/17/bin. Add this directory to PATH for the prepared runtime. A disposable local PostgreSQL server was tested; Docker was not used. The production host and its dependencies remain separate setup.
+Install Python 3.10+ and psql, pg_dump, pg_dumpall, pg_restore. Use a matching PostgreSQL client release that supports the source version; the target must be the same PostgreSQL major version or newer. The earlier Postgres.app 17.11 runtime at /tmp/night-owl-postgres-runtime/Postgres.app/Contents/Versions/17/bin was temporary and disappeared; it was restored and its four client versions checked on 2026-11-03. Verify the files and their `--version` output again before use, then add the directory to PATH. The earlier disposable local PostgreSQL drill is historical evidence; it does not prove that a server is running today. Docker was not used. The production host and its dependencies remain separate setup.
 
 Use a direct source connection or session pooler, not a transaction pooler. Create libpq service and password files outside the repository, with 600 permissions. Use the source database administrator/read access sufficient to read **all** schemas and roles; public/anonymous API credentials cannot export all private data.
 
@@ -60,6 +60,16 @@ Fill connection details privately. Store each password in the private PGPASSFILE
 Use tools/migration/.env.example as a list of environment variables; load the filled configuration from outside the repository. Do not commit the filled version. A private Storage key file contains only the source service-role key. It is needed only for binary downloads and is never sent to a destination.
 
 ## Private credential preparation
+
+For a source-only backup, `tools/migration/prepare_source_access.py` asks for the **existing Database password** through a hidden local terminal prompt. It does not need a target password, connect to Supabase, reset anything, or run an export. First review the offline plan using the non-secret connection fields from Supabase Connect:
+
+    python3 tools/migration/prepare_source_access.py --host SOURCE_HOST --port 5432 --database postgres --user SOURCE_USER --service nightowl_source --sslrootcert /private/etc/ssl/cert.pem --output /absolute/private-parent/nightowl-source-access
+
+Run the same command yourself in Terminal with `--execute` added. The prompt does not display typed characters. Paste/type only the existing database password there and press Enter; never include it in the command or chat. Redirected input and any fallback that could echo the password are refused. Cancellation, empty/multiline input, an existing output or unsafe paths fail without overwriting existing files.
+
+The output must be a new absolute directory outside Git, beneath an existing parent owned by you that other users cannot write. The helper creates a `700` directory containing `600` `service.conf` and `pgpass` files. It rejects user-created symlinks and escapes password colons/backslashes for libpq. Set `PGSERVICEFILE` and `PGPASSFILE` to those two file paths and `NIGHTOWL_SOURCE_SERVICE=nightowl_source` when running the separate export tool; keep the backup output in a different new private directory. No Storage key is collected by this helper.
+
+TLS is always `verify-full`. The macOS example CA path must exist on the machine being used; supply another absolute readable CA path when necessary. PostgreSQL 17 also supports `--sslrootcert system`, which uses that SSL installation's trusted roots. Preparing files does not verify trust configuration or authentication; the later read-only connection must succeed without weakening TLS. See [PostgreSQL SSL parameters](https://www.postgresql.org/docs/17/libpq-connect.html#LIBPQ-CONNECT-SSLROOTCERT).
 
 tools/migration/prepare_pgpass.py combines a private raw source password file with a matching target entry from an existing private passfile. It reads an explicit private libpq service file, escapes colons/backslashes for libpq, preserves password whitespace, and creates a **new** 600 passfile. It refuses blank/multiline passwords, embedded service passwords/options, insecure file/directory permissions, arbitrary symlinks, Git paths, identical source/target identities and existing output files. Remote service entries must require TLS; loopback test entries may use disabled TLS.
 
