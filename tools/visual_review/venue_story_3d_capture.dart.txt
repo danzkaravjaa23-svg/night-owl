@@ -1,0 +1,259 @@
+// Offline review of actual production badges and the real activity legend.
+// Copy to test/_story_3d_visual_test.dart, run flutter test, then remove copy.
+// The gallery is explicitly an animation example, never live activity data.
+import 'dart:convert';
+import 'dart:io';
+import 'dart:typed_data';
+import 'dart:ui' as ui;
+
+import 'package:crypto/crypto.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:night_owl_ub/core/theme/app_colors.dart';
+import 'package:night_owl_ub/core/theme/app_fonts.dart';
+import 'package:night_owl_ub/core/theme/app_theme.dart';
+import 'package:night_owl_ub/features/map/widgets/venue_story_badge.dart';
+import 'package:night_owl_ub/models/venue_story_activity.dart';
+
+const _output = 'build/audit/2026-11-03/story-3d';
+
+Future<Uint8List> _pixels(GlobalKey key,
+    {ui.ImageByteFormat format = ui.ImageByteFormat.png}) async {
+  final boundary =
+      key.currentContext!.findRenderObject()! as RenderRepaintBoundary;
+  final image = await boundary.toImage(pixelRatio: 2);
+  try {
+    final bytes = await image.toByteData(format: format);
+    return bytes!.buffer.asUint8List();
+  } finally {
+    image.dispose();
+  }
+}
+
+Future<String> _capture(GlobalKey key, String path) async {
+  final bytes = await _pixels(key);
+  final file = File(path);
+  await file.parent.create(recursive: true);
+  await file.writeAsBytes(bytes);
+  return sha256.convert(bytes).toString();
+}
+
+Widget _gallery(Animation<double> phase, Map<VenueStoryLevel, GlobalKey> keys) {
+  Widget tile(VenueStoryLevel level) => Expanded(
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: VenueStoryBadge.color(level).withValues(alpha: .065),
+            borderRadius: BorderRadius.circular(22),
+            border: Border.all(
+                color: VenueStoryBadge.color(level).withValues(alpha: .18)),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                RepaintBoundary(
+                  key: keys[level],
+                  child: VenueStoryBadge(level: level, phase: phase, size: 88),
+                ),
+                Text(level.label,
+                    style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        height: 1.2,
+                        color: Color(0xFFF5F5FC))),
+                const SizedBox(height: 4),
+                Text('${level.rangeLabel} story',
+                    style: const TextStyle(
+                        fontSize: 11, height: 1.2, color: Color(0xFFB2B8CE))),
+              ],
+            ),
+          ),
+        ),
+      );
+
+  return Container(
+    width: 390,
+    height: 420,
+    padding: const EdgeInsets.fromLTRB(18, 16, 18, 14),
+    decoration: const BoxDecoration(
+      gradient: LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [Color(0xFF171329), Color(0xFF0B0D17), Color(0xFF101A24)],
+      ),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('NIGHT OWL',
+            style: TextStyle(
+                fontSize: 10,
+                height: 1.2,
+                letterSpacing: 2.5,
+                fontWeight: FontWeight.w800,
+                color: Color(0xFFB6A4FF))),
+        const SizedBox(height: 3),
+        const Text('Газрын хэмнэл',
+            style: TextStyle(
+                fontSize: 23,
+                height: 1.2,
+                fontWeight: FontWeight.w800,
+                color: Color(0xFFF5F5FC))),
+        const SizedBox(height: 12),
+        Expanded(
+          child: Row(children: [
+            tile(VenueStoryLevel.sleeping),
+            const SizedBox(width: 12),
+            tile(VenueStoryLevel.waking),
+          ]),
+        ),
+        const SizedBox(height: 12),
+        Expanded(
+          child: Row(children: [
+            tile(VenueStoryLevel.lively),
+            const SizedBox(width: 12),
+            tile(VenueStoryLevel.onFire),
+          ]),
+        ),
+        const SizedBox(height: 10),
+        const Center(
+          child: Text('Хөдөлгөөний жишээ · бодит story тоо биш',
+              style: TextStyle(
+                  fontSize: 10, height: 1.2, color: Color(0xFFB2B8CE))),
+        ),
+      ],
+    ),
+  );
+}
+
+void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+  setUpAll(() async {
+    AppFonts.configure();
+    await (FontLoader('MaterialIcons')
+          ..addFont(rootBundle.load('fonts/MaterialIcons-Regular.otf')))
+        .load();
+  });
+
+  for (final dark in [true, false]) {
+    for (final narrow in [false, true]) {
+      final name =
+          'legend-${dark ? 'night' : 'day'}-${narrow ? '320-large' : '390'}';
+      testWidgets(name, (tester) async {
+        final capture = GlobalKey();
+        final size = Size(narrow ? 320 : 390, 844);
+        tester.view.physicalSize = size;
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        AppColors.isDarkMode = dark;
+        await tester.pumpWidget(MaterialApp(
+          debugShowCheckedModeBanner: false,
+          theme: dark ? AppTheme.dark : AppTheme.light,
+          home: RepaintBoundary(
+            key: capture,
+            child: Scaffold(
+              body: MediaQuery(
+                data: MediaQueryData(
+                  size: size,
+                  disableAnimations: true,
+                  textScaler: TextScaler.linear(narrow ? 1.5 : 1),
+                ),
+                child: const VenueStoryLegend(),
+              ),
+            ),
+          ),
+        ));
+        await tester.pumpAndSettle();
+        await tester.runAsync(() => GoogleFonts.pendingFonts());
+        await tester.pumpAndSettle();
+        expect(tester.takeException(), isNull);
+        expect(tester.binding.hasScheduledFrame, isFalse);
+        await tester.runAsync(() => _capture(capture, '$_output/$name.png'));
+        await tester.pumpWidget(const SizedBox());
+      });
+    }
+  }
+
+  testWidgets('24 sampled frames show each actual production emotion moving',
+      (tester) async {
+    tester.view.physicalSize = const Size(390, 420);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    AppColors.isDarkMode = true;
+    final capture = GlobalKey();
+    final badgeKeys = {
+      for (final level in VenueStoryLevel.values) level: GlobalKey(),
+    };
+    final hashes = {
+      for (final level in VenueStoryLevel.values) level: <String>{},
+    };
+    final frameHashes = <String>{};
+    final frames = <Map<String, Object>>[];
+    final phase = AnimationController(vsync: tester);
+    try {
+      await tester.pumpWidget(MaterialApp(
+        debugShowCheckedModeBanner: false,
+        theme: AppTheme.dark,
+        home: RepaintBoundary(
+          key: capture,
+          child: Scaffold(body: _gallery(phase, badgeKeys)),
+        ),
+      ));
+      await tester.runAsync(() => GoogleFonts.pendingFonts());
+      await tester.pump();
+      for (var frame = 0; frame < 24; frame++) {
+        phase.value = frame / 24;
+        await tester.pump();
+        expect(tester.takeException(), isNull);
+        final name = 'frame-${frame.toString().padLeft(2, '0')}.png';
+        await tester.runAsync(() async {
+          final hash = await _capture(capture, '$_output/frames/$name');
+          frameHashes.add(hash);
+          frames.add({
+            'file': 'frames/$name',
+            'phase': frame / 24,
+            'time_ms': frame * 250,
+            'sha256': hash,
+          });
+          for (final level in VenueStoryLevel.values) {
+            final pixels = await _pixels(badgeKeys[level]!,
+                format: ui.ImageByteFormat.rawRgba);
+            hashes[level]!.add(sha256.convert(pixels).toString());
+          }
+        });
+      }
+      for (final level in VenueStoryLevel.values) {
+        expect(hashes[level]!.length, greaterThan(1),
+            reason: '${level.name} must visibly change over the cycle.');
+      }
+      expect(frameHashes.length, greaterThan(1));
+      await tester.runAsync(() async {
+        await File('$_output/motion-capture.json')
+            .writeAsString(const JsonEncoder.withIndent('  ').convert({
+          'kind': 'actual-production-widget-review',
+          'canvas_logical_pixels': {'width': 390, 'height': 420},
+          'pixel_ratio': 2,
+          'cycle_ms': 6000,
+          'frame_duration_ms': 250,
+          'frame_count': 24,
+          'claim': 'Animation examples, not live venue activity data.',
+          'distinct_frames': frameHashes.length,
+          'distinct_badge_frames': {
+            for (final entry in hashes.entries)
+              entry.key.name: entry.value.length,
+          },
+          'frames': frames,
+        }));
+      });
+      await tester.pumpWidget(const SizedBox());
+    } finally {
+      phase.dispose();
+    }
+  });
+}

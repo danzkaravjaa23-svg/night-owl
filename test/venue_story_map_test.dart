@@ -51,17 +51,28 @@ void main() {
     {'id': 'b', 'name': 'Ember', 'type': 'bar', 'lat': 47.919, 'lng': 106.92},
   ];
 
-  Widget map(Map<String, int>? counts, {bool reduced = true}) => MaterialApp(
-      theme: AppTheme.dark,
-      home: Scaffold(
-          body: MediaQuery(
-              data: MediaQueryData(disableAnimations: reduced),
-              child: GoogleMapView(
-                  lat: 47.918,
-                  lng: 106.918,
-                  zoom: 18,
-                  markersJson: jsonEncode(rows),
-                  activityCounts: counts))));
+  Widget map(Map<String, int>? counts,
+          {bool reduced = true,
+          bool accessible = false,
+          bool tickers = true,
+          bool offstage = false}) =>
+      MaterialApp(
+          theme: AppTheme.dark,
+          home: Scaffold(
+              body: MediaQuery(
+                  data: MediaQueryData(
+                      disableAnimations: reduced,
+                      accessibleNavigation: accessible),
+                  child: TickerMode(
+                      enabled: tickers,
+                      child: Offstage(
+                          offstage: offstage,
+                          child: GoogleMapView(
+                              lat: 47.918,
+                              lng: 106.918,
+                              zoom: 18,
+                              markersJson: jsonEncode(rows),
+                              activityCounts: counts))))));
 
   testWidgets(
       'unknown activity has no sleeping badges; success zero is sleeping',
@@ -83,20 +94,174 @@ void main() {
     await tester.pumpWidget(const SizedBox());
   });
 
-  testWidgets('badge motion settles and does not recreate map tiles',
+  testWidgets('all pins share continuous paint-only motion beyond one cycle',
       (tester) async {
-    await tester.pumpWidget(map({'a': 2, 'b': 7}, reduced: false));
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    await tester.pumpWidget(map({'a': 0, 'b': 15}, reduced: false));
     await tester.pump();
+    final phases = tester
+        .widgetList<VenueStoryBadge>(find.byType(VenueStoryBadge))
+        .map((badge) => badge.phase)
+        .toList();
+    expect(phases, hasLength(2));
+    expect(phases[1], same(phases[0]),
+        reason: 'Visible pins share one controller, including sleeping pins.');
+    final phase = phases.first as AnimationController;
+    expect(phase.duration, const Duration(seconds: 6));
+    final mapState = tester.state(find.byType(GoogleMapView));
     final tiles = tester.state(find.byType(TileLayer));
+    final tileLayer = tester.widget<TileLayer>(find.byType(TileLayer));
     final markerLayer = tester.widget<MarkerLayer>(find.byType(MarkerLayer));
+    final camera = MapCamera.of(tester.element(find.byType(MarkerLayer)));
     await tester.pump(const Duration(milliseconds: 700));
+    final first = phase.value;
+    expect(first, greaterThan(0));
+    await tester.pump(const Duration(seconds: 6));
+    expect(phase.value, closeTo(first, .001));
+    expect(phase.isAnimating, isTrue);
+    await tester.pump(const Duration(milliseconds: 500));
+    expect(phase.value, greaterThan(first));
+    expect(tester.state(find.byType(GoogleMapView)), same(mapState));
     expect(tester.state(find.byType(TileLayer)), same(tiles));
+    expect(tester.widget<TileLayer>(find.byType(TileLayer)), same(tileLayer));
     expect(
         tester.widget<MarkerLayer>(find.byType(MarkerLayer)), same(markerLayer),
         reason: 'Paint-only frames do not rebuild markers or camera.');
-    await tester.pumpAndSettle();
-    expect(tester.hasRunningAnimations, isFalse);
+    expect(
+        MapCamera.of(tester.element(find.byType(MarkerLayer))), same(camera));
     await tester.pumpWidget(const SizedBox());
+    expect(tester.hasRunningAnimations, isFalse);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('ready activity refreshes preserve the shared motion phase',
+      (tester) async {
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    await tester.pumpWidget(map({'a': 2, 'b': 7}, reduced: false));
+    await tester.pump();
+    final phase = tester
+        .widget<VenueStoryBadge>(find.byType(VenueStoryBadge).first)
+        .phase as AnimationController;
+    await tester.pump(const Duration(milliseconds: 1200));
+    final beforeRefresh = phase.value;
+    await tester.pumpWidget(map({'a': 2, 'b': 7}, reduced: false));
+    expect(
+        tester
+            .widget<VenueStoryBadge>(find.byType(VenueStoryBadge).first)
+            .phase,
+        same(phase));
+    expect(phase.value, closeTo(beforeRefresh, .001));
+    await tester.pump(const Duration(milliseconds: 600));
+    final beforeNewCounts = phase.value;
+    await tester.pumpWidget(map({'a': 0, 'b': 15}, reduced: false));
+    expect(phase.value, closeTo(beforeNewCounts, .001),
+        reason: 'Polling/count changes must not restart every marker.');
+    expect(
+        tester
+            .widgetList<VenueStoryBadge>(find.byType(VenueStoryBadge))
+            .map((badge) => badge.level),
+        containsAll([VenueStoryLevel.sleeping, VenueStoryLevel.onFire]));
+    await tester.pump(const Duration(milliseconds: 600));
+    expect(phase.value, greaterThan(beforeNewCounts));
+    await tester.pumpWidget(const SizedBox());
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('motion preferences and hidden TickerMode stop and resume motion',
+      (tester) async {
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    const counts = {'a': 0, 'b': 15};
+    await tester.pumpWidget(map(counts, reduced: false));
+    await tester.pump();
+    final phase = tester
+        .widget<VenueStoryBadge>(find.byType(VenueStoryBadge).first)
+        .phase as AnimationController;
+    for (final stopped in [
+      map(counts),
+      map(counts, reduced: false, accessible: true),
+      map(counts, reduced: false, tickers: false),
+      // Flutter Offstage retains the map cache; its TickerMode is disabled
+      // by the app while the list view covers the map.
+      map(counts, reduced: false, tickers: false, offstage: true),
+    ]) {
+      await tester.pump(const Duration(milliseconds: 500));
+      expect(phase.value, greaterThan(0));
+      await tester.pumpWidget(stopped);
+      expect(phase.value, 0);
+      expect(phase.isAnimating, isFalse);
+      await tester.pump(const Duration(seconds: 8));
+      expect(phase.value, 0);
+      expect(phase.isAnimating, isFalse,
+          reason: 'The badge clock stays stopped independently of tile fades.');
+      await tester.pumpWidget(map(counts, reduced: false));
+      await tester.pump();
+      expect(phase.isAnimating, isTrue);
+    }
+    await tester.pump(const Duration(milliseconds: 500));
+    expect(phase.value, greaterThan(0));
+    await tester.pumpWidget(const SizedBox());
+    expect(tester.hasRunningAnimations, isFalse);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('background, unavailable activity and disposal leave no ticker',
+      (tester) async {
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    addTearDown(() => tester.binding
+        .handleAppLifecycleStateChanged(AppLifecycleState.resumed));
+    await tester.pumpWidget(map({'a': 0, 'b': 15}, reduced: false));
+    await tester.pump();
+    final phase = tester
+        .widget<VenueStoryBadge>(find.byType(VenueStoryBadge).first)
+        .phase as AnimationController;
+    await tester.pump(const Duration(milliseconds: 600));
+    expect(phase.value, greaterThan(0));
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+    await tester.pump();
+    expect(phase.value, 0);
+    expect(phase.isAnimating, isFalse);
+    await tester.pump(const Duration(seconds: 8));
+    expect(phase.value, 0);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 600));
+    expect(phase.value, greaterThan(0));
+    await tester.pumpWidget(map(null, reduced: false));
+    expect(find.byType(VenueStoryBadge), findsNothing);
+    expect(phase.value, 0);
+    expect(phase.isAnimating, isFalse);
+    await tester.pump(const Duration(seconds: 8));
+    expect(phase.value, 0);
+    expect(phase.isAnimating, isFalse);
+    await tester.pumpWidget(map({'a': 0, 'b': 15}, reduced: false));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 600));
+    expect(phase.value, greaterThan(0));
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump(const Duration(seconds: 8));
+    expect(tester.hasRunningAnimations, isFalse);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('map created inactive waits for foreground before ticking',
+      (tester) async {
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+    addTearDown(() => tester.binding
+        .handleAppLifecycleStateChanged(AppLifecycleState.resumed));
+    await tester.pumpWidget(map({'a': 0, 'b': 15}, reduced: false));
+    await tester.pump();
+    final phase = tester
+        .widget<VenueStoryBadge>(find.byType(VenueStoryBadge).first)
+        .phase as AnimationController;
+    await tester.pump(const Duration(seconds: 8));
+    expect(phase.value, 0);
+    expect(phase.isAnimating, isFalse);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 600));
+    expect(phase.value, greaterThan(0));
+    await tester.pumpWidget(const SizedBox());
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('legend fits 320px with large text in both themes',

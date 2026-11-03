@@ -1,6 +1,6 @@
 {
-  "current_record": "venue_refresh",
-  "historical_fields_notice": "Use venue_refresh for the latest catalog/evidence update; story_map_activity documents the unchanged story API. Other dated sections remain historical; native/store gates still apply.",
+  "current_record": "story_3d_motion",
+  "historical_fields_notice": "Use story_3d_motion for the latest animation pass, venue_refresh for catalog evidence, and story_map_activity for the unchanged backend API. Earlier sections are dated history; native/store gates still apply.",
   "admin_security": {
     "date": "2026-11-03",
     "timezone": "Asia/Ulaanbaatar",
@@ -1258,6 +1258,45 @@
       "Mapped hours, dated events, website availability and story activity are not real-time door/occupancy confirmation",
       "Conflicting Hops & Rocks and Rosewood evidence requires primary confirmation; no pins removed or moved",
       "Store/native signing, Apple setup and independent PostgreSQL migration remain deferred"
+    ]
+  },
+  "story_3d_motion": {
+    "date": "2026-11-03",
+    "branch": "night-owl-features",
+    "status": "3D-look code-native emotions with shared continuous visible animation; backend unchanged; frontend runtime identity at /release.json",
+    "scope": [
+      "Sculpted lavender sleeping, mint waking and golden happy owls, glossy coral flame",
+      "Breathing/nod, blink/wings, bounce/sparkles, floating Zs and sparks in seamless six-second cycle",
+      "One map paint clock; one legend paint clock; no per-pin tickers or per-frame map tile/camera/layout rebuild",
+      "Counts refresh preserves phase; unknown counts, background, reduced motion, accessible navigation and hidden TickerMode stop/reset",
+      "Story thresholds, source uncertainty, privacy/RLS and count-invalidation behavior unchanged"
+    ],
+    "verification": {
+      "flutter_full_passed": 799,
+      "flutter_log": "build/audit/2026-11-03/story-3d/flutter-full.log",
+      "analysis": "No issues found",
+      "analysis_log": "build/audit/2026-11-03/story-3d/analysis.log",
+      "visual_capture_cases": 5,
+      "legend_pngs": 4,
+      "motion_frames": 24,
+      "cycle_ms": 6000,
+      "motion_scope": "Actual production badges; example ranges, not live venue counts",
+      "pixel_checks": "All four change; phase0 and1 equal; no paint beyond 32/48px bounds",
+      "independent_review": "No concrete release-blocking lifecycle/performance/privacy findings",
+      "web_build_log": "build/audit/2026-11-03/story-3d/web-build.log",
+      "web_build": "PASS",
+      "tested_main_dart_sha256": "1fd1816095e0f93e26afe44c7234b6abc571aa40b161833a6b6fc2eb279147e3"
+    },
+    "delivery": {
+      "url": "https://nightowl-ub.netlify.app/",
+      "runtime_identity": "https://nightowl-ub.netlify.app/release.json",
+      "local_receipt": "build/audit/2026-11-03/story-3d/completion.json",
+      "preview_gif": "build/audit/2026-11-03/story-3d/Night-Owl-3D-emotions.gif"
+    },
+    "limits": [
+      "Painted 3D appearance, not a WebGL mesh",
+      "Synthetic motion/identity/pixel checks do not measure physical-device FPS or battery",
+      "Only presentation changed; remaining venue verification and prior native/store work remain deferred"
     ]
   }
 }

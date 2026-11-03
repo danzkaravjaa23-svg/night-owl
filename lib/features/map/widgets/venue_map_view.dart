@@ -622,8 +622,8 @@ class _VenueMarkerLayer extends StatefulWidget {
 
 class _VenueMarkerLayerState extends State<_VenueMarkerLayer>
     with SingleTickerProviderStateMixin, WidgetsBindingObserver {
-  late final _phase = AnimationController(
-      vsync: this, duration: const Duration(milliseconds: 4800));
+  late final _phase =
+      AnimationController(vsync: this, duration: const Duration(seconds: 6));
   bool _foreground = true;
   double? _cachedZoom;
   String? _cachedSelected;
@@ -639,16 +639,17 @@ class _VenueMarkerLayerState extends State<_VenueMarkerLayer>
         WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed;
   }
 
-  void _syncMotion({bool restart = false}) {
+  void _syncMotion() {
     if (!_foreground ||
         !TickerMode.of(context) ||
         AppMotion.reduced(context) ||
         widget.activityCounts == null) {
       _phase.stop();
       _phase.value = 0;
-    } else if (restart || (!_phase.isAnimating && _phase.value == 0)) {
-      // Two gentle cycles when data arrives; no permanent per-pin tickers.
-      _phase.forward(from: 0);
+    } else if (!_phase.isAnimating) {
+      // One shared, paint-only clock keeps visible emotions alive. Data
+      // refreshes preserve its phase and never rebuild tiles/camera per frame.
+      _phase.repeat();
     }
   }
 
@@ -661,14 +662,13 @@ class _VenueMarkerLayerState extends State<_VenueMarkerLayer>
   @override
   void didUpdateWidget(_VenueMarkerLayer oldWidget) {
     super.didUpdateWidget(oldWidget);
-    _syncMotion(
-        restart: !mapEquals(oldWidget.activityCounts, widget.activityCounts));
+    _syncMotion();
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     _foreground = state == AppLifecycleState.resumed;
-    _syncMotion(restart: _foreground);
+    _syncMotion();
   }
 
   @override
