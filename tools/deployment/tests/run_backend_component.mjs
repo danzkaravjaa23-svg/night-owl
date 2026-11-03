@@ -107,6 +107,10 @@ async function until(check, label, timeout = 90000) {
   throw new ComponentFailure(label);
 }
 async function cleanup(workdir) {
+  // A failure before initialization must not stop a pre-existing local stack
+  // that happens to use this project name or directory.
+  const ownership = JSON.parse(await readFile(path.join(workdir, '.nightowl-component-owner.json'), 'utf8'));
+  requireCase(ownership.project === project && ownership.repository === repo && ownership.run === (process.env.GITHUB_RUN_ID ?? 'manual'), 'refusing cleanup without matching disposable-stack ownership');
   // This command is never --all and never targets an existing project.
   await run('supabase', ['stop', '--workdir', workdir, '--project-id', project, '--no-backup'], {stage: 'stop isolated stack', timeout: 90000});
 }
@@ -132,6 +136,7 @@ async function main() {
     catch (error) { if (error instanceof ComponentFailure) throw error; if (error.code !== 'ENOENT') throw error; }
     await mkdir(workdir, {recursive: false, mode: 0o700});
     await chmod(workdir, 0o700);
+    await writeFile(path.join(workdir, '.nightowl-component-owner.json'), JSON.stringify({project, repository: repo, run: process.env.GITHUB_RUN_ID ?? 'manual'}), {mode: 0o600});
     await run('supabase', ['init', '--workdir', workdir], {stage: 'initialize disposable Supabase'});
     initialized = true;
     const configPath = path.join(workdir, 'supabase/config.toml');

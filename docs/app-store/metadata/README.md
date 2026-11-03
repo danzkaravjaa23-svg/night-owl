@@ -15,7 +15,7 @@ The values below exclude each file's final newline. All fields are UTF-8 plain t
 | `promotional_text.txt` | 151 | 170 characters |
 | `keywords.txt` | 88 | 100 UTF-8 bytes |
 | `description.txt` | 1755 | 4000 characters |
-| `review_notes.txt` | 1859 | 4000 UTF-8 bytes |
+| `review_notes.txt` | 3335 | 4000 UTF-8 bytes |
 
 Keywords are separated by commas without spaces, contain no duplicate terms or app-name words, and each term has more than two characters. `UB` is intentionally omitted from keywords.
 
@@ -25,6 +25,6 @@ Limits were checked against Apple's [App information](https://developer.apple.co
 
 The description reflects current source capabilities: optional canonical venue tags, today's active stories in Ulaanbaatar time, a rolling 168-hour post-activity window, 3D map emotions, profiles, follows, messaging, reports, blocks and appearance choices. It does not claim live crowd measurements, guaranteed opening status, universally verified businesses, calls, streaming, delivered push notifications or native validation. The app remains free, and payments are deferred.
 
-`review_notes.txt` assumes a valid review account will be entered separately in App Store Connect's private Sign-in Information fields. No account, password or review contact is included here. Create and verify suitable review access and the walkthrough on the actual submission build before using the notes; keep credentials out of Git and chat. The [review test plan](../REVIEW_TEST_PLAN.md) and current submission report describe remaining verification.
+`review_notes.txt` starts with an explicit draft/rollout gate and describes manual review, canonical Reel retry, selected-message reports and durable deletion recovery. Remove the draft-only status paragraph only after final hosted/device acceptance; revalidate the resulting field before submission. It assumes a valid review account will be entered separately in App Store Connect's private Sign-in Information fields. No account, password or review contact is included here. Create and verify suitable review access and the walkthrough on the actual submission build before using the notes; keep credentials out of Git and chat. The [review test plan](../REVIEW_TEST_PLAN.md) and current submission report describe remaining verification.
 
 Confirm the privacy/support URLs, moderation and account-deletion operation, privacy answers, age-rating questionnaire, Apple sign-in, signing and native-device checks in the [submission pack](../../APP_STORE_SUBMISSION.md) and [release readiness report](../../RELEASE_READINESS.md). The app's 18+ community acknowledgment does not set the App Store age rating. Screenshots must come from the final eligible native build; browser/widget captures are development evidence only. No store record, upload, review submission, publication, purchase or agreement acceptance was performed for these drafts.

@@ -6,7 +6,7 @@
 
 Эхлэл, нэвтрэх, бүртгүүлэх дэлгэцийн Apple товч веб, Android, iOS-д харагдана. iOS нь `sign_in_with_apple` 8.2.0-оор native credential авч, SHA-256 nonce болон identity token-ийг Supabase `signInWithIdToken` урсгалаар баталгаажуулна. Web/Android нь Supabase OAuth ашиглана. Provider идэвхтэй эсэхийг public settings-ээс эхлээд шалгаж, идэвхгүй эсвэл сүлжээний алдааг апп дотор харуулна. iOS-ийн Debug/Profile/Release тохиргоонд Sign in with Apple entitlement холбоотой.
 
-2026-11-03T06:51:19Z-д `GET /auth/v1/settings`-ийг read-only шалгахад `apple=false`, `google=true`, `email=true` байсан. Иймээс Apple-ийн бодит нэвтрэлт одоогоор идэвхгүй. Товч болон урсгалын код байгаа нь серверийн тохиргоо бүрэн, нэвтрэлт амжилттай гэсэн баталгаа биш. Apple account ашигласан бүтэн нэвтрэлт, iOS binary/device туршилт хийгдээгүй.
+2026-11-03T06:51:19Z-д `GET /auth/v1/settings`-ийг read-only шалгахад `apple=false`, `google=true`, `email=true` байсан. Иймээс Apple-ийн бодит нэвтрэлт одоогоор идэвхгүй. Товч болон урсгалын код байгаа нь серверийн тохиргоо бүрэн, нэвтрэлт амжилттай гэсэн баталгаа биш. Apple account ашигласан бүтэн нэвтрэлт болон бодит iPhone/device туршилт хийгдээгүй. Unsigned CI compile-ийн нотолгоо нь бодит login/revoke эсвэл эцсийн signed candidate-ийн QA биш; шинэ build-ийн төлөвийг [release тайлан](RELEASE_READINESS.md)-гаас авна.
 
 ## Identifier болон callback
 
@@ -50,3 +50,16 @@ Apple-ийн Return URL болон Supabase-ийн апп руу буцах URL 
 `008` migration болон Edge function-ийн staging/enable заавар [backend README](../supabase/functions/delete-account/README.md)-д бий. Receipt-only status нь Auth устсаны дараах үр дүнг шалгахын тулд зөвхөн энэ function-д gateway `verify_jwt=false` хэрэглэнэ; prepare/delete бүрийг handler `auth.getUser()`-ээр баталгаажуулдаг. Энэ нь бүх endpoint-ийн auth-ийг унтраах тохиргоо биш.
 
 Криптографийн synthetic тест болон unsigned native build PASS нь Apple service-тэй жинхэнэ revoke/login хийсэн баталгаа биш. Membership/keys/provider тохируулсны дараа disposable Apple account дээр cancel, Hide My Email, nonce expiry, revoke failure, retry болон completion recovery-г шалгана. [Apple deletion шаардлага](https://developer.apple.com/support/offering-account-deletion-in-your-app/).
+
+
+### Deletion integration ба төхөөрөмжийн acceptance
+
+Login callback болон deletion reauthorization нь тусдаа урсгал. `prepare` нь caller-ийг баталж, owner-bound 256-bit receipt болон шаардлагатай үед таван минутын raw nonce өгнө. Client nonce-г SHA-256-аар нэг удаа hash хийж Apple-д явуулна; raw nonce, code болон identity token нь лог, URL, persistent receipt-д орохгүй. Backend зөвшөөрсөн native bundle audience эсвэл web Services ID-г сонгоно; client-ийн arbitrary audience/redirect-ийг ашиглахгүй.
+
+Web дээр official SDK-ийг анхнаас нь бүх page-д ачаалахгүй. Server challenge болон SDK ачаалсны дараах **Apple-ээр баталгаажуулах** гэсэн шинэ товшилтоор popup нээнэ. Production HTTPS origin, Services ID, яг ижил return URL, popup/browser policy болон хэрэв байгаа бол CSP-ийг бодитоор туршина. SDK load, popup cancel, хугацаа дуусах эсвэл өөр Apple account сонгоход delete phase амжилттай гэж үзэхгүй, Supabase session-ийг өөр account болгохгүй.
+
+Устгал нь secure storage-д owner UUID, opaque status receipt, эхэлсэн UTC цаг гэсэн гурван утга л хадгална. Restart эсвэл Auth устсаны дараа хүчинтэй receipt байвал signed-out эхлэл дээр **Өмнөх устгалын төлөвийг шалгах** холбоос гарна. Энэ нь `/settings/delete-account` руу capability-г URL-д хийхгүйгээр нээнэ. Receipt-only status нь шинэ устгал эхлүүлэх эрхгүй; deliberate retry нь эхлээд төлөв шалгана. Өөр хаяг эсвэл шинэ session-д хуучин completion хариу sign-out хийх ёсгүй.
+
+Client receipt preparation-аас 30 хоног; completed server journal completion-оос 30 хоног хадгалагдана. Completed journal-ийн pruning-ийг operator тохируулна. Partial failed job-ийг хугацаа өнгөрлөө гээд автоматаар устгаж/unfreeze хийхгүй. Apple revoke checkpoint амжилттай боловч дараагийн Storage/Auth cleanup тасарсан бол verified checkpoint-оос сэргээнэ; дахин login/Apple identity өөрчлөгдвөл өмнөх checkpoint хүчингүй болно. Эдгээр нь глобал atomic transaction гэсэн баталгаа биш.
+
+Бодит disposable Apple account-аар native болон web урсгал, cancellation/wrong identity, Hide My Email, five-minute expiry, SDK/popup failure, linked identity change, network/Storage/Auth partial failure, app restart, receipt-only completion болон өөр session хамгаалалтыг [N04/N13 test plan](app-store/REVIEW_TEST_PLAN.md)-аар шалгана. 008/009/Edge/client хамт staging acceptance хийж, дараа enable хийнэ. Server key/provider configuration, signed archive, owner review contact/data forms болон App Store submission энэ кодоор хийгдээгүй.

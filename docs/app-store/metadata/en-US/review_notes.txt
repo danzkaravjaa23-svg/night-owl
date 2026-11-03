@@ -1,16 +1,19 @@
-Night Owl UB is a free social discovery app for Ulaanbaatar. The main interface is in Mongolian.
+DRAFT ONLY: source changes below still require a coordinated backend/client rollout, hosted acceptance and verification on the final signed iOS build before these notes are used. Reviewer access/contact and a separate disposable deletion account remain owner-supplied fields in App Store Connect.
+
+Night Owl UB is a free social discovery app for Ulaanbaatar. The main interface is Mongolian.
 
 Access
-Explore supports guest browsing. Publishing, follows, saved places and messaging require sign-in. Use the review account entered separately in App Store Connect's Sign-in Information fields. A new account may first show profile setup and an explicit 18+ community-rules acknowledgment.
+Guest Explore supports map and venue browsing without device location. Publishing, follows, saved places and messaging require sign-in. Enter a non-admin review account separately in Sign-in Information, with completed setup and representative licensed, safe, approved content. New accounts may show profile setup and an explicit 18+ community-rules acknowledgment. Do not put credentials in these notes.
 
 Suggested walkthrough
-1. Open Explore, browse or search venues, change map zoom and select a place to see its details and source links. Device location permission is optional for browsing the map.
-2. Sign in, then use the central create action to publish a photo/video post or a story. A venue from the app's place list can be added or removed before publication; location tagging is optional.
-3. Open the map activity explanation. Four 3D emotions use total readable tagged content: 0, 1-4, 5-14 and 15+. Active stories count only for the current Ulaanbaatar calendar day. Posts count for 168 hours from their original publication time. Posts and place tags remain after that window. Activity is not an opening-status check or a crowd estimate, and counts can differ with content visibility.
-4. Open Profile to edit the profile or select an owl avatar. Profile settings include Day, Night and System appearance and private-account/contact controls.
-5. Use a post's action menu to report content; account actions include blocking.
+1. Open Explore, search/filter venues, change zoom and select a place for details and source links. Listings do not certify current opening or operation.
+2. Use Create for a photo/video post or story, or open the short-video composer for one Reel. A canonical venue from the app's list can be added, changed or removed before submission; tags are optional. A retry preserves the submitted ID, media, caption and place.
+3. Public content uses manual moderation: post/Reel, story, comment, event, venue review, profile edits, note, public collection and owner venue edits wait for approval. Authors see pending/rejected status. Existing approved profile information stays public while edits wait. This is human review, not a claim of AI filtering. Arrange moderator coverage for reviewer submissions.
+4. Map emotions use approved content readable by the viewer: 0, 1-4, 5-14 and 15+ tagged items. Stories count for the current Ulaanbaatar day while active; posts/Reels count for 168 hours from original publication, not approval/edit/retry. Posts and tags remain afterward. Activity is not a crowd or opening-status estimate.
+5. Profile offers personal photos/owl avatars, appearance and privacy/contact settings. User options include blocking. Report post/Reel via its menu; story, comment, venue/review, event, note and collection have exact-content report actions. Long-press a received DM/group message, or use its accessible report action, to report only that selected message. Moderators do not receive general access to private inboxes or thread history.
+
+Account deletion
+Profile > Settings > account deletion is also available during unfinished setup. Apple-linked accounts require fresh native or web Apple authorization without changing the app login. Use only the separate disposable account for destructive review. Completion is confirmed by the server; interrupted cleanup may already have removed data. A saved secure receipt allows explicit status recovery from the signed-out landing screen after restart/Auth deletion. It cannot initiate a new erasure or sign out another account. This path must pass hosted/device acceptance before submission.
 
 Payment scope
-There are no subscriptions, in-app purchases, ticket sales or payment processing. Any venue/event admission price is organizer information. An RSVP is an interest/attendance record, not a ticket.
-
-The city map includes attributed OpenStreetMap listings. A map listing does not certify that the business is operating or open now. Featured events and content depend on what has been published; an empty section is possible.
+No subscriptions, in-app purchases, ticket sales or payment processing. Any venue/event admission price is organizer information; an RSVP is not a ticket. Attributed OpenStreetMap listings and available published content may leave sections empty. No calls, streaming, delivered remote push, live crowd or guaranteed opening claims.
