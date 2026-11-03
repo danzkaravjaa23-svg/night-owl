@@ -1,0 +1,38 @@
+{
+  "status": "database_logical_export_verified",
+  "exported_at": "2026-11-03T12:55:10.802205+00:00",
+  "manifest_format": 2,
+  "source_server_version": 170006,
+  "source_connection_tls_verified": true,
+  "source_transaction_read_only": true,
+  "inventoried_relations": 87,
+  "table_data_coverage": {
+    "status": "verified",
+    "matched_by": "source_relation_oid",
+    "table_data_relations": 86,
+    "partitioned_parents": 1,
+    "materialized_view_refreshes": 0,
+    "unpopulated_materialized_views": 0,
+    "unfiltered_extension_config_tables": 3,
+    "materialized_view_rows_archived": null
+  },
+  "large_object_pages": 0,
+  "verified_artifacts": 7,
+  "archive_manifest_sha256": "67c2413901569991a7bf1b88721c5c1067890de49a720ba7c8671bdcad299dfa",
+  "exporter_sha256": "4cbc128c4101f3683a64162fb850fd7cb8a8f934660c913e3bfe34ee8ae7045a",
+  "storage_objects": 97,
+  "storage_metadata_bytes": 229717181,
+  "storage_binaries_exported": false,
+  "restoration_verified": false,
+  "source_writes_frozen": false,
+  "platform_configuration_complete": false,
+  "backup_release_gate_complete": false,
+  "private_data_in_this_receipt": false,
+  "source_modified": false,
+  "offline_migration_tests_passed": 82,
+  "pending": [
+    "authenticated Storage binary export and checksums",
+    "isolated compatible PostgreSQL restore and row/sequence/media verification",
+    "coordinated write-free snapshot before cutover; migration remains deferred"
+  ]
+}

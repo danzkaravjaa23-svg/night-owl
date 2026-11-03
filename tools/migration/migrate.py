@@ -23,7 +23,10 @@ import uuid
 from datetime import datetime, timezone
 from urllib import error, parse, request
 
-VERSION = 1
+VERSION = 2
+DATABASE_ARTIFACTS = frozenset({"database.dump", "all-table-data.dump", "archive-toc.txt",
+                                "all-table-data-toc.txt", "table-data-coverage.json",
+                                "storage-index.json", "roles.sql"})
 DIAGNOSTIC_DIRECTORY = contextvars.ContextVar("migration_diagnostic_directory", default=None)
 SERVICE = re.compile(r"^[A-Za-z0-9_.-]+$")
 SNAPSHOT = re.compile(r"^[0-9A-Fa-f]+-[0-9A-Fa-f]+-[0-9]+$")
@@ -32,8 +35,15 @@ CATALOG_SQL = f"""SELECT json_build_object(
  'server_version_num', current_setting('server_version_num')::int,
  'database', current_database(),
  'tables', COALESCE((SELECT json_agg(json_build_object('schema', n.nspname,
- 'table', c.relname) ORDER BY n.nspname,c.relname) FROM pg_class c JOIN
- pg_namespace n ON n.oid=c.relnamespace WHERE c.relkind IN ('r','p','m')
+ 'table', c.relname, 'oid', c.oid::bigint, 'relation_kind', c.relkind,
+ 'populated', c.relispopulated, 'extension_name', e.extname,
+ 'extension_config', COALESCE(c.oid=ANY(e.extconfig),false),
+ 'extension_filter', e.extcondition[array_position(e.extconfig,c.oid)])
+ ORDER BY n.nspname,c.relname) FROM pg_class c JOIN
+ pg_namespace n ON n.oid=c.relnamespace LEFT JOIN pg_depend d
+ ON d.classid='pg_class'::regclass AND d.objid=c.oid AND d.objsubid=0
+ AND d.refclassid='pg_extension'::regclass AND d.deptype='e'
+ LEFT JOIN pg_extension e ON e.oid=d.refobjid WHERE c.relkind IN ('r','p','m')
  AND {USER_SCHEMAS}), '[]'::json),
  'foreign_tables', (SELECT count(*) FROM pg_class c JOIN pg_namespace n
  ON n.oid=c.relnamespace WHERE c.relkind='f' AND {USER_SCHEMAS}),
@@ -242,6 +252,10 @@ def snapshot_session(service):
 
 
 def table_digest(service, table, snapshot):
+    # An unpopulated materialized view has no readable rows: SELECT raises an
+    # error until REFRESH. Preserve that state rather than querying or refreshing it.
+    if table.get("relation_kind") == "m" and table.get("populated") is False:
+        return {**table, "rows": 0, "sha256_sorted_json": hashlib.sha256(b"").hexdigest()}
     # One canonical JSON row per line, sorted server-side for order-independent equality.
     # This can sort large tables: run the final export in a write-free maintenance window.
     qualified = identifier(table["schema"]) + "." + identifier(table["table"])
@@ -271,6 +285,68 @@ def table_digest(service, table, snapshot):
     return {**table, "rows": rows, "sha256_sorted_json": digest.hexdigest()}
 
 
+def rescue_table_coverage(tables, toc):
+    """Require every storage relation in the rescue archive, using catalog OIDs.
+
+    TOC names are display text, not reliably quoted identifiers. Numeric source
+    OIDs distinguish names containing spaces/quotes without parsing that text.
+    A data entry alone cannot prove completeness when an extension filters rows.
+    """
+    entries = {}
+    for line in toc.splitlines():
+        if not line.strip() or line.lstrip().startswith(";"):
+            continue
+        match = re.fullmatch(r"\s*(\d+);\s+(\d+)\s+(\d+)\s+(.+)", line)
+        if not match:
+            raise MigrationError("Rescue archive TOC is malformed; coverage cannot be verified.")
+        description = match[4]
+        kind = next((kind for kind in ("TABLE DATA", "MATERIALIZED VIEW DATA")
+                     if description.startswith(kind + " ")), None)
+        if kind:
+            oid = int(match[3])
+            if int(match[2]) != 0 or oid in entries:
+                raise MigrationError("Rescue archive has ambiguous data entries; coverage cannot be verified.")
+            entries[oid] = kind
+
+    expected = {}
+    seen = set()
+    coverage = {"status": "verified", "matched_by": "source_relation_oid",
+                "table_data_relations": 0, "partitioned_parents": 0,
+                "materialized_view_refreshes": 0, "unpopulated_materialized_views": 0,
+                "unfiltered_extension_config_tables": 0}
+    for table in tables:
+        oid, kind = table.get("oid"), table.get("relation_kind")
+        if type(oid) is not int or oid <= 0 or oid in seen or kind not in ("r", "p", "m"):
+            raise MigrationError("Snapshot relation metadata is incomplete or ambiguous; coverage cannot be verified.")
+        seen.add(oid)
+        if table.get("extension_config"):
+            condition = table.get("extension_filter")
+            if not isinstance(condition, str) or condition.strip():
+                raise MigrationError("An extension configuration table has a dump filter; full-row rescue coverage is unverified.")
+            coverage["unfiltered_extension_config_tables"] += 1
+        if kind == "p":
+            # Partition parents own no row storage. Each inventoried leaf must
+            # still have its own TABLE DATA entry, even when the leaf is empty.
+            coverage["partitioned_parents"] += 1
+        elif kind == "m":
+            if type(table.get("populated")) is not bool:
+                raise MigrationError("Materialized-view population state is missing; coverage cannot be verified.")
+            if table["populated"]:
+                expected[oid] = "MATERIALIZED VIEW DATA"
+                coverage["materialized_view_refreshes"] += 1
+            else:
+                coverage["unpopulated_materialized_views"] += 1
+        else:
+            expected[oid] = "TABLE DATA"
+            coverage["table_data_relations"] += 1
+    if entries != expected:
+        raise MigrationError("Rescue archive data entries do not match every expected relation; no complete export recorded.")
+    # A REFRESH entry recalculates a view; it is not a byte copy of cached rows.
+    # The later independent row-digest comparison must still pass after restore.
+    coverage["materialized_view_rows_archived"] = False if coverage["materialized_view_refreshes"] else None
+    return coverage
+
+
 @with_diagnostics
 def export_database(args):
     out = outside_repository(Path(args.output).expanduser())
@@ -297,8 +373,9 @@ def export_database(args):
                 output=out / "dump-error.log")
         os.chmod(archive, 0o600)
         # pg_dump normally omits extension-owned tables except extension configuration data.
-        # Explicit table selection preserves every inventoried non-system table as a separate
-        # rescue archive. Do not blindly replay it over a populated full restore.
+        # Explicit selection includes extension configuration tables, but cannot
+        # override ordinary extension membership or configuration row filters.
+        # Verify actual coverage below; never replay rescue data over a full restore blindly.
         table_data = out / "all-table-data.dump"
         table_args = [f"--table={identifier(t['schema'])}.{identifier(t['table'])}"
                       for t in catalog["tables"]]
@@ -309,6 +386,10 @@ def export_database(args):
         os.chmod(table_data, 0o600)
         toc = command([binary("pg_restore"), "--list", str(archive)])
         write_text(out / "archive-toc.txt", toc)
+        rescue_toc = command([binary("pg_restore"), "--list", str(table_data)])
+        write_text(out / "all-table-data-toc.txt", rescue_toc)
+        coverage = rescue_table_coverage(catalog["tables"], rescue_toc)
+        write_json(out / "table-data-coverage.json", coverage)
         storage = query(source, STORAGE_SQL, snapshot)
         write_json(out / "storage-index.json", storage)
         tables = [table_digest(source, table, snapshot) for table in catalog["tables"]]
@@ -323,10 +404,12 @@ def export_database(args):
         "source_service": source, "server_version_num": catalog["server_version_num"],
         "source_database": catalog["database"], "extensions": catalog["extensions"],
         "roles": catalog["roles"], "tables": tables, "sequences": catalog["sequences"],
+        "table_data_coverage": coverage,
         "large_objects": large_objects, "full_database_archive": True,
-        "scope": "Full logical archive plus explicit rescue archive of every inventoried non-system table; global role definitions without passwords.",
+        "scope": "Full logical archive plus verified rescue TOC coverage of inventoried table data; materialized views use refresh instructions, not cached-row copies; global role definitions without passwords.",
         "files": [{"path": p.name, "bytes": p.stat().st_size, "sha256": file_hash(p)}
-                  for p in (archive, table_data, out / "archive-toc.txt", out / "storage-index.json", out / "roles.sql")],
+                  for p in (archive, table_data, out / "archive-toc.txt", out / "all-table-data-toc.txt",
+                            out / "table-data-coverage.json", out / "storage-index.json", out / "roles.sql")],
         "storage_bytes": "not_exported", "platform_configuration": "manual_inventory_required",
     })
     print(f"Database archive complete: {len(tables)} tables. Storage bytes are still pending.")
@@ -337,12 +420,20 @@ def load_manifest(directory):
     try:
         manifest = json.loads((out / "manifest.json").read_text())
         if manifest["format_version"] != VERSION or manifest["status"] != "database_export_complete":
-            raise MigrationError("Unsupported/incomplete database manifest.")
+            raise MigrationError("Unsupported/incomplete database manifest; create a fresh export with verified rescue coverage.")
+        paths = [item["path"] for item in manifest["files"]]
+        if len(paths) != len(set(paths)) or not DATABASE_ARTIFACTS.issubset(paths):
+            raise MigrationError("Database manifest is missing required checked artifacts or has duplicate entries.")
         for item in manifest["files"]:
             path = artifact_path(out, item["path"])
             if path.stat().st_size != item["bytes"] or file_hash(path) != item["sha256"]:
                 raise MigrationError("Archive checksum/size mismatch; restore refused.")
-    except (OSError, KeyError, ValueError):
+        coverage = json.loads(artifact_path(out, "table-data-coverage.json").read_text())
+        expected_coverage = rescue_table_coverage(
+            manifest["tables"], artifact_path(out, "all-table-data-toc.txt").read_text())
+        if coverage != expected_coverage or manifest["table_data_coverage"] != expected_coverage:
+            raise MigrationError("Database rescue coverage evidence does not match the snapshot inventory; restore refused.")
+    except (OSError, KeyError, ValueError, TypeError, AttributeError):
         raise MigrationError("Cannot verify archive manifest; restore refused.") from None
     return out, manifest
 
@@ -400,7 +491,11 @@ def compare_tables(expected, actual):
         "unexpected": sorted(set(actual_by_key) - set(expected_by_key)),
         "different": sorted(key for key in set(expected_by_key) & set(actual_by_key)
                             if expected_by_key[key]["rows"] != actual_by_key[key]["rows"]
-                            or expected_by_key[key]["sha256_sorted_json"] != actual_by_key[key]["sha256_sorted_json"])
+                            or expected_by_key[key]["sha256_sorted_json"] != actual_by_key[key]["sha256_sorted_json"]
+                            or (expected_by_key[key].get("relation_kind") is not None
+                                and expected_by_key[key]["relation_kind"] != actual_by_key[key].get("relation_kind"))
+                            or (expected_by_key[key].get("relation_kind") == "m"
+                                and expected_by_key[key]["populated"] != actual_by_key[key].get("populated")))
     }
 
 
