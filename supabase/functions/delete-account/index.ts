@@ -258,8 +258,13 @@ Deno.serve(async (req) => {
     cleanupStarted = true;
     const {data: deleted, error} = await admin.auth.admin.deleteUser(user.id, false);
     if (error) throw error;
-    if (deleted?.user?.id !== user.id) throw new Error("Invalid account deletion response");
-    await control("completed");
+    // Real GoTrue versions may acknowledge hard erasure without returning a
+    // User body. An explicit conflicting ID is invalid; a missing body is not
+    // evidence either way. The service-only completed RPC below atomically
+    // verifies this exact auth.users row is absent plus both cleanup markers.
+    if (deleted?.user?.id != null && deleted.user.id !== user.id) throw new Error("Invalid account deletion response");
+    const completion = await control("completed");
+    if (completion.state !== "completed" || completion.user_id !== user.id) throw new Error("Unconfirmed account erasure");
     return json({ok: true, user_id: user.id});
   } catch (error) {
     if (claimed) { try { await control("failed"); } catch { /* A newer worker may own the lease. */ } }

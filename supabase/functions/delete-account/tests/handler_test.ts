@@ -18,6 +18,7 @@ Deno.test("delete-account: actual SDK HTTP contract without live data", async (t
   const files = new Map<string, string[]>();
   let failure = "";
   let apple = false;
+  let authAbsent = false;
   let job: Record<string, unknown> = {state: null};
   const api = Deno.serve({ hostname: "127.0.0.1", port: 0, onListen() {} }, async (req) => {
     const path = new URL(req.url).pathname;
@@ -35,7 +36,10 @@ Deno.test("delete-account: actual SDK HTTP contract without live data", async (t
       if (body.p_action === "lookup") return json(job);
       if (body.p_action === "prepare") job = {user_id: owner, state: "prepared"};
       if (body.p_action === "claim") job.state = "running";
-      if (body.p_action === "completed") job.state = "completed";
+      if (body.p_action === "completed") {
+        if (!authAbsent) return json({code: "22023", message: "Auth row still exists"}, 400);
+        job.state = "completed";
+      }
       if (body.p_action === "failed") job.state = "failed";
       return json(job);
     }
@@ -67,6 +71,8 @@ Deno.test("delete-account: actual SDK HTTP contract without live data", async (t
       assert(body.should_soft_delete === false, "Account erasure must not silently become soft deletion");
       if (failure === "malformed-auth-delete") return json({});
       if (failure === "wrong-auth-delete") return json({ ...user, id: other });
+      authAbsent = true;
+      if (failure === "minimal-auth-delete") return json({message: "User deleted"});
       return json(user);
     }
     return json({ message: "Unexpected loopback API path" }, 404);
@@ -100,6 +106,7 @@ Deno.test("delete-account: actual SDK HTTP contract without live data", async (t
       files.set("posts", ["post.jpg"]);
       failure = "";
       apple = false;
+      authAbsent = false;
       job = {state: null};
       Deno.env.set("ACCOUNT_DELETION_ENABLED", "true");
       await t.step(name, run);
@@ -135,6 +142,13 @@ Deno.test("delete-account: actual SDK HTTP contract without live data", async (t
       assert(calls.slice(0, calls.findIndex((call) => call.method === "DELETE"))
         .filter((call) => call.path.includes("/object/list/")).length === 4, "Cleanup began before enumeration completed");
       assert(calls.filter((call) => !call.path.startsWith("/rest/v1/rpc/")).at(-1)?.path === `/auth/v1/admin/users/${owner}`, "Auth hard delete must be last destructive operation and caller-only");
+    });
+    await step("minimal real GoTrue acknowledgement requires authoritative Auth-row absence", async () => {
+      failure = "minimal-auth-delete";
+      const response = await invoke();
+      const result = await response.json();
+      assert(response.status === 200 && result.ok === true && result.user_id === owner, "Minimal acknowledgement was not reconciled through server absence");
+      assert(calls.some(call => call.path === "/rest/v1/rpc/account_erasure_control"), "Missing completion invariant");
     });
     await step("late listing failure leaves all media untouched", async () => {
       failure = "posts-list";

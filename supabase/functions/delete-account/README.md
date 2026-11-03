@@ -27,6 +27,8 @@ Physical files are removed through the Storage API, never by deleting `storage.o
 
 Apple revoke, Storage and Auth are separate services. Successful revoke is durably checkpointed so a later Storage/Auth failure can resume without revoking twice. A later sign-in/changed Apple identity invalidates an older checkpoint. Auth identities are re-fetched immediately before hard deletion; a newly linked unrevoked identity aborts. This narrows the cross-service race, but is not a claim of global transactional atomicity or coverage of all historical provider grants without a hosted Auth-hook test. A crash between Apple success and checkpoint persistence may require fresh reauthorization. Partial cleanup is reported honestly and is not rolled back.
 
+GoTrue versions can acknowledge hard deletion without returning a User body. Success therefore requires the service-only completion RPC to verify that the exact `auth.users` row is absent and both cleanup checkpoints exist, then return the matching completed journal. A conflicting returned user ID is still rejected; a successful HTTP acknowledgement alone never proves erasure. This contract was exposed by the real local component gate and is covered by SDK regressions.
+
 ## Configuration and enable gates
 
 Keep `ACCOUNT_DELETION_ENABLED` absent/false until the disposable staging plan passes. Supabase credentials remain server environment secrets. Apple setup additionally requires:

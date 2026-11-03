@@ -52,6 +52,7 @@ Deno.test("owner-bound prepare/delete/receipt recovery protocol without real acc
       if(body.p_action==="cleanup")job.database_cleared_at=new Date().toISOString();
       if(body.p_action==="completed"){
         if(failCompletion){failCompletion=false;return json({code:"500",message:"fixture-private-journal-error"},503);}
+        if(!authDeleted)return json({code:"22023",message:"Auth row still exists"},400);
         job.state="completed";
       }
       if(body.p_action==="failed")job.state="failed";
@@ -68,7 +69,7 @@ Deno.test("owner-bound prepare/delete/receipt recovery protocol without real acc
     }
     if(path===`/auth/v1/admin/users/${owner}`&&req.method==="DELETE"){
       if(failAuth)return json({message:"fixture-private-auth-error"},503);
-      authDeleted=true;return json({id:owner,aud:"authenticated",created_at:"2026-10-22T00:00:00Z"});
+      authDeleted=true;return json({message:"User deleted"});
     }
     return json({message:"Unexpected local path"},404);
   });

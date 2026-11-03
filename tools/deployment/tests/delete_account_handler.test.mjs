@@ -22,6 +22,7 @@ async function fixture(options={}) {
   const env={SUPABASE_URL:'https://fixture.invalid',SUPABASE_ANON_KEY:'fixture-anon',
     SUPABASE_SERVICE_ROLE_KEY:'fixture-service',ACCOUNT_DELETION_ENABLED:options.disabled?'false':'true'};
   const removed=new Set();
+  let authAbsent=false;
   if(options.unsetEnabled)delete env.ACCOUNT_DELETION_ENABLED;
   if(options.missingCredential)delete env.SUPABASE_SERVICE_ROLE_KEY;
   const context=createContext({Request,Response,crypto:webcrypto,fetch,TextEncoder,TextDecoder,AbortSignal,btoa,atob,Uint8Array,Deno:{
@@ -41,12 +42,16 @@ async function fixture(options={}) {
     if(key!=='fixture-service')throw new Error(internalError);
     clients.push('admin');
     return {
-      rpc:async(_name,params)=>({data:params.p_action==='storage_inventory'?{objects:[]}:{user_id:caller,state:params.p_action==='lookup'?null:params.p_action==='completed'?'completed':'running'},error:null}),
+      rpc:async(_name,params)=>params.p_action==='completed'&&!authAbsent
+        ?{data:null,error:{code:'22023',message:internalError}}
+        :({data:params.p_action==='storage_inventory'?{objects:[]}:{user_id:caller,state:params.p_action==='lookup'?null:params.p_action==='completed'?'completed':'running'},error:null}),
       auth:{admin:{deleteUser:async (userId,shouldSoftDelete)=>{
         assert.equal(shouldSoftDelete,false);
         events.push({kind:'auth_delete',userId});
         if(options.authDeleteThrows)throw new Error(internalError);
-        return {data:Object.hasOwn(options,'authDeleteData')?options.authDeleteData:{user:{id:caller}},
+        const data=Object.hasOwn(options,'authDeleteData')?options.authDeleteData:{user:{id:caller}};
+        authAbsent=!options.authDeleteFailure&&(options.authAbsent===true||data?.user?.id===caller);
+        return {data,
           error:options.authDeleteFailure?{message:internalError}:null};
       }}},
       storage:{from:bucket=>{
@@ -346,13 +351,25 @@ for(const removeData of [null,{},'not a deletion result']) {
   });
 }
 for(const authDeleteData of [null,{}, {user:null}, {user:{}}, {user:{id:other}}]) {
-  test('Auth deletion must confirm the caller before reporting success: '+JSON.stringify(authDeleteData),async()=>{
+  test('unconfirmed Auth absence cannot report success: '+JSON.stringify(authDeleteData),async()=>{
     const f=await fixture({authDeleteData});
     const response=await f.request();
     assert.equal(response.status,500);
     assert.equal((await response.json()).code,'deletion_incomplete');
   });
 }
+for(const authDeleteData of [null,{}, {user:null}, {user:{}}]) {
+  test('a minimal Auth acknowledgement succeeds only with authoritative absence: '+JSON.stringify(authDeleteData),async()=>{
+    const f=await fixture({authDeleteData,authAbsent:true});
+    const response=await f.request();
+    assert.equal(response.status,200);
+    assert.deepEqual(await response.json(),{ok:true,user_id:caller});
+  });
+}
+test('a conflicting returned Auth ID remains invalid even when caller absence is confirmed',async()=>{
+  const f=await fixture({authDeleteData:{user:{id:other}},authAbsent:true});
+  assert.equal((await f.request()).status,500);
+});
 test('successful Storage no-op cannot erase Auth while media remains',async()=>{
   const f=await fixture({entries:{['avatars:'+caller]:[file('photo.jpg')]},
     persistRemovals:false,removeData:[]});
