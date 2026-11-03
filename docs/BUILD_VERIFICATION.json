@@ -1525,6 +1525,13 @@
       "Apple membership/provider keys/signing",
       "Signed-device acceptance, screenshots and review account",
       "Owner-confirmed privacy/age/export/contact/media rights fields"
-    ]
+    ],
+    "web": {
+      "status": "PASS",
+      "source_commit": "624619a0d84774fb06edde0ab93a5d933fef092b",
+      "built_at": "2026-11-03T07:52:52.546746+00:00",
+      "main_dart_sha256": "375ddafd91463a3754d44232ed379610d1aca09cb5b949ae936c53f0be49a44a",
+      "deployed": false
+    }
   }
 }
