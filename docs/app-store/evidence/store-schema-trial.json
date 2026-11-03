@@ -1,0 +1,74 @@
+{
+  "passed": 8,
+  "captured_at": "2026-11-03T09:37:09.546393+00:00",
+  "metadata_sha256": "d5aa351bbd454158e45f12b6d189b3c06b7e81af4913b2598432e9b39cd8800d",
+  "boundary_metadata_sha256": "3b6b4b22244d72b48fdf9ea60365e1fe912d3f053bd53a415e8b0890decc247e",
+  "bundle_sha256": "d76679fe68e292f56b424c39ac456c0defaf872e6e767281c6ce155b472977a0",
+  "storage_origin": "https://jbbdnpsvstwxtgtjoeru.supabase.co",
+  "sources": [
+    {
+      "file": "tools/deployment/tests/store_backend_preflight.sql",
+      "sha256": "4b987b8ba80f78a8020d39261f02103f95d80d7414fc11ac414cff594ef476f0",
+      "bytes": 2443
+    },
+    {
+      "file": "tools/deployment/tests/admin_console_preflight.sql",
+      "sha256": "28ff3dd83fcb1ab41f5642181c8a501827f5acee3430f20092dc651799fcee47",
+      "bytes": 3424
+    },
+    {
+      "file": "tools/deployment/tests/admin_console_postflight.sql",
+      "sha256": "d0bb64b6474062dbe4efef3b910e23acd7d9dd978512f43cea2e1b3f78cb5184",
+      "bytes": 2174
+    },
+    {
+      "file": "tools/deployment/tests/interaction_boundaries_postflight.sql",
+      "sha256": "ab60b40ae7c8d5b1f907d6ebacfa14d7aface35b670cc3229154556300796675",
+      "bytes": 5461
+    },
+    {
+      "file": "supabase/migrations/202611030008_account_erasure.sql",
+      "sha256": "f14e5d8bb846dac8653276cdde629a0fbf91994bf9abde15291bec07d15c4649",
+      "bytes": 20525
+    },
+    {
+      "file": "supabase/migrations/202611030009_ugc_review.sql",
+      "sha256": "4ecd5b0e5ec6a0855c18b2681f33c44379c2fc32eda9f9ae089fb926a4f76002",
+      "bytes": 50479
+    },
+    {
+      "file": "tools/deployment/tests/account_erasure_postflight.sql",
+      "sha256": "e422936ea130762313ab4eb832fd47d903cf6e27f3c2005eeb2a7d390cd210b2",
+      "bytes": 3143
+    },
+    {
+      "file": "tools/deployment/tests/ugc_review_postflight.sql",
+      "sha256": "95d50bc249d7d42ba4864198dd2f6f19c8f7adcab203fcc4c3bbb8226f43f176",
+      "bytes": 6237
+    }
+  ],
+  "replay": {
+    "relations": 43,
+    "functions": 78,
+    "policies": 169,
+    "installed_triggers": 46,
+    "omitted_platform_triggers": [
+      "storage.buckets.enforce_bucket_name_length_trigger",
+      "storage.buckets.enforce_versioning_status_transition",
+      "storage.buckets.protect_bucket_control_insert",
+      "storage.buckets.protect_bucket_control_update",
+      "storage.buckets.protect_bucket_control_update_role",
+      "storage.buckets.protect_buckets_delete",
+      "storage.objects.protect_objects_delete",
+      "storage.objects.update_objects_updated_at"
+    ],
+    "limits": [
+      "No hosted services or production user data",
+      "Platform-only Auth/Storage triggers excluded",
+      "Extension implementations and physical storage are not replayed"
+    ]
+  },
+  "hosted": false,
+  "production_user_data": false,
+  "claim": "Captured application-schema compatibility only; not hosted Auth/Storage/Edge or Apple acceptance"
+}

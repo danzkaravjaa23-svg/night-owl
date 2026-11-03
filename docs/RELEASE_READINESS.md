@@ -1,6 +1,32 @@
 # Night Owl — release бэлтгэл
 
-## App Store хэрэгжилтийн бэлтгэл — 2026-11-03 (одоогийн)
+## App Store бэлтгэлийн эцсийн шалгалт — 2026-11-03 (одоогийн)
+
+**Код, unsigned build болон автомат шалгалтын бэлтгэл хийгдсэн; Store submission болон шинэ backend-ийн production rollout хүлээгдэж байна.** GitHub: `codex/app-store-preparation`. Backend эх `a492468`, client эх `23a7258`, бодит Storage fixture-ийн засвар `f3f3a98`. Энэ хэсэг болон `BUILD_VERIFICATION.json`-ийн `store_completion` нь доорх түүхэн тоо/байдлыг орлоно.
+
+Аккаунт солигдоход profile/Creator-ийн хуучин мэдээлэл, хүлээгдэж буй хариу болон block үйлдэл шинэ аккаунтад нөлөөлөхийг хаав. Профайлын pending candidate-ийг зөвхөн эзэмшигчийн RPC-ээр сэргээж, батлагдсан хувилбараас ялгана. Private зураг/видеоны signed URL-ийг хугацаа дуусахаас өмнө сэргээнэ; background/offstage үед timer зогсож, видеоны үзэж байсан байрлал болон pause төлөв хадгалагдана. Хуучин avatar URL-ийн query/encoding-той хувилбаруудыг унших боломжийг хадгалсан.
+
+008/009 бэлтгэл нь нийтлэгдсэн media object-ийг солих, устгаад ижил замд дахин upload хийх болон signed-upload тойруу замыг хаана. Зөвшөөрөгдөх шинэ медиа URL нь тухайн төслийн canonical owner path байна. Ашиглагдаж буй файлыг устгахгүй; контент, профайл, report-ийн бүх хамаарал арилсны дараа файлыг цэвэрлэж болно. Өмнө контентод холбосон замд дахин upload хийхийг үлдсэн hash хориглоно. Хуучин нийтэлсэн замын нэг чиглэлт hash үлдэхийг privacy эхэд тайлбарласан. Curated map review-ийн хуучин замыг active admin эрхээр хязгаарлаж, байгууллагын эзэмшигчийн засварыг хяналтын урсгалд үлдээв.
+
+**Шалгалт:** бүх **886 Flutter тест PASS**, `flutter analyze --no-pub` clean, **43 deployment Python**, **36 Node safety/web**, UGC SQL **28**, combined 008/009 **7**, atomic rollout/operations **10** бүлэг PASS. Production-оос шинээр уншсан schema/ACL-ийн synthetic replay **8 бүлэг PASS**: 43 relation, 78 function, 169 policy, 46 application trigger. Platform Storage-ийн 8 trigger, physical files болон бодит hosted session-ийг энэ replay хамрахгүй. [Schema нотолгоо](app-store/evidence/store-schema-trial.json).
+
+**Бодит local backend:** [CI 41616849314](https://github.com/danzkaravjaa23-svg/night-owl/actions/runs/41616849314), source `f3f3a98`, албан Supabase Auth/Storage/Postgres/Edge дээр **10 бүлэг PASS**. Referenced object DELETE HTTP400; bytes болон ownership metadata хэвээр. Overwrite/move/recreate хаалт, draft cleanup, тасалдсан устгал, stale JWT, receipt-only recovery болон бусдын өгөгдөл хадгалагдахыг шалгасан. 11 эх файлын hash таарсан. Энэ нь production эсвэл Apple provider acceptance биш. [Component нотолгоо](app-store/evidence/backend-components-latest.json).
+
+**Native:** [CI 41616509440, attempt 2](https://github.com/danzkaravjaa23-svg/night-owl/actions/runs/41616509440) `23a7258` эхээр unsigned arm64 iPhone release, simulator compile болон iPhone/iPad startup PASS. Xcode 26.3, iOS SDK 26.2, Flutter 3.44.0; 12 privacy manifest inventory хийсэн. Эхний оролдлогын build амжилттай боловч simulator launch команд хугацаа хэтэрсэн; түүнийг амжилттай startup гэж тооцоогүй. Шинэ runner дээр нэг удаа давтахад хоёр төхөөрөмжийн startup шалгалт давсан. Шалгасан native runtime input нь одоогийн эхтэй ижил; дараах өөрчлөлтүүд нь баримт/нотолгоо. Энэ нь signed device, Apple provider эсвэл App Review acceptance биш. [Шинэ native нотолгоо](app-store/evidence/native-build-latest.json). Artifact13223189145-ийг локалд хадгалсан: `build/releases/night-owl-native-unsigned-23a7258-attempt2.zip`, 93,815,256 byte; SHA256 `c232873d10c828f7dba8f50f956d788241bc47a2a312764fde4578a1927cff9b`. ZIP CRC, эх commit, хоёр bundle-ийн Info.plist болон screenshot-уудыг нягталсан. Remote artifact 2026-11-17 хүртэл хадгалагдана; локал хуулбар үлдэнэ.
+
+**Web build:** source `23a7258`, JavaScript release PASS; `main.dart.js` SHA256 `704b5a5970ca4900525bafd3a1f45a835b2e037d3c071f41d9533182a0a8e95f`. Шинэ client-ийг 008/009-өөс өмнө production-д нийтлээгүй. Утасны cache/startup засвар `7cc568e` өмнө нь public Netlify-д гарсан; энэ бэлтгэлийн client-тэй андуурахгүй. Бодит хэрэглэгчийн утсыг алсаас шалгаагүй.
+
+**Нийтийн нууцлалын хуудас:** `night-owl-features` → `e0e1d453dfc0e262478afadb4bf3b5f10d8eb9b0` commit Netlify дээр 10:29:37 UTC-д нийтлэгдсэн. Зөвхөн аль хэдийн live болсон venue/map, server analytics consent болон inactive503 устгалын тайлбарыг зассан. Public `main.dart.js` өмнөх `7cc568e`-тэй byte/hash ижил. Policy HTML нь Netlify-ийн pretty URL/attribute хувиргалтын дараа source-той таарсан; hosting comment болон public HUD script нэмэгддэг тул raw byte/hash ижил гэж тайлагнаагүй. Browser-т шинэ тайлбар харагдсаныг нягталсан. [Нийтлэлийн нотолгоо](app-store/evidence/public-privacy.json).
+
+**Hosted бэлтгэл:** production `delete-account`-ийн шалгасан хоёр эх файл deploy хийгдэж, dashboard-аас буцааж татсан ZIP-ийн byte/hash локал эхтэй таарсан. `ACCOUNT_DELETION_ENABLED=false`, gateway JWT шалгалт **ON** хэвээр. Auth-гүй probe401, public anon probe503/deletion_unavailable. Аккаунт устгах үйлдэл дуудаагүй, 008/009 суулгаагүй. [Идэвхгүй service-ийн нотолгоо](app-store/evidence/hosted-edge-disabled.json).
+
+**Production-д гаргахын өмнөх саад:** Free багц автомат database backup-гүйг dashboard баталсан; сэргээж болох manual DB болон Storage backup батлагдаагүй. Schema metadata export нь data backup биш. Тусдаа hosted copy дээр acceptance, 008/009 + compatible client rollout, зөвхөн мэдээлсэн мессежийн admin context болон receipt-only recovery-ийн scoped gateway өөрчлөлтийн баталгаа, retention scheduler-ийн амжилттай run, хариуцсан operator/moderator үлдсэн. Дараа нь Apple membership/provider/signing, signed iPhone/iPad-ийн 16 acceptance case, Store screenshot/reviewer/privacy/age/contact/media-rights баталгааг гүйцэтгэнэ. Төлбөр, Apple membership, signed IPA, TestFlight upload эсвэл App Review submission хийгдээгүй.
+
+[Эзэмшигчийн дараагийн алхам](app-store/OWNER_NEXT_STEPS.md) · [Backend rollout заавар](../tools/deployment/STORE_BACKEND_ROLLOUT.md)
+
+Доорх хэсгүүд нь тухайн үед шалгасан түүхэн мэдээлэл.
+
+## App Store хэрэгжилтийн эхний бэлтгэл — 2026-11-03 (түүхэн)
 
 **Утасны web шинэчлэлт — 2026-11-03 16:27 (UTC+8):** cache/startup засвар `7cc568e346c376ec2020c2c3fbeea90f09b0939b` production `night-owl-features` салбар руу push хийгдэж Netlify дээр нийтлэгдсэн. `/release.json` энэ commit-ийг баталсан. HTML update controller болон retirement worker нь шалгасан эхтэй, public `main.dart.js` SHA256 `cc0bbbe187b020a22faabbbe0bdc7ef3128695ce53e546a7d6ab944a1f1d0c5d` локал build/өмнөх app кодтой ижил. Bootstrap нь Netlify-ийн WASM dry-run-аас нэмэгдсэн хоосон build бичлэгээс бусад хэсгээрээ ижил. Таван public asset дээр revalidation болон security headers PASS.
 

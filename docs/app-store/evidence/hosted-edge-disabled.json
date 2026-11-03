@@ -1,0 +1,40 @@
+{
+  "project": "jbbdnpsvstwxtgtjoeru",
+  "function": "delete-account",
+  "enabled": false,
+  "verify_jwt": true,
+  "custom_config_digest_matches_false": true,
+  "probes": [
+    {
+      "case": "missing-auth",
+      "status": 401,
+      "body": {
+        "code": "UNAUTHORIZED_NO_AUTH_HEADER",
+        "message": "Missing authorization header"
+      }
+    },
+    {
+      "case": "public-anon",
+      "status": 503,
+      "body": {
+        "error": "Account deletion unavailable",
+        "code": "deletion_unavailable"
+      }
+    }
+  ],
+  "source_files": {
+    "index.ts": "e6d2fa3e6caeb137aa31fe79efbb68b9ad6af775bd7422f461ceb55c410c51f9",
+    "apple_revocation.ts": "82e6dff4b15d1e21e32ea155a5de45649ac234cf7342bb47b99291367bb99edb"
+  },
+  "deletes_invoked": false,
+  "migrations_008_009_installed": false,
+  "source_verification": "Dashboard ZIP downloaded; both source files exactly equal local bytes",
+  "enablement_gate": "Keep disabled until 008/009 and hosted disposable-account acceptance, retention and operations are complete; receipt-only recovery requires reviewed scoped gateway change",
+  "recorded_at": "2026-11-03T10:03:45.663549+00:00",
+  "recovery_backup": {
+    "dashboard": "https://supabase.com/dashboard/project/jbbdnpsvstwxtgtjoeru/database/backups/scheduled",
+    "observed": "Free Plan does not include project backups",
+    "manual_backup_verified": false,
+    "paid_upgrade_performed": false
+  }
+}

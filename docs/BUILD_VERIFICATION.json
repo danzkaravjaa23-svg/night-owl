@@ -1,6 +1,6 @@
 {
-  "current_record": "app_store_implementation",
-  "historical_fields_notice": "Use post_week_activity for combined daily stories and seven-day posts. story_3d_motion documents unchanged 3D presentation, venue_refresh documents catalog evidence, earlier sections are dated history. Native/store gates still apply.",
+  "current_record": "store_completion",
+  "historical_fields_notice": "Use store_completion for current build, hosted rollout and Store readiness. Use post_week_activity for combined daily stories and seven-day posts. story_3d_motion documents unchanged 3D presentation, venue_refresh documents catalog evidence, earlier sections are dated history. Native/store gates still apply.",
   "admin_security": {
     "date": "2026-11-03",
     "timezone": "Asia/Ulaanbaatar",
@@ -1617,5 +1617,117 @@
     "preparation_branch": "codex/app-store-preparation",
     "preparation_code_commit": "7b1eb5e",
     "scope": "Web startup/cache delivery only; app/backend source unchanged from production 9c8b862. App Store 008/009/Edge rollout remains pending."
+  },
+  "store_completion": {
+    "date": "2026-11-03",
+    "branch": "codex/app-store-preparation",
+    "status": "Code/build preparation verified; hosted coordinated rollout and App Store submission are not complete",
+    "source_commits": {
+      "backend": "a4924687ae1f739b7735d917fbc7d4f4e2f52c82",
+      "client": "23a72582fe1d2382b7ec26261b05e6ad3eb886ab",
+      "real_storage_fixture": "f3f3a985e514aa18dbba994465465e6b79326fb1"
+    },
+    "checks": {
+      "flutter_tests_passed": 886,
+      "flutter_analyze": "No issues found",
+      "deployment_python_tests_passed": 43,
+      "node_safety_web_tests_passed": 36,
+      "ugc_sql_groups_passed": 28,
+      "combined_008_009_groups_passed": 7,
+      "atomic_rollout_operations_groups_passed": 10,
+      "captured_schema_trial_groups_passed": 8,
+      "real_backend_component_groups_passed": 10
+    },
+    "local_logs": "build/audit/2026-11-03/store-completion/",
+    "schema_trial": {
+      "evidence": "docs/app-store/evidence/store-schema-trial.json",
+      "captured_at": "2026-11-03T09:37:09.546393+00:00",
+      "production_user_data_copied": false,
+      "platform_storage_triggers_omitted": 8,
+      "full_hosted_parity_claimed": false
+    },
+    "backend_components": {
+      "run_url": "https://github.com/danzkaravjaa23-svg/night-owl/actions/runs/41616849314",
+      "source_commit": "f3f3a985e514aa18dbba994465465e6b79326fb1",
+      "evidence": "docs/app-store/evidence/backend-components-latest.json",
+      "groups_passed": 10,
+      "source_hashes_matched": 11,
+      "apple_live_provider_tested": false
+    },
+    "web_build": {
+      "commit": "23a72582fe1d2382b7ec26261b05e6ad3eb886ab",
+      "built_at": "2026-11-03T10:07:14.756620+00:00",
+      "main_dart_sha256": "704b5a5970ca4900525bafd3a1f45a835b2e037d3c071f41d9533182a0a8e95f",
+      "status": "passed",
+      "deployed": false,
+      "static_policy_pages_source_verified": 4
+    },
+    "hosted_edge": {
+      "evidence": "docs/app-store/evidence/hosted-edge-disabled.json",
+      "source_bytes_verified": true,
+      "account_deletion_enabled": false,
+      "verify_jwt": true,
+      "missing_auth_status": 401,
+      "anon_probe_status": 503,
+      "deletion_invoked": false
+    },
+    "production": {
+      "branch": "night-owl-features",
+      "web_commit": "e0e1d453dfc0e262478afadb4bf3b5f10d8eb9b0",
+      "mobile_update_evidence_record": "mobile_web_delivery",
+      "new_client_deployed": false,
+      "migrations_008_009_installed": false,
+      "recovery_backup_verified": false,
+      "automatic_database_backup": "Free plan does not include project backups; dashboard observed",
+      "paid_upgrade_performed": false,
+      "public_privacy_evidence": "docs/app-store/evidence/public-privacy.json",
+      "public_runtime_unchanged_from": "7cc568e346c376ec2020c2c3fbeea90f09b0939b",
+      "public_privacy_deployed": true
+    },
+    "pending": [
+      "Recoverable database plus physical Storage backup and recovery verification",
+      "Separate hosted copy acceptance with target-specific bundle and synthetic accounts/media",
+      "Coordinated 008/009 and compatible client rollout, scoped reported-message admin access and receipt-only gateway configuration",
+      "Successful hosted retention schedule, named operator/moderator and private alert handoff",
+      "Apple Developer membership, provider keys, signing and signed iPhone/iPad acceptance",
+      "Final native screenshots, reviewer access, owner privacy/age/export/contact/media-rights declarations",
+      "TestFlight and App Review submission"
+    ],
+    "paid_membership_performed": false,
+    "signed_ipa_created": false,
+    "store_uploaded": false,
+    "package_builder": "tools/deployment/package_app_store_prep.py",
+    "native": {
+      "evidence": "docs/app-store/evidence/native-build-latest.json",
+      "source_commit": "23a72582fe1d2382b7ec26261b05e6ad3eb886ab",
+      "runtime_inputs_identical_to_current_checkout": true,
+      "run_url": "https://github.com/danzkaravjaa23-svg/night-owl/actions/runs/41616509440",
+      "run_attempt": 2,
+      "ci_conclusion": "success",
+      "artifact_id": 13223189145,
+      "local_archive": "build/releases/night-owl-native-unsigned-23a7258-attempt2.zip",
+      "archive_sha256": "c232873d10c828f7dba8f50f956d788241bc47a2a312764fde4578a1927cff9b",
+      "archive_bytes": 93815256,
+      "simulator_startup": {
+        "status": "passed",
+        "runtime": "com.apple.CoreSimulator.SimRuntime.iOS-26-2",
+        "devices": [
+          {
+            "name": "iPhone 17",
+            "alive_after_seconds": 12
+          },
+          {
+            "name": "iPad Pro 13-inch (M5)",
+            "alive_after_seconds": 12
+          }
+        ]
+      },
+      "screenshots_visually_inspected": true,
+      "privacy_manifests_inventoried": 12,
+      "signed": false,
+      "physical_devices_tested": false,
+      "apple_live_provider_tested": false,
+      "first_attempt": "Compiled successfully; simulator launch command timed out before PID/screenshots. Preserved as incomplete evidence; one fresh-runner retry passed."
+    }
   }
 }

@@ -1,0 +1,60 @@
+{
+  "scope": "production-public-privacy-only-deployment",
+  "verified_at": "2026-11-03T10:32:24.268837+00:00",
+  "site": "https://nightowl-ub.netlify.app",
+  "branch": "night-owl-features",
+  "commit": "e0e1d453dfc0e262478afadb4bf3b5f10d8eb9b0",
+  "base_commit": "7cc568e346c376ec2020c2c3fbeea90f09b0939b",
+  "changed_source_files": [
+    "web/privacy.html"
+  ],
+  "factual_changes": [
+    "Optional venue tags and viewer-readable map activity windows",
+    "Server analytics consent protection installed 2026-11-03",
+    "Deletion endpoint deployed but disabled (503/unavailable)"
+  ],
+  "source_privacy_sha256": "58ddd3f276b2cd5af6b22957e78a5d29d13a6def986a0eaab70418fa41a77da9",
+  "release": {
+    "commit": "e0e1d453dfc0e262478afadb4bf3b5f10d8eb9b0",
+    "built_at": "2026-11-03T10:29:37.609675+00:00",
+    "main_dart_sha256": "cc0bbbe187b020a22faabbbe0bdc7ef3128695ce53e546a7d6ab944a1f1d0c5d"
+  },
+  "resources": {
+    "privacy.html": {
+      "url": "https://nightowl-ub.netlify.app/privacy.html",
+      "sha256": "cff98b627969283299589cf85f692175b6b252b2b8ca1c017d090b3ffb2193fc",
+      "bytes": 18360
+    },
+    "release.json": {
+      "url": "https://nightowl-ub.netlify.app/release.json",
+      "sha256": "7bfc6bd58808988b69ffa715ab52fc700ce0e759e80803e606aad18e6bbc7122",
+      "bytes": 199
+    },
+    "main.dart.js": {
+      "url": "https://nightowl-ub.netlify.app/main.dart.js",
+      "sha256": "cc0bbbe187b020a22faabbbe0bdc7ef3128695ce53e546a7d6ab944a1f1d0c5d",
+      "bytes": 5292134
+    }
+  },
+  "checks": {
+    "privacy_raw_bytes_equal_source": false,
+    "policy_html_matches_source_after_pretty_url_and_attribute_normalization": true,
+    "additional_platform_html_explicitly_identified": true,
+    "three_approved_facts_present": true,
+    "release_matches_commit": true,
+    "runtime_matches_previous_production_bytes": true
+  },
+  "observed_hosting_transforms": [
+    "One Netlify hosting HTML comment",
+    "Attribute order/quote serialization",
+    "Four known local .html hrefs rewritten to root-relative pretty URLs",
+    "Appended Netlify public free-tier HUD script: /.netlify/scripts/hud?variant=public"
+  ],
+  "runtime_source_changed": false,
+  "future_008_009_content_published": false,
+  "backend_state_changed": false,
+  "limits": [
+    "Static policy correction only; does not enable account deletion or install migrations008/009.",
+    "Netlify transforms served HTML and injects its HUD script; source and served privacy SHA256 values are different and separately recorded."
+  ]
+}
