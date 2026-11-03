@@ -1,0 +1,6 @@
+# Only this function permits receipt-only completion checks after Auth erasure.
+# The handler itself validates auth.getUser() for every prepare/delete request;
+# a 256-bit opaque, server-hashed receipt can only inspect/reconcile completion.
+# This does not disable JWT verification for any other Edge Function.
+[functions.delete-account]
+verify_jwt = false

@@ -1,5 +1,7 @@
+import '../../profile/widgets/block_report_sheet.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/theme/app_colors.dart';
@@ -486,21 +488,54 @@ class _GroupThreadScreenState extends State<_ScopedGroupThread> {
                                                         vertical: 12),
                                                 child: _DateChip(
                                                     label: _dateLabel(time)))),
-                                      _GroupBubble(
-                                        text: m['body'] as String? ?? '',
-                                        isMe: isMe,
-                                        // Нэр — зөвхөн группийн ЭХНИЙ bubble дээр
-                                        senderName:
-                                            (!isMe && !prevSame) ? uname : null,
-                                        senderInitial: uname.isNotEmpty
-                                            ? uname[0].toUpperCase()
-                                            : '?',
-                                        avatarUrl:
-                                            sender?['avatar_url'] as String?,
-                                        isFirstInGroup: !prevSame,
-                                        isLastInGroup: !nextSame,
-                                        time: _timeStr(time),
-                                      ),
+                                      Tooltip(
+                                          message: isMe
+                                              ? ''
+                                              : 'Удаан дараад мессежийг мэдээлэх',
+                                          child: Semantics(
+                                              customSemanticsActions: isMe
+                                                  ? null
+                                                  : {
+                                                      const CustomSemanticsAction(
+                                                              label:
+                                                                  'Мессежийг мэдээлэх'):
+                                                          () => showReportSheet(
+                                                              context,
+                                                              targetType:
+                                                                  'group_message',
+                                                              targetId: m['id']
+                                                                  as String),
+                                                    },
+                                              child: GestureDetector(
+                                                  onLongPress: isMe
+                                                      ? null
+                                                      : () => showReportSheet(
+                                                          context,
+                                                          targetType:
+                                                              'group_message',
+                                                          targetId: m['id']
+                                                              as String),
+                                                  child: _GroupBubble(
+                                                    text:
+                                                        m['body'] as String? ??
+                                                            '',
+                                                    isMe: isMe,
+                                                    // Нэр — зөвхөн группийн ЭХНИЙ bubble дээр
+                                                    senderName:
+                                                        (!isMe && !prevSame)
+                                                            ? uname
+                                                            : null,
+                                                    senderInitial: uname
+                                                            .isNotEmpty
+                                                        ? uname[0].toUpperCase()
+                                                        : '?',
+                                                    avatarUrl:
+                                                        sender?['avatar_url']
+                                                            as String?,
+                                                    isFirstInGroup: !prevSame,
+                                                    isLastInGroup: !nextSame,
+                                                    time: _timeStr(time),
+                                                  )))),
                                     ]);
                               })),
 

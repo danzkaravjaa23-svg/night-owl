@@ -1,3 +1,5 @@
+import '../../profile/widgets/block_report_sheet.dart';
+import '../../../core/widgets/content_review_notice.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -162,6 +164,13 @@ class _CollectionsScreenState extends ConsumerState<CollectionsScreen> {
                                         content: Text('Холбоос хууллаа')));
                               }
                             }),
+                        if (!_own)
+                          IconButton(
+                              tooltip: 'Цуглуулгыг мэдээлэх',
+                              icon: const Icon(Icons.flag_outlined),
+                              onPressed: () => showReportSheet(context,
+                                  targetType: 'collection',
+                                  targetId: row['id'] as String)),
                         if (_own)
                           PopupMenuButton<String>(
                               tooltip: 'Цуглуулгын үйлдэл',
@@ -184,6 +193,12 @@ class _CollectionsScreenState extends ConsumerState<CollectionsScreen> {
                                         value: 'delete', child: Text('Устгах'))
                                   ])
                       ])),
+                  if (_own)
+                    Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: ContentReviewNotice(
+                            status: row['moderation_status'] as String? ??
+                                'approved')),
                   for (final item in (row['collection_places'] as List? ?? []))
                     ListTile(
                         leading: const Icon(Icons.place_outlined),

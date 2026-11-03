@@ -1,5 +1,5 @@
 {
-  "current_record": "post_week_activity",
+  "current_record": "app_store_implementation",
   "historical_fields_notice": "Use post_week_activity for combined daily stories and seven-day posts. story_3d_motion documents unchanged 3D presentation, venue_refresh documents catalog evidence, earlier sections are dated history. Native/store gates still apply.",
   "admin_security": {
     "date": "2026-11-03",
@@ -1369,6 +1369,162 @@
       "No real user post was published or deleted as verification; positive publication/retry/privacy flows use isolated fixtures",
       "Existing historical publication timestamps retain their recorded provenance",
       "Physical-device FPS, Apple configuration, native signing/store release and remaining venue verification are unchanged"
+    ]
+  },
+  "app_store_preparation": {
+    "date": "2026-11-03",
+    "checked_at": "2026-11-03T07:01:56.193943+00:00",
+    "source_base_commit": "9c8b862d69bed2e4f102c9528a584a32e0ce70dd",
+    "status": "PREPARATION_COMPLETE_SUBMISSION_BLOCKED",
+    "membership": "Owner confirmed not active in this turn",
+    "source_preflight": {
+      "passed": 9,
+      "failed": 0
+    },
+    "deployment_python_tests": {
+      "passed": 43,
+      "failed": 0,
+      "ios_preflight_subset": 29
+    },
+    "toolchain": {
+      "macos": "15.5 (24F74)",
+      "developer_directory": "/Library/Developer/CommandLineTools",
+      "full_xcode": "MISSING",
+      "iphoneos_sdk": "MISSING",
+      "flutter": "3.44.0",
+      "cocoapods": "1.17.0"
+    },
+    "native_build": {
+      "compiled": false,
+      "signed": false,
+      "uploaded": false,
+      "testflight": false,
+      "app_review_submitted": false
+    },
+    "public_checks": "build/audit/2026-11-03/app-store-prep/public-preflight.json",
+    "metadata_lengths": {
+      "name": {
+        "count": 12,
+        "unit": "characters",
+        "limit": 30
+      },
+      "subtitle": {
+        "count": 27,
+        "unit": "characters",
+        "limit": 30
+      },
+      "promotional_text": {
+        "count": 151,
+        "unit": "characters",
+        "limit": 170
+      },
+      "description": {
+        "count": 1755,
+        "unit": "characters",
+        "limit": 4000
+      },
+      "keywords": {
+        "count": 88,
+        "unit": "utf8_bytes",
+        "limit": 100
+      },
+      "review_notes": {
+        "count": 1859,
+        "unit": "utf8_bytes",
+        "limit": 4000
+      }
+    },
+    "local_changes": [
+      "iOS deployment-target reference/conditional checks and complete icon chunk/dimension checks",
+      "Current submission guide, Apple setup, metadata drafts and 15 native acceptance cases",
+      "Privacy source reflects installed consent guard and venue content activity; not deployed in this turn"
+    ],
+    "blockers": [
+      "Active Apple Developer membership and eligible macOS/Xcode",
+      "Apple provider/callback/signing setup and native login",
+      "Published working account deletion, Apple revoke and hosted cleanup/recovery tests",
+      "UGC filtering/report coverage and staffed moderation",
+      "Native devices/screenshots, validated signed archive, privacy/age/export/reviewer fields"
+    ],
+    "previous_flutter_evidence": {
+      "passed": 814,
+      "commit": "9c8b862d69bed2e4f102c9528a584a32e0ce70dd",
+      "rerun_this_turn": false,
+      "reason": "No Flutter runtime change"
+    },
+    "actions_not_performed": [
+      "OS install/restart",
+      "purchase or agreement acceptance",
+      "production account mutation",
+      "backend rollout",
+      "Git push",
+      "web deploy",
+      "store upload"
+    ]
+  },
+  "app_store_implementation": {
+    "date": "2026-11-03",
+    "status": "CANDIDATE_CODE_VALIDATED_NATIVE_AND_COMPONENT_CI_PENDING",
+    "branch": "codex/app-store-preparation",
+    "production_deployed": false,
+    "store_uploaded": false,
+    "flutter_tests": {
+      "passed": 859,
+      "log": "build/audit/2026-11-03/store-implementation/flutter-tests.log"
+    },
+    "flutter_analysis": "No issues found",
+    "visual_captures": {
+      "passed": 16,
+      "widths": [
+        320,
+        390
+      ],
+      "large_text_scale": 1.5,
+      "themes": [
+        "day",
+        "night"
+      ],
+      "synthetic_data": true
+    },
+    "deployment_python_tests": 43,
+    "ios_source_preflight": "9/9 PASS",
+    "backend_local": {
+      "erasure_node_tests": 66,
+      "apple_crypto_tests": 18,
+      "deno_sdk_handler_steps": 13,
+      "deno_protocol_steps": 12,
+      "erasure_sql_groups": 22,
+      "erasure_fk_actions": 69,
+      "ugc_sql_groups": 21,
+      "combined_erasure_ugc_groups": 7,
+      "web_admin_tests": 34,
+      "component_safety_tests": 2
+    },
+    "native_baseline": {
+      "source": "ecc1cfbef5075c5c307d80cb2ce300e6167274be",
+      "run": 41596378088,
+      "iphone_release_build": "PASS unsigned arm64",
+      "simulator_build": "PASS",
+      "iphone_startup": "PASS iPhone17; screenshot inspected",
+      "ipad_startup": "TIMEOUT during simulator boot, retry pending",
+      "xcode": "26.3",
+      "sdk": "26.2",
+      "embedded_privacy_manifests": 12
+    },
+    "implementation": [
+      "Durable in-app erasure with secure receipt recovery and Apple token revocation source",
+      "Server enforced prepublication review, version-bound decisions and scoped report context",
+      "Pending-media access control for avatars and venue covers",
+      "Canonical Reel publish and all-surface report entry points",
+      "Unverified demo music removed"
+    ],
+    "pending": [
+      "Exact candidate native build and simulator startup",
+      "Real isolated Auth/Storage/Edge component CI",
+      "Coordinated hosted 008/009 + delete-account rollout and postflight",
+      "Apple membership/provider keys/signing",
+      "Signed-device acceptance, screenshots and review account",
+      "Owner-confirmed privacy/age/export/contact/media rights fields"
     ]
   }
 }

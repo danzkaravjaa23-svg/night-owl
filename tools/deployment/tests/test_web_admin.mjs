@@ -15,7 +15,7 @@ function fixture(fetcher = async () => { throw new Error('Unexpected request'); 
   fetch:fetcher,setTimeout:(fn,ms)=>{timers.push({fn,ms});return timers.length;},clearTimeout:()=>{},
  });
  vm.runInContext(source.replace(/\nboot\(\);\s*$/,''),context);
- const api = vm.runInContext('({scope,current,assertCurrent,ticket,visible,safeImage,esc,avatar,validatePage,requireAdmin,moderate,request,legacyWrite,venuePayload,runAction,receiveSession,attachedPostPath,mediaSource})',context);
+ const api = vm.runInContext('({scope,current,assertCurrent,ticket,visible,safeImage,esc,avatar,validatePage,requireAdmin,moderate,request,legacyWrite,venuePayload,runAction,receiveSession,attachedPostPath,mediaSource,reviewObject,reviewMediaSource,reviewContent})',context);
  const owner = (id='owner-A',token='jwt-A') => vm.runInContext(`session={user:{id:${JSON.stringify(id)}},access_token:${JSON.stringify(token)}};generation++;actor=${JSON.stringify(id)};`,context);
  owner();
  return {api,context,owner,nodes,timers};
@@ -267,4 +267,43 @@ test('non-JSON HTTP authorization denial still clears privileged UI before parsi
   await assert.rejects(f.api.requireAdmin(f.api.scope()));
   assert.equal(parsed,false);assert.equal(f.nodes.get('app').hidden,true);assert.equal(f.nodes.get('view').cleared,true);
  }
+});
+
+const reviewItem = () => ({id:'30000000-0000-4000-8000-000000000001',kind:'story',review_version:'40000000-0000-4000-8000-000000000001'});
+const reviewReceipt = item => ({target_id:item.id,target_type:item.kind,review_version:item.review_version,status:'approved',audit_id:'50000000-0000-4000-8000-000000000001',created_at:'2026-11-03T08:00:00Z'});
+test('review pins selected content version and validates the audit receipt',async()=>{
+ let request;const item=reviewItem();const f=fixture(async(url,options)=>{request={url,options};return ok(reviewReceipt(item));});
+ await f.api.reviewContent(f.api.scope(),item,'approved','Reviewed complete video');
+ assert.match(request.url,/\/rpc\/admin_console_review$/);
+ assert.equal(request.options.headers.Authorization,'Bearer jwt-A');
+ assert.deepEqual(JSON.parse(request.options.body),{p_kind:'story',p_target_id:item.id,p_version:item.review_version,p_decision:'approved',p_reason:'Reviewed complete video'});
+});
+test('review cannot accept a changed version, wrong target or malformed audit',async()=>{
+ for(const patch of [{review_version:'other'},{target_id:'other'},{status:'pending'},{audit_id:'prefix-50000000-0000-4000-8000-000000000001'},{created_at:'invalid'}]){
+  const item=reviewItem();const f=fixture(async()=>ok({...reviewReceipt(item),...patch}));
+  await assert.rejects(f.api.reviewContent(f.api.scope(),item,'approved','Reviewed all content'),/Баталгаатай/);
+ }
+});
+test('review rejects unsupported target kinds, short reasons and invalid decisions without request',async()=>{
+ let calls=0;const f=fixture(async()=>{calls++;return ok({});});
+ for(const [item,decision,reason] of [[{...reviewItem(),kind:'message'},'approved','Reviewed'],[{...reviewItem(),kind:'all'},'approved','Reviewed'],[reviewItem(),'make_admin','Reviewed'],[reviewItem(),'approved','x']])await assert.rejects(f.api.reviewContent(f.api.scope(),item,decision,reason));
+ assert.equal(calls,0);
+});
+test('new review signing supports all private buckets and rejects path escapes',async()=>{
+ const backend='https://jbbdnpsvstwxtgtjoeru.supabase.co';
+ for(const bucket of ['posts','stories','avatars','venues']){
+  let request;const f=fixture(async(url,options)=>{request={url,options};return ok({signedURL:`/object/sign/${bucket}/author/photo.jpg?token=fixture`});});
+  assert.equal(await f.api.reviewMediaSource(f.api.scope(),`${backend}/storage/v1/object/public/${bucket}/author/photo.jpg`),`${backend}/storage/v1/object/sign/${bucket}/author/photo.jpg?token=fixture`);
+  assert.equal(request.options.headers.Authorization,'Bearer jwt-A');
+ }
+ for(const tail of ['/avatars/author/%2e%2e/file.jpg','/stories/author/%2Fother.jpg','/other/author/photo.jpg','/venues/author/photo.jpg?token=unexpected']){
+  const f=fixture();await assert.rejects(f.api.reviewMediaSource(f.api.scope(),`${backend}/storage/v1/object/public${tail}`));
+ }
+});
+test('external review media gets no admin token and late signed media is discarded',async()=>{
+ let calls=0;const f=fixture(async()=>{calls++;throw Error('Unexpected');});
+ assert.equal(await f.api.reviewMediaSource(f.api.scope(),'https://images.test/photo.jpg'),'https://images.test/photo.jpg');assert.equal(calls,0);
+ const response=deferred();const g=fixture(async()=>response.promise);const pending=g.api.reviewMediaSource(g.api.scope(),'https://jbbdnpsvstwxtgtjoeru.supabase.co/storage/v1/object/public/avatars/author/p.jpg');
+ g.owner('other-owner','other-token');response.resolve(ok({signedURL:'/object/sign/avatars/author/p.jpg?token=fixture'}));
+ await assert.rejects(pending,e=>e.constructor.name==='StaleRequest');
 });

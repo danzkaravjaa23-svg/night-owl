@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_colors.dart';
@@ -397,6 +398,16 @@ class _DmThreadScreenState extends State<_ScopedDmThread>
               Navigator.pop(sheetCtx);
               await _markUnread();
             }),
+        ListTile(
+            leading: const Icon(Icons.flag_outlined),
+            title: const Text('Хэрэглэгчийг мэдээлэх / блоклох'),
+            subtitle: const Text(
+                'Тодорхой мессежийг мэдээлэхдээ дээр нь удаан дарна уу.'),
+            onTap: () {
+              Navigator.pop(sheetCtx);
+              showUserOptionsSheet(context,
+                  userId: widget.threadId, username: username);
+            }),
         const SizedBox(height: 12),
       ])),
     );
@@ -570,17 +581,46 @@ class _DmThreadScreenState extends State<_ScopedDmThread>
                                                         vertical: 12),
                                                 child: _DateChip(
                                                     label: _dateLabel(time)))),
-                                      _Bubble(
-                                          text: text,
-                                          isMe: isMe,
-                                          time: _timeStr(time),
-                                          storyMediaUrl:
-                                              m['story_media_url'] as String?,
-                                          noteText: m['note_text'] as String?,
-                                          isFirstInGroup: !prevSame,
-                                          isLastInGroup: !nextSame,
-                                          avatarUrl: avatarUrl,
-                                          senderInitial: initial),
+                                      Tooltip(
+                                          message: isMe
+                                              ? ''
+                                              : 'Удаан дараад мессежийг мэдээлэх',
+                                          child: Semantics(
+                                              customSemanticsActions: isMe
+                                                  ? null
+                                                  : {
+                                                      const CustomSemanticsAction(
+                                                              label:
+                                                                  'Мессежийг мэдээлэх'):
+                                                          () => showReportSheet(
+                                                              context,
+                                                              targetType:
+                                                                  'message',
+                                                              targetId: m['id']
+                                                                  as String),
+                                                    },
+                                              child: GestureDetector(
+                                                  onLongPress: isMe
+                                                      ? null
+                                                      : () => showReportSheet(
+                                                          context,
+                                                          targetType: 'message',
+                                                          targetId: m['id']
+                                                              as String),
+                                                  child: _Bubble(
+                                                      text: text,
+                                                      isMe: isMe,
+                                                      time: _timeStr(time),
+                                                      storyMediaUrl:
+                                                          m['story_media_url']
+                                                              as String?,
+                                                      noteText: m['note_text']
+                                                          as String?,
+                                                      isFirstInGroup: !prevSame,
+                                                      isLastInGroup: !nextSame,
+                                                      avatarUrl: avatarUrl,
+                                                      senderInitial:
+                                                          initial)))),
                                       // "Үзсэн" — зөвхөн өөрийн сүүлийн мессеж уншигдсан үед
                                       if (isMe &&
                                           i == lastMineIdx &&

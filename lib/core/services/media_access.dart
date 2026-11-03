@@ -8,7 +8,9 @@ import 'supabase_service.dart';
   if (uri == null ||
       origin == null ||
       !{'http', 'https'}.contains(uri.scheme) ||
+      !{'http', 'https'}.contains(origin.scheme) ||
       !uri.hasAuthority ||
+      !origin.hasAuthority ||
       uri.userInfo.isNotEmpty ||
       uri.origin != origin.origin) {
     return null;
@@ -16,7 +18,13 @@ import 'supabase_service.dart';
   final parts = uri.pathSegments;
   if (parts.length < 6 ||
       parts.take(4).join('/') != 'storage/v1/object/public' ||
-      !{'posts', 'stories'}.contains(parts[4])) {
+      !{'posts', 'stories', 'avatars', 'venues'}.contains(parts[4]) ||
+      parts.skip(5).any((part) =>
+          part.isEmpty ||
+          part == '.' ||
+          part == '..' ||
+          part.contains('/') ||
+          part.contains('\\'))) {
     return null;
   }
   return (bucket: parts[4], path: parts.skip(5).join('/'));

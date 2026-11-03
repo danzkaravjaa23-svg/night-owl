@@ -1,3 +1,4 @@
+import 'package:night_owl_ub/features/profile/services/report_submission_service.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
@@ -100,6 +101,10 @@ void main() {
     addTearDown(router.dispose);
     await tester.pumpWidget(ProviderScope(
         overrides: [
+          reportSubmissionServiceProvider.overrideWithValue(
+              ReportSubmissionService(
+                  client: Supabase.instance.client,
+                  httpClient: MockClient((request) => reply(request)))),
           reelsProvider.overrideWith((_) =>
               all?.call() ??
               Future.value(List.generate(3, (i) => _reel('clip-$i')))),
@@ -417,7 +422,7 @@ void main() {
           return http.Response(jsonEncode(_authSession('fixture-viewer')), 200,
               headers: {'content-type': 'application/json'}, request: request);
         }
-        if (request.url.path == '/rest/v1/reports') {
+        if (request.url.path == '/rest/v1/rpc/report_ugc') {
           reportRequest = request;
           reported
               .add(Map<String, dynamic>.from(jsonDecode(request.body) as Map));
@@ -441,15 +446,18 @@ void main() {
       expect(find.text('Юунд мэдээлэх вэ?'), findsOneWidget);
       expect(reported, isEmpty);
       await tester.tap(find.text('Спам / хуурамч'));
+      await tester.pump();
+      await tester.ensureVisible(find.text('Модераторт илгээх'));
+      await tester.tap(find.text('Модераторт илгээх'));
       for (var frame = 0; frame < 5; frame++) {
         await tester.pump(const Duration(milliseconds: 100));
       }
       expect(reported, [
         {
-          'reporter_id': 'fixture-viewer',
-          'target_type': 'post',
-          'target_id': 'clip-2',
-          'reason': 'spam',
+          'p_target_type': 'post',
+          'p_target_id': 'clip-2',
+          'p_reason': 'spam',
+          'p_details': null,
         }
       ]);
       expect(find.textContaining('Мэдээлэл хүлээн авлаа'), findsNothing);
@@ -457,11 +465,13 @@ void main() {
           ? http.Response('{"code":"42501","message":"Denied"}', 403,
               headers: {'content-type': 'application/json'},
               request: reportRequest)
-          : http.Response('', 204, request: reportRequest));
-      for (var frame = 0; frame < 30; frame++) {
+          : http.Response(
+              jsonEncode('20000000-0000-4000-8000-000000000001'), 200,
+              request: reportRequest));
+      for (var frame = 0; frame < 5; frame++) {
         await tester.pump(const Duration(milliseconds: 100));
       }
-      // Initial progress toast lasts two seconds, then the server result.
+      // Observe the two-second receipt toast before it expires.
       expect(find.textContaining('PostgrestException'), findsNothing);
       expect(find.textContaining('Мэдэгдлийг хүлээн авлаа'), findsNothing);
       if (denied) {

@@ -2,11 +2,12 @@ import 'user_profile.dart';
 
 class Story {
   final String id;
+  final String moderationStatus;
   final String userId;
   final String mediaUrl;
-  final String mediaType;   // 'image' | 'video'
+  final String mediaType; // 'image' | 'video'
   final String? caption;
-  final int duration;       // seconds per story
+  final int duration; // seconds per story
   final int viewCount;
   final DateTime expiresAt;
   final DateTime createdAt;
@@ -21,6 +22,7 @@ class Story {
 
   const Story({
     required this.id,
+    this.moderationStatus = 'approved',
     required this.userId,
     required this.mediaUrl,
     this.mediaType = 'image',
@@ -42,31 +44,38 @@ class Story {
   bool get isExpired => DateTime.now().isAfter(expiresAt);
 
   factory Story.fromJson(Map<String, dynamic> json) => Story(
-    id:        json['id'] as String,
-    userId:    json['user_id'] as String,
-    mediaUrl:  json['media_url'] as String,
-    mediaType: json['media_type'] as String? ?? 'image',
-    caption:   json['caption'] as String?,
-    duration:  (json['duration'] as num?)?.toInt() ?? 5,
-    viewCount: (json['view_count'] as num?)?.toInt() ?? 0,
-    expiresAt: DateTime.tryParse(json['expires_at']?.toString() ?? '')
-        ?? DateTime.now().add(const Duration(hours: 24)),
-    createdAt: DateTime.tryParse(json['created_at']?.toString() ?? '') ?? DateTime.now(),
-    author:    _parseProfile(json['profiles']),
-    venueId:   json['venue_id'] as String?,
-    venueRef:  (json['venue_ref'] ?? json['venue_id']) as String?,
-    venueName: ((json['venue_catalog'] as Map?)?['name'] ?? (json['venues'] as Map?)?['name']) as String?,
-    mentions:  (json['mentions'] as List?)?.map((e) => e.toString()).toList()
-                 ?? const [],
-    musicUrl:    json['music_url'] as String?,
-    musicTitle:  json['music_title'] as String?,
-    musicArtist: json['music_artist'] as String?,
-  );
+        id: json['id'] as String,
+        moderationStatus: json['moderation_status'] as String? ?? 'approved',
+        userId: json['user_id'] as String,
+        mediaUrl: json['media_url'] as String,
+        mediaType: json['media_type'] as String? ?? 'image',
+        caption: json['caption'] as String?,
+        duration: (json['duration'] as num?)?.toInt() ?? 5,
+        viewCount: (json['view_count'] as num?)?.toInt() ?? 0,
+        expiresAt: DateTime.tryParse(json['expires_at']?.toString() ?? '') ??
+            DateTime.now().add(const Duration(hours: 24)),
+        createdAt: DateTime.tryParse(json['created_at']?.toString() ?? '') ??
+            DateTime.now(),
+        author: _parseProfile(json['profiles']),
+        venueId: json['venue_id'] as String?,
+        venueRef: (json['venue_ref'] ?? json['venue_id']) as String?,
+        venueName: ((json['venue_catalog'] as Map?)?['name'] ??
+            (json['venues'] as Map?)?['name']) as String?,
+        mentions:
+            (json['mentions'] as List?)?.map((e) => e.toString()).toList() ??
+                const [],
+        musicUrl: json['music_url'] as String?,
+        musicTitle: json['music_title'] as String?,
+        musicArtist: json['music_artist'] as String?,
+      );
 
   static UserProfile? _parseProfile(dynamic p) {
     if (p == null) return null;
-    try { return UserProfile.fromJson(p as Map<String, dynamic>); }
-    catch (_) { return null; }
+    try {
+      return UserProfile.fromJson(p as Map<String, dynamic>);
+    } catch (_) {
+      return null;
+    }
   }
 }
 

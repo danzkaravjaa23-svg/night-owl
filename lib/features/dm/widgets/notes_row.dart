@@ -1,3 +1,5 @@
+import '../../profile/widgets/block_report_sheet.dart';
+import '../../../core/widgets/content_review_notice.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -91,7 +93,7 @@ class NotesRowState extends State<NotesRow> {
           .toIso8601String();
       final data = await SupabaseService.client
           .from('notes')
-          .select('user_id, text, venue_id, created_at')
+          .select('id, user_id, text, venue_id, created_at, moderation_status')
           .gt('created_at', cutoff)
           .order('created_at', ascending: false)
           .limit(50);
@@ -130,6 +132,8 @@ class NotesRowState extends State<NotesRow> {
       final list = rows.map((r) {
         final p = pmap[r['user_id']];
         return {
+          'id': r['id'],
+          'moderation_status': r['moderation_status'],
           'user_id': r['user_id'],
           'username': p?['username'] ?? 'User',
           'avatar_url': p?['avatar_url'],
@@ -252,6 +256,12 @@ class NotesRowState extends State<NotesRow> {
                                   .copyWith(color: AppColors.textPrimary))),
                     ]),
                   ],
+                  if (n['id'] is String)
+                    TextButton.icon(
+                        onPressed: () => showReportSheet(sheetCtx,
+                            targetType: 'note', targetId: n['id'] as String),
+                        icon: const Icon(Icons.flag_outlined),
+                        label: const Text('Note-г мэдээлэх')),
                   const SizedBox(height: 18),
                   _Pressable(
                     onTap: () {
@@ -540,7 +550,10 @@ class _NoteComposerState extends ConsumerState<_NoteComposer> {
       } else {
         await _service.save(_session, text, venue);
       }
-      if (mounted && _session.isCurrent) Navigator.pop(context, true);
+      if (mounted && _session.isCurrent) {
+        if (!deleting) showSubmittedForReview(context);
+        Navigator.pop(context, true);
+      }
     } catch (_) {
       if (mounted && _session.isCurrent) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
@@ -593,6 +606,9 @@ class _NoteComposerState extends ConsumerState<_NoteComposer> {
                 style: AppTextStyles.bodyXs
                     .copyWith(color: AppColors.textSecondary)),
             const SizedBox(height: 14),
+            ContentReviewNotice(
+                status: widget.existing?['moderation_status'] as String? ??
+                    'approved'),
             TextField(
               controller: _ctrl,
               readOnly: _busy,

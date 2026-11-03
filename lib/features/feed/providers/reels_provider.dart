@@ -16,7 +16,7 @@ class ReelsRepository {
 
   static const _columns =
       'id, user_id, caption, media_url, media_urls, media_type, '
-      'likes_count, comments_count, created_at, venue_ref, '
+      'likes_count, comments_count, created_at, venue_ref, moderation_status, '
       'venue_catalog!venue_ref (name), '
       'profiles!user_id (username, avatar_url)';
   static const _videoFilter = 'media_type.eq.video,'

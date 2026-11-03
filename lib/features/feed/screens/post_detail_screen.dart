@@ -1,3 +1,4 @@
+import '../../../core/widgets/content_review_notice.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -230,6 +231,7 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
     }
 
     _commentCtrl.clear();
+    showSubmittedForReview(context);
     HapticFeedback.lightImpact();
     // Scroll to bottom after new comment
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -328,7 +330,8 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
         if (!_isCurrent(request)) throw StateError('Пост өөрчлөгдсөн байна');
         await ref.read(feedProvider.notifier).editCaption(post.id, text);
         if (_isCurrent(request)) {
-          setState(() => _post = _post!.copyWith(caption: text));
+          setState(() => _post =
+              _post!.copyWith(caption: text, moderationStatus: 'pending'));
         }
       },
       onDelete: () async {
@@ -389,6 +392,13 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
                                   onComment: () => _focusNode.requestFocus(),
                                 ),
                 ),
+
+                if (_post?.userId == me)
+                  SliverToBoxAdapter(
+                      child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 20),
+                          child: ContentReviewNotice(
+                              status: _post!.moderationStatus))),
 
                 // ── Comments header — жижиг том үсэг, tertiary (нэгдсэн хэв маяг) ──
                 if (canInteract) ...[
@@ -1078,10 +1088,12 @@ class _CommentTileState extends State<_CommentTile> {
                       .copyWith(color: AppColors.textTertiary)),
             ]),
             const SizedBox(height: 3),
+            if (widget.isOwn)
+              ContentReviewNotice(status: comment.moderationStatus),
             Text(comment.body,
                 style: AppTextStyles.bodyMd.copyWith(height: 1.4)),
             // Үйлдлийн мөр — текст 11px хэвээр, харин хүрэлтийн талбай 44px
-            Row(children: [
+            Wrap(crossAxisAlignment: WrapCrossAlignment.center, children: [
               _Press(
                 scale: 0.95,
                 onTap: widget.onReply,
@@ -1092,6 +1104,12 @@ class _CommentTileState extends State<_CommentTile> {
                           fontWeight: FontWeight.w600)),
                 ),
               ),
+              if (!widget.isOwn)
+                TextButton.icon(
+                    onPressed: () => showReportSheet(context,
+                        targetType: 'comment', targetId: comment.id),
+                    icon: const Icon(Icons.flag_outlined, size: 16),
+                    label: const Text('Мэдээлэх')),
               if (widget.isOwn) ...[
                 const SizedBox(width: 8),
                 _Press(

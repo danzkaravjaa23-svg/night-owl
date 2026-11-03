@@ -1,3 +1,4 @@
+import '../../../core/widgets/content_review_notice.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -20,11 +21,16 @@ const int _maxVideoBytes = 50 * 1024 * 1024; // Storage bucket limit
 const int _maxImageBytes = 25 * 1024 * 1024; // 25MB
 
 class CreatePostScreen extends ConsumerStatefulWidget {
+  final bool videoOnly;
   final ContentPublicationService? publicationService;
   final Future<List<PickedMediaFile>> Function({bool multiple})? mediaPicker;
   final VenueCatalogLoader? venueLoader;
   const CreatePostScreen(
-      {super.key, this.publicationService, this.mediaPicker, this.venueLoader});
+      {super.key,
+      this.videoOnly = false,
+      this.publicationService,
+      this.mediaPicker,
+      this.venueLoader});
 
   @override
   ConsumerState<CreatePostScreen> createState() => _CreatePostScreenState();
@@ -100,7 +106,9 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
     setState(() => _allowExit = true);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
-        context.canPop() ? context.pop() : context.go(AppRoutes.feed);
+        context.canPop()
+            ? context.pop()
+            : context.go(widget.videoOnly ? AppRoutes.reels : AppRoutes.feed);
       }
     });
   }
@@ -119,8 +127,10 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
       _error = null;
     });
     try {
-      final picked = await (widget.mediaPicker ?? pickPostMedia)(
-          multiple: !append || !_isVideoPost);
+      final picker = widget.mediaPicker ??
+          (widget.videoOnly ? pickPostVideo : pickPostMedia);
+      final picked = await picker(
+          multiple: !widget.videoOnly && (!append || !_isVideoPost));
       if (!mounted || !_session.isCurrent) {
         for (final media in picked) {
           revokePreviewUrl(media.previewUrl);
@@ -128,7 +138,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
         return;
       }
       if (picked.isEmpty) return;
-      final acceptVideo = !append && picked.first.isVideo;
+      final acceptVideo = widget.videoOnly || (!append && picked.first.isVideo);
       final accepted = <PickedMediaFile>[];
       final room = acceptVideo ? 1 : _maxImages - (append ? _media.length : 0);
       for (final file in picked) {
@@ -151,8 +161,9 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
         }
       }
       if (accepted.isEmpty) {
-        setState(() => _error =
-            'Тохирох файл алга. Зураг 25MB, видео 50MB хүртэл; MP4, MOV, WebM эсвэл зураг сонгоно уу.');
+        setState(() => _error = widget.videoOnly
+            ? '50MB хүртэл MP4, MOV эсвэл WebM видео сонгоно уу.'
+            : 'Тохирох файл алга. Зураг 25MB, видео 50MB хүртэл; MP4, MOV, WebM эсвэл зураг сонгоно уу.');
         return;
       }
       // Validate replacement before releasing the existing draft.
@@ -224,7 +235,9 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
       return;
     }
     if (_media.isEmpty) {
-      setState(() => _error = 'Зураг эсвэл видео сонгоно уу');
+      setState(() => _error = widget.videoOnly
+          ? 'Видео сонгоно уу'
+          : 'Зураг эсвэл видео сонгоно уу');
       return;
     }
     final media = List<PickedMediaFile>.of(_media);
@@ -284,6 +297,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
       setState(() => _uploadProgress = null);
       await _publisher.publish(_session, 'posts', _pendingRow!);
       if (!mounted || !_session.isCurrent) return;
+      showSubmittedForReview(context);
       ref.invalidate(feedProvider);
       ref.read(postsVersionProvider.notifier).state++;
       ref.invalidate(currentProfileProvider);
@@ -291,7 +305,11 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
       setState(() => _allowExit = true);
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted && _session.isCurrent) {
-          context.canPop() ? context.pop() : context.go(AppRoutes.feed);
+          if (widget.videoOnly) {
+            context.go(AppRoutes.reels);
+          } else {
+            context.canPop() ? context.pop() : context.go(AppRoutes.feed);
+          }
         }
       });
     } catch (error) {
@@ -333,7 +351,8 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
               tooltip: 'Хаах',
               onPressed: (_loading || _picking) ? null : _requestClose,
               icon: const Icon(Icons.close)),
-          title: Text('Шинэ пост', style: AppTextStyles.h2),
+          title: Text(widget.videoOnly ? 'Богино видео' : 'Шинэ пост',
+              style: AppTextStyles.h2),
           actions: [
             Padding(
               padding: const EdgeInsets.only(right: 8),
@@ -409,7 +428,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                       border: Border.all(color: AppColors.hairline),
                     ),
                     clipBehavior: Clip.antiAlias,
-                    child: _PickerPlaceholder(),
+                    child: _PickerPlaceholder(videoOnly: widget.videoOnly),
                   ),
                 ),
 
@@ -523,7 +542,9 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
           ),
           const SizedBox(height: 8),
           Text(
-            'Байршилтай пост газрын хэмнэлд 7 хоног тооцогдоно. Пост болон байршил хэвээр үлдэнэ.',
+            widget.videoOnly
+                ? 'Байршилтай видео газрын хэмнэлд 7 хоног тооцогдоно. Видео болон байршил хэвээр үлдэнэ.'
+                : 'Байршилтай пост газрын хэмнэлд 7 хоног тооцогдоно. Пост болон байршил хэвээр үлдэнэ.',
             style:
                 AppTextStyles.bodyXs.copyWith(color: AppColors.textSecondary),
           ),
@@ -532,9 +553,11 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
           GradientButton(
             label: _pendingRow != null
                 ? 'Дахин шалгах'
-                : _media.length > 1
-                    ? 'Хуваалцах (${_media.length})'
-                    : 'Хуваалцах',
+                : widget.videoOnly
+                    ? 'Reel хуваалцах'
+                    : _media.length > 1
+                        ? 'Хуваалцах (${_media.length})'
+                        : 'Хуваалцах',
             onPressed: (!_hasMedia || _loading || _picking) ? null : _post,
           ),
           const SizedBox(height: 40),
@@ -693,9 +716,10 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
       final venue = await pickDiscoveryVenue(
         context,
         selectedRef: _venueRef,
-        title: 'Постын байршил',
-        helperText:
-            'Нийтэлснээс хойш 7 хоног газрын хэмнэлд тооцогдоно. Пост болон байршил хэвээр үлдэнэ.',
+        title: widget.videoOnly ? 'Видеоны байршил' : 'Постын байршил',
+        helperText: widget.videoOnly
+            ? 'Нийтэлснээс хойш 7 хоног газрын хэмнэлд тооцогдоно. Видео болон байршил хэвээр үлдэнэ.'
+            : 'Нийтэлснээс хойш 7 хоног газрын хэмнэлд тооцогдоно. Пост болон байршил хэвээр үлдэнэ.',
         loader: widget.venueLoader,
       );
       if (venue != null && mounted && _canEdit) {
@@ -798,6 +822,9 @@ class _Thumb extends StatelessWidget {
 
 // ─── Picker placeholder ───
 class _PickerPlaceholder extends StatelessWidget {
+  final bool videoOnly;
+  const _PickerPlaceholder({required this.videoOnly});
+
   @override
   Widget build(BuildContext context) => Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -809,14 +836,25 @@ class _PickerPlaceholder extends StatelessWidget {
               shape: BoxShape.circle,
               gradient: AppColors.accentGradientSoft,
             ),
-            child: const Icon(Icons.perm_media_outlined,
-                color: AppColors.accentStart, size: 38),
+            child: Icon(
+                videoOnly
+                    ? Icons.slow_motion_video_outlined
+                    : Icons.perm_media_outlined,
+                color: AppColors.accentStart,
+                size: 38),
           ),
           const SizedBox(height: 16),
-          Text('Зураг (10 хүртэл) эсвэл видео сонгох',
-              style: AppTextStyles.labelLg, textAlign: TextAlign.center),
+          Text(
+              videoOnly
+                  ? 'Видео сонгох'
+                  : 'Зураг (10 хүртэл) эсвэл видео сонгох',
+              style: AppTextStyles.labelLg,
+              textAlign: TextAlign.center),
           const SizedBox(height: 6),
-          Text('Зураг 25MB · Видео 50MB хүртэл\nMP4, MOV, WebM, JPG, PNG',
+          Text(
+              videoOnly
+                  ? 'Нэг видео · 50MB хүртэл\nMP4, MOV, WebM'
+                  : 'Зураг 25MB · Видео 50MB хүртэл\nMP4, MOV, WebM, JPG, PNG',
               textAlign: TextAlign.center,
               style:
                   AppTextStyles.bodyXs.copyWith(color: AppColors.textTertiary)),

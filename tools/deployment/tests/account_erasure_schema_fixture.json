@@ -1,0 +1,1851 @@
+{
+  "columns": [
+    {
+      "type": "uuid",
+      "table": "admin_audit_log",
+      "column": "id",
+      "nullable": "NO"
+    },
+    {
+      "type": "uuid",
+      "table": "admin_audit_log",
+      "column": "actor_id",
+      "nullable": "YES"
+    },
+    {
+      "type": "text",
+      "table": "admin_audit_log",
+      "column": "actor_username",
+      "nullable": "YES"
+    },
+    {
+      "type": "text",
+      "table": "admin_audit_log",
+      "column": "action",
+      "nullable": "NO"
+    },
+    {
+      "type": "text",
+      "table": "admin_audit_log",
+      "column": "target_type",
+      "nullable": "NO"
+    },
+    {
+      "type": "text",
+      "table": "admin_audit_log",
+      "column": "target_id",
+      "nullable": "NO"
+    },
+    {
+      "type": "text",
+      "table": "admin_audit_log",
+      "column": "reason",
+      "nullable": "NO"
+    },
+    {
+      "type": "timestamptz",
+      "table": "admin_audit_log",
+      "column": "created_at",
+      "nullable": "NO"
+    },
+    {
+      "type": "uuid",
+      "table": "blocks",
+      "column": "blocker_id",
+      "nullable": "NO"
+    },
+    {
+      "type": "uuid",
+      "table": "blocks",
+      "column": "blocked_id",
+      "nullable": "NO"
+    },
+    {
+      "type": "timestamptz",
+      "table": "blocks",
+      "column": "created_at",
+      "nullable": "YES"
+    },
+    {
+      "type": "uuid",
+      "table": "checkins",
+      "column": "id",
+      "nullable": "NO"
+    },
+    {
+      "type": "uuid",
+      "table": "checkins",
+      "column": "user_id",
+      "nullable": "NO"
+    },
+    {
+      "type": "uuid",
+      "table": "checkins",
+      "column": "venue_id",
+      "nullable": "NO"
+    },
+    {
+      "type": "timestamptz",
+      "table": "checkins",
+      "column": "expires_at",
+      "nullable": "YES"
+    },
+    {
+      "type": "timestamptz",
+      "table": "checkins",
+      "column": "created_at",
+      "nullable": "YES"
+    },
+    {
+      "type": "text",
+      "table": "checkins",
+      "column": "audience",
+      "nullable": "NO"
+    },
+    {
+      "type": "uuid",
+      "table": "collection_places",
+      "column": "collection_id",
+      "nullable": "NO"
+    },
+    {
+      "type": "text",
+      "table": "collection_places",
+      "column": "venue_ref",
+      "nullable": "NO"
+    },
+    {
+      "type": "text",
+      "table": "collection_places",
+      "column": "note",
+      "nullable": "NO"
+    },
+    {
+      "type": "timestamptz",
+      "table": "collection_places",
+      "column": "created_at",
+      "nullable": "NO"
+    },
+    {
+      "type": "uuid",
+      "table": "comment_likes",
+      "column": "comment_id",
+      "nullable": "NO"
+    },
+    {
+      "type": "uuid",
+      "table": "comment_likes",
+      "column": "user_id",
+      "nullable": "NO"
+    },
+    {
+      "type": "timestamptz",
+      "table": "comment_likes",
+      "column": "created_at",
+      "nullable": "YES"
+    },
+    {
+      "type": "uuid",
+      "table": "comments",
+      "column": "id",
+      "nullable": "NO"
+    },
+    {
+      "type": "uuid",
+      "table": "comments",
+      "column": "post_id",
+      "nullable": "NO"
+    },
+    {
+      "type": "uuid",
+      "table": "comments",
+      "column": "user_id",
+      "nullable": "NO"
+    },
+    {
+      "type": "text",
+      "table": "comments",
+      "column": "body",
+      "nullable": "NO"
+    },
+    {
+      "type": "timestamptz",
+      "table": "comments",
+      "column": "created_at",
+      "nullable": "YES"
+    },
+    {
+      "type": "int4",
+      "table": "comments",
+      "column": "likes_count",
+      "nullable": "YES"
+    },
+    {
+      "type": "uuid",
+      "table": "comments",
+      "column": "parent_id",
+      "nullable": "YES"
+    },
+    {
+      "type": "uuid",
+      "table": "discovery_activity",
+      "column": "id",
+      "nullable": "NO"
+    },
+    {
+      "type": "uuid",
+      "table": "discovery_activity",
+      "column": "user_id",
+      "nullable": "NO"
+    },
+    {
+      "type": "text",
+      "table": "discovery_activity",
+      "column": "event",
+      "nullable": "NO"
+    },
+    {
+      "type": "text",
+      "table": "discovery_activity",
+      "column": "target",
+      "nullable": "NO"
+    },
+    {
+      "type": "date",
+      "table": "discovery_activity",
+      "column": "day",
+      "nullable": "NO"
+    },
+    {
+      "type": "timestamptz",
+      "table": "discovery_activity",
+      "column": "created_at",
+      "nullable": "NO"
+    },
+    {
+      "type": "uuid",
+      "table": "dm_requests",
+      "column": "requester_id",
+      "nullable": "NO"
+    },
+    {
+      "type": "uuid",
+      "table": "dm_requests",
+      "column": "target_id",
+      "nullable": "NO"
+    },
+    {
+      "type": "text",
+      "table": "dm_requests",
+      "column": "status",
+      "nullable": "NO"
+    },
+    {
+      "type": "timestamptz",
+      "table": "dm_requests",
+      "column": "created_at",
+      "nullable": "NO"
+    },
+    {
+      "type": "uuid",
+      "table": "event_features",
+      "column": "event_id",
+      "nullable": "NO"
+    },
+    {
+      "type": "int4",
+      "table": "event_features",
+      "column": "rank",
+      "nullable": "NO"
+    },
+    {
+      "type": "uuid",
+      "table": "event_features",
+      "column": "selected_by",
+      "nullable": "YES"
+    },
+    {
+      "type": "timestamptz",
+      "table": "event_features",
+      "column": "selected_at",
+      "nullable": "NO"
+    },
+    {
+      "type": "uuid",
+      "table": "event_rsvps",
+      "column": "event_id",
+      "nullable": "NO"
+    },
+    {
+      "type": "uuid",
+      "table": "event_rsvps",
+      "column": "user_id",
+      "nullable": "NO"
+    },
+    {
+      "type": "text",
+      "table": "event_rsvps",
+      "column": "status",
+      "nullable": "NO"
+    },
+    {
+      "type": "timestamptz",
+      "table": "event_rsvps",
+      "column": "created_at",
+      "nullable": "YES"
+    },
+    {
+      "type": "uuid",
+      "table": "events",
+      "column": "id",
+      "nullable": "NO"
+    },
+    {
+      "type": "uuid",
+      "table": "events",
+      "column": "venue_id",
+      "nullable": "YES"
+    },
+    {
+      "type": "uuid",
+      "table": "events",
+      "column": "organizer_id",
+      "nullable": "YES"
+    },
+    {
+      "type": "text",
+      "table": "events",
+      "column": "title",
+      "nullable": "NO"
+    },
+    {
+      "type": "text",
+      "table": "events",
+      "column": "description",
+      "nullable": "YES"
+    },
+    {
+      "type": "text",
+      "table": "events",
+      "column": "cover_url",
+      "nullable": "YES"
+    },
+    {
+      "type": "timestamptz",
+      "table": "events",
+      "column": "starts_at",
+      "nullable": "NO"
+    },
+    {
+      "type": "timestamptz",
+      "table": "events",
+      "column": "ends_at",
+      "nullable": "YES"
+    },
+    {
+      "type": "int4",
+      "table": "events",
+      "column": "price",
+      "nullable": "YES"
+    },
+    {
+      "type": "int4",
+      "table": "events",
+      "column": "capacity",
+      "nullable": "YES"
+    },
+    {
+      "type": "int4",
+      "table": "events",
+      "column": "attendee_count",
+      "nullable": "YES"
+    },
+    {
+      "type": "timestamptz",
+      "table": "events",
+      "column": "created_at",
+      "nullable": "YES"
+    },
+    {
+      "type": "uuid",
+      "table": "follow_requests",
+      "column": "requester_id",
+      "nullable": "NO"
+    },
+    {
+      "type": "uuid",
+      "table": "follow_requests",
+      "column": "target_id",
+      "nullable": "NO"
+    },
+    {
+      "type": "timestamptz",
+      "table": "follow_requests",
+      "column": "created_at",
+      "nullable": "NO"
+    },
+    {
+      "type": "uuid",
+      "table": "follows",
+      "column": "id",
+      "nullable": "NO"
+    },
+    {
+      "type": "uuid",
+      "table": "follows",
+      "column": "follower_id",
+      "nullable": "NO"
+    },
+    {
+      "type": "uuid",
+      "table": "follows",
+      "column": "following_id",
+      "nullable": "NO"
+    },
+    {
+      "type": "timestamptz",
+      "table": "follows",
+      "column": "created_at",
+      "nullable": "YES"
+    },
+    {
+      "type": "uuid",
+      "table": "group_chats",
+      "column": "id",
+      "nullable": "NO"
+    },
+    {
+      "type": "text",
+      "table": "group_chats",
+      "column": "name",
+      "nullable": "NO"
+    },
+    {
+      "type": "uuid",
+      "table": "group_chats",
+      "column": "created_by",
+      "nullable": "YES"
+    },
+    {
+      "type": "timestamptz",
+      "table": "group_chats",
+      "column": "created_at",
+      "nullable": "YES"
+    },
+    {
+      "type": "uuid",
+      "table": "group_members",
+      "column": "group_id",
+      "nullable": "NO"
+    },
+    {
+      "type": "uuid",
+      "table": "group_members",
+      "column": "user_id",
+      "nullable": "NO"
+    },
+    {
+      "type": "timestamptz",
+      "table": "group_members",
+      "column": "joined_at",
+      "nullable": "YES"
+    },
+    {
+      "type": "uuid",
+      "table": "group_messages",
+      "column": "id",
+      "nullable": "NO"
+    },
+    {
+      "type": "uuid",
+      "table": "group_messages",
+      "column": "group_id",
+      "nullable": "NO"
+    },
+    {
+      "type": "uuid",
+      "table": "group_messages",
+      "column": "sender_id",
+      "nullable": "NO"
+    },
+    {
+      "type": "text",
+      "table": "group_messages",
+      "column": "body",
+      "nullable": "NO"
+    },
+    {
+      "type": "timestamptz",
+      "table": "group_messages",
+      "column": "created_at",
+      "nullable": "YES"
+    },
+    {
+      "type": "uuid",
+      "table": "likes",
+      "column": "id",
+      "nullable": "NO"
+    },
+    {
+      "type": "uuid",
+      "table": "likes",
+      "column": "user_id",
+      "nullable": "NO"
+    },
+    {
+      "type": "uuid",
+      "table": "likes",
+      "column": "post_id",
+      "nullable": "NO"
+    },
+    {
+      "type": "timestamptz",
+      "table": "likes",
+      "column": "created_at",
+      "nullable": "YES"
+    },
+    {
+      "type": "uuid",
+      "table": "live_comments",
+      "column": "id",
+      "nullable": "NO"
+    },
+    {
+      "type": "uuid",
+      "table": "live_comments",
+      "column": "stream_id",
+      "nullable": "YES"
+    },
+    {
+      "type": "uuid",
+      "table": "live_comments",
+      "column": "user_id",
+      "nullable": "YES"
+    },
+    {
+      "type": "text",
+      "table": "live_comments",
+      "column": "text",
+      "nullable": "NO"
+    },
+    {
+      "type": "timestamptz",
+      "table": "live_comments",
+      "column": "created_at",
+      "nullable": "YES"
+    },
+    {
+      "type": "uuid",
+      "table": "live_streams",
+      "column": "id",
+      "nullable": "NO"
+    },
+    {
+      "type": "uuid",
+      "table": "live_streams",
+      "column": "user_id",
+      "nullable": "YES"
+    },
+    {
+      "type": "text",
+      "table": "live_streams",
+      "column": "title",
+      "nullable": "NO"
+    },
+    {
+      "type": "bool",
+      "table": "live_streams",
+      "column": "is_live",
+      "nullable": "YES"
+    },
+    {
+      "type": "int4",
+      "table": "live_streams",
+      "column": "viewer_count",
+      "nullable": "YES"
+    },
+    {
+      "type": "text",
+      "table": "live_streams",
+      "column": "thumbnail_url",
+      "nullable": "YES"
+    },
+    {
+      "type": "timestamptz",
+      "table": "live_streams",
+      "column": "started_at",
+      "nullable": "YES"
+    },
+    {
+      "type": "timestamptz",
+      "table": "live_streams",
+      "column": "ended_at",
+      "nullable": "YES"
+    },
+    {
+      "type": "uuid",
+      "table": "live_streams",
+      "column": "venue_id",
+      "nullable": "YES"
+    },
+    {
+      "type": "uuid",
+      "table": "messages",
+      "column": "id",
+      "nullable": "NO"
+    },
+    {
+      "type": "uuid",
+      "table": "messages",
+      "column": "sender_id",
+      "nullable": "NO"
+    },
+    {
+      "type": "uuid",
+      "table": "messages",
+      "column": "receiver_id",
+      "nullable": "NO"
+    },
+    {
+      "type": "text",
+      "table": "messages",
+      "column": "body",
+      "nullable": "NO"
+    },
+    {
+      "type": "bool",
+      "table": "messages",
+      "column": "is_read",
+      "nullable": "YES"
+    },
+    {
+      "type": "timestamptz",
+      "table": "messages",
+      "column": "created_at",
+      "nullable": "YES"
+    },
+    {
+      "type": "text",
+      "table": "messages",
+      "column": "conversation_id",
+      "nullable": "YES"
+    },
+    {
+      "type": "text",
+      "table": "messages",
+      "column": "story_media_url",
+      "nullable": "YES"
+    },
+    {
+      "type": "text",
+      "table": "messages",
+      "column": "note_text",
+      "nullable": "YES"
+    },
+    {
+      "type": "text",
+      "table": "messages",
+      "column": "venue_ref",
+      "nullable": "YES"
+    },
+    {
+      "type": "uuid",
+      "table": "notes",
+      "column": "id",
+      "nullable": "NO"
+    },
+    {
+      "type": "uuid",
+      "table": "notes",
+      "column": "user_id",
+      "nullable": "NO"
+    },
+    {
+      "type": "text",
+      "table": "notes",
+      "column": "text",
+      "nullable": "NO"
+    },
+    {
+      "type": "uuid",
+      "table": "notes",
+      "column": "venue_id",
+      "nullable": "YES"
+    },
+    {
+      "type": "timestamptz",
+      "table": "notes",
+      "column": "expires_at",
+      "nullable": "YES"
+    },
+    {
+      "type": "timestamptz",
+      "table": "notes",
+      "column": "created_at",
+      "nullable": "YES"
+    },
+    {
+      "type": "uuid",
+      "table": "notifications",
+      "column": "id",
+      "nullable": "NO"
+    },
+    {
+      "type": "uuid",
+      "table": "notifications",
+      "column": "user_id",
+      "nullable": "NO"
+    },
+    {
+      "type": "uuid",
+      "table": "notifications",
+      "column": "actor_id",
+      "nullable": "NO"
+    },
+    {
+      "type": "text",
+      "table": "notifications",
+      "column": "actor_name",
+      "nullable": "YES"
+    },
+    {
+      "type": "text",
+      "table": "notifications",
+      "column": "actor_avatar",
+      "nullable": "YES"
+    },
+    {
+      "type": "text",
+      "table": "notifications",
+      "column": "type",
+      "nullable": "NO"
+    },
+    {
+      "type": "text",
+      "table": "notifications",
+      "column": "message",
+      "nullable": "NO"
+    },
+    {
+      "type": "bool",
+      "table": "notifications",
+      "column": "is_read",
+      "nullable": "YES"
+    },
+    {
+      "type": "timestamptz",
+      "table": "notifications",
+      "column": "created_at",
+      "nullable": "YES"
+    },
+    {
+      "type": "uuid",
+      "table": "notifications",
+      "column": "post_id",
+      "nullable": "YES"
+    },
+    {
+      "type": "uuid",
+      "table": "pilot_content",
+      "column": "post_id",
+      "nullable": "NO"
+    },
+    {
+      "type": "timestamptz",
+      "table": "pilot_content",
+      "column": "reviewed_at",
+      "nullable": "NO"
+    },
+    {
+      "type": "uuid",
+      "table": "pilot_creators",
+      "column": "user_id",
+      "nullable": "NO"
+    },
+    {
+      "type": "timestamptz",
+      "table": "pilot_creators",
+      "column": "enrolled_at",
+      "nullable": "NO"
+    },
+    {
+      "type": "uuid",
+      "table": "pilot_participants",
+      "column": "user_id",
+      "nullable": "NO"
+    },
+    {
+      "type": "timestamptz",
+      "table": "pilot_participants",
+      "column": "enrolled_at",
+      "nullable": "NO"
+    },
+    {
+      "type": "text",
+      "table": "pilot_venues",
+      "column": "venue_ref",
+      "nullable": "NO"
+    },
+    {
+      "type": "timestamptz",
+      "table": "pilot_venues",
+      "column": "reviewed_at",
+      "nullable": "NO"
+    },
+    {
+      "type": "uuid",
+      "table": "place_collections",
+      "column": "id",
+      "nullable": "NO"
+    },
+    {
+      "type": "uuid",
+      "table": "place_collections",
+      "column": "user_id",
+      "nullable": "NO"
+    },
+    {
+      "type": "text",
+      "table": "place_collections",
+      "column": "title",
+      "nullable": "NO"
+    },
+    {
+      "type": "bool",
+      "table": "place_collections",
+      "column": "is_public",
+      "nullable": "NO"
+    },
+    {
+      "type": "timestamptz",
+      "table": "place_collections",
+      "column": "created_at",
+      "nullable": "NO"
+    },
+    {
+      "type": "uuid",
+      "table": "posts",
+      "column": "id",
+      "nullable": "NO"
+    },
+    {
+      "type": "uuid",
+      "table": "posts",
+      "column": "user_id",
+      "nullable": "NO"
+    },
+    {
+      "type": "uuid",
+      "table": "posts",
+      "column": "venue_id",
+      "nullable": "YES"
+    },
+    {
+      "type": "text",
+      "table": "posts",
+      "column": "caption",
+      "nullable": "YES"
+    },
+    {
+      "type": "text",
+      "table": "posts",
+      "column": "media_url",
+      "nullable": "YES"
+    },
+    {
+      "type": "int4",
+      "table": "posts",
+      "column": "likes_count",
+      "nullable": "YES"
+    },
+    {
+      "type": "timestamptz",
+      "table": "posts",
+      "column": "created_at",
+      "nullable": "YES"
+    },
+    {
+      "type": "text",
+      "table": "posts",
+      "column": "venue_name",
+      "nullable": "YES"
+    },
+    {
+      "type": "int4",
+      "table": "posts",
+      "column": "comments_count",
+      "nullable": "YES"
+    },
+    {
+      "type": "text",
+      "table": "posts",
+      "column": "media_type",
+      "nullable": "YES"
+    },
+    {
+      "type": "_text",
+      "table": "posts",
+      "column": "media_urls",
+      "nullable": "YES"
+    },
+    {
+      "type": "text",
+      "table": "posts",
+      "column": "venue_ref",
+      "nullable": "YES"
+    },
+    {
+      "type": "uuid",
+      "table": "profiles",
+      "column": "id",
+      "nullable": "NO"
+    },
+    {
+      "type": "text",
+      "table": "profiles",
+      "column": "username",
+      "nullable": "NO"
+    },
+    {
+      "type": "text",
+      "table": "profiles",
+      "column": "full_name",
+      "nullable": "YES"
+    },
+    {
+      "type": "text",
+      "table": "profiles",
+      "column": "avatar_url",
+      "nullable": "YES"
+    },
+    {
+      "type": "text",
+      "table": "profiles",
+      "column": "bio",
+      "nullable": "YES"
+    },
+    {
+      "type": "_text",
+      "table": "profiles",
+      "column": "interests",
+      "nullable": "YES"
+    },
+    {
+      "type": "bool",
+      "table": "profiles",
+      "column": "is_verified",
+      "nullable": "YES"
+    },
+    {
+      "type": "bool",
+      "table": "profiles",
+      "column": "is_business",
+      "nullable": "YES"
+    },
+    {
+      "type": "text",
+      "table": "profiles",
+      "column": "fcm_token",
+      "nullable": "YES"
+    },
+    {
+      "type": "timestamptz",
+      "table": "profiles",
+      "column": "updated_at",
+      "nullable": "YES"
+    },
+    {
+      "type": "timestamptz",
+      "table": "profiles",
+      "column": "created_at",
+      "nullable": "YES"
+    },
+    {
+      "type": "int4",
+      "table": "profiles",
+      "column": "followers_count",
+      "nullable": "YES"
+    },
+    {
+      "type": "int4",
+      "table": "profiles",
+      "column": "following_count",
+      "nullable": "YES"
+    },
+    {
+      "type": "int4",
+      "table": "profiles",
+      "column": "posts_count",
+      "nullable": "YES"
+    },
+    {
+      "type": "bool",
+      "table": "profiles",
+      "column": "is_admin",
+      "nullable": "YES"
+    },
+    {
+      "type": "bool",
+      "table": "profiles",
+      "column": "is_banned",
+      "nullable": "YES"
+    },
+    {
+      "type": "text",
+      "table": "profiles",
+      "column": "cover_url",
+      "nullable": "YES"
+    },
+    {
+      "type": "timestamptz",
+      "table": "profiles",
+      "column": "last_seen_at",
+      "nullable": "YES"
+    },
+    {
+      "type": "bool",
+      "table": "profiles",
+      "column": "is_private",
+      "nullable": "NO"
+    },
+    {
+      "type": "text",
+      "table": "profiles",
+      "column": "dm_policy",
+      "nullable": "NO"
+    },
+    {
+      "type": "uuid",
+      "table": "reports",
+      "column": "id",
+      "nullable": "NO"
+    },
+    {
+      "type": "uuid",
+      "table": "reports",
+      "column": "reporter_id",
+      "nullable": "NO"
+    },
+    {
+      "type": "text",
+      "table": "reports",
+      "column": "target_type",
+      "nullable": "NO"
+    },
+    {
+      "type": "uuid",
+      "table": "reports",
+      "column": "target_id",
+      "nullable": "NO"
+    },
+    {
+      "type": "text",
+      "table": "reports",
+      "column": "reason",
+      "nullable": "NO"
+    },
+    {
+      "type": "text",
+      "table": "reports",
+      "column": "details",
+      "nullable": "YES"
+    },
+    {
+      "type": "text",
+      "table": "reports",
+      "column": "status",
+      "nullable": "YES"
+    },
+    {
+      "type": "timestamptz",
+      "table": "reports",
+      "column": "created_at",
+      "nullable": "YES"
+    },
+    {
+      "type": "uuid",
+      "table": "saved_posts",
+      "column": "user_id",
+      "nullable": "NO"
+    },
+    {
+      "type": "uuid",
+      "table": "saved_posts",
+      "column": "post_id",
+      "nullable": "NO"
+    },
+    {
+      "type": "timestamptz",
+      "table": "saved_posts",
+      "column": "created_at",
+      "nullable": "YES"
+    },
+    {
+      "type": "uuid",
+      "table": "stories",
+      "column": "id",
+      "nullable": "NO"
+    },
+    {
+      "type": "uuid",
+      "table": "stories",
+      "column": "user_id",
+      "nullable": "NO"
+    },
+    {
+      "type": "text",
+      "table": "stories",
+      "column": "media_url",
+      "nullable": "NO"
+    },
+    {
+      "type": "text",
+      "table": "stories",
+      "column": "media_type",
+      "nullable": "YES"
+    },
+    {
+      "type": "text",
+      "table": "stories",
+      "column": "caption",
+      "nullable": "YES"
+    },
+    {
+      "type": "int4",
+      "table": "stories",
+      "column": "duration",
+      "nullable": "YES"
+    },
+    {
+      "type": "int4",
+      "table": "stories",
+      "column": "view_count",
+      "nullable": "YES"
+    },
+    {
+      "type": "timestamptz",
+      "table": "stories",
+      "column": "expires_at",
+      "nullable": "YES"
+    },
+    {
+      "type": "timestamptz",
+      "table": "stories",
+      "column": "created_at",
+      "nullable": "YES"
+    },
+    {
+      "type": "uuid",
+      "table": "stories",
+      "column": "venue_id",
+      "nullable": "YES"
+    },
+    {
+      "type": "_uuid",
+      "table": "stories",
+      "column": "mentions",
+      "nullable": "YES"
+    },
+    {
+      "type": "text",
+      "table": "stories",
+      "column": "music_url",
+      "nullable": "YES"
+    },
+    {
+      "type": "text",
+      "table": "stories",
+      "column": "music_title",
+      "nullable": "YES"
+    },
+    {
+      "type": "text",
+      "table": "stories",
+      "column": "music_artist",
+      "nullable": "YES"
+    },
+    {
+      "type": "text",
+      "table": "stories",
+      "column": "venue_ref",
+      "nullable": "YES"
+    },
+    {
+      "type": "uuid",
+      "table": "story_likes",
+      "column": "story_id",
+      "nullable": "NO"
+    },
+    {
+      "type": "uuid",
+      "table": "story_likes",
+      "column": "user_id",
+      "nullable": "NO"
+    },
+    {
+      "type": "timestamptz",
+      "table": "story_likes",
+      "column": "created_at",
+      "nullable": "NO"
+    },
+    {
+      "type": "uuid",
+      "table": "story_views",
+      "column": "id",
+      "nullable": "NO"
+    },
+    {
+      "type": "uuid",
+      "table": "story_views",
+      "column": "story_id",
+      "nullable": "NO"
+    },
+    {
+      "type": "uuid",
+      "table": "story_views",
+      "column": "viewer_id",
+      "nullable": "NO"
+    },
+    {
+      "type": "timestamptz",
+      "table": "story_views",
+      "column": "viewed_at",
+      "nullable": "YES"
+    },
+    {
+      "type": "text",
+      "table": "venue_catalog",
+      "column": "ref",
+      "nullable": "NO"
+    },
+    {
+      "type": "uuid",
+      "table": "venue_catalog",
+      "column": "venue_id",
+      "nullable": "YES"
+    },
+    {
+      "type": "text",
+      "table": "venue_catalog",
+      "column": "name",
+      "nullable": "NO"
+    },
+    {
+      "type": "text",
+      "table": "venue_catalog",
+      "column": "venue_type",
+      "nullable": "YES"
+    },
+    {
+      "type": "text",
+      "table": "venue_catalog",
+      "column": "address",
+      "nullable": "YES"
+    },
+    {
+      "type": "text",
+      "table": "venue_catalog",
+      "column": "district",
+      "nullable": "YES"
+    },
+    {
+      "type": "float8",
+      "table": "venue_catalog",
+      "column": "lat",
+      "nullable": "YES"
+    },
+    {
+      "type": "float8",
+      "table": "venue_catalog",
+      "column": "lng",
+      "nullable": "YES"
+    },
+    {
+      "type": "text",
+      "table": "venue_catalog",
+      "column": "cover_url",
+      "nullable": "YES"
+    },
+    {
+      "type": "text",
+      "table": "venue_catalog",
+      "column": "phone",
+      "nullable": "YES"
+    },
+    {
+      "type": "text",
+      "table": "venue_catalog",
+      "column": "website_url",
+      "nullable": "YES"
+    },
+    {
+      "type": "text",
+      "table": "venue_catalog",
+      "column": "source_url",
+      "nullable": "YES"
+    },
+    {
+      "type": "text",
+      "table": "venue_catalog",
+      "column": "source_label",
+      "nullable": "YES"
+    },
+    {
+      "type": "timestamptz",
+      "table": "venue_catalog",
+      "column": "source_retrieved_at",
+      "nullable": "YES"
+    },
+    {
+      "type": "text",
+      "table": "venue_catalog",
+      "column": "hours",
+      "nullable": "YES"
+    },
+    {
+      "type": "int4",
+      "table": "venue_catalog",
+      "column": "price_min",
+      "nullable": "YES"
+    },
+    {
+      "type": "int4",
+      "table": "venue_catalog",
+      "column": "price_max",
+      "nullable": "YES"
+    },
+    {
+      "type": "text",
+      "table": "venue_catalog",
+      "column": "menu_url",
+      "nullable": "YES"
+    },
+    {
+      "type": "_text",
+      "table": "venue_catalog",
+      "column": "vibes",
+      "nullable": "NO"
+    },
+    {
+      "type": "timestamptz",
+      "table": "venue_catalog",
+      "column": "reviewed_at",
+      "nullable": "YES"
+    },
+    {
+      "type": "uuid",
+      "table": "venue_catalog",
+      "column": "reviewed_by",
+      "nullable": "YES"
+    },
+    {
+      "type": "uuid",
+      "table": "venue_reviews",
+      "column": "id",
+      "nullable": "NO"
+    },
+    {
+      "type": "uuid",
+      "table": "venue_reviews",
+      "column": "venue_id",
+      "nullable": "NO"
+    },
+    {
+      "type": "uuid",
+      "table": "venue_reviews",
+      "column": "user_id",
+      "nullable": "NO"
+    },
+    {
+      "type": "int4",
+      "table": "venue_reviews",
+      "column": "rating",
+      "nullable": "NO"
+    },
+    {
+      "type": "text",
+      "table": "venue_reviews",
+      "column": "comment",
+      "nullable": "YES"
+    },
+    {
+      "type": "timestamptz",
+      "table": "venue_reviews",
+      "column": "created_at",
+      "nullable": "YES"
+    },
+    {
+      "type": "uuid",
+      "table": "venue_saves",
+      "column": "user_id",
+      "nullable": "NO"
+    },
+    {
+      "type": "text",
+      "table": "venue_saves",
+      "column": "venue_ref",
+      "nullable": "NO"
+    },
+    {
+      "type": "timestamptz",
+      "table": "venue_saves",
+      "column": "created_at",
+      "nullable": "NO"
+    },
+    {
+      "type": "bool",
+      "table": "venue_saves",
+      "column": "legacy_import",
+      "nullable": "NO"
+    },
+    {
+      "type": "uuid",
+      "table": "venues",
+      "column": "id",
+      "nullable": "NO"
+    },
+    {
+      "type": "text",
+      "table": "venues",
+      "column": "name",
+      "nullable": "NO"
+    },
+    {
+      "type": "text",
+      "table": "venues",
+      "column": "venue_type",
+      "nullable": "YES"
+    },
+    {
+      "type": "float8",
+      "table": "venues",
+      "column": "lat",
+      "nullable": "YES"
+    },
+    {
+      "type": "float8",
+      "table": "venues",
+      "column": "lng",
+      "nullable": "YES"
+    },
+    {
+      "type": "text",
+      "table": "venues",
+      "column": "district",
+      "nullable": "YES"
+    },
+    {
+      "type": "text",
+      "table": "venues",
+      "column": "description",
+      "nullable": "YES"
+    },
+    {
+      "type": "text",
+      "table": "venues",
+      "column": "cover_url",
+      "nullable": "YES"
+    },
+    {
+      "type": "int4",
+      "table": "venues",
+      "column": "checkin_count",
+      "nullable": "YES"
+    },
+    {
+      "type": "timestamptz",
+      "table": "venues",
+      "column": "created_at",
+      "nullable": "YES"
+    },
+    {
+      "type": "uuid",
+      "table": "venues",
+      "column": "owner_id",
+      "nullable": "YES"
+    },
+    {
+      "type": "numeric",
+      "table": "venues",
+      "column": "rating",
+      "nullable": "YES"
+    },
+    {
+      "type": "int4",
+      "table": "venues",
+      "column": "review_count",
+      "nullable": "YES"
+    },
+    {
+      "type": "text",
+      "table": "venues",
+      "column": "phone",
+      "nullable": "YES"
+    },
+    {
+      "type": "text",
+      "table": "venues",
+      "column": "open_time",
+      "nullable": "YES"
+    },
+    {
+      "type": "text",
+      "table": "venues",
+      "column": "close_time",
+      "nullable": "YES"
+    },
+    {
+      "type": "text",
+      "table": "venues",
+      "column": "address",
+      "nullable": "YES"
+    }
+  ],
+  "foreign_keys": [
+    {
+      "name": "blocks_blocked_id_fkey",
+      "table": "blocks",
+      "definition": "FOREIGN KEY (blocked_id) REFERENCES profiles(id) ON DELETE CASCADE"
+    },
+    {
+      "name": "blocks_blocker_id_fkey",
+      "table": "blocks",
+      "definition": "FOREIGN KEY (blocker_id) REFERENCES profiles(id) ON DELETE CASCADE"
+    },
+    {
+      "name": "checkins_user_id_fkey",
+      "table": "checkins",
+      "definition": "FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE CASCADE"
+    },
+    {
+      "name": "checkins_venue_id_fkey",
+      "table": "checkins",
+      "definition": "FOREIGN KEY (venue_id) REFERENCES venues(id) ON DELETE CASCADE"
+    },
+    {
+      "name": "collection_places_collection_id_fkey",
+      "table": "collection_places",
+      "definition": "FOREIGN KEY (collection_id) REFERENCES place_collections(id) ON DELETE CASCADE"
+    },
+    {
+      "name": "collection_places_venue_ref_fkey",
+      "table": "collection_places",
+      "definition": "FOREIGN KEY (venue_ref) REFERENCES venue_catalog(ref) ON DELETE CASCADE"
+    },
+    {
+      "name": "comment_likes_comment_id_fkey",
+      "table": "comment_likes",
+      "definition": "FOREIGN KEY (comment_id) REFERENCES comments(id) ON DELETE CASCADE"
+    },
+    {
+      "name": "comment_likes_user_id_fkey",
+      "table": "comment_likes",
+      "definition": "FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE CASCADE"
+    },
+    {
+      "name": "comments_parent_id_fkey",
+      "table": "comments",
+      "definition": "FOREIGN KEY (parent_id) REFERENCES comments(id) ON DELETE CASCADE"
+    },
+    {
+      "name": "comments_post_id_fkey",
+      "table": "comments",
+      "definition": "FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE"
+    },
+    {
+      "name": "comments_user_id_fkey",
+      "table": "comments",
+      "definition": "FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE CASCADE"
+    },
+    {
+      "name": "discovery_activity_user_id_fkey",
+      "table": "discovery_activity",
+      "definition": "FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE CASCADE"
+    },
+    {
+      "name": "dm_requests_requester_id_fkey",
+      "table": "dm_requests",
+      "definition": "FOREIGN KEY (requester_id) REFERENCES profiles(id) ON DELETE CASCADE"
+    },
+    {
+      "name": "dm_requests_target_id_fkey",
+      "table": "dm_requests",
+      "definition": "FOREIGN KEY (target_id) REFERENCES profiles(id) ON DELETE CASCADE"
+    },
+    {
+      "name": "event_features_event_id_fkey",
+      "table": "event_features",
+      "definition": "FOREIGN KEY (event_id) REFERENCES events(id) ON DELETE CASCADE"
+    },
+    {
+      "name": "event_features_selected_by_fkey",
+      "table": "event_features",
+      "definition": "FOREIGN KEY (selected_by) REFERENCES profiles(id) ON DELETE SET NULL"
+    },
+    {
+      "name": "event_rsvps_event_id_fkey",
+      "table": "event_rsvps",
+      "definition": "FOREIGN KEY (event_id) REFERENCES events(id) ON DELETE CASCADE"
+    },
+    {
+      "name": "event_rsvps_user_id_fkey",
+      "table": "event_rsvps",
+      "definition": "FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE CASCADE"
+    },
+    {
+      "name": "events_organizer_id_fkey",
+      "table": "events",
+      "definition": "FOREIGN KEY (organizer_id) REFERENCES profiles(id) ON DELETE SET NULL"
+    },
+    {
+      "name": "events_venue_id_fkey",
+      "table": "events",
+      "definition": "FOREIGN KEY (venue_id) REFERENCES venues(id) ON DELETE CASCADE"
+    },
+    {
+      "name": "follow_requests_requester_id_fkey",
+      "table": "follow_requests",
+      "definition": "FOREIGN KEY (requester_id) REFERENCES profiles(id) ON DELETE CASCADE"
+    },
+    {
+      "name": "follow_requests_target_id_fkey",
+      "table": "follow_requests",
+      "definition": "FOREIGN KEY (target_id) REFERENCES profiles(id) ON DELETE CASCADE"
+    },
+    {
+      "name": "follows_follower_id_fkey",
+      "table": "follows",
+      "definition": "FOREIGN KEY (follower_id) REFERENCES profiles(id) ON DELETE CASCADE"
+    },
+    {
+      "name": "follows_following_id_fkey",
+      "table": "follows",
+      "definition": "FOREIGN KEY (following_id) REFERENCES profiles(id) ON DELETE CASCADE"
+    },
+    {
+      "name": "group_chats_created_by_fkey",
+      "table": "group_chats",
+      "definition": "FOREIGN KEY (created_by) REFERENCES profiles(id) ON DELETE SET NULL"
+    },
+    {
+      "name": "group_members_group_id_fkey",
+      "table": "group_members",
+      "definition": "FOREIGN KEY (group_id) REFERENCES group_chats(id) ON DELETE CASCADE"
+    },
+    {
+      "name": "group_members_user_id_fkey",
+      "table": "group_members",
+      "definition": "FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE CASCADE"
+    },
+    {
+      "name": "group_messages_group_id_fkey",
+      "table": "group_messages",
+      "definition": "FOREIGN KEY (group_id) REFERENCES group_chats(id) ON DELETE CASCADE"
+    },
+    {
+      "name": "group_messages_sender_id_fkey",
+      "table": "group_messages",
+      "definition": "FOREIGN KEY (sender_id) REFERENCES profiles(id) ON DELETE CASCADE"
+    },
+    {
+      "name": "likes_post_id_fkey",
+      "table": "likes",
+      "definition": "FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE"
+    },
+    {
+      "name": "likes_user_id_fkey",
+      "table": "likes",
+      "definition": "FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE CASCADE"
+    },
+    {
+      "name": "live_comments_stream_id_fkey",
+      "table": "live_comments",
+      "definition": "FOREIGN KEY (stream_id) REFERENCES live_streams(id) ON DELETE CASCADE"
+    },
+    {
+      "name": "live_comments_user_id_fkey",
+      "table": "live_comments",
+      "definition": "FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE CASCADE"
+    },
+    {
+      "name": "live_streams_user_id_fkey",
+      "table": "live_streams",
+      "definition": "FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE CASCADE"
+    },
+    {
+      "name": "live_streams_venue_id_fkey",
+      "table": "live_streams",
+      "definition": "FOREIGN KEY (venue_id) REFERENCES venues(id) ON DELETE SET NULL"
+    },
+    {
+      "name": "messages_receiver_id_fkey",
+      "table": "messages",
+      "definition": "FOREIGN KEY (receiver_id) REFERENCES profiles(id) ON DELETE CASCADE"
+    },
+    {
+      "name": "messages_sender_id_fkey",
+      "table": "messages",
+      "definition": "FOREIGN KEY (sender_id) REFERENCES profiles(id) ON DELETE CASCADE"
+    },
+    {
+      "name": "messages_venue_ref_fkey",
+      "table": "messages",
+      "definition": "FOREIGN KEY (venue_ref) REFERENCES venue_catalog(ref)"
+    },
+    {
+      "name": "notes_user_id_fkey",
+      "table": "notes",
+      "definition": "FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE CASCADE"
+    },
+    {
+      "name": "notes_venue_id_fkey",
+      "table": "notes",
+      "definition": "FOREIGN KEY (venue_id) REFERENCES venues(id) ON DELETE SET NULL"
+    },
+    {
+      "name": "notifications_actor_id_fkey",
+      "table": "notifications",
+      "definition": "FOREIGN KEY (actor_id) REFERENCES profiles(id) ON DELETE CASCADE"
+    },
+    {
+      "name": "notifications_post_id_fkey",
+      "table": "notifications",
+      "definition": "FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE"
+    },
+    {
+      "name": "notifications_user_id_fkey",
+      "table": "notifications",
+      "definition": "FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE CASCADE"
+    },
+    {
+      "name": "pilot_content_post_id_fkey",
+      "table": "pilot_content",
+      "definition": "FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE"
+    },
+    {
+      "name": "pilot_creators_user_id_fkey",
+      "table": "pilot_creators",
+      "definition": "FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE CASCADE"
+    },
+    {
+      "name": "pilot_participants_user_id_fkey",
+      "table": "pilot_participants",
+      "definition": "FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE CASCADE"
+    },
+    {
+      "name": "pilot_venues_venue_ref_fkey",
+      "table": "pilot_venues",
+      "definition": "FOREIGN KEY (venue_ref) REFERENCES venue_catalog(ref) ON DELETE CASCADE"
+    },
+    {
+      "name": "place_collections_user_id_fkey",
+      "table": "place_collections",
+      "definition": "FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE CASCADE"
+    },
+    {
+      "name": "posts_user_id_fkey",
+      "table": "posts",
+      "definition": "FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE CASCADE"
+    },
+    {
+      "name": "posts_venue_id_fkey",
+      "table": "posts",
+      "definition": "FOREIGN KEY (venue_id) REFERENCES venues(id) ON DELETE SET NULL"
+    },
+    {
+      "name": "posts_venue_ref_fkey",
+      "table": "posts",
+      "definition": "FOREIGN KEY (venue_ref) REFERENCES venue_catalog(ref)"
+    },
+    {
+      "name": "profiles_id_fkey",
+      "table": "profiles",
+      "definition": "FOREIGN KEY (id) REFERENCES auth.users(id) ON DELETE CASCADE"
+    },
+    {
+      "name": "reports_reporter_id_fkey",
+      "table": "reports",
+      "definition": "FOREIGN KEY (reporter_id) REFERENCES profiles(id) ON DELETE CASCADE"
+    },
+    {
+      "name": "saved_posts_post_id_fkey",
+      "table": "saved_posts",
+      "definition": "FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE"
+    },
+    {
+      "name": "saved_posts_user_id_fkey",
+      "table": "saved_posts",
+      "definition": "FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE CASCADE"
+    },
+    {
+      "name": "stories_user_id_fkey",
+      "table": "stories",
+      "definition": "FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE CASCADE"
+    },
+    {
+      "name": "stories_venue_id_fkey",
+      "table": "stories",
+      "definition": "FOREIGN KEY (venue_id) REFERENCES venues(id) ON DELETE SET NULL"
+    },
+    {
+      "name": "stories_venue_ref_fkey",
+      "table": "stories",
+      "definition": "FOREIGN KEY (venue_ref) REFERENCES venue_catalog(ref)"
+    },
+    {
+      "name": "story_likes_story_id_fkey",
+      "table": "story_likes",
+      "definition": "FOREIGN KEY (story_id) REFERENCES stories(id) ON DELETE CASCADE"
+    },
+    {
+      "name": "story_likes_user_id_fkey",
+      "table": "story_likes",
+      "definition": "FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE"
+    },
+    {
+      "name": "story_views_story_id_fkey",
+      "table": "story_views",
+      "definition": "FOREIGN KEY (story_id) REFERENCES stories(id) ON DELETE CASCADE"
+    },
+    {
+      "name": "story_views_viewer_id_fkey",
+      "table": "story_views",
+      "definition": "FOREIGN KEY (viewer_id) REFERENCES profiles(id) ON DELETE CASCADE"
+    },
+    {
+      "name": "venue_catalog_reviewed_by_fkey",
+      "table": "venue_catalog",
+      "definition": "FOREIGN KEY (reviewed_by) REFERENCES profiles(id) ON DELETE SET NULL"
+    },
+    {
+      "name": "venue_catalog_venue_id_fkey",
+      "table": "venue_catalog",
+      "definition": "FOREIGN KEY (venue_id) REFERENCES venues(id) ON DELETE CASCADE"
+    },
+    {
+      "name": "venue_reviews_user_id_fkey",
+      "table": "venue_reviews",
+      "definition": "FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE CASCADE"
+    },
+    {
+      "name": "venue_reviews_venue_id_fkey",
+      "table": "venue_reviews",
+      "definition": "FOREIGN KEY (venue_id) REFERENCES venues(id) ON DELETE CASCADE"
+    },
+    {
+      "name": "venue_saves_user_id_fkey",
+      "table": "venue_saves",
+      "definition": "FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE CASCADE"
+    },
+    {
+      "name": "venue_saves_venue_ref_fkey",
+      "table": "venue_saves",
+      "definition": "FOREIGN KEY (venue_ref) REFERENCES venue_catalog(ref) ON DELETE CASCADE"
+    },
+    {
+      "name": "venues_owner_id_fkey",
+      "table": "venues",
+      "definition": "FOREIGN KEY (owner_id) REFERENCES profiles(id) ON DELETE SET NULL"
+    }
+  ]
+}

@@ -22,8 +22,19 @@ class PickedMediaFile {
 /// Файл сонгох диалог. Cancel хийвэл хоосон list буцаана —
 /// window focus + delay guard тул dangling await үлдэхгүй.
 Future<List<PickedMediaFile>> pickPostMedia({bool multiple = true}) async {
+  return _pickMedia(accept: 'image/*,video/*', multiple: multiple);
+}
+
+Future<List<PickedMediaFile>> pickPostVideo({bool multiple = false}) async {
+  return _pickMedia(accept: 'video/*', multiple: false);
+}
+
+Future<List<PickedMediaFile>> _pickMedia({
+  required String accept,
+  required bool multiple,
+}) async {
   final input = html.FileUploadInputElement()
-    ..accept = 'image/*,video/*'
+    ..accept = accept
     ..multiple = multiple;
 
   final c = Completer<List<PickedMediaFile>>();
@@ -68,8 +79,7 @@ Future<Object> resizeImageForUpload(PickedMediaFile media,
     // onLoad + onError уралдаан + timeout — мөнхөд гацахгүй
     await Future.any([
       img.onLoad.first,
-      img.onError.first
-          .then((_) => throw Exception('Зураг уншиж чадсангүй')),
+      img.onError.first.then((_) => throw Exception('Зураг уншиж чадсангүй')),
     ]).timeout(const Duration(seconds: 15));
 
     final w = img.naturalWidth;
@@ -126,7 +136,8 @@ Future<void> uploadBlobWithProgress({
     if (s >= 200 && s < 300) {
       completer.complete();
     } else if (s == 413) {
-      completer.completeError('Файл хэтэрхий том байна — сервер хүлээж авсангүй');
+      completer
+          .completeError('Файл хэтэрхий том байна — сервер хүлээж авсангүй');
     } else {
       completer.completeError('Илгээхэд алдаа гарлаа ($s)');
     }
@@ -134,8 +145,11 @@ Future<void> uploadBlobWithProgress({
   void fail(String message) {
     if (!completer.isCompleted) completer.completeError(message);
   }
-  xhr.onError.listen((_) => fail('Сүлжээний алдаа — интернэт холболтоо шалгана уу'));
-  xhr.onTimeout.listen((_) => fail('Илгээх хугацаа дууслаа. Холболтоо шалгаад дахин оролдоно уу.'));
+
+  xhr.onError
+      .listen((_) => fail('Сүлжээний алдаа — интернэт холболтоо шалгана уу'));
+  xhr.onTimeout.listen((_) =>
+      fail('Илгээх хугацаа дууслаа. Холболтоо шалгаад дахин оролдоно уу.'));
   xhr.onAbort.listen((_) => fail('Медиа илгээх үйлдэл цуцлагдлаа.'));
   xhr.send(blob as html.Blob);
   await completer.future;

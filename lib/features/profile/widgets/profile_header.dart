@@ -1,4 +1,4 @@
-import 'package:cached_network_image/cached_network_image.dart';
+import '../../../core/widgets/authorized_media.dart';
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
@@ -470,7 +470,7 @@ class _ProfileCover extends StatelessWidget {
       height: 140,
       child: Stack(fit: StackFit.expand, children: [
         if (url?.isNotEmpty == true)
-          CachedNetworkImage(
+          AuthorizedImage(
               imageUrl: url!,
               fit: BoxFit.cover,
               memCacheWidth: 1200,

@@ -1,3 +1,5 @@
+import '../../../core/widgets/content_review_notice.dart';
+import '../../profile/widgets/block_report_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/widgets/authorized_media.dart';
@@ -536,6 +538,13 @@ class _EventDetailSheetState extends ConsumerState<_EventDetailSheet> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(e.title, style: AppTextStyles.h2),
+                          if (e.organizerId == ref.read(sessionUserIdProvider))
+                            ContentReviewNotice(status: e.moderationStatus),
+                          TextButton.icon(
+                              onPressed: () => showReportSheet(context,
+                                  targetType: 'event', targetId: e.id),
+                              icon: const Icon(Icons.flag_outlined, size: 18),
+                              label: const Text('Эвентийн агуулгыг мэдээлэх')),
                           const SizedBox(height: 8),
                           _line(Icons.location_on_outlined, e.venueName ?? '—'),
                           _line(

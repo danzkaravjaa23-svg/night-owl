@@ -1,3 +1,4 @@
+import '../../../core/widgets/content_review_notice.dart';
 import 'dart:async';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
@@ -1312,6 +1313,10 @@ class _ReelPageState extends State<_ReelPage>
                         ),
                       ),
             ]),
+            if (userId == SupabaseService.currentUser?.id)
+              ContentReviewNotice(
+                  status: reel['moderation_status'] as String? ?? 'approved',
+                  onDark: true),
             if (caption.isNotEmpty) ...[
               const SizedBox(height: 10),
               Text(caption,

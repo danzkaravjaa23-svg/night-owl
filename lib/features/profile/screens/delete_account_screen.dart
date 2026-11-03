@@ -1,3 +1,5 @@
+import '../../auth/services/apple_auth_service.dart';
+import '../../auth/services/apple_web_sdk.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -14,7 +16,9 @@ class DeleteAccountScreen extends ConsumerStatefulWidget {
 }
 
 class _DeleteAccountScreenState extends ConsumerState<DeleteAccountScreen> {
-  late final String? _owner;
+  String? _owner;
+  bool _restoring = true;
+  late final AccountDeletionService _service;
   bool _acknowledged = false;
   bool _busy = false;
   bool _sending = false;
@@ -26,14 +30,47 @@ class _DeleteAccountScreenState extends ConsumerState<DeleteAccountScreen> {
   @override
   void initState() {
     super.initState();
+    _service = ref.read(accountDeletionServiceProvider);
     _owner = ref.read(sessionUserIdProvider);
+    _restore();
+  }
+
+  Future<void> _restore() async {
+    final initial = _owner;
+    try {
+      await _service.restorePendingReceipts();
+      if (!mounted) return;
+      if (ref.read(sessionUserIdProvider) != initial) {
+        setState(() {
+          _scopeChanged = true;
+          _restoring = false;
+        });
+        return;
+      }
+      setState(() {
+        _owner = initial ?? _service.pendingOwnerId;
+        _restoring = false;
+      });
+    } catch (error) {
+      if (mounted) {
+        setState(() {
+          _restoring = false;
+          _message = error is AccountDeletionFailure
+              ? error.message
+              : 'Сэргээх мэдээллийг ачаалж чадсангүй.';
+        });
+      }
+    }
   }
 
   bool _active(int epoch) =>
       mounted &&
       !_scopeChanged &&
       epoch == _epoch &&
-      ref.read(sessionUserIdProvider) == _owner;
+      (ref.read(sessionUserIdProvider) == _owner ||
+          (ref.read(sessionUserIdProvider) == null &&
+              _owner != null &&
+              _service.hasPendingReceipt(_owner!)));
 
   Future<void> _delete() async {
     if (_busy || !_acknowledged || _owner == null || _scopeChanged) return;
@@ -66,16 +103,118 @@ class _DeleteAccountScreenState extends ConsumerState<DeleteAccountScreen> {
       _sending = true;
       _message = null;
     });
-    final service = ref.read(accountDeletionServiceProvider);
+    await _send(epoch);
+  }
+
+  Future<void> _recover() async {
+    if (_busy ||
+        _scopeChanged ||
+        _owner == null ||
+        !_service.hasPendingReceipt(_owner!)) {
+      return;
+    }
+    setState(() {
+      _busy = true;
+      _sending = true;
+      _message = null;
+    });
+    await _send(_epoch);
+  }
+
+  Future<AppleDeletionProof> _authorizeApple(
+      AppleDeletionChallenge challenge, int epoch) async {
+    if (!challenge.web) return authorizeAppleDeletion(challenge);
     try {
-      await service.deleteOwnAccount(_owner);
+      await ensureAppleWebSdk();
+    } catch (_) {
+      throw const AppleDeletionAuthorizationFailure(
+          'apple_identity_unavailable');
+    }
+    if (!mounted || !_active(epoch)) {
+      throw const AccountDeletionFailure('session_changed');
+    }
+    var authorizing = false;
+    String? error;
+    // A new click after the server challenge/SDK load preserves browser popup
+    // activation. Reauthorization cannot silently replace the app login.
+    final proof = await showDialog<AppleDeletionProof>(
+        context: context,
+        barrierDismissible: false,
+        builder: (dialog) => StatefulBuilder(
+            builder: (dialog, update) => PopScope(
+                  canPop: !authorizing,
+                  child: AlertDialog(
+                    title: const Text('Apple холболтыг цуцлах'),
+                    content: Column(mainAxisSize: MainAxisSize.min, children: [
+                      const Text(
+                          'Устгал үргэлжлэхийн өмнө одоогийн Apple бүртгэлээ баталгаажуулна уу. Аппын нэвтрэх хаяг солигдохгүй.'),
+                      if (error != null)
+                        Padding(
+                            padding: const EdgeInsets.only(top: 12),
+                            child: Text(error!)),
+                    ]),
+                    actions: [
+                      TextButton(
+                          onPressed:
+                              authorizing ? null : () => Navigator.pop(dialog),
+                          child: const Text('Цуцлах')),
+                      FilledButton(
+                          onPressed: authorizing
+                              ? null
+                              : () async {
+                                  if (!_active(epoch)) {
+                                    Navigator.pop(dialog);
+                                    return;
+                                  }
+                                  update(() {
+                                    authorizing = true;
+                                    error = null;
+                                  });
+                                  try {
+                                    final result = await authorizeAppleDeletion(
+                                        challenge,
+                                        loadWebSdk: () async {});
+                                    if (dialog.mounted) {
+                                      Navigator.pop(dialog,
+                                          _active(epoch) ? result : null);
+                                    }
+                                  } catch (failure) {
+                                    if (dialog.mounted) {
+                                      update(() {
+                                        authorizing = false;
+                                        error = AccountDeletionFailure(failure
+                                                    is AppleDeletionAuthorizationFailure
+                                                ? failure.code
+                                                : 'apple_reauthorization_failed')
+                                            .message;
+                                      });
+                                    }
+                                  }
+                                },
+                          child: Text(authorizing
+                              ? 'Apple баталгаажуулж байна…'
+                              : 'Apple-ээр баталгаажуулах')),
+                    ],
+                  ),
+                )));
+    if (proof == null) {
+      throw const AppleDeletionAuthorizationFailure('apple_cancelled');
+    }
+    return proof;
+  }
+
+  Future<void> _send(int epoch) async {
+    final service = _service;
+    try {
+      await service.deleteOwnAccount(_owner!,
+          appleReauthorize: (challenge) => _authorizeApple(challenge, epoch));
       if (!_active(epoch)) return;
       setState(() {
         _deleted = true;
         _acknowledged = false;
         _message = null;
       });
-      final cleared = await service.clearDeletedSession(_owner);
+      final cleared = await service.clearDeletedSession(_owner!);
       if (!mounted || _scopeChanged || epoch != _epoch) return;
       if (!cleared) {
         setState(() => _message =
@@ -102,7 +241,13 @@ class _DeleteAccountScreenState extends ConsumerState<DeleteAccountScreen> {
   @override
   Widget build(BuildContext context) {
     ref.listen<String?>(sessionUserIdProvider, (previous, next) {
-      if (next == _owner || (_deleted && next == null)) return;
+      if (next == _owner ||
+          (_deleted && next == null) ||
+          (next == null &&
+              _owner != null &&
+              _service.hasPendingReceipt(_owner!))) {
+        return;
+      }
       setState(() {
         _epoch++;
         _scopeChanged = true;
@@ -113,9 +258,12 @@ class _DeleteAccountScreenState extends ConsumerState<DeleteAccountScreen> {
       });
     });
     final current = ref.watch(sessionUserIdProvider);
-    final changed =
-        _scopeChanged || (current != _owner && !(_deleted && current == null));
-    final profile = !changed && !_deleted && _owner != null
+    final recovering = current == null &&
+        _owner != null &&
+        _service.hasPendingReceipt(_owner!);
+    final changed = _scopeChanged ||
+        (current != _owner && !(_deleted && current == null) && !recovering);
+    final profile = !changed && !_deleted && _owner != null && current == _owner
         ? ref.watch(currentProfileProvider).valueOrNull
         : null;
     return PopScope(
@@ -135,7 +283,10 @@ class _DeleteAccountScreenState extends ConsumerState<DeleteAccountScreen> {
                             : AppRoutes.settings))),
         body: SafeArea(
             child: ListView(padding: const EdgeInsets.all(20), children: [
-          if (changed) ...[
+          if (_restoring) ...[
+            const LinearProgressIndicator(),
+            const Text('Өмнөх хүсэлтийн төлөвийг ачаалж байна…'),
+          ] else if (changed) ...[
             const Text('Бүртгэл солигдлоо. Устгах хуудсыг дахин нээнэ үү.'),
           ] else if (_deleted) ...[
             const Icon(Icons.check_circle_outline, size: 40),
@@ -147,6 +298,18 @@ class _DeleteAccountScreenState extends ConsumerState<DeleteAccountScreen> {
                 onPressed:
                     _busy ? null : () => context.go(AppRoutes.authLanding),
                 child: const Text('Нэвтрэх хуудас')),
+          ] else if (recovering) ...[
+            const Text(
+                'Өмнөх устгах хүсэлтийн төлөвийг шалгана. Шинэ устгал эхлүүлэхгүй.'),
+            if (_message != null)
+              Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  child: Semantics(liveRegion: true, child: Text(_message!))),
+            if (_sending) const LinearProgressIndicator(),
+            FilledButton(
+                key: const ValueKey('delete-account-recover'),
+                onPressed: _busy ? null : _recover,
+                child: const Text('Устгалын төлөвийг шалгах')),
           ] else if (_owner == null) ...[
             const Text('Өөрийн бүртгэлийг устгахын тулд нэвтэрнэ үү.'),
             const SizedBox(height: 16),

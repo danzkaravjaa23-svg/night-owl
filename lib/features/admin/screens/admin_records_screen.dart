@@ -6,6 +6,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/widgets/app_avatar.dart';
 import '../../../core/widgets/authorized_media.dart';
+import '../../../core/widgets/network_video.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../discovery/services/discovery_service.dart';
 import '../providers/admin_console_provider.dart';
@@ -255,6 +256,7 @@ class _AdminRecordsScreenState extends ConsumerState<AdminRecordsScreen> {
     final target = adminText(row, 'target_id');
     final author = adminText(row, 'target_author_id');
     final pending = row['status'] == 'pending';
+    final media = adminText(row, 'target_media_url');
     final reason = switch (row['reason']) {
       'spam' => 'Спам',
       'harassment' => 'Дарамт',
@@ -296,6 +298,14 @@ class _AdminRecordsScreenState extends ConsumerState<AdminRecordsScreen> {
         AdminTag(switch (type) {
           'post' => 'Нийтлэл',
           'comment' => 'Сэтгэгдэл',
+          'story' => 'Story',
+          'message' => 'Сонгосон мессеж',
+          'group_message' => 'Сонгосон групп мессеж',
+          'event' => 'Эвент',
+          'review' => 'Газрын үнэлгээ',
+          'note' => 'Тэмдэглэл',
+          'collection' => 'Цуглуулга',
+          'venue' => 'Газар',
           _ => 'Хэрэглэгч'
         }),
         AdminTag(
@@ -311,6 +321,18 @@ class _AdminRecordsScreenState extends ConsumerState<AdminRecordsScreen> {
           adminText(row, 'target_excerpt',
               'Контентын текст байхгүй эсвэл устсан байна.'),
           style: AppTextStyles.bodyMd.copyWith(height: 1.5)),
+      if (media.isNotEmpty) ...[
+        const SizedBox(height: 12),
+        if (isVideoUrl(media))
+          NetworkVideo(
+              url: media, height: 240, autoplay: false, showControls: true)
+        else
+          AuthorizedImage(
+              imageUrl: media,
+              width: double.infinity,
+              height: 220,
+              fit: BoxFit.contain),
+      ],
       if (adminText(row, 'details').isNotEmpty) ...[
         const SizedBox(height: 12),
         Text('Тайлбар', style: AppTextStyles.labelMd),

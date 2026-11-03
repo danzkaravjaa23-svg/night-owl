@@ -59,6 +59,7 @@ final commentsProvider =
               'user_id': c.userId,
               'body': c.body,
               'parent_id': c.parentId,
+              'moderation_status': c.moderationStatus,
               'likes_count': c.likesCount,
               'is_liked_by_me': likedIds.contains(c.id),
               'created_at': c.createdAt.toIso8601String(),
@@ -94,7 +95,7 @@ class CommentService {
       await SupabaseService.client.from('comments').insert({
         'post_id': postId,
         'user_id': user.id,
-        'body':    trimmed,
+        'body': trimmed,
         if (parentId != null) 'parent_id': parentId,
       });
       return null;
@@ -104,17 +105,20 @@ class CommentService {
   }
 
   /// Сэтгэгдэл лайк toggle
-  static Future<String?> toggleLike(String commentId, bool currentlyLiked) async {
+  static Future<String?> toggleLike(
+      String commentId, bool currentlyLiked) async {
     final user = SupabaseService.currentUser;
     if (user == null) return 'Нэвтэрнэ үү';
     try {
       if (currentlyLiked) {
         await SupabaseService.client.from('comment_likes').delete().match({
-          'comment_id': commentId, 'user_id': user.id,
+          'comment_id': commentId,
+          'user_id': user.id,
         });
       } else {
         await SupabaseService.client.from('comment_likes').upsert({
-          'comment_id': commentId, 'user_id': user.id,
+          'comment_id': commentId,
+          'user_id': user.id,
         }, onConflict: 'comment_id, user_id');
       }
       return null;

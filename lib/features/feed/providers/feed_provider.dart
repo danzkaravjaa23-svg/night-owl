@@ -9,7 +9,8 @@ import '../../discovery/services/discovery_service.dart';
 // ─── Feed posts (paginated, RPC-based for correct isLikedByMe) ───────────────
 class FeedNotifier extends StateNotifier<AsyncValue<List<Post>>> {
   final bool followingOnly;
-  FeedNotifier({this.followingOnly=false}) : super(const AsyncValue.loading()) {
+  FeedNotifier({this.followingOnly = false})
+      : super(const AsyncValue.loading()) {
     loadFeed();
   }
 
@@ -83,8 +84,12 @@ class FeedNotifier extends StateNotifier<AsyncValue<List<Post>>> {
         );
         rows = (data as List).cast<Map<String, dynamic>>();
       } else {
-        if(followingOnly){
-          if(mounted){state=const AsyncValue.data([]);_hasMore=false;hasMore.value=false;}
+        if (followingOnly) {
+          if (mounted) {
+            state = const AsyncValue.data([]);
+            _hasMore = false;
+            hasMore.value = false;
+          }
           return;
         }
         // Fallback: plain query with cursor
@@ -102,7 +107,10 @@ class FeedNotifier extends StateNotifier<AsyncValue<List<Post>>> {
       final fetched = rows.map((j) => Post.fromJson(j)).toList();
       if (!mounted) return;
       _hasMore = fetched.length == AppConstants.feedPageSize;
-      if (fetched.isNotEmpty) { _cursor = fetched.last.createdAt; _cursorId = fetched.last.id; }
+      if (fetched.isNotEmpty) {
+        _cursor = fetched.last.createdAt;
+        _cursorId = fetched.last.id;
+      }
 
       // Давхардлаас сэргийлэх (cursor хилийн ижил timestamp edge case)
       final existing = refresh ? <Post>[] : (state.valueOrNull ?? []);
@@ -195,12 +203,18 @@ class FeedNotifier extends StateNotifier<AsyncValue<List<Post>>> {
       _liking.remove(postId);
     }
   }
-  void syncLike(Post post){
+
+  void syncLike(Post post) {
     syncLikeState(post.id, post.isLikedByMe, post.likesCount);
   }
+
   void syncLikeState(String id, bool liked, int count) {
-    if(!mounted||!state.hasValue)return;
-    state=AsyncValue.data(state.value!.map((p)=>p.id==id?p.copyWith(isLikedByMe:liked,likesCount:count<0?0:count):p).toList());
+    if (!mounted || !state.hasValue) return;
+    state = AsyncValue.data(state.value!
+        .map((p) => p.id == id
+            ? p.copyWith(isLikedByMe: liked, likesCount: count < 0 ? 0 : count)
+            : p)
+        .toList());
   }
 
   Future<void> _writeLike(String userId, String postId, bool like) async {
@@ -236,7 +250,9 @@ class FeedNotifier extends StateNotifier<AsyncValue<List<Post>>> {
     }
     if (!mounted) return;
     final list = (state.valueOrNull ?? [])
-        .map((p) => p.id == postId ? p.copyWith(caption: trimmed) : p)
+        .map((p) => p.id == postId
+            ? p.copyWith(caption: trimmed, moderationStatus: 'pending')
+            : p)
         .toList();
     state = AsyncValue.data(list);
   }
@@ -285,8 +301,9 @@ final feedProvider =
   ref.watch(socialVersionProvider);
   return FeedNotifier();
 });
-final followingFeedProvider=StateNotifierProvider<FeedNotifier,AsyncValue<List<Post>>>((ref) {
+final followingFeedProvider =
+    StateNotifierProvider<FeedNotifier, AsyncValue<List<Post>>>((ref) {
   ref.watch(sessionUserIdProvider);
   ref.watch(socialVersionProvider);
-  return FeedNotifier(followingOnly:true);
+  return FeedNotifier(followingOnly: true);
 });

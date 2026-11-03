@@ -1,3 +1,5 @@
+import 'package:night_owl_ub/features/profile/services/account_deletion_receipt_store.dart';
+import 'package:night_owl_ub/features/auth/services/apple_auth_service.dart';
 import 'dart:async';
 import 'dart:convert';
 
@@ -23,15 +25,37 @@ http.Response jsonResponse(Object data, [int status = 200]) =>
     http.Response(jsonEncode(data), status,
         headers: {'Content-Type': 'application/json'});
 
+class MemoryReceiptStore extends AccountDeletionReceiptStore {
+  String? value;
+  bool fail = false;
+  @override
+  Future<String?> read() async => value;
+  @override
+  Future<void> write(String value) async {
+    if (fail) throw StateError('fixture');
+    this.value = value;
+  }
+}
+
 class FakeDeletionService extends AccountDeletionService {
   int requests = 0;
   int signOuts = 0;
   Completer<void>? pending;
   Object? failure;
   VoidCallback? onClear;
+  String? receiptOwner;
+  @override
+  String? get pendingOwnerId => receiptOwner;
+  @override
+  bool hasPendingReceipt(String ownerId) => receiptOwner == ownerId;
 
   @override
-  Future<void> deleteOwnAccount(String expectedUserId) async {
+  Future<void> restorePendingReceipts() async {}
+
+  @override
+  Future<void> deleteOwnAccount(String expectedUserId,
+      {Future<AppleDeletionProof> Function(AppleDeletionChallenge)?
+          appleReauthorize}) async {
     expect(expectedUserId, owner);
     requests++;
     await pending?.future;
@@ -61,6 +85,8 @@ void main() {
   group('Account deletion service with an isolated SDK HTTP double', () {
     late SupabaseClient client;
     late AccountDeletionService service;
+    late http.Client transport;
+    late MemoryReceiptStore receipts;
     late List<http.Request> requests;
     late Future<http.Response> Function(http.Request) respond;
     late Future<http.Response> Function(http.Request) logoutReply;
@@ -75,8 +101,45 @@ void main() {
     setUp(() async {
       SharedPreferences.setMockInitialValues({});
       requests = [];
-      respond = (_) async => jsonResponse({'ok': true, 'user_id': owner});
+      receipts = MemoryReceiptStore();
+      respond = (request) async => jsonResponse(
+          jsonDecode(request.body)['action'] == 'prepare'
+              ? {
+                  'ok': true,
+                  'user_id': owner,
+                  'receipt_token': 'A' * 43,
+                  'apple_required': false
+                }
+              : {'ok': true, 'user_id': owner});
       logoutReply = (_) async => jsonResponse({});
+      transport = MockClient((request) async {
+        requests.add(request);
+        if (request.url.path == '/auth/v1/token') {
+          final payload = base64Url
+              .encode(utf8.encode(jsonEncode({
+                'sub': account,
+                'exp': DateTime.now().millisecondsSinceEpoch ~/ 1000 + 3600,
+              })))
+              .replaceAll('=', '');
+          return jsonResponse({
+            'access_token': 'fixture.$payload.fixture',
+            'refresh_token': 'fixture-refresh',
+            'token_type': 'bearer',
+            'expires_in': 3600,
+            'user': {
+              'id': account,
+              'aud': 'authenticated',
+              'created_at': '2026-10-22T00:00:00Z'
+            }
+          });
+        }
+        if (request.url.path == '/auth/v1/logout') {
+          return logoutReply(request);
+        }
+        expect(request.url.host, 'fixture.example.test');
+        expect(request.url.path, '/functions/v1/delete-account');
+        return respond(request);
+      });
       await Supabase.initialize(
           url: 'https://fixture.example.test',
           anonKey: 'fixture-public-key',
@@ -85,36 +148,10 @@ void main() {
               autoRefreshToken: false,
               detectSessionInUri: false,
               localStorage: EmptyLocalStorage()),
-          httpClient: MockClient((request) async {
-            requests.add(request);
-            if (request.url.path == '/auth/v1/token') {
-              final payload = base64Url
-                  .encode(utf8.encode(jsonEncode({
-                    'sub': account,
-                    'exp': DateTime.now().millisecondsSinceEpoch ~/ 1000 + 3600,
-                  })))
-                  .replaceAll('=', '');
-              return jsonResponse({
-                'access_token': 'fixture.$payload.fixture',
-                'refresh_token': 'fixture-refresh',
-                'token_type': 'bearer',
-                'expires_in': 3600,
-                'user': {
-                  'id': account,
-                  'aud': 'authenticated',
-                  'created_at': '2026-10-22T00:00:00Z'
-                }
-              });
-            }
-            if (request.url.path == '/auth/v1/logout') {
-              return logoutReply(request);
-            }
-            expect(request.url.host, 'fixture.example.test');
-            expect(request.url.path, '/functions/v1/delete-account');
-            return respond(request);
-          }));
+          httpClient: transport);
       client = Supabase.instance.client;
-      service = AccountDeletionService(client: client);
+      service = AccountDeletionService(
+          client: client, httpClient: transport, receiptStore: receipts);
       await signIn(owner);
       requests.clear();
     });
@@ -126,10 +163,22 @@ void main() {
         () async {
       final token = client.auth.currentSession!.accessToken;
       await service.deleteOwnAccount(owner);
-      expect(requests, hasLength(1));
-      expect(requests.single.method.toUpperCase(), 'POST');
-      expect(requests.single.headers['Authorization'], 'Bearer $token');
-      expect(jsonDecode(requests.single.body), {'confirmation': 'DELETE'});
+      expect(requests, hasLength(2));
+      expect(requests.every((r) => r.method.toUpperCase() == 'POST'), isTrue);
+      expect(
+          requests.every((r) => r.headers['authorization'] == 'Bearer $token'),
+          isTrue);
+      expect(jsonDecode(requests.first.body), {
+        'confirmation': 'DELETE',
+        'action': 'prepare',
+        'client_platform': 'native'
+      });
+      expect(jsonDecode(requests.last.body), {
+        'confirmation': 'DELETE',
+        'action': 'delete',
+        'receipt_token': 'A' * 43,
+        'client_platform': 'native'
+      });
       // The screen must verify its scope before clearing a session.
       expect(client.auth.currentUser?.id, owner);
       expect(await service.clearDeletedSession(owner), isTrue);
@@ -213,7 +262,10 @@ void main() {
         () async {
       final gate = Completer<http.Response>();
       respond = (_) => gate.future;
-      final pending = service.deleteOwnAccount(owner);
+      final pending = expectLater(
+          service.deleteOwnAccount(owner),
+          throwsA(isA<AccountDeletionFailure>()
+              .having((e) => e.code, 'code', 'session_changed')));
       await signIn(other);
       gate.complete(jsonResponse({'ok': true, 'user_id': owner}));
       await pending;
@@ -226,7 +278,10 @@ void main() {
         () async {
       final gate = Completer<http.Response>();
       service = AccountDeletionService(
-          client: client, requestTimeout: const Duration(milliseconds: 250));
+          client: client,
+          httpClient: transport,
+          receiptStore: receipts,
+          requestTimeout: const Duration(milliseconds: 250));
       respond = (_) => gate.future;
       final pending = service.deleteOwnAccount(owner);
       final failed = expectLater(
@@ -249,6 +304,8 @@ void main() {
       logoutReply = (_) => gate.future;
       service = AccountDeletionService(
           client: client,
+          httpClient: transport,
+          receiptStore: receipts,
           sessionClearTimeout: const Duration(milliseconds: 50));
       expect(await service.clearDeletedSession(owner), isTrue);
       expect(client.auth.currentUser, isNull);
@@ -259,6 +316,259 @@ void main() {
       expect(
           requests.where((r) => r.url.path == '/auth/v1/logout'), hasLength(1));
     });
+
+    test(
+        'Apple proof is bound to server challenge without a Supabase identity switch',
+        () async {
+      final initial = client.auth.currentSession;
+      respond = (request) async =>
+          jsonResponse(jsonDecode(request.body)['action'] == 'prepare'
+              ? {
+                  'ok': true,
+                  'user_id': owner,
+                  'receipt_token': 'A' * 43,
+                  'apple_required': true,
+                  'nonce': 'B' * 43,
+                  'client_id': 'com.nightowl.ub.nightOwlUb',
+                  'redirect_uri': null
+                }
+              : {'ok': true, 'user_id': owner});
+      service = AccountDeletionService(
+          client: client,
+          httpClient: transport,
+          receiptStore: receipts,
+          appleReauthorize: (challenge) async {
+            expect(challenge.nonce, 'B' * 43);
+            expect(challenge.clientId, 'com.nightowl.ub.nightOwlUb');
+            expect(challenge.web, isFalse);
+            expect(client.auth.currentSession, same(initial));
+            return const AppleDeletionProof('fresh-code', 'identity-proof');
+          });
+      await service.deleteOwnAccount(owner);
+      expect(jsonDecode(requests.last.body)['apple_code'], 'fresh-code');
+      expect(jsonDecode(requests.last.body)['apple_identity_token'],
+          'identity-proof');
+      expect(client.auth.currentSession, same(initial));
+      expect(requests.where((r) => r.url.path.contains('/auth/')), isEmpty);
+    });
+
+    test('Apple cancellation sends no destructive phase and preserves login',
+        () async {
+      final initial = client.auth.currentSession;
+      respond = (_) async => jsonResponse({
+            'ok': true,
+            'user_id': owner,
+            'receipt_token': 'A' * 43,
+            'apple_required': true,
+            'nonce': 'B' * 43,
+            'client_id': 'com.nightowl.ub.nightOwlUb'
+          });
+      service = AccountDeletionService(
+          client: client,
+          httpClient: transport,
+          receiptStore: receipts,
+          appleReauthorize: (_) async =>
+              throw const AppleDeletionAuthorizationFailure('apple_cancelled'));
+      await expectLater(
+          service.deleteOwnAccount(owner),
+          throwsA(isA<AccountDeletionFailure>()
+              .having((e) => e.code, 'code', 'apple_cancelled')));
+      expect(requests, hasLength(1));
+      expect(jsonDecode(requests.single.body)['action'], 'prepare');
+      expect(client.auth.currentSession, same(initial));
+    });
+
+    test('account change during Apple authorization never reaches delete',
+        () async {
+      final proof = Completer<AppleDeletionProof>();
+      respond = (_) async => jsonResponse({
+            'ok': true,
+            'user_id': owner,
+            'receipt_token': 'A' * 43,
+            'apple_required': true,
+            'nonce': 'B' * 43,
+            'client_id': 'com.nightowl.ub.nightOwlUb'
+          });
+      service = AccountDeletionService(
+          client: client,
+          httpClient: transport,
+          receiptStore: receipts,
+          appleReauthorize: (_) => proof.future);
+      final pending = expectLater(
+          service.deleteOwnAccount(owner),
+          throwsA(isA<AccountDeletionFailure>()
+              .having((e) => e.code, 'code', 'session_changed')));
+      await Future<void>.delayed(Duration.zero);
+      await signIn(other);
+      proof.complete(const AppleDeletionProof('fresh-code', 'identity-proof'));
+      await pending;
+      expect(
+          requests.where((r) =>
+              r.url.path.contains('/functions/') &&
+              jsonDecode(r.body)['action'] == 'delete'),
+          isEmpty);
+      expect(client.auth.currentUser?.id, other);
+    });
+
+    test(
+        'uncertain deletion recovers by receipt after Auth is gone, without another delete',
+        () async {
+      final gate = Completer<http.Response>();
+      respond = (request) async {
+        final action = jsonDecode(request.body)['action'];
+        if (action == 'prepare') {
+          return jsonResponse({
+            'ok': true,
+            'user_id': owner,
+            'receipt_token': 'A' * 43,
+            'apple_required': false
+          });
+        }
+        if (action == 'delete') return gate.future;
+        expect(action, 'status');
+        expect(request.headers['authorization'], 'Bearer fixture-public-key');
+        return jsonResponse({'ok': true, 'user_id': owner});
+      };
+      service = AccountDeletionService(
+          client: client,
+          httpClient: transport,
+          receiptStore: receipts,
+          requestTimeout: const Duration(milliseconds: 50));
+      await expectLater(service.deleteOwnAccount(owner),
+          throwsA(isA<AccountDeletionFailure>()));
+      await client.auth.signOut();
+      // Restart: recover using only the encrypted durable status capability.
+      service = AccountDeletionService(
+          client: client, httpClient: transport, receiptStore: receipts);
+      await service.deleteOwnAccount(owner);
+      expect(await service.clearDeletedSession(owner), isTrue);
+      final actions = requests
+          .where((r) => r.url.path.contains('/functions/'))
+          .map((r) => jsonDecode(r.body)['action']);
+      expect(actions.toList(), ['prepare', 'delete', 'status']);
+      gate.complete(jsonResponse({'ok': true, 'user_id': owner}));
+      expect(client.auth.currentUser, isNull);
+    });
+
+    test('processing receipt is checked without starting a concurrent erase',
+        () async {
+      respond = (request) async => switch (jsonDecode(request.body)['action']) {
+            'prepare' => jsonResponse({
+                'ok': true,
+                'user_id': owner,
+                'receipt_token': 'A' * 43,
+                'apple_required': false
+              }),
+            'delete' => jsonResponse({'code': 'deletion_incomplete'}, 500),
+            _ => jsonResponse({
+                'ok': false,
+                'processing': true,
+                'code': 'deletion_incomplete'
+              }, 202),
+          };
+      await expectLater(service.deleteOwnAccount(owner),
+          throwsA(isA<AccountDeletionFailure>()));
+      await expectLater(
+          service.deleteOwnAccount(owner),
+          throwsA(isA<AccountDeletionFailure>()
+              .having((e) => e.code, 'code', 'deletion_busy')));
+      expect(requests.map((r) => jsonDecode(r.body)['action']).toList(),
+          ['prepare', 'delete', 'status']);
+    });
+
+    test('completion cannot clear a new login for the same account', () async {
+      await service.deleteOwnAccount(owner);
+      await signIn(owner);
+      requests.clear();
+      expect(await service.clearDeletedSession(owner), isFalse);
+      expect(client.auth.currentUser?.id, owner);
+      expect(requests, isEmpty);
+    });
+
+    test(
+        'a persisted foreign receipt cannot operate on a newly logged-in account',
+        () async {
+      receipts.value = jsonEncode([
+        {
+          'owner_id': owner,
+          'receipt_token': 'A' * 43,
+          'started_at': DateTime.now().toUtc().toIso8601String()
+        }
+      ]);
+      await signIn(other);
+      requests.clear();
+      await expectLater(
+          service.deleteOwnAccount(owner),
+          throwsA(isA<AccountDeletionFailure>()
+              .having((e) => e.code, 'code', 'session_changed')));
+      expect(requests, isEmpty);
+      expect(client.auth.currentUser?.id, other);
+    });
+
+    test('unavailable secure storage blocks the destructive phase', () async {
+      receipts.fail = true;
+      await expectLater(
+          service.deleteOwnAccount(owner),
+          throwsA(isA<AccountDeletionFailure>()
+              .having((e) => e.code, 'code', 'receipt_storage_unavailable')));
+      expect(requests.map((r) => jsonDecode(r.body)['action']).toList(),
+          ['prepare']);
+      expect(client.auth.currentUser?.id, owner);
+    });
+
+    test(
+        'receipt validation ignores expired, future, malformed and proof-bearing records',
+        () async {
+      receipts.value = jsonEncode([
+        {
+          'owner_id': owner,
+          'receipt_token': 'A' * 43,
+          'started_at': DateTime.now()
+              .toUtc()
+              .subtract(const Duration(days: 31))
+              .toIso8601String()
+        },
+        {
+          'owner_id': owner,
+          'receipt_token': 'B' * 43,
+          'started_at': '2099-01-01T00:00:00Z'
+        },
+        {
+          'owner_id': owner,
+          'receipt_token': 'bad',
+          'started_at': DateTime.now().toUtc().toIso8601String()
+        },
+        {
+          'owner_id': owner,
+          'receipt_token': 'C' * 43,
+          'started_at': DateTime.now().toUtc().toIso8601String(),
+          'apple_identity_token': 'never-accept-persisted-proof'
+        },
+      ]);
+      final original = receipts.value;
+      await service.restorePendingReceipts();
+      expect(service.pendingOwnerId, isNull);
+      expect(service.hasPendingReceipt(owner), isFalse);
+      expect(receipts.value, original);
+      expect(requests, isEmpty);
+    });
+
+    test('completion removes only the matching owner receipt', () async {
+      receipts.value = jsonEncode([
+        for (final id in [owner, other])
+          {
+            'owner_id': id,
+            'receipt_token': (id == owner ? 'A' : 'B') * 43,
+            'started_at': DateTime.now().toUtc().toIso8601String()
+          }
+      ]);
+      await service.deleteOwnAccount(owner);
+      expect(jsonDecode(requests.single.body)['action'], 'status');
+      expect(await service.clearDeletedSession(owner), isTrue);
+      final saved = jsonDecode(receipts.value!) as List;
+      expect(saved, hasLength(1));
+      expect(saved.single['owner_id'], other);
+    });
   });
 
   group('Account deletion screen', () {
@@ -266,12 +576,13 @@ void main() {
     late FakeDeletionService service;
     final session = StateProvider<String?>((ref) => owner);
 
-    Future<void> render(WidgetTester tester, {String? user = owner}) async {
+    Future<void> render(WidgetTester tester,
+        {String? user = owner, bool recovering = false}) async {
       tester.view.physicalSize = const Size(320, 844);
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
-      service = FakeDeletionService();
+      service = FakeDeletionService()..receiptOwner = recovering ? owner : null;
       container = ProviderContainer(overrides: [
         session.overrideWith((ref) => user),
         sessionUserIdProvider.overrideWith((ref) => ref.watch(session)),
@@ -353,6 +664,19 @@ void main() {
       await tester.pumpAndSettle();
       expect(service.requests, 1);
       expect(service.signOuts, 1);
+      expect(find.text('Бүртгэл устгагдлаа.'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets(
+        'signed-out restart offers receipt status without destructive confirmation',
+        (tester) async {
+      await render(tester, user: null, recovering: true);
+      expect(find.byKey(const ValueKey('delete-account-submit')), findsNothing);
+      expect(find.byKey(const ValueKey('delete-account-ack')), findsNothing);
+      await tester.tap(find.byKey(const ValueKey('delete-account-recover')));
+      await tester.pumpAndSettle();
+      expect(service.requests, 1);
       expect(find.text('Бүртгэл устгагдлаа.'), findsOneWidget);
       expect(tester.takeException(), isNull);
     });

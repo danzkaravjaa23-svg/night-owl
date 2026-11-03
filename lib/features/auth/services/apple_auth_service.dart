@@ -7,6 +7,97 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/utils/auth_callback.dart';
 import 'account_metadata_service.dart';
+import 'apple_web_sdk.dart';
+
+class AppleDeletionChallenge {
+  final String nonce, clientId;
+  final Uri? redirectUri;
+  final bool web;
+  const AppleDeletionChallenge(
+      {required this.nonce,
+      required this.clientId,
+      required this.web,
+      this.redirectUri});
+}
+
+class AppleDeletionProof {
+  final String authorizationCode, identityToken;
+  const AppleDeletionProof(this.authorizationCode, this.identityToken);
+}
+
+class AppleDeletionAuthorizationFailure implements Exception {
+  final String code;
+  const AppleDeletionAuthorizationFailure(this.code);
+}
+
+typedef AppleDeletionCredentialRequest = Future<AuthorizationCredentialAppleID>
+    Function({
+  required String nonce,
+  WebAuthenticationOptions? webAuthenticationOptions,
+});
+
+/// Reauthorize only; never signs in, links identities, or replaces Supabase auth.
+Future<AppleDeletionProof> authorizeAppleDeletion(
+  AppleDeletionChallenge challenge, {
+  AppleDeletionCredentialRequest? request,
+  Future<void> Function()? loadWebSdk,
+}) async {
+  if (!RegExp(r'^[A-Za-z0-9_-]{43}$').hasMatch(challenge.nonce) ||
+      challenge.clientId.trim().isEmpty ||
+      (challenge.web &&
+          (challenge.redirectUri?.scheme != 'https' ||
+              challenge.redirectUri!.host.isEmpty ||
+              challenge.redirectUri!.userInfo.isNotEmpty))) {
+    throw const AppleDeletionAuthorizationFailure(
+        'apple_reauthorization_failed');
+  }
+  try {
+    if (challenge.web) {
+      await (loadWebSdk ?? ensureAppleWebSdk)();
+    } else if (request == null &&
+        (!await SignInWithApple.isAvailable() ||
+            !const {TargetPlatform.iOS, TargetPlatform.macOS}
+                .contains(defaultTargetPlatform))) {
+      throw const AppleDeletionAuthorizationFailure(
+          'apple_identity_unavailable');
+    }
+    final hashed = sha256.convert(utf8.encode(challenge.nonce)).toString();
+    final options = challenge.web
+        ? WebAuthenticationOptions(
+            clientId: challenge.clientId, redirectUri: challenge.redirectUri!)
+        : null;
+    final credential = await (request ??
+                (
+                        {required String nonce,
+                        WebAuthenticationOptions? webAuthenticationOptions}) =>
+                    SignInWithApple.getAppleIDCredential(
+                        scopes: const [],
+                        nonce: nonce,
+                        webAuthenticationOptions: webAuthenticationOptions))(
+            nonce: hashed, webAuthenticationOptions: options)
+        .timeout(const Duration(minutes: 3));
+    final token = credential.identityToken;
+    if (credential.authorizationCode.isEmpty ||
+        token == null ||
+        token.isEmpty) {
+      throw const AppleDeletionAuthorizationFailure(
+          'apple_reauthorization_failed');
+    }
+    return AppleDeletionProof(credential.authorizationCode, token);
+  } on AppleDeletionAuthorizationFailure {
+    rethrow;
+  } on SignInWithAppleAuthorizationException catch (error) {
+    throw AppleDeletionAuthorizationFailure(
+        error.code == AuthorizationErrorCode.canceled
+            ? 'apple_cancelled'
+            : 'apple_reauthorization_failed');
+  } catch (_) {
+    // The web plugin reports popup cancellation as a generic credentials error.
+    // It is still a failed reauthorization, and cannot reach the deletion phase.
+    throw const AppleDeletionAuthorizationFailure(
+        'apple_reauthorization_failed');
+  }
+}
 
 class AppleSignInFailure implements Exception {
   final String message;

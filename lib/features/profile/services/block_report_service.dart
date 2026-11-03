@@ -1,3 +1,5 @@
+import 'report_submission_service.dart';
+import '../../post/services/content_publication.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../auth/providers/auth_provider.dart';
@@ -75,40 +77,28 @@ class BlockReportService {
   }
 
   /// Контент/хэрэглэгчийг мэдээлэх
-  /// targetType: 'post' | 'user' | 'comment' | 'venue'
+  /// Server validates the caller-readable target and selected context.
   static Future<String?> report({
     required String targetType,
     required String targetId,
     required String reason,
     String? details,
   }) async {
-    final me = SupabaseService.currentUser?.id;
-    if (me == null) return 'Нэвтэрнэ үү';
-    if (!const {'post', 'user', 'comment', 'venue'}.contains(targetType) ||
-        !const {'spam', 'harassment', 'nudity', 'violence', 'hate', 'other'}
-            .contains(reason) ||
-        targetId.trim().isEmpty ||
-        (details?.trim().length ?? 0) > 2000) {
-      return 'Мэдээллээ шалгана уу. Тайлбар 2000 тэмдэгтээс хэтрэхгүй байна.';
-    }
+    final service = ReportSubmissionService();
+    final session = service.captureSession();
     try {
-      await _c.from('reports').insert({
-        'reporter_id': me,
-        'target_type': targetType,
-        'target_id': targetId,
-        'reason': reason,
-        if (details != null && details.trim().isNotEmpty)
-          'details': details.trim(),
-      });
+      await service.submit(session,
+          targetType: targetType,
+          targetId: targetId,
+          reason: reason,
+          details: details);
       return null;
-    } catch (e) {
-      if (e is PostgrestException && e.code == '40001') {
-        return 'Энэ агуулгын тухай таны өмнөх мэдээлэл шалгагдаж байна.';
-      }
-      if (e is PostgrestException && e.code == 'P0002') {
-        return 'Мэдээлэх агуулга олдсонгүй. Хуудсыг шинэчилнэ үү.';
-      }
-      return discoveryError(e);
+    } catch (error) {
+      return error is PublicationFailure
+          ? error.message
+          : discoveryError(error);
+    } finally {
+      session.close();
     }
   }
 }

@@ -12,6 +12,7 @@ import '../../../core/services/supabase_service.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/widgets/night_owl_brand.dart';
+import '../../../core/widgets/authorized_media.dart';
 import '../../../core/widgets/app_motion.dart';
 import '../../../core/widgets/premium_surface.dart';
 import '../../../core/widgets/gradient_button.dart';
@@ -835,9 +836,12 @@ class _MapScreenState extends ConsumerState<MapScreen> {
             height: size,
             child: url == null
                 ? fallback()
-                : Image.network(url,
+                : AuthorizedImage(
+                    imageUrl: url,
                     fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => fallback())));
+                    memCacheWidth: (size * 3).round(),
+                    placeholder: (_, __) => fallback(),
+                    errorWidget: (_, __, ___) => fallback())));
   }
 
   Widget _detail(Venue venue, double height, bool saved) {

@@ -1,8 +1,10 @@
 # Night Owl web admin
 
 A static, responsive admin console with the app’s midnight navy and lavender
-palette. It shares the app backend. No service-role key, user emails, private
-messages, or auth tokens are displayed in the console.
+palette. It shares the app backend. No service-role key, user emails or auth tokens are displayed. The console
+has no private-message inbox browser. A reporter can explicitly submit one
+selected message and its currently readable attachment for moderation; only
+that captured report context appears in the report queue.
 
 ## Run and deploy
 
@@ -28,7 +30,7 @@ and `crossorigin="anonymous"`. This is the exact version resolved by the previou
 There is no Tailwind runtime dependency. The hosted Supabase script still needs
 network access; this is not an offline admin application.
 
-## Backend prerequisite — pending deployment
+## Backend prerequisites
 
 Apply and verify the existing social discovery/featured-event prerequisites,
 then `202611030001_account_deletion_boundaries.sql` before
@@ -48,11 +50,46 @@ The native app uses **Profile → Админ панел** or **Settings → Ад
 with routes for reports, users, content, audit, featured events and pilot/venue
 review. Native and web consoles share the same RPC and audit contract.
 
+## Manual prepublication review — prepared, not deployed
+
+`202611030009_ugc_review.sql` extends the existing admin console with a manual
+review queue. Deploy it only with the matching Flutter/web pending-status UI,
+private-bucket media renderers and migration `008` erasure changes. This source
+work does not apply it to the hosted backend. Existing published rows retain
+approval; new posts, stories, comments, events, reviews, notes, public collections,
+profiles and owner-submitted venues wait for review. Private collections and
+private conversations do not enter the publication queue.
+
+**Нийтлэхийн өмнөх шалгалт** lists pending content by submission time. Read all
+text, inspect every photograph and watch each complete video. If media fails to
+open, refresh/retry rather than approving unseen content. The decision dialog
+requires an explicit full-review acknowledgment and a 3–1000-character reason.
+An approval/rejection is tied to the exact submitted version and returns an audit
+receipt; edits require a new review. Approved content can also be hidden with a
+recorded rejection. This does not appoint a moderator or provide staffed coverage.
+
+An approved public profile remains visible while a replacement is pending.
+Rejecting its pending replacement retains the prior identity; rejecting the
+approved identity itself hides it. Captured reports may concern posts, comments,
+users, venues, stories, direct/group messages, events, reviews, notes or public
+collections. Only the reporter-readable selected row is captured. The service
+cannot browse unrelated conversations. Deleting a subject/reporter removes
+captured context and quoted report details through the erasure hook; minimal
+reason/status/time/audit records follow the owner's documented retention policy.
+Operational report retention, response targets, escalation and appeal handling
+must be confirmed before submission. No automatic AI moderation is claimed.
+
+Run `tools/deployment/tests/ugc_review_postflight.sql` read-only after a staging
+install. Isolated checks are `run_ugc_review_fixture.mjs` and
+`run_erasure_ugc_fixture.mjs`; both take an absolute PGlite module path. The second
+uses the 69-FK synthetic schema and installs actual `008` plus `009` together.
+
 ## Pages and actions
 
 | Page | Behavior |
 | --- | --- |
 | Dashboard | Authoritative server totals; failed counts remain errors |
+| Prepublication review | Kind/status filters, all-media preview, version-bound approval/rejection with audit |
 | Reports | Pending/resolved/reviewed/all filters, pagination, target excerpt, resolve/dismiss/reopen |
 | Users | Literal name search, pagination, ban/unban and verification changes |
 | Posts and comments | Search, pagination, excerpts, deletion with a recorded reason |
@@ -60,7 +97,8 @@ review. Native and web consoles share the same RPC and audit contract.
 | Events | Existing list/delete flow with the same gate and affected-row confirmation |
 | Audit | Paginated administrator action, target, reason and timestamp |
 
-Moderation uses only `admin_console_action`, with a required 3–1000-character
+Legacy moderation uses `admin_console_action`; publication decisions use
+`admin_console_review`, with a required 3–1000-character
 reason. Linked report actions close the matching pending report atomically on
 the server. This UI does not grant or revoke administrator roles. User admin
 flags cannot be edited through direct profile updates.
@@ -89,7 +127,8 @@ reason. Zero affected rows are never reported as success.
   successful result. Signed links are not persisted by this UI.
 - External HTTPS media is displayed without an Authorization header or referrer.
   HTML is escaped, URL schemes are checked, and untrusted values never enter
-  inline JavaScript event handlers. No DMs or account-email lookups are performed.
+  inline JavaScript event handlers. The admin client performs no DM-table or
+  account-email lookups; selected report context comes from the guarded report RPC.
 
 ## Local checks
 

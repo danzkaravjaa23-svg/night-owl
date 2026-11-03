@@ -1,3 +1,4 @@
+import '../../../core/widgets/content_review_notice.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart' show ScrollCacheExtent;
@@ -705,6 +706,8 @@ class _PostCardState extends ConsumerState<_PostCard>
                       ]),
                     ),
                   ),
+                  if (widget.post.userId == SupabaseService.currentUser?.id)
+                    ContentReviewNotice(status: widget.post.moderationStatus),
                   const SizedBox(height: 2),
                   MouseRegion(
                     cursor: widget.post.venueRef == null

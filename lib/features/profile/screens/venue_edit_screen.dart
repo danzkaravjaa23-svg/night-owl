@@ -7,6 +7,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/utils/image_uploader.dart';
 import '../../../core/widgets/gradient_button.dart';
+import '../../../core/widgets/authorized_media.dart';
 import '../../../core/router/app_router.dart';
 import '../../map/providers/venue_provider.dart';
 import '../../../models/venue.dart';
@@ -293,38 +294,40 @@ class _VenueEditScreenState extends ConsumerState<VenueEditScreen> {
                             onTap: _canEdit ? _pickCover : null,
                             child: Container(
                                 height: 150,
+                                clipBehavior: Clip.antiAlias,
                                 decoration: BoxDecoration(
                                     color: AppColors.bgElevated,
                                     borderRadius: BorderRadius.circular(16),
                                     border:
-                                        Border.all(color: AppColors.hairline),
-                                    image: _coverBytes != null
-                                        ? DecorationImage(
-                                            image: MemoryImage(_coverBytes!),
-                                            fit: BoxFit.cover)
-                                        : (_coverUrl != null
-                                            ? DecorationImage(
-                                                image: NetworkImage(_coverUrl!),
-                                                fit: BoxFit.cover)
-                                            : null)),
-                                child: (_coverBytes == null &&
-                                        _coverUrl == null)
-                                    ? Center(
-                                        child: Column(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                            Icon(
-                                                Icons
-                                                    .add_photo_alternate_outlined,
-                                                color: AppColors.textTertiary,
-                                                size: 36),
-                                            const SizedBox(height: 6),
-                                            Text('Cover зураг',
-                                                style: TextStyle(
-                                                    color: AppColors
-                                                        .textTertiary)),
-                                          ]))
-                                    : null),
+                                        Border.all(color: AppColors.hairline)),
+                                child: _coverBytes != null
+                                    ? Image.memory(_coverBytes!,
+                                        fit: BoxFit.cover)
+                                    : _coverUrl != null
+                                        ? AuthorizedImage(
+                                            imageUrl: _coverUrl!,
+                                            fit: BoxFit.cover,
+                                            memCacheWidth: 1200,
+                                            errorWidget: (_, __, ___) =>
+                                                const Center(
+                                                    child: Icon(Icons
+                                                        .broken_image_outlined)))
+                                        : Center(
+                                            child: Column(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                Icon(
+                                                    Icons
+                                                        .add_photo_alternate_outlined,
+                                                    color:
+                                                        AppColors.textTertiary,
+                                                    size: 36),
+                                                const SizedBox(height: 6),
+                                                Text('Cover зураг',
+                                                    style: TextStyle(
+                                                        color: AppColors
+                                                            .textTertiary)),
+                                              ]))),
                           ),
                           const SizedBox(height: 16),
                           _field(_nameCtrl, 'Газрын нэр'),

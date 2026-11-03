@@ -1,0 +1,45 @@
+name: Validate isolated backend components
+on:
+  workflow_dispatch:
+  push:
+    branches: [codex/app-store-preparation]
+    paths:
+      - '.github/workflows/backend-preparation.yml'
+      - 'supabase/**'
+      - 'supabase_featured_events.sql'
+      - 'tools/deployment/tests/*component*'
+      - 'tools/deployment/tests/account_erasure*'
+permissions:
+  contents: read
+concurrency:
+  group: backend-preparation-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  components:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      NIGHTOWL_COMPONENT_WORKDIR: ${{ runner.temp }}/nightowl-component
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: supabase/setup-cli@v3
+        with:
+          version: '2.122.1'
+      - name: Check disposable-stack safety guards
+        run: node --test tools/deployment/tests/backend_component_safety.test.mjs
+      - name: Exercise real local Auth, Storage and account erasure
+        run: node tools/deployment/tests/run_backend_component.mjs
+      - name: Remove only this disposable local stack
+        if: always()
+        run: node tools/deployment/tests/run_backend_component.mjs --cleanup
+      - name: Preserve sanitized component evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: night-owl-backend-components-${{ github.sha }}
+          retention-days: 14
+          if-no-files-found: warn
+          path: build/backend-component/component-result.json

@@ -85,8 +85,11 @@ class _DashboardState extends ConsumerState<_Dashboard> {
                 const SizedBox(height: 12),
                 _navigation(Icons.people_outline, 'Хэрэглэгчид',
                     'Хайх, баталгаажуулах, хориг удирдах', '/admin/users'),
-                _navigation(Icons.article_outlined, 'Контент',
-                    'Нийтлэл болон сэтгэгдлийг шалгах', '/admin/content'),
+                _navigation(
+                    Icons.article_outlined,
+                    'Контент',
+                    'Нийтлэхийн өмнөх шалгалт, зөвшөөрөх эсвэл татгалзах',
+                    '/admin/content'),
                 _navigation(
                     Icons.history_rounded,
                     'Үйлдлийн түүх',

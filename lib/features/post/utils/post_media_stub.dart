@@ -20,6 +20,9 @@ class PickedMediaFile {
 Future<List<PickedMediaFile>> pickPostMedia({bool multiple = true}) async =>
     const [];
 
+Future<List<PickedMediaFile>> pickPostVideo({bool multiple = false}) async =>
+    const [];
+
 /// Preview object URL чөлөөлөх
 void revokePreviewUrl(String url) {}
 

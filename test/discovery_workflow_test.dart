@@ -1399,10 +1399,27 @@ void main() {
             'https://evil.test/storage/v1/object/public/posts/$me/a.jpg',
             backend: 'https://example.test'),
         isNull);
+    for (final bucket in ['avatars', 'venues', 'stories']) {
+      expect(
+          protectedStorageObject(
+              'https://example.test/storage/v1/object/public/$bucket/$me/a.jpg',
+              backend: 'https://example.test'),
+          (bucket: bucket, path: '$me/a.jpg'));
+    }
+    for (final url in [
+      'https://example.test.evil.test/storage/v1/object/public/avatars/$me/a.jpg',
+      'https://user@example.test/storage/v1/object/public/avatars/$me/a.jpg',
+      'https://example.test:444/storage/v1/object/public/avatars/$me/a.jpg',
+      'https://example.test/storage/v1/object/public/avatars/$me/',
+      'https://example.test/storage/v1/object/public/avatars/$me/a%2Fb.jpg',
+    ]) {
+      expect(
+          protectedStorageObject(url, backend: 'https://example.test'), isNull);
+    }
     expect(
         protectedStorageObject(
             'https://example.test/storage/v1/object/public/avatars/$me/a.jpg',
-            backend: 'https://example.test'),
+            backend: 'invalid'),
         isNull);
     expect(
         protectedStorageObject('blob:https://example.test/local',
@@ -1708,6 +1725,53 @@ void main() {
     expect(find.text('List for eq.$other'), findsOneWidget);
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets(
+      'blocking or privacy changes discard avatar and venue signed access',
+      (tester) async {
+    for (final bucket in ['avatars', 'venues']) {
+      var signing = 0;
+      final denied = Completer<http.Response>();
+      respond = (r) async {
+        if (r.url.path.contains('/object/sign/')) {
+          signing++;
+          if (signing == 1) {
+            return json(
+                r, {'signedURL': '/object/sign/$bucket/photo?token=old'});
+          }
+          return denied.future;
+        }
+        return json(r, []);
+      };
+      final container = ProviderContainer(
+          overrides: [sessionUserIdProvider.overrideWithValue(me)]);
+      await tester.pumpWidget(UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp(
+              home: AuthorizedMedia(
+                  url:
+                      '${AppConstants.backendUrl}/storage/v1/object/public/$bucket/$me/photo.jpg',
+                  placeholder: () => const Text('checking access'),
+                  error: () => const Text('access denied'),
+                  builder: (_) => const Text('protected image')))));
+      await tester.pumpAndSettle();
+      expect(find.text('protected image'), findsOneWidget);
+      container.read(socialVersionProvider.notifier).state++;
+      await tester.pump();
+      expect(find.text('protected image'), findsNothing);
+      expect(find.text('checking access'), findsOneWidget);
+      denied.complete(http.Response(
+          jsonEncode(
+              {'message': 'denied', 'statusCode': '403', 'error': 'Forbidden'}),
+          403,
+          headers: {'content-type': 'application/json'}));
+      await tester.pumpAndSettle();
+      expect(find.text('access denied'), findsOneWidget);
+      expect(signing, 2);
+      await tester.pumpWidget(const SizedBox());
+      container.dispose();
+    }
   });
 
   testWidgets('switching accounts removes previously signed media immediately',

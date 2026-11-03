@@ -5,8 +5,10 @@ import {readFile} from 'node:fs/promises';
 import {stripTypeScriptTypes} from 'node:module';
 import {test} from 'node:test';
 import {createContext,SourceTextModule,SyntheticModule} from 'node:vm';
+import {webcrypto} from 'node:crypto';
 
 const source=await readFile(new URL('../../../supabase/functions/delete-account/index.ts',import.meta.url),'utf8');
+const appleSource=await readFile(new URL('../../../supabase/functions/delete-account/apple_revocation.ts',import.meta.url),'utf8');
 const caller='10000000-0000-0000-0000-000000000001';
 const other='10000000-0000-0000-0000-000000000002';
 const internalError='fixture-private-error-detail';
@@ -22,7 +24,7 @@ async function fixture(options={}) {
   const removed=new Set();
   if(options.unsetEnabled)delete env.ACCOUNT_DELETION_ENABLED;
   if(options.missingCredential)delete env.SUPABASE_SERVICE_ROLE_KEY;
-  const context=createContext({Request,Response,Deno:{
+  const context=createContext({Request,Response,crypto:webcrypto,fetch,TextEncoder,TextDecoder,AbortSignal,btoa,atob,Uint8Array,Deno:{
     env:{get:name=>env[name]},serve:value=>{handler=value;},
   }});
   function createClient(url,key,config) {
@@ -39,6 +41,7 @@ async function fixture(options={}) {
     if(key!=='fixture-service')throw new Error(internalError);
     clients.push('admin');
     return {
+      rpc:async(_name,params)=>({data:params.p_action==='storage_inventory'?{objects:[]}:{user_id:caller,state:params.p_action==='lookup'?null:params.p_action==='completed'?'completed':'running'},error:null}),
       auth:{admin:{deleteUser:async (userId,shouldSoftDelete)=>{
         assert.equal(shouldSoftDelete,false);
         events.push({kind:'auth_delete',userId});
@@ -87,8 +90,11 @@ async function fixture(options={}) {
     };
   }
   const sdk=new SyntheticModule(['createClient'],function(){this.setExport('createClient',createClient);},{context});
+  const appleModule=new SourceTextModule(stripTypeScriptTypes(appleSource),{context});
+  await appleModule.link(()=>{throw new Error('Unexpected Apple dependency');});
   const module=new SourceTextModule(stripTypeScriptTypes(source),{context});
   await module.link(specifier=>{
+    if(specifier==='./apple_revocation.ts')return appleModule;
     assert.equal(specifier,'https://esm.sh/@supabase/supabase-js@2.118.0');
     return sdk;
   });

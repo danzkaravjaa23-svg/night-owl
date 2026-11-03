@@ -5,10 +5,12 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/gradient_button.dart';
 import '../../../core/widgets/owl_loading.dart';
 import '../../../core/router/app_router.dart';
+import '../../profile/services/account_deletion_service.dart';
 import '../widgets/auth_ui.dart';
 
 class AuthLandingScreen extends StatefulWidget {
-  const AuthLandingScreen({super.key});
+  final AccountDeletionService? deletionService;
+  const AuthLandingScreen({super.key, this.deletionService});
 
   @override
   State<AuthLandingScreen> createState() => _AuthLandingScreenState();
@@ -17,7 +19,27 @@ class AuthLandingScreen extends StatefulWidget {
 class _AuthLandingScreenState extends State<AuthLandingScreen> {
   bool _gLoading = false;
   bool _aLoading = false;
+  bool _hasPendingDeletion = false;
   bool get _authBusy => _gLoading || _aLoading;
+
+  @override
+  void initState() {
+    super.initState();
+    _restoreDeletionReceipt();
+  }
+
+  Future<void> _restoreDeletionReceipt() async {
+    try {
+      final service = widget.deletionService ?? AccountDeletionService();
+      await service.restorePendingReceipts();
+      if (mounted) {
+        setState(() => _hasPendingDeletion = service.pendingOwnerId != null);
+      }
+    } catch (_) {
+      // A failed local receipt lookup must not interrupt sign-in or expose
+      // capability/owner details. The deletion page can retry secure storage.
+    }
+  }
 
   Future<void> _googleSignIn() async {
     if (_authBusy) return;
@@ -219,6 +241,18 @@ class _AuthLandingScreenState extends State<AuthLandingScreen> {
                                             const Icon(Icons.explore_outlined),
                                         label: const Text(
                                             'Бүртгэлгүйгээр газрууд үзэх')),
+                                    if (_hasPendingDeletion)
+                                      TextButton.icon(
+                                          key: const ValueKey(
+                                              'auth-deletion-recovery'),
+                                          onPressed: _authBusy
+                                              ? null
+                                              : () => context.push(
+                                                  AppRoutes.deleteAccount),
+                                          icon:
+                                              const Icon(Icons.restore_rounded),
+                                          label: const Text(
+                                              'Өмнөх устгалын төлөвийг шалгах')),
                                     Text('18+ · Хүндэтгэлтэй хамтын орчин',
                                         textAlign: TextAlign.center,
                                         style: TextStyle(

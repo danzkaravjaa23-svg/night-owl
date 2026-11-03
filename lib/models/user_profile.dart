@@ -1,6 +1,7 @@
 /// Хэрэглэгчийн профайл
 class UserProfile {
   final String id;
+  final String moderationStatus;
   final String? username;
   final String? name;
   final String? bio;
@@ -18,6 +19,7 @@ class UserProfile {
 
   UserProfile({
     required this.id,
+    this.moderationStatus = 'approved',
     this.username,
     this.name,
     this.bio,
@@ -36,6 +38,7 @@ class UserProfile {
 
   factory UserProfile.fromJson(Map<String, dynamic> json) => UserProfile(
         id: json['id'] as String,
+        moderationStatus: json['moderation_status'] as String? ?? 'approved',
         username: json['username'] as String?,
         name: (json['full_name'] ?? json['name']) as String?,
         bio: json['bio'] as String?,
@@ -81,6 +84,7 @@ class UserProfile {
   }) =>
       UserProfile(
         id: id,
+        moderationStatus: moderationStatus,
         username: username ?? this.username,
         name: name ?? this.name,
         bio: bio ?? this.bio,

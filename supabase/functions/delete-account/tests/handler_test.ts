@@ -18,6 +18,7 @@ Deno.test("delete-account: actual SDK HTTP contract without live data", async (t
   const files = new Map<string, string[]>();
   let failure = "";
   let apple = false;
+  let job: Record<string, unknown> = {state: null};
   const api = Deno.serve({ hostname: "127.0.0.1", port: 0, onListen() {} }, async (req) => {
     const path = new URL(req.url).pathname;
     calls.push({ path, method: req.method });
@@ -28,6 +29,16 @@ Deno.test("delete-account: actual SDK HTTP contract without live data", async (t
         ? json(user) : json({ message: "Invalid fixture token" }, 401);
     }
     assert(req.headers.get("Authorization") === "Bearer fixture-service", "Admin bearer must stay server-only");
+    if (path === "/rest/v1/rpc/account_erasure_control") {
+      const body = await req.json();
+      if (body.p_action === "storage_inventory") return json({objects: []});
+      if (body.p_action === "lookup") return json(job);
+      if (body.p_action === "prepare") job = {user_id: owner, state: "prepared"};
+      if (body.p_action === "claim") job.state = "running";
+      if (body.p_action === "completed") job.state = "completed";
+      if (body.p_action === "failed") job.state = "failed";
+      return json(job);
+    }
     if (path.startsWith("/storage/v1/object/list/")) {
       const bucket = path.split("/").at(-1)!;
       assert(buckets.includes(bucket), "Unexpected bucket");
@@ -89,6 +100,7 @@ Deno.test("delete-account: actual SDK HTTP contract without live data", async (t
       files.set("posts", ["post.jpg"]);
       failure = "";
       apple = false;
+      job = {state: null};
       Deno.env.set("ACCOUNT_DELETION_ENABLED", "true");
       await t.step(name, run);
     };
@@ -122,7 +134,7 @@ Deno.test("delete-account: actual SDK HTTP contract without live data", async (t
       assert(lists.length === 8, "Every bucket must be checked before and after cleanup");
       assert(calls.slice(0, calls.findIndex((call) => call.method === "DELETE"))
         .filter((call) => call.path.includes("/object/list/")).length === 4, "Cleanup began before enumeration completed");
-      assert(calls.at(-1)?.path === `/auth/v1/admin/users/${owner}`, "Auth hard delete must be last and caller-only");
+      assert(calls.filter((call) => !call.path.startsWith("/rest/v1/rpc/")).at(-1)?.path === `/auth/v1/admin/users/${owner}`, "Auth hard delete must be last destructive operation and caller-only");
     });
     await step("late listing failure leaves all media untouched", async () => {
       failure = "posts-list";
@@ -154,7 +166,7 @@ Deno.test("delete-account: actual SDK HTTP contract without live data", async (t
         const response = await invoke();
         const result = await response.json();
         assert(response.status === 500 && result.code === "deletion_incomplete", "Invalid Auth response looked successful");
-        assert(calls.at(-1)?.path === `/auth/v1/admin/users/${owner}`, "Only the caller can be erased");
+        assert(calls.filter((call) => !call.path.startsWith("/rest/v1/rpc/")).at(-1)?.path === `/auth/v1/admin/users/${owner}`, "Only the caller can be erased");
       });
     }
     await step("partial cleanup is explicit and a deliberate retry resumes", async () => {

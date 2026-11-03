@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart' as cached;
 import '../../features/auth/providers/auth_provider.dart';
+import '../../features/discovery/services/discovery_service.dart';
 import '../services/media_access.dart';
 
 class AuthorizedMedia extends ConsumerStatefulWidget {
@@ -27,7 +28,8 @@ class _AuthorizedMediaState extends ConsumerState<AuthorizedMedia> {
       return widget.builder(widget.url);
     }
     final account = ref.watch(sessionUserIdProvider);
-    final identity = '$account:${widget.url}';
+    final accessVersion = ref.watch(socialVersionProvider);
+    final identity = '$account:$accessVersion:${widget.url}';
     if (_identity != identity) {
       _identity = identity;
       _url = authorizedMediaUrl(widget.url);
@@ -67,22 +69,26 @@ class AuthorizedImage extends StatelessWidget {
       this.placeholder,
       this.errorWidget});
   @override
-  Widget build(BuildContext context) => AuthorizedMedia(
-      url: imageUrl,
-      placeholder: () =>
-          placeholder?.call(context, imageUrl) ??
-          SizedBox(width: width, height: height),
-      error: () =>
-          errorWidget?.call(
-              context, imageUrl, StateError('Медиа үзэх боломжгүй')) ??
-          const Icon(Icons.lock_outline),
-      builder: (url) => cached.CachedNetworkImage(
-          imageUrl: url,
-          width: width,
-          height: height,
-          fit: fit,
-          memCacheWidth: memCacheWidth,
-          fadeInDuration: fadeInDuration,
-          placeholder: placeholder,
-          errorWidget: errorWidget));
+  Widget build(BuildContext context) {
+    Widget image(String url) => cached.CachedNetworkImage(
+        imageUrl: url,
+        width: width,
+        height: height,
+        fit: fit,
+        memCacheWidth: memCacheWidth,
+        fadeInDuration: fadeInDuration,
+        placeholder: placeholder,
+        errorWidget: errorWidget);
+    if (protectedStorageObject(imageUrl) == null) return image(imageUrl);
+    return AuthorizedMedia(
+        url: imageUrl,
+        placeholder: () =>
+            placeholder?.call(context, imageUrl) ??
+            SizedBox(width: width, height: height),
+        error: () =>
+            errorWidget?.call(
+                context, imageUrl, StateError('Медиа үзэх боломжгүй')) ??
+            const Icon(Icons.lock_outline),
+        builder: image);
+  }
 }

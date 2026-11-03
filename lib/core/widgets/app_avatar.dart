@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:cached_network_image/cached_network_image.dart';
+import 'authorized_media.dart';
 import '../constants/avatar_presets.dart';
 import '../theme/app_colors.dart';
 
@@ -37,7 +37,7 @@ class AppAvatar extends StatelessWidget {
       avatar = _presetAvatar(avatarSize, preset);
     } else if (NightOwlAvatars.isNetworkPhoto(imageUrl)) {
       avatar = ClipOval(
-        child: CachedNetworkImage(
+        child: AuthorizedImage(
           imageUrl: imageUrl!.trim(),
           width: avatarSize,
           height: avatarSize,

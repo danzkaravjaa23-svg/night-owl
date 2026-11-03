@@ -48,11 +48,13 @@ jobs:
       - name: Launch iPhone and iPad simulators
         run: python3 tools/deployment/ios_simulator_smoke.py
       - name: Preserve native bundles
+        if: ${{ always() && hashFiles('build/ios/iphoneos/Runner.app/Info.plist') != '' && hashFiles('build/ios/iphonesimulator/Runner.app/Info.plist') != '' }}
         run: |
           mkdir -p build/releases
           tar -czf build/releases/night-owl-iphoneos-unsigned.tar.gz -C build/ios/iphoneos Runner.app
           tar -czf build/releases/night-owl-simulator.tar.gz -C build/ios/iphonesimulator Runner.app
       - uses: actions/upload-artifact@v4
+        if: ${{ always() && hashFiles('build/releases/night-owl-iphoneos-unsigned.tar.gz') != '' }}
         with:
           name: night-owl-native-unsigned-${{ github.sha }}
           retention-days: 14

@@ -1,3 +1,4 @@
+import '../../../core/widgets/content_review_notice.dart';
 import 'dart:async';
 
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -249,6 +250,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                             onFollowing: () =>
                                 _openFollows(profile.id, 'following'),
                           )),
+                          SliverToBoxAdapter(
+                              child: Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 20),
+                                  child: ContentReviewNotice(
+                                      status: profile.moderationStatus,
+                                      profile: true))),
                           SliverToBoxAdapter(
                               child: Padding(
                                   padding:

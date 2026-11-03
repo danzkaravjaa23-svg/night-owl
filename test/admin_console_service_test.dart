@@ -271,4 +271,110 @@ void main() {
         {'p_kind': 'creator', 'p_id': other, 'p_enabled': true});
     expect(requests, hasLength(2));
   });
+  Map<String, dynamic> reviewItem() => {
+        'id': '30000000-0000-4000-8000-000000000001',
+        'kind': 'post',
+        'review_version': '40000000-0000-4000-8000-000000000001',
+        'content': <String, dynamic>{'caption': 'Selected safe draft'},
+        'status': 'pending',
+      };
+  Map<String, dynamic> reviewReceipt(Map<String, dynamic> item) => {
+        'target_id': item['id'],
+        'target_type': item['kind'],
+        'review_version': item['review_version'],
+        'status': 'approved',
+        'audit_id': '50000000-0000-4000-8000-000000000001',
+        'created_at': '2026-11-03T08:00:00Z',
+      };
+  test('review queue filters and pagination use captured RPC contract',
+      () async {
+    respond = (_) async => jsonResponse({
+          'items': [reviewItem()],
+          'has_more': true
+        });
+    final session = capture();
+    final page = await service.reviewQueue(session, kind: 'post', offset: 20);
+    expect(page.hasMore, isTrue);
+    expect(page.items.single['content'], {'caption': 'Selected safe draft'});
+    expect(requests.single.url.path, '/rest/v1/rpc/admin_console_review_queue');
+    expect(requests.single.headers['authorization'], 'Bearer ${session.token}');
+    expect(jsonDecode(requests.single.body), {
+      'p_kind': 'post',
+      'p_status': 'pending',
+      'p_offset': 20,
+      'p_limit': 20
+    });
+  });
+  test(
+      'review decisions bind the exact content version and require matching audit',
+      () async {
+    final item = reviewItem();
+    respond = (_) async => jsonResponse(reviewReceipt(item));
+    await service.review(capture(),
+        item: item, decision: 'approved', reason: 'Reviewed all media');
+    expect(requests.single.url.path, '/rest/v1/rpc/admin_console_review');
+    expect(jsonDecode(requests.single.body), {
+      'p_kind': 'post',
+      'p_target_id': item['id'],
+      'p_version': item['review_version'],
+      'p_decision': 'approved',
+      'p_reason': 'Reviewed all media'
+    });
+    respond = (_) async => jsonResponse(
+        {...reviewReceipt(item), 'review_version': 'wrong-version'});
+    await expectLater(
+        service.review(capture(),
+            item: item, decision: 'approved', reason: 'Reviewed all media'),
+        throwsA(failure('action_uncertain')));
+  });
+  test(
+      'review refuses malformed queue records and invalid decisions before mutation',
+      () async {
+    respond = (_) async => jsonResponse({
+          'items': [
+            {'id': 'x', 'kind': 'post'}
+          ],
+          'has_more': false
+        });
+    await expectLater(
+        service.reviewQueue(capture()), throwsA(failure('response')));
+    requests.clear();
+    await expectLater(
+        service.review(capture(),
+            item: reviewItem(),
+            decision: 'make_admin',
+            reason: 'Invalid review'),
+        throwsA(failure('invalid')));
+    await expectLater(
+        service.review(capture(),
+            item: reviewItem(), decision: 'approved', reason: 'x'),
+        throwsA(failure('invalid')));
+    expect(requests, isEmpty);
+  });
+  test('a late review completion cannot become success after account switch',
+      () async {
+    final pending = Completer<http.Response>();
+    respond = (_) => pending.future;
+    final future = service.review(capture(),
+        item: reviewItem(), decision: 'approved', reason: 'Reviewed all media');
+    final assertion = expectLater(future, throwsA(failure('session_changed')));
+    await Future<void>.delayed(Duration.zero);
+    await signIn(other);
+    pending.complete(jsonResponse(reviewReceipt(reviewItem())));
+    await assertion;
+  });
+  test('review timeout is uncertain and server denial revokes the admin scope',
+      () async {
+    respond = (_) => Completer<http.Response>().future;
+    await expectLater(
+        service.review(capture(),
+            item: reviewItem(),
+            decision: 'approved',
+            reason: 'Reviewed all media'),
+        throwsA(failure('action_uncertain')));
+    final session = capture();
+    respond = (_) async => jsonResponse({'code': '42501'}, 403);
+    await expectLater(service.reviewQueue(session), throwsA(failure('denied')));
+    expect(session.isCurrent, isFalse);
+  });
 }

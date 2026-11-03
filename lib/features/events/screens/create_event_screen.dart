@@ -1,3 +1,4 @@
+import '../../../core/widgets/content_review_notice.dart';
 import 'dart:async';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
@@ -246,6 +247,7 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
       await _service.publishEvent(_session, _pendingRow!);
       if (!mounted) return;
       _session.check();
+      showSubmittedForReview(context);
       ref.invalidate(upcomingEventsProvider);
       ScaffoldMessenger.of(context)
           .showSnackBar(const SnackBar(content: Text('Эвент нийтлэгдлээ 🎉')));

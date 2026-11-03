@@ -191,6 +191,62 @@ class AdminConsoleFixtureService extends AdminConsoleService {
     return result;
   }
 
+  final reviewItems = <Map<String, dynamic>>[
+    {
+      'id': '30000000-0000-4000-8000-000000000001',
+      'kind': 'post',
+      'author_id': '10000000-0000-4000-8000-000000000002',
+      'review_version': '40000000-0000-4000-8000-000000000001',
+      'status': 'pending',
+      'created_at': '2026-11-03T08:00:00Z',
+      'content': <String, dynamic>{
+        'caption': 'Шалгах шинэ нийтлэл',
+        'media_urls': <String>[]
+      }
+    }
+  ];
+  final reviewDecisions = <Map<String, dynamic>>[];
+  Future<AdminConsolePage> Function(String kind, String status, int offset)?
+      reviewHandler;
+
+  @override
+  Future<AdminConsolePage> reviewQueue(AdminConsoleSession session,
+      {String kind = 'all',
+      String status = 'pending',
+      int offset = 0,
+      int limit = 20}) async {
+    session.check();
+    final result = reviewHandler != null
+        ? await reviewHandler!(kind, status, offset)
+        : AdminConsolePage(
+            items: reviewItems
+                .where((item) =>
+                    item['status'] == status &&
+                    (kind == 'all' || item['kind'] == kind))
+                .toList(),
+            hasMore: false);
+    session.check();
+    return result;
+  }
+
+  @override
+  Future<void> review(AdminConsoleSession session,
+      {required Map<String, dynamic> item,
+      required String decision,
+      required String reason}) async {
+    session.check();
+    reviewDecisions.add({
+      'id': item['id'],
+      'version': item['review_version'],
+      'decision': decision,
+      'reason': reason
+    });
+    await actionPending?.future;
+    session.check();
+    if (actionFailure != null) throw actionFailure!;
+    item['status'] = decision;
+  }
+
   @override
   Future<Map<String, dynamic>> action(AdminConsoleSession session,
       {required String action,

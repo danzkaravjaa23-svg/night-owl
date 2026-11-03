@@ -58,8 +58,10 @@ const ACTIONS = new Set(['ban_user','unban_user','verify_user','unverify_user','
 const ACTION_LABELS = {ban_user:'Хэрэглэгч хориглох',unban_user:'Хориг цуцлах',verify_user:'Баталгаажуулах',unverify_user:'Баталгаа цуцлах',delete_post:'Нийтлэл устгах',delete_comment:'Сэтгэгдэл устгах',resolve_report:'Шийдвэрлэсэн болгох',dismiss_report:'Зөрчилгүй гэж хаах',reopen_report:'Дахин нээх'};
 const STATUS = {pending:'Хүлээгдэж буй',resolved:'Шийдвэрлэсэн',reviewed:'Зөрчилгүй гэж хаасан'};
 const REASONS = {spam:'Спам',harassment:'Дарамт',nudity:'Бэлгийн агуулга',violence:'Хүчирхийлэл',hate:'Үзэн ядалт',other:'Бусад'};
+const REVIEW_KINDS = {all:'Бүх төрөл',post:'Нийтлэл',story:'Story',comment:'Сэтгэгдэл',event:'Эвент',review:'Газрын үнэлгээ',profile:'Профайл',note:'Тэмдэглэл',collection:'Нийтийн цуглуулга',venue:'Газар'};
 const PAGES = [
  ['dashboard','Хяналтын самбар','Анхаарах зүйлс, бодит тоон мэдээлэл.'],
+ ['review','Нийтлэхийн өмнөх шалгалт','Бүх текст, зураг, видеог бүрэн үзэж шалгаад шийдвэр гаргана. Хувийн DM түүх орохгүй.'],
  ['reports','Мэдэгдлүүд','Зөрчлийн мэдээллийг шалгаж, шийдвэрийн шалтгааныг бүртгэнэ.'],
  ['users','Хэрэглэгчид','Бүртгэлийн төлөвийг хянах. Админ эрхийг энд өөрчлөхгүй.'],
  ['posts','Нийтлэлүүд','Нийтэлсэн агуулгыг хянах. Устгах үйлдэл буцаагдахгүй.'],
@@ -70,7 +72,7 @@ const PAGES = [
 ];
 let session = null, generation = 0, pageGeneration = 0, queryGeneration = 0;
 let actor = null, activePage = 'dashboard', modalCancel = null, actionGeneration = 0, actionBusy = false;
-const queue = Object.fromEntries(PAGES.map(([id]) => [id, {offset:0,search:'',status:'pending'}]));
+const queue = Object.fromEntries(PAGES.map(([id]) => [id, {offset:0,search:'',status:'pending',kind:'all'}]));
 class StaleRequest extends Error {}
 class AdminError extends Error { constructor(message, code = '') { super(message); this.code = code; } }
 function scope() { return {generation, owner:session?.user?.id, token:session?.access_token}; }
@@ -84,7 +86,7 @@ function safeImage(value) {
  if (value.startsWith('nightowl://avatar/')) { const name = presets[value.slice(18)]; return name ? `/assets/assets/images/avatars/${name}.webp` : ''; }
  try { const url = new URL(value); return url.protocol === 'https:' && !url.username && !url.password ? url.href : ''; } catch (_) { return ''; }
 }
-function avatar(value) { const src = safeImage(value) || '/assets/assets/icons/night_owl_mark.png'; return `<img class="avatar" src="${esc(src)}" alt="" loading="lazy" referrerpolicy="no-referrer">`; }
+function avatar(value) { const safe=safeImage(value); const src = safe.startsWith(SUPABASE_URL+'/storage/v1/object/public/') ? '/assets/assets/icons/night_owl_mark.png' : safe || '/assets/assets/icons/night_owl_mark.png'; return `<img class="avatar" src="${esc(src)}" alt="" loading="lazy" referrerpolicy="no-referrer">`; }
 function photo(value) { const src = safeImage(value); return src ? `<img class="media" src="${esc(src)}" alt="Нийтэлсэн зураг" loading="lazy" referrerpolicy="no-referrer">` : ''; }
 function badge(value, bad = false) { return `<span class="badge${bad ? ' bad' : ''}">${esc(value)}</span>`; }
 function loading() { return '<div class="loading" role="status"><div class="spinner"></div>Уншиж байна…</div>'; }
@@ -184,6 +186,11 @@ function renderQueue(t) {
   form.onsubmit = event => { event.preventDefault(); if (!visible(t)) return; if (searchable) state.search = form.elements.search.value.trim(); else state.status = form.elements.status.value; state.offset = 0; queryGeneration++; t.query = queryGeneration; loadQueue(t); };
   wrap.append(form);
  }
+ if (id === 'review') {
+  const form = el(`<form class="tools"><label>Төрөл<select name="kind">${Object.entries(REVIEW_KINDS).map(([value,label])=>`<option value="${value}"${value===state.kind?' selected':''}>${esc(label)}</option>`).join('')}</select></label><label>Төлөв<select name="status">${[['pending','Хүлээгдэж буй'],['approved','Баталсан'],['rejected','Татгалзсан']].map(([value,label])=>`<option value="${value}"${value===state.status?' selected':''}>${label}</option>`).join('')}</select></label><button class="primary" type="submit">Шүүх</button></form>`);
+  form.onsubmit = event => { event.preventDefault(); if (!visible(t) || actionBusy) return; state.kind=form.elements.kind.value;state.status=form.elements.status.value;state.offset=0;queryGeneration++;t.query=queryGeneration;loadQueue(t); };
+  wrap.append(form);
+ }
  if (id === 'venues') { const add = el('<button class="primary" style="margin-bottom:20px">+ Газар нэмэх</button>'); add.onclick = () => venueForm(t); wrap.append(add); }
  wrap.append(el('<div id="queueItems"></div>'),el('<div id="queuePager" class="pager"></div>'));
  $('view').replaceChildren(wrap); loadQueue(t);
@@ -195,6 +202,7 @@ async function loadQueue(base) {
   const args = {p_offset:state.offset,p_limit:PAGE_SIZE}; let data;
   if (t.id === 'users') data = await rpc(t.scope,'users',{...args,p_search:state.search});
   else if (t.id === 'reports') data = await rpc(t.scope,'reports',{...args,p_status:state.status});
+  else if (t.id === 'review') data = await rpc(t.scope,'review_queue',{...args,p_kind:state.kind,p_status:state.status});
   else if (t.id === 'audit') data = await rpc(t.scope,'audit',args);
   else if (t.id === 'posts' || t.id === 'comments') data = await rpc(t.scope,'content',{...args,p_kind:t.id === 'posts' ? 'post' : 'comment',p_search:state.search});
   else {
@@ -222,16 +230,19 @@ function actionButton(card,t,action,target,label,reportId = null) {
 }
 function renderRecord(item,t) {
  let card;
+ if (t.id === 'review') return renderReviewRecord(item,t);
  if (t.id === 'users') {
   card = el(`<article class="card"><div class="record-top">${avatar(item.avatar_url)}<div class="grow"><h3 class="break">@${esc(item.username || 'Нэргүй')}</h3><p class="small muted break">${esc(item.full_name)}</p></div><div class="row wrap">${item.is_admin ? badge('Админ') : ''}${item.is_verified ? badge('Баталгаажсан') : ''}${item.is_banned ? badge('Хориглосон',true) : ''}</div></div><p class="record-meta">Бүртгүүлсэн: ${esc(fmtDate(item.created_at))}</p><div class="actions"></div></article>`);
+  hydrateProtectedAvatar(card,item.avatar_url,t);
   if (item.id !== t.scope.owner && !item.is_admin) { actionButton(card,t,item.is_banned ? 'unban_user' : 'ban_user',item.id,`@${item.username || 'Нэргүй'}`); actionButton(card,t,item.is_verified ? 'unverify_user' : 'verify_user',item.id,`@${item.username || 'Нэргүй'}`); }
  } else if (t.id === 'reports') {
   card = el(`<article class="card"><div class="row wrap"><h3 class="grow">${esc(REASONS[item.reason] || item.reason)}</h3>${badge(STATUS[item.status] || item.status,item.status === 'pending')}</div><p class="record-meta">${esc(item.target_type)} · ${esc(fmtDate(item.created_at))} · Мэдээлсэн: @${esc(item.reporter_username || 'Нэргүй')}</p>${item.details ? `<p class="break" style="margin-bottom:12px">${esc(item.details)}</p>` : ''}<div class="excerpt">${esc(item.target_excerpt || 'Агуулга устсан эсвэл урьдчилан харах боломжгүй.')}</div><p class="id">ID: ${esc(item.target_id)}</p><div class="actions"></div></article>`);
   if (item.status === 'pending') {
    if (item.target_type === 'post' || item.target_type === 'comment') actionButton(card,t,`delete_${item.target_type}`,item.target_id,item.target_excerpt || item.target_id,item.id);
-   if (item.target_type === 'user') actionButton(card,t,'ban_user',item.target_id,item.target_excerpt || item.target_id,item.id);
+   if (item.target_author_id || item.target_type === 'user') actionButton(card,t,'ban_user',item.target_author_id || item.target_id,item.target_excerpt || item.target_id,item.id);
    actionButton(card,t,'resolve_report',item.id,'Энэ мэдэгдэл'); actionButton(card,t,'dismiss_report',item.id,'Энэ мэдэгдэл');
   } else actionButton(card,t,'reopen_report',item.id,'Энэ мэдэгдэл');
+  if (item.target_media_url) appendReviewMedia(card,item.target_media_url,t);
  } else if (t.id === 'posts' || t.id === 'comments') {
   card = el(`<article class="card">${t.id === 'posts' && item.media_url ? '<div class="media-preview small muted" role="status">Медиа ачаалж байна…</div>' : ''}<h3 class="break">@${esc(item.username || 'Нэргүй')}</h3><p class="record-meta">${esc(fmtDate(item.created_at))}</p><p class="break">${esc(item.body || 'Тайлбаргүй')}</p><p class="id">ID: ${esc(item.id)}</p><div class="actions"></div></article>`);
   actionButton(card,t,t.id === 'posts' ? 'delete_post' : 'delete_comment',item.id,item.body || item.id);
@@ -246,6 +257,73 @@ function renderRecord(item,t) {
  }
  return card;
 }
+
+function reviewObject(source) {
+ let url; try { url=new URL(source); } catch (_) { throw new AdminError('Медиа холбоос буруу байна.'); }
+ if (url.origin!==new URL(SUPABASE_URL).origin) return null;
+ const match=url.pathname.match(/^\/storage\/v1\/object\/public\/(posts|stories|avatars|venues)\/(.+)$/);
+ if (!match || url.username || url.password || url.search || url.hash) throw new AdminError('Медиа холбоос зөвшөөрөгдөхгүй.');
+ let parts;try { parts=match[2].split('/').map(decodeURIComponent); } catch (_) { throw new AdminError('Медиа зам буруу байна.'); }
+ if (parts.length<2 || parts.some(part=>!part||part==='.'||part==='..'||/[\\/%\x00-\x1f]/.test(part))) throw new AdminError('Медиа зам буруу байна.');
+ return {bucket:match[1],path:parts.map(encodeURIComponent).join('/')};
+}
+async function reviewMediaSource(captured,source) {
+ assertCurrent(captured);
+ const object=reviewObject(source);
+ if (!object) { const external=safeImage(source); if (!external.startsWith('https://')) throw new AdminError('HTTPS медиа шаардлагатай.'); return external; }
+ const endpoint=`/storage/v1/object/sign/${object.bucket}/${object.path}`;
+ const result=await request(captured,`object/sign/${object.bucket}/${object.path}`,{api:'storage/v1',body:{expiresIn:300}});
+ const signed=result?.signedURL??result?.signedUrl;
+ if (typeof signed!=='string') throw new AdminError('Медиа үзэх холбоос ирсэнгүй.');
+ const url=new URL(signed.startsWith('/object/')?`/storage/v1${signed}`:signed,SUPABASE_URL);
+ if (url.origin!==new URL(SUPABASE_URL).origin || url.username || url.password || url.hash || url.pathname!==endpoint || !url.searchParams.get('token')) throw new AdminError('Медиа үзэх холбоос тохирохгүй.');
+ assertCurrent(captured);return url.href;
+}
+async function hydrateProtectedAvatar(card,source,t) {
+ if (typeof source!=='string' || !source.startsWith(SUPABASE_URL+'/storage/v1/object/public/')) return;
+ try { const signed=await reviewMediaSource(t.scope,source);if (visible(t)&&card.isConnected)card.querySelector('.avatar').src=signed; } catch (_) { /* Keep the owl fallback. */ }
+}
+function appendReviewMedia(card,source,t,forceVideo=false,forceAudio=false) {
+ const preview=el('<div class="media-preview small muted" role="status">Медиа ачаалж байна…</div>');card.append(preview);
+ (async()=>{try{
+  const signed=await reviewMediaSource(t.scope,source);if(!visible(t)||!preview.isConnected)return;
+  const video=forceVideo||/\.(mp4|webm|mov|m4v|avi|mkv)$/i.test(new URL(source).pathname);
+  const node=document.createElement(forceAudio?'audio':video?'video':'img');node.className='media';node.referrerPolicy='no-referrer';
+  if(video||forceAudio){node.controls=true;node.preload='metadata';node.playsInline=true;}
+  else{node.alt='Шалгах зураг';node.loading='lazy';node.style.objectFit='contain';}
+  node.addEventListener('error',()=>{if(visible(t)&&preview.isConnected)preview.textContent='Медиа нээгдсэнгүй. Бүрэн үзтэл батлахгүй.';});
+  node.src=signed;preview.replaceChildren(node);
+ }catch(_){if(visible(t)&&preview.isConnected)preview.textContent='Медиа нээгдсэнгүй. Эрх, хадгалалтыг шалгаад шинэчилнэ үү.';}})();
+}
+function renderReviewRecord(item,t) {
+ if(!item||typeof item.id!=='string'||typeof item.review_version!=='string'||!REVIEW_KINDS[item.kind]||!item.content||typeof item.content!=='object')throw new AdminError('Шалгалтын хариу буруу байна.');
+ const card=el(`<article class="card"><div class="row wrap"><h3 class="grow">${esc(REVIEW_KINDS[item.kind])}</h3>${badge(item.status,item.status==='pending')}</div><p class="record-meta">${esc(fmtDate(item.submitted_at || item.created_at))}</p><pre class="excerpt">${esc(JSON.stringify(item.content,null,2))}</pre><p class="id">ID: ${esc(item.id)}</p><div class="actions"></div></article>`);
+ const media=new Set(['media_url','cover_url','avatar_url','music_url'].map(key=>item.content[key]).filter(value=>typeof value==='string'&&value.startsWith('https://')));
+ for(const key of ['media_urls','photos'])if(Array.isArray(item.content[key]))for(const value of item.content[key])if(typeof value==='string'&&value.startsWith('https://'))media.add(value);
+ for(const source of media)appendReviewMedia(card,source,t,item.content.media_type==='video'&&source===item.content.media_url,source===item.content.music_url);
+ for(const decision of item.status==='pending'?['approved','rejected']:item.status==='approved'?['rejected']:[]){
+  const button=el(`<button class="${decision==='approved'?'primary':'danger'}">${decision==='approved'?'Шалгаад зөвшөөрөх':item.status==='approved'?'Харагдахыг зогсоох':'Татгалзах'}</button>`);
+  button.onclick=()=>runReview(t,item,decision,button);card.querySelector('.actions').append(button);
+ }
+ return card;
+}
+async function reviewContent(captured,item,decision,reason) {
+ if(!item||typeof item.id!=='string'||typeof item.review_version!=='string'||(!REVIEW_KINDS[item.kind]||item.kind==='all')||!['approved','rejected'].includes(decision)||typeof reason!=='string'||reason.trim().length<3||reason.trim().length>1000)throw new AdminError('Шийдвэр, шалтгаанаа шалгана уу.');
+ const result=await rpc(captured,'review',{p_kind:item.kind,p_target_id:item.id,p_version:item.review_version,p_decision:decision,p_reason:reason.trim()},true);
+ if(!result||result.target_id!==item.id||result.target_type!==item.kind||result.review_version!==item.review_version||result.status!==decision||typeof result.audit_id!=='string'||!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(result.audit_id)||!Number.isFinite(new Date(result.created_at).getTime()))throw new AdminError('Баталгаатай баримт ирсэнгүй. Дахин шийдэхээс өмнө шинэчлээд аудит шалгана уу.');
+ return result;
+}
+async function runReview(t,item,decision,button) {
+ if(!visible(t)||actionBusy)return;actionBusy=true;const attempt=++actionGeneration;button.disabled=true;
+ try{
+  const reason=await reasonDialog(decision==='approved'?'Нийтлэхийг зөвшөөрөх':'Контентыг хязгаарлах',JSON.stringify(item.content),true);
+  if(!reason||!visible(t))return;
+  await reviewContent(t.scope,item,decision,reason);if(!visible(t))return;
+  toast('Шийдвэр болон аудитын баримтыг хадгаллаа.');await loadQueue(t);
+ }catch(error){if(visible(t))toast(errorText(error),true);}
+ finally{if(attempt===actionGeneration)actionBusy=false;if(button.isConnected)button.disabled=false;}
+}
+
 function attachedPostPath(item) {
  const source = item?.media_url;
  if (typeof source !== 'string') return null;
@@ -287,15 +365,15 @@ async function hydrateMedia(card,item,t) {
   node.addEventListener('error',unavailable); node.src = source; preview.replaceChildren(node);
  } catch (_) { unavailable(); }
 }
-function reasonDialog(title,target) {
+function reasonDialog(title,target,requireReview = false) {
  closeModal();
  return new Promise(resolve => {
-  const dialog = el(`<dialog aria-labelledby="reasonTitle"><form><h2 id="reasonTitle">${esc(title)}</h2><p class="break">${esc(String(target).slice(0,240))}</p><p class="small muted">${title.includes('устгах') ? 'Устгасан агуулгыг энэ хэсгээс сэргээх боломжгүй.' : 'Шалгасан нөхцөл, шийдвэрийн үндэслэлээ бичнэ үү.'} Шалтгаан үйлдлийн түүхэнд бүртгэгдэнэ.</p><label>Шийдвэрийн шалтгаан<textarea name="reason" rows="4" minlength="3" maxlength="1000" required placeholder="Шалгасан нөхцөл, шийдвэрийн үндэслэл…"></textarea></label><p class="error small" id="reasonError" hidden>Дор хаяж 3 тэмдэгттэй шалтгаан бичнэ үү.</p><div class="actions"><button type="button" class="cancel">Болих</button><button class="primary" type="submit">Баталгаажуулах</button></div></form></dialog>`);
+  const dialog = el(`<dialog aria-labelledby="reasonTitle"><form><h2 id="reasonTitle">${esc(title)}</h2><p class="break">${esc(String(target).slice(0,240))}</p><p class="small muted">${title.includes('устгах') ? 'Устгасан агуулгыг энэ хэсгээс сэргээх боломжгүй.' : 'Шалгасан нөхцөл, шийдвэрийн үндэслэлээ бичнэ үү.'} Шалтгаан үйлдлийн түүхэнд бүртгэгдэнэ.</p>${requireReview ? '<label class="row"><input name="reviewConfirmed" type="checkbox" required style="width:24px;min-height:24px">Бүх текст, зураг, видеог бүрэн үзэж шалгасан.</label>' : ''}<label>Шийдвэрийн шалтгаан<textarea name="reason" rows="4" minlength="3" maxlength="1000" required placeholder="Шалгасан нөхцөл, шийдвэрийн үндэслэл…"></textarea></label><p class="error small" id="reasonError" hidden>Дор хаяж 3 тэмдэгттэй шалтгаан бичнэ үү.</p><div class="actions"><button type="button" class="cancel">Болих</button><button class="primary" type="submit">Баталгаажуулах</button></div></form></dialog>`);
   const finish = value => { if (modalCancel === cancel) modalCancel = null; dialog.close(); dialog.remove(); resolve(value); };
   const cancel = () => finish(null); modalCancel = cancel;
   dialog.addEventListener('cancel', event => { event.preventDefault(); cancel(); });
   dialog.querySelector('.cancel').onclick = cancel;
-  dialog.querySelector('form').onsubmit = event => { event.preventDefault(); const value = dialog.querySelector('textarea').value.trim(); if (value.length < 3) { dialog.querySelector('#reasonError').hidden = false; return; } finish(value); };
+  dialog.querySelector('form').onsubmit = event => { event.preventDefault(); const value = dialog.querySelector('textarea').value.trim(); if (value.length < 3 || (requireReview && !dialog.querySelector('[name=reviewConfirmed]').checked)) { dialog.querySelector('#reasonError').hidden = false; return; } finish(value); };
   document.body.append(dialog); dialog.showModal(); dialog.querySelector('textarea').focus();
  });
 }

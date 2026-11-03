@@ -1,0 +1,16 @@
+Night Owl UB is a free social discovery app for Ulaanbaatar. The main interface is in Mongolian.
+
+Access
+Explore supports guest browsing. Publishing, follows, saved places and messaging require sign-in. Use the review account entered separately in App Store Connect's Sign-in Information fields. A new account may first show profile setup and an explicit 18+ community-rules acknowledgment.
+
+Suggested walkthrough
+1. Open Explore, browse or search venues, change map zoom and select a place to see its details and source links. Device location permission is optional for browsing the map.
+2. Sign in, then use the central create action to publish a photo/video post or a story. A venue from the app's place list can be added or removed before publication; location tagging is optional.
+3. Open the map activity explanation. Four 3D emotions use total readable tagged content: 0, 1-4, 5-14 and 15+. Active stories count only for the current Ulaanbaatar calendar day. Posts count for 168 hours from their original publication time. Posts and place tags remain after that window. Activity is not an opening-status check or a crowd estimate, and counts can differ with content visibility.
+4. Open Profile to edit the profile or select an owl avatar. Profile settings include Day, Night and System appearance and private-account/contact controls.
+5. Use a post's action menu to report content; account actions include blocking.
+
+Payment scope
+There are no subscriptions, in-app purchases, ticket sales or payment processing. Any venue/event admission price is organizer information. An RSVP is an interest/attendance record, not a ticket.
+
+The city map includes attributed OpenStreetMap listings. A map listing does not certify that the business is operating or open now. Featured events and content depend on what has been published; an empty section is possible.

@@ -168,6 +168,8 @@ class AdminConsoleService {
       'admin_console_audit',
       'admin_console_content',
       'admin_console_action',
+      'admin_console_review_queue',
+      'admin_console_review',
       'get_pilot_overview',
       'search_pilot_candidates',
       'set_pilot_entry',
@@ -377,5 +379,94 @@ class AdminConsoleService {
       throw const AdminConsoleFailure('action_uncertain');
     }
     return receipt;
+  }
+
+  Future<AdminConsolePage> reviewQueue(AdminConsoleSession session,
+      {String kind = 'all',
+      String status = 'pending',
+      int offset = 0,
+      int limit = 20}) async {
+    if (!const {
+          'all',
+          'post',
+          'story',
+          'comment',
+          'event',
+          'review',
+          'profile',
+          'note',
+          'collection',
+          'venue'
+        }.contains(kind) ||
+        !const {'pending', 'approved', 'rejected'}.contains(status) ||
+        offset < 0 ||
+        offset > 100000 ||
+        limit < 1 ||
+        limit > 100) {
+      throw const AdminConsoleFailure('invalid');
+    }
+    final result = await _rpc(session, 'admin_console_review_queue', {
+      'p_kind': kind,
+      'p_status': status,
+      'p_offset': offset,
+      'p_limit': limit,
+    });
+    final items = result['items'];
+    if (items is! List ||
+        result['has_more'] is! bool ||
+        items.any((row) =>
+            row is! Map<String, dynamic> ||
+            row['id'] is! String ||
+            row['kind'] is! String ||
+            row['review_version'] is! String ||
+            row['content'] is! Map<String, dynamic> ||
+            row['status'] != status)) {
+      throw const AdminConsoleFailure('response');
+    }
+    return AdminConsolePage(
+        items: List.unmodifiable(items.cast<Map<String, dynamic>>()),
+        hasMore: result['has_more'] as bool);
+  }
+
+  Future<void> review(AdminConsoleSession session,
+      {required Map<String, dynamic> item,
+      required String decision,
+      required String reason}) async {
+    session.check();
+    if (!const {'approved', 'rejected'}.contains(decision) ||
+        reason.trim().runes.length < 3 ||
+        reason.trim().runes.length > 1000 ||
+        item['id'] is! String ||
+        item['kind'] is! String ||
+        item['review_version'] is! String) {
+      throw const AdminConsoleFailure('invalid');
+    }
+    final Map<String, dynamic> receipt;
+    try {
+      receipt = await _rpc(session, 'admin_console_review', {
+        'p_kind': item['kind'],
+        'p_target_id': item['id'],
+        'p_version': item['review_version'],
+        'p_decision': decision,
+        'p_reason': reason.trim(),
+      });
+    } on AdminConsoleFailure catch (failure) {
+      if (failure.code == 'network' || failure.code == 'response') {
+        throw const AdminConsoleFailure('action_uncertain');
+      }
+      rethrow;
+    }
+    if (receipt['target_id'] != item['id'] ||
+        receipt['target_type'] != item['kind'] ||
+        receipt['review_version'] != item['review_version'] ||
+        receipt['status'] != decision ||
+        receipt['audit_id'] is! String ||
+        !RegExp(r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$',
+                caseSensitive: false)
+            .hasMatch(receipt['audit_id'] as String) ||
+        receipt['created_at'] is! String ||
+        DateTime.tryParse(receipt['created_at'] as String) == null) {
+      throw const AdminConsoleFailure('action_uncertain');
+    }
   }
 }

@@ -227,6 +227,72 @@ void main() {
     }
   }
 
+  testWidgets(
+      'review requires full-review affirmation and a reason, then submits once',
+      (tester) async {
+    service.actionPending = Completer<void>();
+    await render(tester, const AdminContentScreen());
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Шалгах шинэ нийтлэл'), findsOneWidget);
+    await tester.ensureVisible(find.text('Шалгаад зөвшөөрөх'));
+    await tester.tap(find.text('Шалгаад зөвшөөрөх'));
+    await tester.pumpAndSettle();
+    final confirm = find.widgetWithText(FilledButton, 'Баталгаажуулах');
+    expect(tester.widget<FilledButton>(confirm).onPressed, isNull);
+    await tester.enterText(
+        find.byType(TextField), 'Бүх медиа болон текстийг бүрэн шалгасан');
+    expect(tester.widget<FilledButton>(confirm).onPressed, isNull);
+    await tester.tap(find.byType(CheckboxListTile));
+    await tester.pump();
+    await tester.tap(confirm);
+    await tester.pump();
+    expect(service.reviewDecisions, hasLength(1));
+    expect(service.reviewDecisions.single['version'],
+        service.reviewItems.single['review_version']);
+    service.actionPending!.complete();
+    await tester.pumpAndSettle();
+    expect(find.text('Шалгаад зөвшөөрөх'), findsNothing);
+    expect(
+        find.text('Шийдвэр болон аудитын баримтыг хадгаллаа.'), findsOneWidget);
+  });
+
+  testWidgets(
+      'review uncertainty retains the submitted content and requires refresh',
+      (tester) async {
+    service.actionFailure = const AdminConsoleFailure('action_uncertain');
+    await render(tester, const AdminContentScreen());
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Татгалзах'));
+    await tester.tap(find.text('Татгалзах'));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+        find.byType(TextField), 'Хамтын орчны дүрэмд нийцээгүй');
+    await tester.tap(find.byType(CheckboxListTile));
+    await tester.pump();
+    await tester.tap(find.widgetWithText(FilledButton, 'Баталгаажуулах'));
+    await tester.pumpAndSettle();
+    expect(service.reviewDecisions, hasLength(1));
+    expect(service.reviewItems.single['status'], 'pending');
+    expect(find.textContaining('Шалгах шинэ нийтлэл'), findsOneWidget);
+    expect(find.text('Дахин шалгах шаардлагатай'), findsOneWidget);
+  });
+
+  testWidgets(
+      'session invalidation removes review data and closes its decision dialog',
+      (tester) async {
+    await render(tester, const AdminContentScreen());
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Шалгаад зөвшөөрөх'));
+    await tester.tap(find.text('Шалгаад зөвшөөрөх'));
+    await tester.pumpAndSettle();
+    service.currentSession!
+        .invalidate(const AdminConsoleFailure('session_changed'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Шалгах шинэ нийтлэл'), findsNothing);
+    expect(find.byType(AlertDialog), findsNothing);
+    expect(service.reviewDecisions, isEmpty);
+  });
+
   group('records controller', () {
     late AdminFixtureSession session;
     late AdminRecordsController records;

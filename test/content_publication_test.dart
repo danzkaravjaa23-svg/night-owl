@@ -10,7 +10,9 @@ import 'package:go_router/go_router.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:image/image.dart' as image;
+import 'package:image_picker/image_picker.dart' show XFile;
 import 'package:night_owl_ub/core/theme/app_fonts.dart';
+import 'package:night_owl_ub/features/feed/screens/create_reel_screen.dart';
 import 'package:night_owl_ub/features/feed/screens/create_story_screen.dart';
 import 'package:night_owl_ub/features/discovery/services/discovery_service.dart';
 import 'package:night_owl_ub/features/map/providers/venue_story_activity_provider.dart';
@@ -18,6 +20,8 @@ import 'package:night_owl_ub/features/post/screens/create_post_screen.dart';
 import 'package:night_owl_ub/features/post/services/content_publication.dart';
 import 'package:night_owl_ub/features/post/utils/post_media.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+// ignore: depend_on_referenced_packages
+import 'package:video_player_platform_interface/video_player_platform_interface.dart';
 
 const owner = '10000000-0000-0000-0000-000000000001';
 const other = '10000000-0000-0000-0000-000000000002';
@@ -44,6 +48,8 @@ class ComposerService extends ContentPublicationService {
   final Uint8List imageBytes;
   final rows = <Map<String, dynamic>>[];
   int uploads = 0;
+  final uploadPaths = <String>[];
+  final uploadContentTypes = <String>[];
   Completer<String>? pendingUpload;
   Completer<void>? pendingPublish;
   Object? failure;
@@ -62,10 +68,14 @@ class ComposerService extends ContentPublicationService {
 
   @override
   Future<String> uploadPost(PublicationSession session, Object blob,
-          {required String path,
-          required String contentType,
-          void Function(double)? onProgress}) =>
-      upload();
+      {required String path,
+      required String contentType,
+      void Function(double)? onProgress}) {
+    uploadPaths.add(path);
+    uploadContentTypes.add(contentType);
+    return upload();
+  }
+
   @override
   Future<String> uploadStory(PublicationSession session, Uint8List bytes,
           {required String path, required String contentType}) =>
@@ -77,6 +87,51 @@ class ComposerService extends ContentPublicationService {
     await pendingPublish?.future;
     if (failure != null) throw failure!;
   }
+}
+
+class _ComposerVideoPlatform extends VideoPlayerPlatform {
+  final _streams = <int, StreamController<VideoEvent>>{};
+  int _nextId = 0;
+
+  @override
+  Future<void> init() async {}
+  @override
+  Future<int?> create(DataSource dataSource) async {
+    final id = ++_nextId;
+    _streams[id] = StreamController<VideoEvent>()
+      ..add(VideoEvent(
+          eventType: VideoEventType.initialized,
+          duration: const Duration(seconds: 15),
+          size: const Size(360, 640)));
+    return id;
+  }
+
+  @override
+  Stream<VideoEvent> videoEventsFor(int playerId) => _streams[playerId]!.stream;
+  @override
+  Future<void> dispose(int playerId) async {
+    await _streams[playerId]!.close();
+  }
+
+  @override
+  Future<void> play(int playerId) async {}
+  @override
+  Future<void> pause(int playerId) async {}
+  @override
+  Future<void> setLooping(int playerId, bool looping) async {}
+  @override
+  Future<void> setVolume(int playerId, double volume) async {}
+  @override
+  Future<void> setPlaybackSpeed(int playerId, double speed) async {}
+  @override
+  Future<void> setMixWithOthers(bool mixWithOthers) async {}
+  @override
+  Future<void> seekTo(int playerId, Duration position) async {}
+  @override
+  Future<Duration> getPosition(int playerId) async => Duration.zero;
+  @override
+  Widget buildViewWithOptions(VideoViewOptions options) =>
+      const SizedBox.expand();
 }
 
 void main() {
@@ -332,12 +387,16 @@ void main() {
   group('composer draft and async lifecycle', () {
     late Directory temp;
     late PickedMediaFile media;
+    late PickedMediaFile video;
     late ComposerService publisher;
     setUp(() async {
       temp = await Directory.systemTemp.createTemp('nightowl-compose-test-');
       final path = '${temp.path}/photo.png';
       await File(path).writeAsBytes(png);
       media = PickedMediaFile(null, path, false);
+      final videoPath = '${temp.path}/clip.mp4';
+      await File(videoPath).writeAsBytes(png);
+      video = PickedMediaFile(XFile(videoPath), videoPath, true);
       publisher = ComposerService(png);
     });
     tearDown(() async {
@@ -350,6 +409,21 @@ void main() {
 
     Future<void> pickPost(WidgetTester tester) async {
       await tester.tap(find.text('Зураг (10 хүртэл) эсвэл видео сонгох'));
+      await tester.pumpAndSettle();
+    }
+
+    void fakeVideoPlayer(WidgetTester tester) {
+      final previous = VideoPlayerPlatform.instance;
+      VideoPlayerPlatform.instance = _ComposerVideoPlatform();
+      addTearDown(() async {
+        await tester.pumpWidget(const SizedBox());
+        await tester.pumpAndSettle();
+        VideoPlayerPlatform.instance = previous;
+      });
+    }
+
+    Future<void> pickReel(WidgetTester tester) async {
+      await tester.tap(find.text('Видео сонгох'));
       await tester.pumpAndSettle();
     }
 
@@ -470,6 +544,8 @@ void main() {
       expect(publisher.uploads, 1);
       expect(loads, 2);
       expect(find.text('Feed fixture'), findsOneWidget);
+      expect(find.text('Шалгалтад илгээлээ. Баталсны дараа бусдад харагдана.'),
+          findsOneWidget);
       expect(tester.takeException(), isNull);
     });
 
@@ -739,6 +815,128 @@ void main() {
       await tester.pumpAndSettle();
       expect(publisher.rows, isEmpty);
       expect(find.textContaining('Нэвтрэх хаяг өөрчлөгдсөн'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('Reel picker is single-video and ignores a changed account',
+        (tester) async {
+      final pending = Completer<List<PickedMediaFile>>();
+      var picks = 0;
+      await pump(
+          tester,
+          CreateReelScreen(
+              publicationService: publisher,
+              mediaPicker: ({bool multiple = true}) {
+                expect(multiple, isFalse);
+                picks++;
+                return pending.future;
+              }));
+      await tester.tap(find.text('Видео сонгох'));
+      await tester.tap(find.text('Видео сонгох'));
+      expect(picks, 1);
+      publisher.scope.active = false;
+      pending.complete([video]);
+      await tester.pumpAndSettle();
+      expect(find.text('Видео сонгох'), findsOneWidget);
+      expect(publisher.uploads, 0);
+      expect(publisher.rows, isEmpty);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('Reel rejects an image returned by a media picker',
+        (tester) async {
+      await pump(
+          tester,
+          CreateReelScreen(
+              publicationService: publisher,
+              mediaPicker: ({bool multiple = true}) async => [media]));
+      await pickReel(tester);
+      expect(find.text('Видео сонгох'), findsOneWidget);
+      expect(find.text('50MB хүртэл MP4, MOV эсвэл WebM видео сонгоно уу.'),
+          findsOneWidget);
+      final share = tester
+          .widget<TextButton>(find.widgetWithText(TextButton, 'Хуваалцах'));
+      expect(share.onPressed, isNull);
+      expect(publisher.uploads, 0);
+      expect(publisher.rows, isEmpty);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('Reel account change during upload never inserts a row',
+        (tester) async {
+      fakeVideoPlayer(tester);
+      publisher.pendingUpload = Completer<String>();
+      await pump(
+          tester,
+          CreateReelScreen(
+              publicationService: publisher,
+              mediaPicker: ({bool multiple = true}) async => [video]));
+      await pickReel(tester);
+      await tester.tap(find.widgetWithText(TextButton, 'Хуваалцах'));
+      await tester.pump();
+      expect(publisher.uploads, 1);
+      expect(publisher.uploadPaths.single, startsWith('$owner/'));
+      expect(publisher.uploadContentTypes.single, 'video/mp4');
+      publisher.scope.active = false;
+      publisher.pendingUpload!.complete('https://fixture.test/clip.mp4');
+      await tester.pumpAndSettle();
+      expect(publisher.rows, isEmpty);
+      expect(find.textContaining('Нэвтрэх хаяг өөрчлөгдсөн'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets(
+        'Reel uncertain publish retries the same ID and venue then returns to Reels',
+        (tester) async {
+      fakeVideoPlayer(tester);
+      publisher.pendingPublish = Completer<void>();
+      publisher.failure =
+          const PublicationFailure('Нийтлэгдсэн байж болно. Дахин шалгана уу.');
+      final router = GoRouter(initialLocation: '/compose', routes: [
+        GoRoute(
+            path: '/compose',
+            builder: (_, __) => CreateReelScreen(
+                publicationService: publisher,
+                mediaPicker: ({bool multiple = true}) async => [video],
+                venueLoader: storyVenueLoader)),
+        GoRoute(
+            path: '/reels',
+            builder: (_, __) => const Scaffold(body: Text('Reels fixture'))),
+      ]);
+      addTearDown(router.dispose);
+      await tester.pumpWidget(
+          ProviderScope(child: MaterialApp.router(routerConfig: router)));
+      await tester.pumpAndSettle();
+      await pickReel(tester);
+      await tester.enterText(find.byType(TextField).first, 'Original Reel');
+      await choosePostVenue(tester, 'Газрын зураг дахь газар');
+      expect(find.textContaining('7 хоног тооцогдоно'), findsOneWidget);
+      final share = find.widgetWithText(TextButton, 'Хуваалцах');
+      await tester.tap(share);
+      await tester.tap(share);
+      await tester.pump();
+      expect(publisher.rows, hasLength(1));
+      expect(publisher.rows.single['user_id'], owner);
+      expect(publisher.rows.single['media_type'], 'video');
+      expect(publisher.rows.single['caption'], 'Original Reel');
+      expect(publisher.rows.single['venue_ref'], 'osm:node:123');
+      expect(publisher.rows.single.containsKey('venue_id'), isFalse);
+      expect(publisher.rows.single['id'], isNotEmpty);
+      expect(
+          tester
+              .widget<IconButton>(find.byWidgetPredicate((widget) =>
+                  widget is IconButton && widget.tooltip == 'Байршлыг хасах'))
+              .onPressed,
+          isNull);
+      publisher.pendingPublish!.complete();
+      await tester.pumpAndSettle();
+      publisher.failure = null;
+      await tester.tap(find.widgetWithText(TextButton, 'Дахин шалгах'));
+      await tester.pumpAndSettle();
+      expect(publisher.uploads, 1);
+      expect(publisher.rows, hasLength(2));
+      expect(publisher.rows.first, publisher.rows.last);
+      expect(find.text('Reels fixture'), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
 

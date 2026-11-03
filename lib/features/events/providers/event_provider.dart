@@ -8,6 +8,8 @@ import '../../post/services/content_publication.dart';
 
 class EventItem {
   final String id;
+  final String moderationStatus;
+  final String? organizerId;
   final String title;
   final String? description;
   final String? coverUrl;
@@ -18,6 +20,8 @@ class EventItem {
   final int attendeeCount; // бодит RSVP тоо (events.attendee_count)
   const EventItem({
     required this.id,
+    this.moderationStatus = 'approved',
+    this.organizerId,
     required this.title,
     this.description,
     this.coverUrl,
@@ -126,7 +130,7 @@ class EventService extends ContentPublicationService {
     final data = await client
         .from('events')
         .select(
-            'id, title, description, cover_url, starts_at, price, venue_id, organizer_id, attendee_count')
+            'id, title, description, cover_url, starts_at, price, venue_id, organizer_id, attendee_count, moderation_status')
         .gte('starts_at', now)
         .order('starts_at', ascending: true)
         .limit(30);
@@ -164,6 +168,8 @@ class EventService extends ContentPublicationService {
     return rows
         .map((r) => EventItem(
               id: r['id'] as String,
+              moderationStatus: r['moderation_status'] as String? ?? 'approved',
+              organizerId: r['organizer_id'] as String?,
               title: r['title'] as String? ?? 'Event',
               description: r['description'] as String?,
               coverUrl: r['cover_url'] as String?,

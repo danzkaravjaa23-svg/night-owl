@@ -1,5 +1,26 @@
 # Night Owl — release бэлтгэл
 
+## App Store хэрэгжилтийн бэлтгэл — 2026-11-03 (одоогийн)
+
+**Кодын candidate шалгагдсан; Store submission хараахан бэлэн биш.** `codex/app-store-preparation` салбарт бүртгэл устгах durable receipt/сэргээх урсгал, Apple grant revoke эх, серверээр мөрдүүлэх нийтлэхийн өмнөх хяналт, бүх UGC төрлийн report entry, зөвхөн мэдээлсэн мессежийн admin context болон pending avatar/venue media хамгаалалт бэлэн. Reel нийтлэх урсгалыг нэгтгэж, баталгаажаагүй demo хөгжмийн санг хасав. Шинэ 008/009 migration болон Edge function production-д хараахан суулгаагүй; client-ийг тэдгээрээс өмнө deploy хийхгүй.
+
+**Одоогийн нотолгоо:** 859 Flutter тест, analyzer clean, 16 synthetic UI capture (өдөр/шөнө, 390px/320px, 1.5×), 43 deployment Python тест, iOS source 9/9 PASS. Backend: erasure Node66, Apple crypto18, Deno handler13/protocol12 алхам, SQL22/69FK, UGC21, хосолсон008/009 7, webadmin34 PASS. Хамрах хүрээ нь тусгаарласан fixture; production хэрэглэгчээр destructive туршилт хийгээгүй.
+
+Cloud Xcode26.3/iOS26.2 дээр unsigned arm64 iPhone release болон simulator build PASS. `ecc1cfb` эхийн iPhone17 дээр апп нээгдэж, хэл сонгох дэлгэцийн screenshot шалгагдсан. iPad эхний boot timeout болсон; зассан harness болон эцсийн candidate-ийг дахин ажиллуулна. Эдгээр нь signing, бодит төхөөрөмжийн хэрэглэгчийн урсгал эсвэл App Review зөвшөөрөл биш. Бодит тусгаарласан Auth/Storage/Edge component CI-г нэмж ажиллуулж байна.
+
+Гишүүнчлэл, Apple provider/keys, signing, signed-device acceptance, эцсийн Store screenshot, review account, нас/нууцлал/export/contact/медиа эрхийн эзэмшигчийн баталгааг үлдсэн gate гэж бүртгэв. Дэлгэрэнгүй: [submission checklist](APP_STORE_SUBMISSION.md), [native acceptance](app-store/REVIEW_TEST_PLAN.md), `BUILD_VERIFICATION.json` → `app_store_implementation`.
+
+Доорх нь өмнөх шалгалтын түүх; дээрх current record-ийг ашиглана.
+
+## App Store эхний бэлтгэл — 2026-11-03
+
+**Store submission BLOCKED; бэлтгэлийн багц шинэчлэгдсэн.** [Одоогийн store тайлан](APP_STORE_SUBMISSION.md), [listing текстүүд](app-store/metadata/README.md), [15 native acceptance case](app-store/REVIEW_TEST_PLAN.md). Эзэмшигч гишүүнчлэл идэвхгүйг баталсан; macOS 15.5/full Xcode байхгүй. Fresh public check: Apple false, Google/email true; delete-account 404; privacy/support бодит static HTML 200. Admin/consent SQL өмнөх rollout-оор суусан тул хуучин “суулгаагүй” тэмдэглэлийг өнөөгийн төлөв гэж хэрэглэхгүй.
+
+iOS source preflight **9/9 PASS**, deployment Python **43 PASS** (iOS 29). Toolchain Full Xcode BLOCK; Flutter3.44/CocoaPods PASS. Minimum iOS13 target ба icon dimensions шалгалт нэмсэн. Privacy эхэд суусан consent хамгаалалт, venue-tagged post/story тоолол тусгагдсан; энэ өөрчлөлт одоогоор локал, public policy deploy хийгдээгүй. Flutter runtime өөрчлөгдөөгүй; доорх 814 PASS нь өмнөх шалгасан release-ийн нотолгоо.
+
+Бүрэн deletion/Apple revoke, UGC шүүлт ба report coverage, хариуцсан moderation, native төхөөрөмж/архив/screenshot, listing privacy/age/contact талбарууд үлдсэн. iOS build, signing, upload, TestFlight, App Review submission, OS шинэчлэлт, membership төлбөр хийгдээгүй. Энэ бэлтгэлээр Git push/web deploy мөн хийгдээгүй. Receipt: `build/audit/2026-11-03/app-store-prep/`.
+
+
 ## 2026-11-03 post location — animation-д 7 хоног нөлөөлөх одоогийн хувилбар
 
 Post-ын optional location нь story-той ижил canonical газрын жагсаалтаас хайж сонгох/солих/хасах боломжтой. Хэрэглэгчийн хүссэн **7 хоног нь зөвхөн газрын animation-д тооцогдох хугацаа**: нийтэлснээс хойш 168 цаг. Post болон байршлын тэмдэглэгээ устахгүй. Өнөөдрийн Улаанбаатарын идэвхтэй story болон сүүлийн 168 цагийн танд харагдах post тус бүр 1 идэвх нэмнэ; 0 / 1–4 / 5–14 / 15+ дөрвөн түвшин хэвээр. Map-ийн pin, group, карт дээр story/post тоог тусад нь харуулж, тайлбарт хоёр өөр хугацааг заасан.

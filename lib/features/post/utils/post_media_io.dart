@@ -81,8 +81,15 @@ Future<List<PickedMediaFile>> pickPostMedia({bool multiple = true}) async {
     ];
   } catch (e) {
     debugPrint('pickPostMedia failed: $e');
-    throw Exception('Медиа сонгож чадсангүй. Зургийн сангийн зөвшөөрлөө шалгана уу.');
+    throw Exception(
+        'Медиа сонгож чадсангүй. Зургийн сангийн зөвшөөрлөө шалгана уу.');
   }
+}
+
+/// Reels use the gallery's single-video picker rather than mixed media.
+Future<List<PickedMediaFile>> pickPostVideo({bool multiple = false}) async {
+  final file = await ImagePicker().pickVideo(source: ImageSource.gallery);
+  return file == null ? const [] : [PickedMediaFile(file, file.path, true)];
 }
 
 void revokePreviewUrl(String url) {
@@ -148,7 +155,8 @@ Future<void> uploadBlobWithProgress({
   }
 
   final client = HttpClient()..connectionTimeout = const Duration(seconds: 30);
-  final deadline = Timer(const Duration(seconds: 120), () => client.close(force: true));
+  final deadline =
+      Timer(const Duration(seconds: 120), () => client.close(force: true));
   var status = 0;
   var body = '';
   try {

@@ -375,8 +375,9 @@ class _SetupScreenState extends State<SetupScreen> {
       if (!mounted || !_isSetupUser(savedUser)) return;
       if (widget.forceEdit) {
         // Засах горим — ирсэн газраа буцна (профайл/тохиргоо)
-        ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Профайл хадгалагдлаа')));
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text(
+                'Профайлын өөрчлөлтийг шалгалтад илгээлээ. Баталсан мэдээлэл хэвээр байна.')));
         context.canPop() ? context.pop() : context.go(AppRoutes.profile);
       } else {
         context.go(destination);
