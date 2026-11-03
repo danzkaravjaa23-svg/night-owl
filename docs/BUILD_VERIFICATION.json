@@ -1621,7 +1621,7 @@
   "store_completion": {
     "date": "2026-11-03",
     "branch": "codex/app-store-preparation",
-    "status": "Code/build preparation verified; hosted coordinated rollout and App Store submission are not complete",
+    "status": "Code/build and isolated database/filesystem recovery verified; hosted coordinated rollout and App Store submission are not complete",
     "source_commits": {
       "backend": "a4924687ae1f739b7735d917fbc7d4f4e2f52c82",
       "client": "23a72582fe1d2382b7ec26261b05e6ad3eb886ab",
@@ -1636,7 +1636,8 @@
       "combined_008_009_groups_passed": 7,
       "atomic_rollout_operations_groups_passed": 10,
       "captured_schema_trial_groups_passed": 8,
-      "real_backend_component_groups_passed": 10
+      "real_backend_component_groups_passed": 10,
+      "migration_offline_tests_passed": 97
     },
     "local_logs": "build/audit/2026-11-03/store-completion/",
     "schema_trial": {
@@ -1682,10 +1683,12 @@
       "paid_upgrade_performed": false,
       "public_privacy_evidence": "docs/app-store/evidence/public-privacy.json",
       "public_runtime_unchanged_from": "7cc568e346c376ec2020c2c3fbeea90f09b0939b",
-      "public_privacy_deployed": true
+      "public_privacy_deployed": true,
+      "recovery_backup_verified_scope": "Full hosted recovery/operations gate remains incomplete; verified local data and filesystem recovery is recorded separately"
     },
     "pending": [
-      "Recoverable database plus physical Storage backup and recovery verification",
+      "Free staging capacity: owner to pause an unused project; no paid upgrade or production change performed",
+      "Hosted Auth/Storage/ACL recovery and access acceptance, with a responsible recovery operator",
       "Separate hosted copy acceptance with target-specific bundle and synthetic accounts/media",
       "Coordinated 008/009 and compatible client rollout, scoped reported-message admin access and receipt-only gateway configuration",
       "Successful hosted retention schedule, named operator/moderator and private alert handoff",
@@ -1728,6 +1731,47 @@
       "physical_devices_tested": false,
       "apple_live_provider_tested": false,
       "first_attempt": "Compiled successfully; simulator launch command timed out before PID/screenshots. Preserved as incomplete evidence; one fresh-runner retry passed."
+    },
+    "recovery": {
+      "verified_at": "2026-11-03T13:30:18.055564+00:00",
+      "database_export_evidence": "docs/app-store/evidence/database-export.json",
+      "database_recovery_evidence": "docs/app-store/evidence/database-recovery.json",
+      "storage_evidence": "docs/app-store/evidence/storage-export.json",
+      "database_manifest_format": 3,
+      "database_manifest_sha256": "d304580c6b0159b9b383f8cc12c4c22431e1e5ddcd6584c5e92dec5acffb0d69",
+      "canonical_digest_settings_recorded": true,
+      "relations_row_count_and_digest_matched": 87,
+      "sequence_states_matched": 4,
+      "large_object_pages_matched": 0,
+      "storage_objects": 97,
+      "storage_bytes": 229717181,
+      "same_get_strong_etag_and_local_sha256_size_identity_verified": 97,
+      "fresh_private_filesystem_restored_reads_sha256_verified": 97,
+      "source_server_version": 170006,
+      "target_server_version": 170011,
+      "target_locale": "ICU en-US",
+      "target_outbound_network_denied": true,
+      "target_cron_jobs_enabled": false,
+      "target_server_stopped": true,
+      "ownership_acl_restored": false,
+      "hosted_auth_storage_acl_parity_verified": false,
+      "extension_compatibility_note": "Managed pg_cron SQL version 1.6.4; exact upstream v1.6.4 uses SQL control version 1.6. No relabeling or hosted version parity claimed.",
+      "source_writes_frozen": false,
+      "source_modified": false,
+      "backup_release_gate_complete": false,
+      "limits": [
+        "Single-transaction --no-owner --no-acl restore proves local logical data recovery, not managed Supabase service/role parity",
+        "Reopened filesystem bytes do not prove destination Storage API/owner/RLS access",
+        "Operator recovery responsibility and hosted acceptance remain; PostgreSQL migration/cutover remains deferred"
+      ]
+    },
+    "staging_capacity": {
+      "status": "blocked_by_existing_free_project_limit",
+      "observed_in_dashboard": "An organization member has reached the two active Free project limit; creation of a new staging project is blocked",
+      "owner_action_requested": "Pause an unused project themselves to make capacity available",
+      "existing_project_paused_by_agent": false,
+      "paid_upgrade_performed": false,
+      "hosted_staging_created": false
     }
   }
 }

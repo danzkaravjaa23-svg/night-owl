@@ -1,0 +1,65 @@
+{
+  "status": "isolated_database_recovery_verified",
+  "verified_at": "2026-11-03T13:30:18.055564+00:00",
+  "target_kind": "new local PostgreSQL cluster, private Unix socket only",
+  "source_server_version": 170006,
+  "target_server_version": 170011,
+  "locale_provider": "icu",
+  "locale": "en-US",
+  "relations_row_count_and_digest_matched": 87,
+  "sequence_states_matched": 4,
+  "large_object_pages_matched": 0,
+  "restore_single_transaction": true,
+  "source_roles_executed": false,
+  "compatibility_roles": "NOLOGIN/nonprivileged",
+  "ownership_acl_restored": false,
+  "target_tcp_listener": false,
+  "outbound_network_denied": true,
+  "cron_jobs_enabled": false,
+  "server_stopped": true,
+  "restore_phase_wall_seconds_approx": 1.53,
+  "verify_phase_wall_seconds_approx": 0.78,
+  "extensions": [
+    {
+      "name": "plpgsql",
+      "version": "1.0"
+    },
+    {
+      "name": "pg_cron",
+      "version": "1.6"
+    },
+    {
+      "name": "pg_stat_statements",
+      "version": "1.11"
+    },
+    {
+      "name": "pg_trgm",
+      "version": "1.6"
+    },
+    {
+      "name": "pgcrypto",
+      "version": "1.3"
+    },
+    {
+      "name": "supabase_vault",
+      "version": "0.3.1"
+    },
+    {
+      "name": "uuid-ossp",
+      "version": "1.1"
+    }
+  ],
+  "extension_compatibility_note": "Source pg_cron SQL version1.6.4; upstream v1.6.4 runtime uses SQL control version1.6. No relabeling or hosted version-parity claim.",
+  "database_manifest_sha256": "d304580c6b0159b9b383f8cc12c4c22431e1e5ddcd6584c5e92dec5acffb0d69",
+  "dependency_build_receipt_sha256": "d40a0323d89072bcd70cf7bf5a87ff99862efd102079fb6d6b45b7d04a13ac5d",
+  "sandbox_profile_sha256": "f7a677f23e62c49bfe5078a79c4a8ae1ebc635e2d6b0726dac0d071f0a232fef",
+  "restored_media_filesystem_objects": 97,
+  "hosted_auth_storage_acl_parity_verified": false,
+  "source_modified": false,
+  "private_data_in_this_receipt": false,
+  "limits": [
+    "Filesystem byte recovery does not prove Storage API/owner/RLS access",
+    "Global roles, service configuration and encryption material require operator review",
+    "No frozen cutover snapshot or production migration performed"
+  ]
+}

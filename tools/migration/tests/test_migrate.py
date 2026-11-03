@@ -1,10 +1,12 @@
 import contextlib
+from email.message import Message
 import hashlib
 import importlib.util
 import io
 import json
 import os
 from pathlib import Path
+import shlex
 import tempfile
 import unittest
 from unittest import mock
@@ -16,6 +18,18 @@ spec.loader.exec_module(migrate)
 fixture_spec = importlib.util.spec_from_file_location("nightowl_fixture", MODULE.parent / "tests" / "run_postgres_fixture.py")
 fixture = importlib.util.module_from_spec(fixture_spec)
 fixture_spec.loader.exec_module(fixture)
+
+
+class StorageResponse(io.BytesIO):
+    def __init__(self, data, etags=('"Fixture-opaque-2"',), status=200):
+        super().__init__(data)
+        self.headers = Message()
+        for etag in etags:
+            self.headers['ETag'] = etag
+        self.status = status
+
+    def getcode(self):
+        return self.status
 
 
 class MigrationSafetyTests(unittest.TestCase):
@@ -38,6 +52,7 @@ class MigrationSafetyTests(unittest.TestCase):
                 file.write_bytes(b"; synthetic TOC\n" if name.endswith("toc.txt") else b"archive")
         migrate.write_json(self.base / "manifest.json", {
             "format_version": migrate.VERSION, "status": "database_export_complete",
+            "digest_settings": dict(migrate.DIGEST_SETTINGS),
             "source_service": "source", "server_version_num": 150000,
             "files": [{"path": name, "bytes": (self.base/name).stat().st_size,
                        "sha256": migrate.file_hash(self.base/name)} for name in sorted(migrate.DATABASE_ARTIFACTS)],
@@ -63,7 +78,8 @@ class MigrationSafetyTests(unittest.TestCase):
         file = storage / relative
         file.write_bytes(data)
         index = self.base / "storage-index.json"
-        index.write_text(json.dumps({"objects": [{"bucket_id": "private", "name": "../a picture.png"}]}))
+        index.write_text(json.dumps({"objects": [{"bucket_id": "private", "name": "../a picture.png",
+                                                 "metadata": {"size": len(data), "eTag": "Fixture-opaque-2"}}]}))
         self.rehash_fixture_manifest()
         migrate.write_json(storage / "manifest.json", {
             "format_version": migrate.VERSION, "status": "storage_export_complete",
@@ -74,12 +90,20 @@ class MigrationSafetyTests(unittest.TestCase):
         })
         return storage
 
+    def storage_args(self):
+        key = self.base / "storage-key"
+        key.write_text("fixture-service-key")
+        key.chmod(0o600)
+        return mock.Mock(output=str(self.base), storage_url="https://fixture.supabase.co", storage_key_file=str(key))
+
     def test_default_plan_never_launches_database_or_network(self):
         with mock.patch.object(migrate.subprocess, "run", side_effect=AssertionError("command ran")), \
                 mock.patch.object(migrate.subprocess, "Popen", side_effect=AssertionError("command ran")), \
                 mock.patch.object(migrate.request, "build_opener", side_effect=AssertionError("network ran")), \
+                mock.patch.object(Path, "read_text", side_effect=AssertionError("private file read")), \
                 contextlib.redirect_stdout(io.StringIO()) as output:
-            for action in ("export-db", "export-storage", "restore-db", "verify-db", "verify-storage"):
+            for action in ("export-db", "export-storage", "restore-db", "verify-db", "verify-storage",
+                           "verify-storage-source"):
                 self.assertEqual(migrate.main([action]), 0)
         self.assertIn('"data_copied": false', output.getvalue())
 
@@ -108,11 +132,11 @@ class MigrationSafetyTests(unittest.TestCase):
         with self.assertRaises(migrate.MigrationError):
             migrate.load_manifest(self.base)
 
-    def test_manifest_requires_version_two_and_hashed_coverage_artifacts(self):
+    def test_manifest_requires_version_three_and_hashed_coverage_artifacts(self):
         self.bundle()
         path = self.base / "manifest.json"
         original = json.loads(path.read_text())
-        variants = [{**original, "format_version": 1},
+        variants = [{**original, "format_version": 1}, {**original, "format_version": 2},
                     {**original, "files": original["files"] + [original["files"][0]]}]
         for name in migrate.DATABASE_ARTIFACTS:
             variants.append({**original, "files": [item for item in original["files"] if item["path"] != name]})
@@ -122,6 +146,132 @@ class MigrationSafetyTests(unittest.TestCase):
                 migrate.load_manifest(self.base)
         path.write_text(json.dumps(original))
         migrate.load_manifest(self.base)
+
+    def test_manifest_requires_exact_canonical_digest_settings_before_target_access(self):
+        self.bundle()
+        path = self.base / "manifest.json"
+        original = json.loads(path.read_text())
+        variants = [None, {}, {**original["digest_settings"], "extra_float_digits": "0"},
+                    {**original["digest_settings"], "timezone": "private-invalid-value"},
+                    {**original["digest_settings"], "unrecognized": "private-invalid-value"}]
+        args = mock.Mock(output=str(self.base), source="source", target="target", target_database="staging")
+        for settings in variants:
+            path.write_text(json.dumps({**original, "digest_settings": settings}))
+            with self.subTest(settings=settings), \
+                    mock.patch.object(migrate, "validate_target", side_effect=AssertionError("target accessed")), \
+                    mock.patch.object(migrate, "command", side_effect=AssertionError("restore ran")):
+                with self.assertRaisesRegex(migrate.MigrationError, "fresh export") as error:
+                    migrate.restore_database(args)
+                self.assertNotIn("private-invalid-value", str(error.exception))
+        del original["digest_settings"]
+        path.write_text(json.dumps(original))
+        with self.assertRaisesRegex(migrate.MigrationError, "digest settings"):
+            migrate.load_manifest(self.base)
+
+    def test_database_environment_pins_serialization_and_discards_ambient_overrides(self):
+        service, password = self.base / "service.conf", self.base / "pgpass"
+        for file in (service, password):
+            file.write_text("synthetic fixture only")
+            file.chmod(0o600)
+        ambient = {"PGSERVICEFILE": str(service), "PGPASSFILE": str(password),
+                   "PGOPTIONS": "-c extra_float_digits=0 -c default_transaction_read_only=off",
+                   "PGDATESTYLE": "SQL,DMY", "PGTZ": "Asia/Ulaanbaatar", "PGCLIENTENCODING": "LATIN1",
+                   "PGPASSWORD": "synthetic-not-a-real-password", "PGHOST": "remote.invalid",
+                   "PGHOSTADDR": "192.0.2.1", "PGPORT": "9999", "PGUSER": "ambient-user",
+                   "PGDATABASE": "ambient-db", "PGSERVICE": "ambient-service"}
+        with mock.patch.dict(os.environ, ambient, clear=True):
+            for read_only in (True, False):
+                env = migrate.db_env(read_only=read_only)
+                parts = shlex.split(env["PGOPTIONS"])
+                self.assertTrue(all(part == "-c" for part in parts[::2]))
+                settings = dict(part.split("=", 1) for part in parts[1::2])
+                expected = {**migrate.DIGEST_SETTINGS, "row_security": "off"}
+                if read_only:
+                    expected["default_transaction_read_only"] = "on"
+                self.assertEqual(settings, expected)
+                for key in ambient.keys() - {"PGSERVICEFILE", "PGPASSFILE", "PGOPTIONS"}:
+                    self.assertNotIn(key, env)
+                self.assertEqual(env["PGSERVICEFILE"], str(service))
+                self.assertEqual(env["PGPASSFILE"], str(password))
+            self.assertEqual(os.environ["PGOPTIONS"], ambient["PGOPTIONS"])
+        with self.assertRaises(TypeError):
+            migrate.DIGEST_SETTINGS["extra_float_digits"] = "0"
+
+    def test_table_digest_keeps_float_precision_with_rounded_ambient_default(self):
+        # PG17 serializes the same float8 bits 3fd3333333333334 as these two
+        # JSON rows for extra_float_digits=0 and >0 respectively. No private DB.
+        rounded = b'{"lat": 0.3}\n'
+        precise = b'{"lat": 0.30000000000000004}\n'
+        self.assertNotEqual(hashlib.sha256(rounded).hexdigest(), hashlib.sha256(precise).hexdigest())
+        service, password = self.base / "service.conf", self.base / "pgpass"
+        for file in (service, password):
+            file.write_text("synthetic fixture only")
+            file.chmod(0o600)
+
+        def fake_process(*args, **kwargs):
+            options = shlex.split(kwargs["env"]["PGOPTIONS"])
+            settings = dict(part.split("=", 1) for part in options[1::2])
+            output = precise if int(settings.get("extra_float_digits", "0")) > 0 else rounded
+            return mock.Mock(stdin=io.BytesIO(), stdout=io.BytesIO(output),
+                             wait=mock.Mock(return_value=0), poll=mock.Mock(return_value=0))
+
+        with mock.patch.dict(os.environ, {"PGSERVICEFILE": str(service), "PGPASSFILE": str(password),
+                                         "PGOPTIONS": "-c extra_float_digits=0"}, clear=True), \
+                mock.patch.object(migrate, "binary", return_value="psql"), \
+                mock.patch.object(migrate.subprocess, "Popen", side_effect=fake_process):
+            result = migrate.table_digest("fixture", {"schema": "public", "table": "synthetic"}, None)
+        self.assertEqual(result["rows"], 1)
+        self.assertEqual(result["sha256_sorted_json"], hashlib.sha256(precise).hexdigest())
+
+    def test_queries_enforce_canonical_settings_after_snapshot_despite_conflicting_startup_options(self):
+        # Model settings selected by higher-precedence service options; no
+        # service file or database is needed to inspect the corrective SQL.
+        conflicting = {"PGOPTIONS": "-c extra_float_digits=0 -c timezone=Asia/Ulaanbaatar -c row_security=on"}
+        snapshot = "00000001-00000002-1"
+        query = "SELECT to_jsonb(t)::text FROM synthetic t;"
+        with mock.patch.object(migrate, "db_env", return_value=conflicting), \
+                mock.patch.object(migrate, "binary", return_value="psql"), \
+                mock.patch.object(migrate, "command", return_value="{}") as command:
+            self.assertEqual(migrate.query("synthetic", query, snapshot), {})
+        sql = command.call_args.args[2]
+        self.assertTrue(sql.startswith("BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY;\n"))
+        imported = sql.index("SET TRANSACTION SNAPSHOT")
+        for setting, value in migrate.DIGEST_SETTINGS.items():
+            applied = sql.index(f"SET LOCAL {setting} = '{value}';")
+            self.assertLess(imported, applied)
+            self.assertLess(applied, sql.index(query))
+        self.assertLess(sql.index("SET LOCAL row_security = off;"), sql.index(query))
+
+    def test_snapshot_owner_enforces_settings_inside_read_only_transaction_before_exporting(self):
+        snapshot = "00000001-00000002-1"
+        proc = mock.Mock(stdin=mock.Mock(), stdout=io.StringIO(snapshot + "\n"),
+                         poll=mock.Mock(return_value=None), wait=mock.Mock(return_value=0))
+        with mock.patch.object(migrate, "db_env", return_value={"PGOPTIONS": "-c extra_float_digits=0"}), \
+                mock.patch.object(migrate, "binary", return_value="psql"), \
+                mock.patch.object(migrate.subprocess, "Popen", return_value=proc):
+            with migrate.snapshot_session("synthetic") as actual:
+                self.assertEqual(actual, snapshot)
+                sql = proc.stdin.write.call_args.args[0]
+        self.assertTrue(sql.startswith("BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY;\n"))
+        for setting, value in migrate.DIGEST_SETTINGS.items():
+            self.assertLess(sql.index(f"SET LOCAL {setting} = '{value}';"), sql.index("SELECT pg_export_snapshot();"))
+        self.assertIn("SET LOCAL row_security = off;", sql)
+        self.assertEqual(proc.stdin.write.call_args.args[0], "ROLLBACK;\n\\q\n")
+
+    def test_source_and_target_digests_use_same_in_transaction_precision_contract(self):
+        precise = b'{"lat": 0.30000000000000004}\n'
+        processes = [mock.Mock(stdin=mock.Mock(), stdout=io.BytesIO(precise),
+                               poll=mock.Mock(return_value=0), wait=mock.Mock(return_value=0)) for _ in range(2)]
+        with mock.patch.object(migrate, "db_env", return_value={"PGOPTIONS": "-c extra_float_digits=0"}), \
+                mock.patch.object(migrate, "binary", return_value="psql"), \
+                mock.patch.object(migrate.subprocess, "Popen", side_effect=processes):
+            results = [migrate.table_digest(service, {"schema": "public", "table": "synthetic"},
+                                            "00000001-00000002-1") for service in ("source", "target")]
+        self.assertEqual(results[0], results[1])
+        sql = processes[0].stdin.write.call_args.args[0].decode()
+        self.assertEqual(sql, processes[1].stdin.write.call_args.args[0].decode())
+        self.assertLess(sql.index("SET TRANSACTION SNAPSHOT"), sql.index("SET LOCAL extra_float_digits = '3';"))
+        self.assertLess(sql.index("SET LOCAL extra_float_digits = '3';"), sql.index("COPY (SELECT"))
 
     def test_manifest_recomputes_coverage_and_never_echoes_inventory_names(self):
         self.bundle()
@@ -398,6 +548,7 @@ class MigrationSafetyTests(unittest.TestCase):
                 else:
                     migrate.export_database(args)
                     _, manifest = migrate.load_manifest(output)
+                    self.assertEqual(manifest["digest_settings"], dict(migrate.DIGEST_SETTINGS))
                     self.assertEqual(manifest["table_data_coverage"]["table_data_relations"], 5)
                     self.assertTrue({"all-table-data-toc.txt", "table-data-coverage.json"}.issubset(
                         {file["path"] for file in manifest["files"]}))
@@ -410,14 +561,14 @@ class MigrationSafetyTests(unittest.TestCase):
         data = b"synthetic private storage bytes"
         index = {"buckets": [{"id": "private", "public": False}, {"id": "empty", "public": True}],
                  "objects": [{"id": "fixture-object", "bucket_id": "private",
-                              "name": "../private file.png", "metadata": {"size": len(data)}}]}
+                              "name": "../private file.png", "metadata": {"size": len(data), "eTag": "Fixture-opaque-2"}}]}
         (self.base / "storage-index.json").write_text(json.dumps(index))
         self.rehash_fixture_manifest()
         key = self.base / "storage-key"
         key.write_text("fixture-service-key")
         key.chmod(0o600)
         opener = mock.Mock()
-        opener.open.return_value = io.BytesIO(data)
+        opener.open.return_value = StorageResponse(data)
         args = mock.Mock(output=str(self.base), storage_url="https://fixture.supabase.co",
                          storage_key_file=str(key))
         with mock.patch.object(migrate.request, "build_opener", return_value=opener), \
@@ -426,29 +577,143 @@ class MigrationSafetyTests(unittest.TestCase):
             migrate.verify_storage(args)
         req = opener.open.call_args.args[0]
         self.assertEqual(req.get_header("Authorization"), "Bearer fixture-service-key")
+        self.assertEqual(req.get_header("If-match"), '"Fixture-opaque-2"')
         self.assertIn("/storage/v1/object/private/", req.full_url)
         self.assertIn("private%20file.png", req.full_url)
         manifest = json.loads((self.base / "storage" / "manifest.json").read_text())
         self.assertEqual(manifest["object_count"], 1)
         self.assertEqual(manifest["total_bytes"], len(data))
+        self.assertEqual(manifest["objects"][0]["response_etag"], '"Fixture-opaque-2"')
+        self.assertIn("frozen", manifest["consistency"])
 
     def test_changed_storage_size_cannot_get_success_manifest(self):
         self.bundle()
         index = {"buckets": [], "objects": [{"id": "fixture-object", "bucket_id": "private",
-                                          "name": "a.png", "metadata": {"size": 100}}]}
+                                          "name": "a.png", "metadata": {"size": 100, "eTag": "Fixture-opaque-2"}}]}
         (self.base / "storage-index.json").write_text(json.dumps(index))
         self.rehash_fixture_manifest()
         key = self.base / "storage-key"
         key.write_text("fixture-service-key")
         key.chmod(0o600)
         opener = mock.Mock()
-        opener.open.return_value = io.BytesIO(b"changed bytes")
+        opener.open.return_value = StorageResponse(b"changed bytes")
         args = mock.Mock(output=str(self.base), storage_url="https://fixture.supabase.co",
                          storage_key_file=str(key))
         with mock.patch.object(migrate.request, "build_opener", return_value=opener):
             with self.assertRaises(migrate.MigrationError):
                 migrate.export_storage(args)
         self.assertFalse((self.base / "storage" / "manifest.json").exists())
+
+    def test_storage_etags_are_opaque_case_sensitive_strong_validators(self):
+        self.assertEqual(migrate.strong_etag(' \t"MixedCase-deadbeef-7"\t '), '"MixedCase-deadbeef-7"')
+        self.assertEqual(migrate.strong_etag("MixedCase-deadbeef-7", allow_unquoted=True), '"MixedCase-deadbeef-7"')
+        for tag in (None, "", '""', 'W/"weak"', '"unterminated', '"one", "two"', '"line\r\nbreak"', '"unicode-🐈"'):
+            with self.subTest(tag=tag), self.assertRaises(migrate.MigrationError):
+                migrate.strong_etag(tag, allow_unquoted=True)
+
+    def test_storage_rejects_missing_weak_duplicate_or_mismatched_get_etag_before_writing(self):
+        cases = [(), ('W/"Fixture-opaque-2"',), ('"Fixture-opaque-2"', '"Fixture-opaque-2"'),
+                 ('"fixture-opaque-2"',), ('unquoted',), ('"Fixture-opaque-2", "other"',)]
+        for tags in cases:
+            opener = mock.Mock()
+            opener.open.return_value = StorageResponse(b"same-size", etags=tags)
+            target = self.base / "never-created"
+            with self.subTest(tags=tags), self.assertRaises(migrate.MigrationError):
+                migrate.download_object(opener, "https://fixture.invalid/object", "synthetic-key",
+                                        '"Fixture-opaque-2"', target)
+            self.assertFalse(target.exists())
+
+    def test_same_size_storage_overwrite_cannot_get_success_manifest(self):
+        self.bundle()
+        index = {"objects": [{"bucket_id": "private", "name": "same-size",
+                               "metadata": {"size": 4, "eTag": "old-object"}}]}
+        (self.base / "storage-index.json").write_text(json.dumps(index))
+        self.rehash_fixture_manifest()
+        args = self.storage_args()
+        opener = mock.Mock()
+        opener.open.return_value = StorageResponse(b"new!", etags=('"new-object"',))
+        with mock.patch.object(migrate.request, "build_opener", return_value=opener):
+            with self.assertRaisesRegex(migrate.MigrationError, "ETag changed"):
+                migrate.export_storage(args)
+        self.assertEqual(opener.open.call_args.args[0].get_header("If-match"), '"old-object"')
+        self.assertFalse((self.base / "storage" / "manifest.json").exists())
+        self.assertEqual(list((self.base / "storage" / "objects").iterdir()), [])
+
+    def test_storage_snapshot_requires_every_strong_tag_before_network(self):
+        for tag in (None, "", 'W/"weak"', '"bad\nvalue"'):
+            index = {"objects": [{"bucket_id": "private", "name": "first", "metadata": {"eTag": "valid"}},
+                                  {"bucket_id": "private", "name": "second", "metadata": {"eTag": tag}}]}
+            with self.subTest(tag=tag), self.assertRaises(migrate.MigrationError):
+                migrate.storage_snapshot_objects(index)
+
+    def test_source_verification_proves_same_get_bytes_without_changing_existing_archive(self):
+        storage = self.storage_bundle()  # Legacy manifest deliberately has no response_etag field.
+        args = self.storage_args()
+        data = next((storage / "objects").iterdir()).read_bytes()
+        def receipt():
+            return {str(p.relative_to(self.base)): (p.read_bytes(), p.stat().st_mtime_ns, p.stat().st_mode)
+                    for p in self.base.rglob("*") if p.is_file()}
+        before = receipt()
+        opener = mock.Mock()
+        opener.open.return_value = StorageResponse(data)
+        with mock.patch.object(migrate.request, "build_opener", return_value=opener) as build, \
+                contextlib.redirect_stdout(io.StringIO()) as output:
+            self.assertEqual(migrate.main(["verify-storage-source", "--execute", "--output", str(self.base),
+                                           "--storage-url", args.storage_url, "--storage-key-file", args.storage_key_file]), 0)
+        self.assertIsInstance(build.call_args.args[0], migrate.NoRedirect)
+        self.assertEqual(before, receipt())
+        self.assertEqual(opener.open.call_count, 1)
+        req = opener.open.call_args.args[0]
+        self.assertEqual(req.get_header("If-match"), '"Fixture-opaque-2"')
+        report = json.loads(output.getvalue())
+        self.assertEqual(report["status"], "source_bytes_verified")
+        self.assertEqual(report["object_count"], 1)
+        self.assertEqual(report["total_bytes"], len(data))
+        self.assertIs(report["archive_modified"], False)
+        self.assertIs(report["atomic_snapshot"], False)
+        self.assertNotIn("fixture-service-key", output.getvalue())
+        self.assertNotIn(args.storage_url, output.getvalue())
+
+    def test_source_verification_rejects_same_tag_same_size_changed_bytes(self):
+        storage = self.storage_bundle()
+        args = self.storage_args()
+        path = next((storage / "objects").iterdir())
+        original = path.read_bytes()
+        opener = mock.Mock()
+        opener.open.return_value = StorageResponse(b"x" * len(original))
+        with mock.patch.object(migrate.request, "build_opener", return_value=opener), \
+                contextlib.redirect_stdout(io.StringIO()) as output:
+            with self.assertRaisesRegex(migrate.MigrationError, "bytes differ"):
+                migrate.verify_storage_source(args)
+        self.assertEqual(output.getvalue(), "")
+        self.assertEqual(path.read_bytes(), original)
+
+    def test_source_verification_checks_local_archive_before_key_or_network(self):
+        storage = self.storage_bundle()
+        args = self.storage_args()
+        next((storage / "objects").iterdir()).write_bytes(b"corrupt")
+        with mock.patch.object(migrate, "storage_access", side_effect=AssertionError("key read")), \
+                mock.patch.object(migrate.request, "build_opener", side_effect=AssertionError("network opened")):
+            with self.assertRaisesRegex(migrate.MigrationError, "checksum/size"):
+                migrate.verify_storage_source(args)
+
+    def test_storage_redirect_and_precondition_errors_are_static_and_do_not_write(self):
+        for code in (302, 307, 412):
+            opener = mock.Mock()
+            secret_url = "https://fixture.invalid/private-object?secret=synthetic"
+            response = io.BytesIO(b"private response")
+            opener.open.side_effect = migrate.error.HTTPError(secret_url, code, "synthetic-key", Message(), response)
+            with self.subTest(code=code), self.assertRaises(migrate.MigrationError) as raised:
+                migrate.download_object(opener, secret_url, "synthetic-key", '"expected"')
+            self.assertNotIn(secret_url, str(raised.exception))
+            self.assertNotIn("synthetic-key", str(raised.exception))
+            self.assertTrue(response.closed)
+
+    def test_storage_partial_response_cannot_verify_full_object(self):
+        opener = mock.Mock()
+        opener.open.return_value = StorageResponse(b"partial", status=206)
+        with self.assertRaises(migrate.MigrationError):
+            migrate.download_object(opener, "https://fixture.invalid/object", "synthetic-key", '"Fixture-opaque-2"')
 
     def test_fixture_runner_plan_never_connects(self):
         with mock.patch.object(fixture.sys, "argv", ["fixture", "--admin-service", "anything"]), \

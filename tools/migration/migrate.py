@@ -11,6 +11,7 @@ import contextvars
 import functools
 import contextlib
 import hashlib
+from http.client import HTTPException
 import json
 import os
 from pathlib import Path
@@ -21,9 +22,16 @@ import sys
 import tempfile
 import uuid
 from datetime import datetime, timezone
+from types import MappingProxyType
 from urllib import error, parse, request
 
-VERSION = 2
+VERSION = 3
+# JSON text depends on session output settings even when stored values are equal.
+# Keep this contract immutable and require it in every accepted database manifest.
+DIGEST_SETTINGS = MappingProxyType({
+    "extra_float_digits": "3", "intervalstyle": "postgres", "bytea_output": "hex",
+    "DateStyle": "ISO,YMD", "timezone": "UTC", "client_encoding": "UTF8",
+})
 DATABASE_ARTIFACTS = frozenset({"database.dump", "all-table-data.dump", "archive-toc.txt",
                                 "all-table-data-toc.txt", "table-data-coverage.json",
                                 "storage-index.json", "roles.sql"})
@@ -100,12 +108,11 @@ def db_env(read_only=True):
             raise MigrationError(f"Set {label} to a private file outside the repository.")
         env[label] = str(outside_repository(private_file(env[label], label)))
     # Ignore ambient credentials/host selection; a validated service alias is explicit.
-    for label in ("PGPASSWORD", "PGHOST", "PGHOSTADDR", "PGPORT", "PGUSER", "PGDATABASE", "PGSERVICE"):
+    for label in ("PGPASSWORD", "PGHOST", "PGHOSTADDR", "PGPORT", "PGUSER", "PGDATABASE", "PGSERVICE",
+                  "PGDATESTYLE", "PGTZ", "PGCLIENTENCODING"):
         env.pop(label, None)
-    env["PGOPTIONS"] = (
-        "-c default_transaction_read_only=on -c timezone=UTC -c row_security=off"
-        if read_only else "-c timezone=UTC -c row_security=off"
-    )
+    canonical = " ".join(f"-c {key}={value}" for key, value in DIGEST_SETTINGS.items())
+    env["PGOPTIONS"] = ("-c default_transaction_read_only=on " if read_only else "") + canonical + " -c row_security=off"
     env["PGCONNECT_TIMEOUT"] = "15"
     return env
 
@@ -187,9 +194,17 @@ def identifier(text):
     return '"' + text.replace('"', '""') + '"'
 
 
+def canonical_settings_sql():
+    # libpq service options can override PGOPTIONS. Enforce the contract in SQL
+    # after BEGIN/importing a snapshot, before any query can serialize rows.
+    return "".join(f"SET LOCAL {name} = {sql_literal(value)};\n"
+                   for name, value in DIGEST_SETTINGS.items()) + "SET LOCAL row_security = off;\n"
+
+
 def transaction_sql(sql, snapshot=None):
     imported = f"SET TRANSACTION SNAPSHOT {sql_literal(snapshot)};\n" if snapshot else ""
-    return "BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY;\n" + imported + sql + "\nCOMMIT;\n"
+    return ("BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY;\n" + imported
+            + canonical_settings_sql() + sql + "\nCOMMIT;\n")
 
 
 def query(service, sql, snapshot=None):
@@ -226,7 +241,7 @@ def snapshot_session(service):
                                 stdout=subprocess.PIPE, stderr=stderr, text=True, bufsize=1)
         try:
             proc.stdin.write("BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY;\n"
-                             "SELECT pg_export_snapshot();\n")
+                             + canonical_settings_sql() + "SELECT pg_export_snapshot();\n")
             proc.stdin.flush()
             snapshot = proc.stdout.readline().strip()
             if not SNAPSHOT.fullmatch(snapshot):
@@ -401,6 +416,7 @@ def export_database(args):
     write_text(out / "roles.sql", roles)
     write_json(out / "manifest.json", {
         "format_version": VERSION, "created_at": now(), "status": "database_export_complete",
+        "digest_settings": dict(DIGEST_SETTINGS),
         "source_service": source, "server_version_num": catalog["server_version_num"],
         "source_database": catalog["database"], "extensions": catalog["extensions"],
         "roles": catalog["roles"], "tables": tables, "sequences": catalog["sequences"],
@@ -420,7 +436,9 @@ def load_manifest(directory):
     try:
         manifest = json.loads((out / "manifest.json").read_text())
         if manifest["format_version"] != VERSION or manifest["status"] != "database_export_complete":
-            raise MigrationError("Unsupported/incomplete database manifest; create a fresh export with verified rescue coverage.")
+            raise MigrationError("Unsupported/incomplete database manifest; create a fresh export with canonical digests and verified rescue coverage.")
+        if manifest.get("digest_settings") != dict(DIGEST_SETTINGS):
+            raise MigrationError("Database digest settings are missing or incompatible; create a fresh export before restore.")
         paths = [item["path"] for item in manifest["files"]]
         if len(paths) != len(set(paths)) or not DATABASE_ARTIFACTS.issubset(paths):
             raise MigrationError("Database manifest is missing required checked artifacts or has duplicate entries.")
@@ -542,58 +560,108 @@ def object_file(bucket, name):
     return "objects/" + hashlib.sha256(json.dumps([bucket, name], ensure_ascii=False).encode()).hexdigest()
 
 
-def download_object(opener, url, key, target):
-    req = request.Request(url, headers={"Authorization": "Bearer " + key, "apikey": key})
+def strong_etag(value, *, allow_unquoted=False):
+    """Canonicalize one strong opaque validator without changing its case/content."""
+    if not isinstance(value, str):
+        raise MigrationError("Storage snapshot and response require a strong ETag.")
+    value = value.strip(" \t")
+    if value.startswith('W/'):
+        raise MigrationError("Weak Storage ETags cannot verify snapshot bytes.")
+    if len(value) >= 2 and value.startswith('"') and value.endswith('"'):
+        opaque = value[1:-1]
+    elif allow_unquoted:
+        opaque = value
+    else:
+        raise MigrationError("Storage response ETag is malformed.")
+    # RFC 9110 opaque-tag bytes; quotes, controls and newlines are never accepted.
+    if not re.fullmatch(r'[\x21\x23-\x7e\x80-\xff]+', opaque):
+        raise MigrationError("Storage ETag is missing or malformed.")
+    return '"' + opaque + '"'
+
+
+def storage_snapshot_objects(storage):
+    objects = {}
+    try:
+        for obj in storage["objects"]:
+            identity = obj["bucket_id"], obj["name"]
+            if any(not isinstance(part, str) or not part for part in identity):
+                raise MigrationError("Storage index contains an invalid object identity.")
+            if identity in objects:
+                raise MigrationError("Duplicate storage object identity.")
+            etag = strong_etag((obj.get("metadata") or {}).get("eTag"), allow_unquoted=True)
+            objects[identity] = obj, etag
+    except (KeyError, TypeError, AttributeError):
+        raise MigrationError("Storage index is malformed.") from None
+    return objects
+
+
+def storage_access(args):
+    base = storage_base(args.storage_url)
+    keyfile = outside_repository(private_file(args.storage_key_file, "Storage key file"))
+    key = keyfile.read_text().strip()
+    if not key or not key.isascii() or any(character.isspace() for character in key):
+        raise MigrationError("Storage key file must contain one non-empty ASCII key.")
+    return base, key
+
+
+def storage_object_url(base, bucket, name):
+    return base + "/storage/v1/object/" + parse.quote(bucket, safe="") + "/" + parse.quote(name, safe="/")
+
+
+def download_object(opener, url, key, expected_etag, target=None):
+    expected_etag = strong_etag(expected_etag)
+    req = request.Request(url, headers={"Authorization": "Bearer " + key, "apikey": key,
+                                       "If-Match": expected_etag, "Accept-Encoding": "identity"})
     digest, size = hashlib.sha256(), 0
     try:
-        with opener.open(req, timeout=60) as response, open(target, "xb") as output:
-            os.chmod(target, 0o600)
-            for chunk in iter(lambda: response.read(1024 * 1024), b""):
-                size += len(chunk)
-                digest.update(chunk)
-                output.write(chunk)
+        with opener.open(req, timeout=60) as response:
+            etags = response.headers.get_all("ETag", [])
+            if response.getcode() != 200 or len(etags) != 1:
+                raise MigrationError("Storage GET requires status 200 and exactly one strong ETag.")
+            response_etag = strong_etag(etags[0])
+            if response_etag != expected_etag:
+                raise MigrationError("Storage object ETag changed since database snapshot; repeat frozen export.")
+            # Verification streams into the digest only; it never opens archive files for writing.
+            with open(target, "xb") if target is not None else contextlib.nullcontext() as output:
+                if output is not None:
+                    os.chmod(target, 0o600)
+                for chunk in iter(lambda: response.read(1024 * 1024), b""):
+                    size += len(chunk)
+                    digest.update(chunk)
+                    if output is not None:
+                        output.write(chunk)
     except error.HTTPError as http_error:
         http_error.close()
-        raise MigrationError("Storage download failed; no completed manifest/cutover.") from None
-    except (error.URLError, OSError):
+        raise MigrationError("Storage GET failed; no completed export/source verification.") from None
+    except (error.URLError, OSError, HTTPException):
         # The URL/key/error details are deliberately excluded from console output.
-        raise MigrationError("Storage download failed; no completed manifest/cutover.") from None
-    return size, digest.hexdigest()
+        raise MigrationError("Storage GET failed; no completed export/source verification.") from None
+    return size, digest.hexdigest(), response_etag
 
 
 @with_diagnostics
 def export_storage(args):
     out, _ = load_manifest(args.output)
-    base = storage_base(args.storage_url)
-    keyfile = outside_repository(private_file(args.storage_key_file, "Storage key file"))
-    key = keyfile.read_text().strip()
-    if not key or any(character.isspace() for character in key):
-        raise MigrationError("Storage key file must contain one non-empty key.")
     storage = json.loads((out / "storage-index.json").read_text())
+    snapshot = storage_snapshot_objects(storage)
+    base, key = storage_access(args)
     destination = out / "storage"
     if destination.exists():
         raise MigrationError("Storage export already exists; use a new full export directory.")
     (destination / "objects").mkdir(parents=True, mode=0o700)
     os.chmod(destination, 0o700)
     opener = request.build_opener(NoRedirect())
-    objects, seen = [], set()
-    for obj in storage["objects"]:
-        bucket, name = obj["bucket_id"], obj["name"]
-        if not isinstance(bucket, str) or not isinstance(name, str) or not bucket or not name:
-            raise MigrationError("Storage index contains an invalid object identity.")
-        identity = bucket, name
-        if identity in seen:
-            raise MigrationError("Duplicate storage object identity.")
-        seen.add(identity)
+    objects = []
+    for (bucket, name), (obj, expected_etag) in snapshot.items():
         relative = object_file(bucket, name)
-        url = base + "/storage/v1/object/" + parse.quote(bucket, safe="") + "/" + parse.quote(name, safe="/")
-        size, digest = download_object(opener, url, key, destination / relative)
+        url = storage_object_url(base, bucket, name)
+        size, digest, response_etag = download_object(opener, url, key, expected_etag, destination / relative)
         # Metadata size can be stale, but mismatch means no complete migration claim.
         expected_size = (obj.get("metadata") or {}).get("size")
         if expected_size is not None and str(expected_size) != str(size):
             raise MigrationError("Storage object byte size changed since database snapshot; repeat frozen export.")
         objects.append({"bucket": bucket, "name": name, "object_id": obj.get("id"),
-                        "path": relative, "bytes": size, "sha256": digest})
+                        "path": relative, "bytes": size, "sha256": digest, "response_etag": response_etag})
     write_json(destination / "manifest.json", {
         "format_version": VERSION, "status": "storage_export_complete", "created_at": now(),
         "index_sha256": file_hash(out / "storage-index.json"),
@@ -604,9 +672,8 @@ def export_storage(args):
     print(f"Storage export complete: {len(objects)} objects. No files uploaded to a destination.")
 
 
-@with_diagnostics
-def verify_storage(args):
-    out, _ = load_manifest(args.output)
+def verified_storage_bundle(directory):
+    out, _ = load_manifest(directory)
     folder = out / "storage"
     try:
         manifest = json.loads((folder / "manifest.json").read_text())
@@ -625,14 +692,44 @@ def verify_storage(args):
                 raise MigrationError("Storage file checksum/size mismatch.")
         if manifest["object_count"] != len(actual) or manifest["total_bytes"] != sum(item["bytes"] for item in manifest["objects"]):
             raise MigrationError("Storage manifest totals are inconsistent.")
-    except (OSError, KeyError, ValueError):
+    except (OSError, KeyError, ValueError, TypeError):
         raise MigrationError("Cannot verify storage manifest/files.") from None
-    print(f"Local storage archive verified: {len(actual)} objects. Destination upload is not verified.")
+    return out, manifest, index
+
+
+@with_diagnostics
+def verify_storage(args):
+    _, manifest, _ = verified_storage_bundle(args.output)
+    print(f"Local storage archive verified: {manifest['object_count']} objects. Destination upload is not verified.")
+
+
+@with_diagnostics
+def verify_storage_source(args):
+    # Verify the entire existing archive before reading the key or opening HTTP.
+    _, manifest, index = verified_storage_bundle(args.output)
+    snapshot = storage_snapshot_objects(index)
+    base, key = storage_access(args)
+    opener = request.build_opener(NoRedirect())
+    for item in manifest["objects"]:
+        identity = item["bucket"], item["name"]
+        obj, expected_etag = snapshot[identity]
+        size, digest, _ = download_object(opener, storage_object_url(base, *identity), key, expected_etag)
+        if size != item["bytes"] or digest != item["sha256"]:
+            raise MigrationError("Source Storage bytes differ from the existing archive; no source verification.")
+        expected_size = (obj.get("metadata") or {}).get("size")
+        if expected_size is not None and str(expected_size) != str(size):
+            raise MigrationError("Source Storage byte size differs from database snapshot metadata.")
+    print(json.dumps({"action": "verify-storage-source", "status": "source_bytes_verified",
+                      "verified_at": now(), "object_count": manifest["object_count"],
+                      "total_bytes": manifest["total_bytes"], "source_mutation": False,
+                      "archive_modified": False, "atomic_snapshot": False,
+                      "consistency": "Per-object GET evidence only; source database/storage write freeze is still required."}))
 
 
 def parser():
     p = argparse.ArgumentParser(description=__doc__)
-    p.add_argument("action", choices=["export-db", "export-storage", "restore-db", "verify-db", "verify-storage"])
+    p.add_argument("action", choices=["export-db", "export-storage", "restore-db", "verify-db", "verify-storage",
+                                      "verify-storage-source"])
     p.add_argument("--execute", action="store_true", help="Actually run the selected operation; default is offline plan only.")
     p.add_argument("--output", default=os.environ.get("NIGHTOWL_EXPORT_DIR", ""))
     p.add_argument("--source", default=os.environ.get("NIGHTOWL_SOURCE_SERVICE", ""))
@@ -660,7 +757,7 @@ def main(argv=None):
         return 2
     actions = {"export-db": export_database, "export-storage": export_storage,
                "restore-db": restore_database, "verify-db": verify_database,
-               "verify-storage": verify_storage}
+               "verify-storage": verify_storage, "verify-storage-source": verify_storage_source}
     try:
         actions[args.action](args)
     except (MigrationError, OSError) as exc:

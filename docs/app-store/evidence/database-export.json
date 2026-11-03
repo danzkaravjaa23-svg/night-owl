@@ -1,10 +1,20 @@
 {
-  "status": "database_logical_export_verified",
-  "exported_at": "2026-11-03T12:55:10.802205+00:00",
-  "manifest_format": 2,
+  "status": "database_logical_export_and_isolated_restore_verified",
+  "exported_at": "2026-11-03T13:26:27.054565+00:00",
+  "verified_at": "2026-11-03T13:30:18.055564+00:00",
+  "manifest_format": 3,
+  "digest_settings": {
+    "extra_float_digits": "3",
+    "intervalstyle": "postgres",
+    "bytea_output": "hex",
+    "DateStyle": "ISO,YMD",
+    "timezone": "UTC",
+    "client_encoding": "UTF8"
+  },
   "source_server_version": 170006,
   "source_connection_tls_verified": true,
   "source_transaction_read_only": true,
+  "source_service_custom_options": false,
   "inventoried_relations": 87,
   "table_data_coverage": {
     "status": "verified",
@@ -18,21 +28,21 @@
   },
   "large_object_pages": 0,
   "verified_artifacts": 7,
-  "archive_manifest_sha256": "67c2413901569991a7bf1b88721c5c1067890de49a720ba7c8671bdcad299dfa",
-  "exporter_sha256": "4cbc128c4101f3683a64162fb850fd7cb8a8f934660c913e3bfe34ee8ae7045a",
+  "archive_manifest_sha256": "d304580c6b0159b9b383f8cc12c4c22431e1e5ddcd6584c5e92dec5acffb0d69",
   "storage_objects": 97,
   "storage_metadata_bytes": 229717181,
-  "storage_binaries_exported": false,
-  "restoration_verified": false,
+  "storage_binaries_exported": true,
+  "restoration_verified": true,
   "source_writes_frozen": false,
   "platform_configuration_complete": false,
   "backup_release_gate_complete": false,
   "private_data_in_this_receipt": false,
   "source_modified": false,
-  "offline_migration_tests_passed": 82,
+  "offline_migration_tests_passed": 97,
+  "recovery_evidence": "database-recovery.json",
   "pending": [
-    "authenticated Storage binary export and checksums",
-    "isolated compatible PostgreSQL restore and row/sequence/media verification",
-    "coordinated write-free snapshot before cutover; migration remains deferred"
+    "Hosted Auth/Storage/ACL recovery and access acceptance",
+    "Operator responsibility and recovery arrangement",
+    "Coordinated write-free snapshot before any cutover; migration remains deferred"
   ]
 }
