@@ -1,0 +1,247 @@
+{
+  "scope": "real-local-Auth-Storage-Edge-component-integration",
+  "production_schema_parity": false,
+  "apple_live_provider_tested": false,
+  "hosted_project_accessed": false,
+  "source_commit": "d1d0f4e14235b314d2b6c5ad2c2a4d501a3dc7be",
+  "cli_version": "2.122.1",
+  "passed": [
+    "official local stack and actual Edge source are reachable",
+    "real GoTrue creates and authenticates two disposable accounts",
+    "real Storage persists retrievable binary bytes and trusted ownership metadata",
+    "real HTTP preparation requires Auth and a receipt cannot initiate deletion",
+    "real concurrent claims exclude a worker and freeze only the erasing member",
+    "actual Edge resumes a durable failed job and hard-deletes through GoTrue",
+    "real Auth absence and audited FK cascades preserve other members and shared places",
+    "real Storage API removes owner binary files including legacy paths and preserves others",
+    "receipt-only repeated recovery works after Auth removal and stale JWT resurrection fails"
+  ],
+  "status": "passed",
+  "source_sha256": {
+    "tools/deployment/tests/component_application_bootstrap.sql": "6763b9392b07cef3cc0e801e6ae411d2f1ab6a783fc8f0f28f57f2e5c1346399",
+    "supabase/migrations/202610160001_social_discovery.sql": "8600ffee5c742c3992c2858be2303c866f7b67591913d483765603e2a301bb93",
+    "supabase_featured_events.sql": "1f6a8092ba4efce0286026ff8984dc9bb87c53e7962688b39f73ddcd0ead740f",
+    "supabase/migrations/202611030001_account_deletion_boundaries.sql": "38d86c477a641e32dcb80a1d1d706037b05c94ba52aa3386cfb780c982b6ee03",
+    "supabase/migrations/202611030003_admin_console.sql": "c9e7c5fed5486606f494172cbb6a67bcb607a9ca5538c994ca7f79272f159f54",
+    "supabase/migrations/202611030005_venue_story_activity.sql": "c8240d7f736c7dfdb671e2069d88163dbb3f35cdf3cd4111dcfb1c6512686fed",
+    "supabase/migrations/202611030007_venue_map_activity.sql": "3a73db2bc19ffd7a86e7c3b9d65e6ad0bcb092ad36bf266b81510f7fa36135a1",
+    "supabase/migrations/202611030008_account_erasure.sql": "f14e5d8bb846dac8653276cdde629a0fbf91994bf9abde15291bec07d15c4649",
+    "supabase/migrations/202611030009_ugc_review.sql": "da04f1451642b04afee6a4d3ffaac34a9c25e787bf0c21fa69361c43ad11e8fb",
+    "supabase/functions/delete-account/index.ts": "e6d2fa3e6caeb137aa31fe79efbb68b9ad6af775bd7422f461ceb55c410c51f9",
+    "supabase/functions/delete-account/apple_revocation.ts": "82e6dff4b15d1e21e32ea155a5de45649ac234cf7342bb47b99291367bb99edb"
+  },
+  "delete_response": {
+    "status": 200,
+    "cleanup_started": false
+  },
+  "component_images": [
+    "supabase_edge_runtime_nightowl-component public.ecr.aws/supabase/edge-runtime:v1.77.8",
+    "supabase_storage_nightowl-component public.ecr.aws/supabase/storage-api:v1.84.19",
+    "supabase_rest_nightowl-component public.ecr.aws/supabase/postgrest:v16.5",
+    "supabase_auth_nightowl-component public.ecr.aws/supabase/gotrue:v2.197.0",
+    "supabase_kong_nightowl-component public.ecr.aws/supabase/kong:2.8.1",
+    "supabase_db_nightowl-component public.ecr.aws/supabase/postgres:17.11.0.006"
+  ],
+  "elapsed_seconds": 94,
+  "http_trace": [
+    {
+      "stage": "control_reconcile",
+      "status": 500,
+      "code": "P0002"
+    },
+    {
+      "stage": "auth_get",
+      "status": 200
+    },
+    {
+      "stage": "control_lookup",
+      "status": 200
+    },
+    {
+      "stage": "control_prepare",
+      "status": 200
+    },
+    {
+      "stage": "control_reconcile",
+      "status": 200
+    },
+    {
+      "stage": "auth_get",
+      "status": 200
+    },
+    {
+      "stage": "control_status",
+      "status": 200
+    },
+    {
+      "stage": "control_claim",
+      "status": 500,
+      "code": "55P03"
+    },
+    {
+      "stage": "auth_get",
+      "status": 200
+    },
+    {
+      "stage": "control_status",
+      "status": 200
+    },
+    {
+      "stage": "control_claim",
+      "status": 200
+    },
+    {
+      "stage": "control_storage_inventory",
+      "status": 200
+    },
+    {
+      "stage": "control_renew",
+      "status": 200
+    },
+    {
+      "stage": "storage_list",
+      "status": 200
+    },
+    {
+      "stage": "control_renew",
+      "status": 200
+    },
+    {
+      "stage": "storage_list",
+      "status": 200
+    },
+    {
+      "stage": "control_renew",
+      "status": 200
+    },
+    {
+      "stage": "storage_list",
+      "status": 200
+    },
+    {
+      "stage": "control_renew",
+      "status": 200
+    },
+    {
+      "stage": "storage_list",
+      "status": 200
+    },
+    {
+      "stage": "control_renew",
+      "status": 200
+    },
+    {
+      "stage": "storage_list",
+      "status": 200
+    },
+    {
+      "stage": "control_renew",
+      "status": 200
+    },
+    {
+      "stage": "storage_list",
+      "status": 200
+    },
+    {
+      "stage": "control_renew",
+      "status": 200
+    },
+    {
+      "stage": "storage_remove",
+      "status": 200
+    },
+    {
+      "stage": "control_renew",
+      "status": 200
+    },
+    {
+      "stage": "storage_remove",
+      "status": 200
+    },
+    {
+      "stage": "control_renew",
+      "status": 200
+    },
+    {
+      "stage": "storage_remove",
+      "status": 200
+    },
+    {
+      "stage": "control_renew",
+      "status": 200
+    },
+    {
+      "stage": "storage_remove",
+      "status": 200
+    },
+    {
+      "stage": "control_renew",
+      "status": 200
+    },
+    {
+      "stage": "storage_list",
+      "status": 200
+    },
+    {
+      "stage": "control_renew",
+      "status": 200
+    },
+    {
+      "stage": "storage_list",
+      "status": 200
+    },
+    {
+      "stage": "control_renew",
+      "status": 200
+    },
+    {
+      "stage": "storage_list",
+      "status": 200
+    },
+    {
+      "stage": "control_renew",
+      "status": 200
+    },
+    {
+      "stage": "storage_list",
+      "status": 200
+    },
+    {
+      "stage": "control_storage_inventory",
+      "status": 200
+    },
+    {
+      "stage": "control_storage_cleared",
+      "status": 200
+    },
+    {
+      "stage": "control_cleanup",
+      "status": 200
+    },
+    {
+      "stage": "control_renew",
+      "status": 200
+    },
+    {
+      "stage": "auth_get",
+      "status": 200
+    },
+    {
+      "stage": "auth_delete",
+      "status": 200
+    },
+    {
+      "stage": "control_completed",
+      "status": 200
+    },
+    {
+      "stage": "control_reconcile",
+      "status": 200
+    },
+    {
+      "stage": "control_reconcile",
+      "status": 200
+    }
+  ],
+  "passed_count": 9
+}

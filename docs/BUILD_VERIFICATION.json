@@ -1464,7 +1464,7 @@
   },
   "app_store_implementation": {
     "date": "2026-11-03",
-    "status": "CANDIDATE_CODE_VALIDATED_NATIVE_AND_COMPONENT_CI_PENDING",
+    "status": "PREPARATION_VALIDATED_SUBMISSION_REQUIRES_OWNER_SETUP_AND_HOSTED_ACCEPTANCE",
     "branch": "codex/app-store-preparation",
     "production_deployed": false,
     "store_uploaded": false,
@@ -1489,9 +1489,9 @@
     "deployment_python_tests": 43,
     "ios_source_preflight": "9/9 PASS",
     "backend_local": {
-      "erasure_node_tests": 66,
+      "erasure_node_tests": 71,
       "apple_crypto_tests": 18,
-      "deno_sdk_handler_steps": 13,
+      "deno_sdk_handler_steps": 14,
       "deno_protocol_steps": 12,
       "erasure_sql_groups": 22,
       "erasure_fk_actions": 69,
@@ -1506,7 +1506,7 @@
       "iphone_release_build": "PASS unsigned arm64",
       "simulator_build": "PASS",
       "iphone_startup": "PASS iPhone17; screenshot inspected",
-      "ipad_startup": "TIMEOUT during simulator boot, retry pending",
+      "ipad_startup": "Historical boot timeout, superseded by successful candidate run41599319526",
       "xcode": "26.3",
       "sdk": "26.2",
       "embedded_privacy_manifests": 12
@@ -1519,12 +1519,10 @@
       "Unverified demo music removed"
     ],
     "pending": [
-      "Exact candidate native build and simulator startup",
-      "Real isolated Auth/Storage/Edge component CI",
-      "Coordinated hosted 008/009 + delete-account rollout and postflight",
+      "Coordinated hosted 008/009 + delete-account staging/production rollout and acceptance",
       "Apple membership/provider keys/signing",
-      "Signed-device acceptance, screenshots and review account",
-      "Owner-confirmed privacy/age/export/contact/media rights fields"
+      "Signed-device acceptance, final Store screenshots and review account",
+      "Staffed moderation and owner-confirmed privacy/age/export/contact/media rights fields"
     ],
     "web": {
       "status": "PASS",
@@ -1532,6 +1530,38 @@
       "built_at": "2026-11-03T07:52:52.546746+00:00",
       "main_dart_sha256": "375ddafd91463a3754d44232ed379610d1aca09cb5b949ae936c53f0be49a44a",
       "deployed": false
-    }
+    },
+    "native_candidate": {
+      "status": "PASS",
+      "source_commit": "7cbbeb354a1936be66e1faea2edb058901b7b0fd",
+      "run_url": "https://github.com/danzkaravjaa23-svg/night-owl/actions/runs/41599319526",
+      "iphone_release": "Unsigned arm64 PASS",
+      "simulator_build": "PASS",
+      "startup": [
+        "iPhone 17 / iOS26.2",
+        "iPad Pro 13-inch (M5) / iOS26.2"
+      ],
+      "scope": "Unsigned compile and signed-out simulator startup only; no signed-device, Apple-provider or App Store approval claim.",
+      "artifact_id": 13214034348,
+      "archive_sha256": "028d478107dcf53c0f77914f3c886cbf4496641f0d3142eb1b9a4c798f556f45",
+      "archive_bytes": 93798715,
+      "evidence": "docs/app-store/evidence/native-build.json",
+      "app_source_matches_final_branch": true
+    },
+    "backend_components": {
+      "status": "PASS",
+      "source_commit": "d1d0f4e14235b314d2b6c5ad2c2a4d501a3dc7be",
+      "run_url": "https://github.com/danzkaravjaa23-svg/night-owl/actions/runs/41600759661",
+      "passed_groups": 9,
+      "artifact_id": 13214322564,
+      "archive_sha256": "f2cc710f0df023f3a1f971dbbd7285bc6c53741a9cdf748551dd5508990bfe89",
+      "source_hashes_verified": true,
+      "evidence": "docs/app-store/evidence/backend-components.json",
+      "production_schema_parity": false,
+      "apple_live_provider_tested": false
+    },
+    "production_rechecked_at": "2026-11-03T07:56:52.796964+00:00",
+    "production_commit": "9c8b862d69bed2e4f102c9528a584a32e0ce70dd",
+    "package_builder": "tools/deployment/package_app_store_prep.py"
   }
 }

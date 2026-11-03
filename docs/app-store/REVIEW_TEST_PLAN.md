@@ -4,6 +4,8 @@ Prepared 2026-11-03, Asia/Ulaanbaatar. **Not executed on the final signed native
 
 ## Current entry conditions
 
+Unsigned native compile and signed-out startup passed on iPhone 17 and iPad Pro 13-inch (M5), iOS 26.2 ([CI](https://github.com/danzkaravjaa23-svg/night-owl/actions/runs/41599319526)). Actual isolated Auth/Storage/Edge passed 9 component groups ([CI](https://github.com/danzkaravjaa23-svg/night-owl/actions/runs/41600759661)). Neither result executes the signed-device acceptance cases below or certifies production schema parity.
+
 - Historical public read-only preflight at `2026-11-03T06:51:19Z`: Apple provider disabled; Google and email enabled; account-deletion function returned `404 / NOT_FOUND`; support/privacy were actual static HTML. Evidence: `build/audit/2026-11-03/app-store-prep/public-preflight.json`. These observations do not certify a later deployment.
 - Source implements 008 durable account erasure and 009 manual UGC review/reporting plus client changes. They must be rolled out together and accepted on hosted staging before production enablement. Earlier installed admin/storage protections are not evidence that 008/009 or the new Edge handler are live.
 - Settings and unfinished setup expose **Бүртгэл устгах**. A validated saved local receipt reveals **Өмнөх устгалын төлөвийг шалгах** on the signed-out landing screen; `/settings/delete-account` is public for status recovery. The entry points do not prove hosted erasure works.

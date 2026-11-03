@@ -1,0 +1,197 @@
+{
+  "scope": "Unsigned compile and signed-out simulator startup only; no signed-device, Apple-provider or App Store approval claim.",
+  "source_commit": "7cbbeb354a1936be66e1faea2edb058901b7b0fd",
+  "run_url": "https://github.com/danzkaravjaa23-svg/night-owl/actions/runs/41599319526",
+  "artifact_id": 13214034348,
+  "archive_sha256": "028d478107dcf53c0f77914f3c886cbf4496641f0d3142eb1b9a4c798f556f45",
+  "archive_bytes": 93798715,
+  "local_archive": "build/releases/night-owl-native-unsigned-7cbbeb3.zip",
+  "remote_artifact_expires_at": "2026-11-17T08:07:54Z",
+  "bundle_inventory": {
+    "scope": "Built unsigned iPhone app; inventory only, not Apple privacy/signature approval.",
+    "bundle": {
+      "CFBundleIdentifier": "com.nightowl.ub.nightOwlUb",
+      "CFBundleShortVersionString": "1.0.0",
+      "CFBundleVersion": "1",
+      "MinimumOSVersion": "13.0",
+      "UIDeviceFamily": [
+        1,
+        2
+      ],
+      "DTXcode": "2630",
+      "DTXcodeBuild": "17C529",
+      "DTSDKName": "iphoneos26.2",
+      "DTPlatformName": "iphoneos",
+      "DTPlatformVersion": "26.2"
+    },
+    "architectures": "arm64",
+    "privacy_manifests": [
+      {
+        "path": "Frameworks/Flutter.framework/PrivacyInfo.xcprivacy",
+        "sha256": "9f95d7e7862a4b56b66ed926bd6d622d2a6545a827d19847278b438d571d4212",
+        "manifest": {
+          "NSPrivacyTracking": false,
+          "NSPrivacyTrackingDomains": [],
+          "NSPrivacyCollectedDataTypes": [],
+          "NSPrivacyAccessedAPITypes": [
+            {
+              "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategoryFileTimestamp",
+              "NSPrivacyAccessedAPITypeReasons": [
+                "0A2A.1",
+                "C617.1"
+              ]
+            },
+            {
+              "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategorySystemBootTime",
+              "NSPrivacyAccessedAPITypeReasons": [
+                "35F9.1"
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "path": "Frameworks/flutter_secure_storage.framework/flutter_secure_storage.bundle/PrivacyInfo.xcprivacy",
+        "sha256": "47226a29608df206ad0a110e6afeb5a77ff575ac1df9c76bfdb2d6dfb3fafed1",
+        "manifest": {
+          "NSPrivacyTrackingDomains": [],
+          "NSPrivacyAccessedAPITypes": [],
+          "NSPrivacyCollectedDataTypes": [],
+          "NSPrivacyTracking": false
+        }
+      },
+      {
+        "path": "Frameworks/share_plus.framework/share_plus_privacy.bundle/PrivacyInfo.xcprivacy",
+        "sha256": "6d2da0d8d930227d428c1d9363b0ad6e3a12e2c9b68c5ce297158a7412fc8c31",
+        "manifest": {
+          "NSPrivacyTrackingDomains": [],
+          "NSPrivacyAccessedAPITypes": [],
+          "NSPrivacyCollectedDataTypes": [],
+          "NSPrivacyTracking": false
+        }
+      },
+      {
+        "path": "PrivacyInfo.xcprivacy",
+        "sha256": "f5fdbfb28f394fa0fd083992dd2421d5700fac962d3fc4f03ce1a75150397107",
+        "manifest": {
+          "NSPrivacyAccessedAPITypes": [
+            {
+              "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategoryFileTimestamp",
+              "NSPrivacyAccessedAPITypeReasons": [
+                "C617.1"
+              ]
+            },
+            {
+              "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategoryUserDefaults",
+              "NSPrivacyAccessedAPITypeReasons": [
+                "CA92.1"
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "path": "app_links_app_links.bundle/PrivacyInfo.xcprivacy",
+        "sha256": "df01bf8f311b7b350d01d55afe5059ead9ba2b0069c5421e69d9b405f7cabea2",
+        "manifest": {
+          "NSPrivacyTrackingDomains": [],
+          "NSPrivacyAccessedAPITypes": [],
+          "NSPrivacyCollectedDataTypes": [],
+          "NSPrivacyTracking": false
+        }
+      },
+      {
+        "path": "geolocator_apple_geolocator_apple.bundle/PrivacyInfo.xcprivacy",
+        "sha256": "a7e73ec4e14dfe962be5b1649d41ffcb4d581846fcf8925c8736ed27ad267532",
+        "manifest": {
+          "NSPrivacyTrackingDomains": [],
+          "NSPrivacyAccessedAPITypes": [],
+          "NSPrivacyCollectedDataTypes": [],
+          "NSPrivacyTracking": false
+        }
+      },
+      {
+        "path": "image_picker_ios_image_picker_ios.bundle/PrivacyInfo.xcprivacy",
+        "sha256": "6d2da0d8d930227d428c1d9363b0ad6e3a12e2c9b68c5ce297158a7412fc8c31",
+        "manifest": {
+          "NSPrivacyTrackingDomains": [],
+          "NSPrivacyAccessedAPITypes": [],
+          "NSPrivacyCollectedDataTypes": [],
+          "NSPrivacyTracking": false
+        }
+      },
+      {
+        "path": "pointer_interceptor_ios_pointer_interceptor_ios.bundle/PrivacyInfo.xcprivacy",
+        "sha256": "6d2da0d8d930227d428c1d9363b0ad6e3a12e2c9b68c5ce297158a7412fc8c31",
+        "manifest": {
+          "NSPrivacyTrackingDomains": [],
+          "NSPrivacyAccessedAPITypes": [],
+          "NSPrivacyCollectedDataTypes": [],
+          "NSPrivacyTracking": false
+        }
+      },
+      {
+        "path": "shared_preferences_foundation_shared_preferences_foundation.bundle/PrivacyInfo.xcprivacy",
+        "sha256": "056428b938bd57018a60019d15c3c1ee2fa727f23687598bbbd934848b180b1a",
+        "manifest": {
+          "NSPrivacyTrackingDomains": [],
+          "NSPrivacyAccessedAPITypes": [
+            {
+              "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategoryUserDefaults",
+              "NSPrivacyAccessedAPITypeReasons": [
+                "1C8F.1"
+              ]
+            }
+          ],
+          "NSPrivacyCollectedDataTypes": [],
+          "NSPrivacyTracking": false
+        }
+      },
+      {
+        "path": "sqflite_darwin_sqflite_darwin.bundle/PrivacyInfo.xcprivacy",
+        "sha256": "47226a29608df206ad0a110e6afeb5a77ff575ac1df9c76bfdb2d6dfb3fafed1",
+        "manifest": {
+          "NSPrivacyTrackingDomains": [],
+          "NSPrivacyAccessedAPITypes": [],
+          "NSPrivacyCollectedDataTypes": [],
+          "NSPrivacyTracking": false
+        }
+      },
+      {
+        "path": "url_launcher_ios_url_launcher_ios.bundle/PrivacyInfo.xcprivacy",
+        "sha256": "6d2da0d8d930227d428c1d9363b0ad6e3a12e2c9b68c5ce297158a7412fc8c31",
+        "manifest": {
+          "NSPrivacyTrackingDomains": [],
+          "NSPrivacyAccessedAPITypes": [],
+          "NSPrivacyCollectedDataTypes": [],
+          "NSPrivacyTracking": false
+        }
+      },
+      {
+        "path": "video_player_avfoundation_video_player_avfoundation.bundle/PrivacyInfo.xcprivacy",
+        "sha256": "6d2da0d8d930227d428c1d9363b0ad6e3a12e2c9b68c5ce297158a7412fc8c31",
+        "manifest": {
+          "NSPrivacyTrackingDomains": [],
+          "NSPrivacyAccessedAPITypes": [],
+          "NSPrivacyCollectedDataTypes": [],
+          "NSPrivacyTracking": false
+        }
+      }
+    ]
+  },
+  "simulator_startup": {
+    "runtime": "com.apple.CoreSimulator.SimRuntime.iOS-26-2",
+    "devices": [
+      {
+        "name": "iPhone 17",
+        "alive_after_seconds": 12
+      },
+      {
+        "name": "iPad Pro 13-inch (M5)",
+        "alive_after_seconds": 12
+      }
+    ]
+  },
+  "screenshots_visually_inspected": true,
+  "signed": false
+}

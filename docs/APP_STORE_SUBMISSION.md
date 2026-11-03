@@ -33,16 +33,18 @@ Apple Developer Program **жилд 99 USD**, боломжтой оронд до�
 |---|---|---|
 | Гишүүнчлэл | Эзэмшигч: идэвхжүүлээгүй | Active membership, Team, App Store Connect хандалт |
 | macOS / Xcode | Локал macOS 15.5 дээр full Xcode байхгүй; GitHub macOS runner дээр Xcode 26.3 / iOS SDK 26.2-оор build PASS | Локал signing/device work хийх бол тохирох OS/Xcode; cloud CI compile энэ саадыг давсан |
-| Flutter / native source | Flutter 3.44.0; iOS target 13.0; source preflight болон unsigned iPhone/simulator compile PASS | Шинэ candidate-ийн native startup, эцсийн signed archive/privacy report |
+| Flutter / native source | Flutter 3.44.0; iOS target 13.0; source preflight болон unsigned iPhone/simulator compile PASS | Эцсийн signed archive/device acceptance/privacy report |
 | Bundle ID / version | `com.nightowl.ub.nightOwlUb`; `1.0.0+1`; signing Team сонгоогүй | Энэ ID эзэмшигчийнх эсэх, ашигласан build number-ийг Connect-д шалгах |
 | Apple login | Public settings: Apple `false`, Google `true`, email `true` | Apple App ID, Services ID, provider, callback, бодит iPhone login |
-| Account deletion | Durable job/lease, write freeze, Apple reauthorization/revoke, secure receipt recovery кодтой; public function хамгийн сүүлд 404 | Hosted staging cleanup/recovery, Edge deployment/enable, Apple credentials ба disposable account-ийн бүтэн устгал |
+| Account deletion | Durable job/lease, write freeze, fresh Apple revoke, secure recovery кодтой; бодит local Auth/Storage/Edge 9 бүлэг PASS; public function хамгийн сүүлд 404 | Hosted staging cleanup/recovery, Edge deployment/enable, Apple credentials ба disposable account-ийн бүтэн устгал |
 | Privacy / support URL | Хоёул 200, бодит static HTML, contact email байгаа; Flutter fallback биш | Privacy эхийн consent/venue хэсгийг нийцүүлсэн; public deploy дараа, App Privacy questionnaire үлдсэн |
 | Backend / admin | Өмнөх rollout-оор storage/deletion boundaries, analytics consent, admin/interaction SQL суусан; 005–007 map шинэчлэлт суусан | 008/009 болон account deletion Edge rollout тусдаа дутуу; бодит moderator workflow |
-| Native QA / screenshots | Simulator, iPhone/iPad run, signed archive, store screenshot байхгүй | Төхөөрөмжийн тест ба native screenshot |
+| Native QA / screenshots | iPhone 17 + iPad Pro 13(M5), iOS 26.2 simulator startup PASS; хоёр screenshot нягталсан | Signed төхөөрөмжийн 16 case, archive болон Store screenshot үлдсэн |
 | UGC аюулгүй байдал | Server-enforced pending/approved/rejected, text/photo/video review queue; өргөтгөсөн report, block болон audit кодтой | 009 migration ба клиент хамт rollout; хариуцсан moderator, бодит report шийдвэрлэлт |
 
 iOS source preflight **9/9 PASS**, deployment Python **43 тест PASS** (үүнд iOS preflight 29). GitHub-ийн [анхны native build](https://github.com/danzkaravjaa23-svg/night-owl/actions/runs/41594468073) нь `51e2144` commit дээр unsigned iPhone release `Runner.app` болон simulator build хоёрыг амжилттай гаргасан; Xcode 26.3 / iOS SDK 26.2 / Flutter 3.44.0. Энэ нь эхний суурийн нотолгоо: дараагийн backend/client засвар бүрийг шинэ candidate-аар дахин build/test хийнэ.
+
+Эцсийн app source `7cbbeb3`-ийн [native CI](https://github.com/danzkaravjaa23-svg/night-owl/actions/runs/41599319526) unsigned iPhone/simulator build, iPhone 17/iPad Pro 13(M5) startup PASS. 12 privacy manifest inventory хийж, screenshot хоёрыг нягталсан. [Бодит component CI](https://github.com/danzkaravjaa23-svg/night-owl/actions/runs/41600759661) `d1d0f4e` эхээр Auth/Storage/Edge 9 бүлэг PASS; бүрэн production schema parity болон Apple live provider тест биш. Flutter 859, analyzer clean, 16 UI capture, web release PASS. [Дэлгэрэнгүй нотолгоо](app-store/evidence), [эрх авсны дараах дараалал](app-store/OWNER_NEXT_STEPS.md).
 
 Public шалгалтын цаг `2026-11-03T06:51:19.982817Z`; receipt: `build/audit/2026-11-03/app-store-prep/public-preflight.json`. GET шалгалтаар хэрэглэгчийн устгал хийгээгүй. Өмнө суусан SQL-ийг хуучин checklist-ийн дагуу дахин суулгахгүй.
 
