@@ -505,6 +505,163 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
+    Future<void> choosePostVenue(WidgetTester tester, String name) async {
+      final picker = find.byKey(const ValueKey('post-location-picker'));
+      await tester.scrollUntilVisible(picker, 200,
+          scrollable: find.byType(Scrollable).first);
+      await tester.tap(picker);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(name));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets(
+        'post location can change and be removed before optional publish',
+        (tester) async {
+      publisher.failure = const PublicationFailure('fixture publish error');
+      await pump(
+          tester,
+          CreatePostScreen(
+              publicationService: publisher,
+              mediaPicker: ({bool multiple = true}) async => [media],
+              venueLoader: storyVenueLoader));
+      await pickPost(tester);
+      await choosePostVenue(tester, 'Community газар');
+      await choosePostVenue(tester, 'Газрын зураг дахь газар');
+      expect(find.text('Community газар'), findsNothing);
+      expect(find.text('Газрын зураг дахь газар'), findsOneWidget);
+      expect(find.textContaining('7 хоног тооцогдоно'), findsOneWidget);
+      final remove = find.byTooltip('Байршлыг хасах');
+      await tester.ensureVisible(remove);
+      await tester.tap(remove);
+      await tester.pumpAndSettle();
+      expect(find.text('Байршил нэмэх (сонголтоор)'), findsOneWidget);
+      await tester.tap(find.widgetWithText(TextButton, 'Хуваалцах'));
+      await tester.pumpAndSettle();
+      expect(publisher.rows, hasLength(1));
+      expect(publisher.rows.single.containsKey('venue_ref'), isFalse);
+      expect(publisher.rows.single.containsKey('venue_id'), isFalse);
+      expect(publisher.rows.single.containsKey('venue_name'), isFalse);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets(
+        'OSM post location and ID freeze across duplicate taps and retry',
+        (tester) async {
+      publisher.pendingPublish = Completer<void>();
+      publisher.failure = const PublicationFailure('fixture publish error');
+      await pump(
+          tester,
+          CreatePostScreen(
+              publicationService: publisher,
+              mediaPicker: ({bool multiple = true}) async => [media],
+              venueLoader: storyVenueLoader));
+      await pickPost(tester);
+      await choosePostVenue(tester, 'Газрын зураг дахь газар');
+      final share = find.widgetWithText(TextButton, 'Хуваалцах');
+      await tester.tap(share);
+      await tester.tap(share);
+      await tester.pump();
+      expect(publisher.rows, hasLength(1));
+      expect(publisher.rows.single['venue_ref'], 'osm:node:123');
+      expect(publisher.rows.single['venue_name'], 'Газрын зураг дахь газар');
+      expect(publisher.rows.single.containsKey('venue_id'), isFalse);
+      final remove = tester.widget<IconButton>(find.byWidgetPredicate(
+          (widget) =>
+              widget is IconButton && widget.tooltip == 'Байршлыг хасах'));
+      expect(remove.onPressed, isNull);
+      publisher.pendingPublish!.complete();
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(TextButton, 'Дахин шалгах'));
+      await tester.pumpAndSettle();
+      expect(publisher.uploads, 1);
+      expect(publisher.rows, hasLength(2));
+      expect(publisher.rows[0], publisher.rows[1]);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('successful community post refreshes map activity',
+        (tester) async {
+      var loads = 0;
+      final container = ProviderContainer(overrides: [
+        venueStoryActivityProvider.overrideWith((ref) async {
+          loads++;
+          return {};
+        }),
+      ]);
+      addTearDown(container.dispose);
+      final activity = container.listen(venueStoryActivityProvider, (_, __) {});
+      addTearDown(activity.close);
+      await container.read(venueStoryActivityProvider.future);
+      final router = GoRouter(initialLocation: '/post', routes: [
+        GoRoute(
+            path: '/post',
+            builder: (_, __) => CreatePostScreen(
+                publicationService: publisher,
+                mediaPicker: ({bool multiple = true}) async => [media],
+                venueLoader: storyVenueLoader)),
+        GoRoute(
+            path: '/feed',
+            builder: (_, __) => const Scaffold(body: Text('Feed fixture'))),
+      ]);
+      addTearDown(router.dispose);
+      await tester.pumpWidget(UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp.router(routerConfig: router)));
+      await tester.pumpAndSettle();
+      await pickPost(tester);
+      await choosePostVenue(tester, 'Community газар');
+      await tester.tap(find.widgetWithText(TextButton, 'Хуваалцах'));
+      await tester.pumpAndSettle();
+      expect(publisher.rows.single['venue_ref'], other);
+      expect(publisher.rows.single['venue_id'], other);
+      expect(publisher.uploads, 1);
+      expect(loads, 2);
+      expect(find.text('Feed fixture'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets(
+        'post ignores a location picked after the captured account changes',
+        (tester) async {
+      final locations = Completer<List<JsonRow>>();
+      var pickerLoads = 0;
+      Future<List<JsonRow>> loader(
+          {required String query, required int offset, required int limit}) {
+        pickerLoads++;
+        return locations.future;
+      }
+
+      await pump(
+          tester,
+          CreatePostScreen(
+              publicationService: publisher,
+              mediaPicker: ({bool multiple = true}) async => [media],
+              venueLoader: loader));
+      await pickPost(tester);
+      final picker = find.byKey(const ValueKey('post-location-picker'));
+      await tester.scrollUntilVisible(picker, 200,
+          scrollable: find.byType(Scrollable).first);
+      await tester.tap(picker);
+      await tester.pump();
+      expect(pickerLoads, 1);
+      publisher.scope.active = false;
+      locations.complete(storyVenues);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Community газар'));
+      await tester.pumpAndSettle();
+      expect(find.text('Community газар'), findsNothing);
+      await tester.tap(find.widgetWithText(TextButton, 'Хуваалцах'));
+      await tester.pumpAndSettle();
+      expect(publisher.rows, isEmpty);
+      expect(publisher.uploads, 0);
+      await tester.scrollUntilVisible(
+          find.textContaining('Нэвтрэх хаяг өөрчлөгдсөн'), -200,
+          scrollable: find.byType(Scrollable).first);
+      expect(find.textContaining('Нэвтрэх хаяг өөрчлөгдсөн'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+
     testWidgets(
         'post picker prevents duplicate opens and ignores completion after dispose',
         (tester) async {

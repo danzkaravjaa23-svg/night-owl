@@ -1,6 +1,6 @@
 {
-  "current_record": "story_3d_motion",
-  "historical_fields_notice": "Use story_3d_motion for the latest animation pass, venue_refresh for catalog evidence, and story_map_activity for the unchanged backend API. Earlier sections are dated history; native/store gates still apply.",
+  "current_record": "post_week_activity",
+  "historical_fields_notice": "Use post_week_activity for combined daily stories and seven-day posts. story_3d_motion documents unchanged 3D presentation, venue_refresh documents catalog evidence, earlier sections are dated history. Native/store gates still apply.",
   "admin_security": {
     "date": "2026-11-03",
     "timezone": "Asia/Ulaanbaatar",
@@ -1297,6 +1297,78 @@
       "Painted 3D appearance, not a WebGL mesh",
       "Synthetic motion/identity/pixel checks do not measure physical-device FPS or battery",
       "Only presentation changed; remaining venue verification and prior native/store work remain deferred"
+    ]
+  },
+  "post_week_activity": {
+    "date": "2026-11-03",
+    "branch": "night-owl-features",
+    "status": "Canonical post location integrated; seven-day post animation contribution implemented; backend installed and verified; frontend runtime identity at /release.json",
+    "rules": {
+      "story_window": "Readable, unexpired, nonfuture stories created today in Asia/Ulaanbaatar",
+      "post_window": "Readable, nonfuture location-tagged posts with publication > now minus 168 elapsed hours and <= now",
+      "weight": "One story or post = one activity; thresholds 0 / 1-4 / 5-14 / 15+ unchanged",
+      "after_expiry": "Only map influence expires; post and location remain",
+      "original_publication_clock": "New posts use server created_at; updates cannot change original timestamp; old rows not rewritten"
+    },
+    "scope": [
+      "Shared canonical location picker for posts, optional add/change/remove, OSM refs without invented UUID",
+      "Frozen publication retry ID, location and media; captured-account stale selection rejected",
+      "Separate story/post breakdowns on map pins, groups and selected cards",
+      "Alias deduplication sums both content kinds; earliest expiration, auth/privacy/post-version refresh",
+      "Same-total changed private breakdown also closes the stale open group sheet",
+      "New SECURITY INVOKER venue_map_activity RPC; legacy daily-story RPC remains available"
+    ],
+    "verification": {
+      "flutter_full_passed": 814,
+      "flutter_log": "build/audit/2026-11-03/post-week/flutter-full.log",
+      "analysis": "No issues found",
+      "analysis_log": "build/audit/2026-11-03/post-week/analysis-final.log",
+      "sql_fixture_groups_passed": 28,
+      "sql_log": "build/audit/2026-11-03/post-week/venue-map-sql-fixture.log",
+      "visual_cases_passed": 9,
+      "visual_scope": "4 actual composer layouts and 4 actual legend layouts (day/night, 390px and 320px at 1.5x), plus 24 sampled emotion frames; local fictional location fixture",
+      "visual_log": "build/audit/2026-11-03/post-week/visual-capture.log",
+      "composer_capture_final_log": "build/audit/2026-11-03/post-week/composer-capture-final.log",
+      "web_build": "PASS",
+      "web_build_log": "build/audit/2026-11-03/post-week/web-build.log",
+      "tested_main_dart_sha256": "cc0bbbe187b020a22faabbbe0bdc7ef3128695ce53e546a7d6ab944a1f1d0c5d",
+      "independent_reviews": "No blocking SQL, privacy, count or composer integration findings"
+    },
+    "backend": {
+      "project_ref": "jbbdnpsvstwxtgtjoeru",
+      "migration": "supabase/migrations/202611030007_venue_map_activity.sql",
+      "migration_sha256": "3a73db2bc19ffd7a86e7c3b9d65e6ad0bcb092ad36bf266b81510f7fa36135a1",
+      "postflight": {
+        "at": "2026-11-03T05:16:40.911676+00:00",
+        "api_body_md5": "a5e98d55426da4ec476d52836ba798aa",
+        "clock_body_md5": "47214df5dad9c0b80010cc136a2e727d",
+        "all_postflight_boolean_checks": true,
+        "post_index": true,
+        "story_index": true,
+        "migration_result": "Success. No rows returned",
+        "source_characters": 6052,
+        "pasted_characters": 6052,
+        "migration_sha256": "3a73db2bc19ffd7a86e7c3b9d65e6ad0bcb092ad36bf266b81510f7fa36135a1",
+        "scope": "API and clock bodies, invoker/stable/search path, anon/authenticated execute with PUBLIC revoked, clock trigger, unchanged legacy API, both restrictive RLS policies and partial indexes",
+        "verification_application_rows_mutated": false
+      },
+      "anonymous_http": {
+        "http_status": 200,
+        "row_count": 0,
+        "public_story_count": 0,
+        "public_post_count": 0,
+        "private_user_mutation": false
+      }
+    },
+    "delivery": {
+      "url": "https://nightowl-ub.netlify.app/",
+      "runtime_identity": "https://nightowl-ub.netlify.app/release.json",
+      "completion_receipt": "build/audit/2026-11-03/post-week/completion.json"
+    },
+    "limits": [
+      "No real user post was published or deleted as verification; positive publication/retry/privacy flows use isolated fixtures",
+      "Existing historical publication timestamps retain their recorded provenance",
+      "Physical-device FPS, Apple configuration, native signing/store release and remaining venue verification are unchanged"
     ]
   }
 }

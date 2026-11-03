@@ -89,7 +89,8 @@ void main() {
             .widgetList<VenueStoryBadge>(find.byType(VenueStoryBadge))
             .map((v) => v.level),
         containsAll([VenueStoryLevel.sleeping, VenueStoryLevel.onFire]));
-    expect(find.byTooltip('Ember · Өнөөдөр 15 story · Галтай'), findsOneWidget);
+    expect(
+        find.byTooltip('Ember · 15 story · 0 post · Галтай'), findsOneWidget);
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox());
   });
@@ -281,9 +282,67 @@ void main() {
                   child: VenueStoryLegend()))));
       await tester.pumpAndSettle();
       expect(find.byType(VenueStoryBadge), findsNWidgets(4));
-      expect(find.text('15+ story'), findsOneWidget);
+      expect(find.text('15+ идэвх'), findsOneWidget);
       expect(tester.takeException(), isNull);
     }
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('weekly posts contribute to pin level with separate counts',
+      (tester) async {
+    await tester.pumpWidget(MaterialApp(
+        home: Scaffold(
+            body: MediaQuery(
+                data: const MediaQueryData(disableAnimations: true),
+                child: GoogleMapView(
+                    lat: 47.918,
+                    lng: 106.918,
+                    zoom: 18,
+                    markersJson: jsonEncode(rows),
+                    activityCounts: const {'a': 5, 'b': 15},
+                    activityPostCounts: const {'a': 4, 'b': 15})))));
+    await tester.pumpAndSettle();
+    expect(
+        find.byTooltip('Moon · 1 story · 4 post · Идэвхтэй'), findsOneWidget);
+    expect(
+        find.byTooltip('Ember · 0 story · 15 post · Галтай'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets(
+      'same total with changed private post breakdown closes group sheet',
+      (tester) async {
+    Widget scene(Map<String, int> posts) => MaterialApp(
+        home: Scaffold(
+            body: MediaQuery(
+                data: const MediaQueryData(disableAnimations: true),
+                child: GoogleMapView(
+                    lat: 47.918,
+                    lng: 106.918,
+                    zoom: 14,
+                    markersJson: jsonEncode([
+                      for (final id in ['a', 'b'])
+                        {
+                          'id': id,
+                          'name': 'Venue $id',
+                          'lat': 47.918,
+                          'lng': 106.918
+                        }
+                    ]),
+                    activityCounts: const {'a': 3, 'b': 2},
+                    activityPostCounts: posts))));
+    await tester.pumpWidget(scene({'a': 2, 'b': 2}));
+    await tester.pumpAndSettle();
+    await tester
+        .tap(find.byTooltip('2 газар · 1 story · 4 post · Газруудыг харах'));
+    await tester.pumpAndSettle();
+    expect(find.text('1 story · 4 post'), findsOneWidget);
+    await tester.pumpWidget(scene({'a': 1, 'b': 1}));
+    await tester.pumpAndSettle();
+    expect(find.text('1 story · 4 post'), findsNothing);
+    expect(find.byKey(const ValueKey('venue-group-member-a')), findsNothing);
+    expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox());
   });
 
@@ -311,13 +370,13 @@ void main() {
     await tester.pumpAndSettle();
     final tiles = tester.state(find.byType(TileLayer));
     await tester
-        .tap(find.byTooltip('2 газар · Өнөөдөр 3 story · Газруудыг харах'));
+        .tap(find.byTooltip('2 газар · 3 story · 0 post · Газруудыг харах'));
     await tester.pumpAndSettle();
-    expect(find.text('Өнөөдөр 3 story'), findsOneWidget);
+    expect(find.text('3 story · 0 post'), findsOneWidget);
     expect(find.byKey(const ValueKey('venue-group-member-a')), findsOneWidget);
     await tester.pumpWidget(scene(null));
     await tester.pumpAndSettle();
-    expect(find.text('Өнөөдөр 3 story'), findsNothing);
+    expect(find.text('3 story · 0 post'), findsNothing);
     expect(find.byKey(const ValueKey('venue-group-member-a')), findsNothing);
     expect(tester.state(find.byType(TileLayer)), same(tiles));
     expect(tester.takeException(), isNull);

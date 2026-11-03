@@ -11,11 +11,11 @@ import '../../discovery/services/discovery_service.dart';
 /// A narrow request seam also keeps provider tests independent of real auth.
 final venueStoryActivityLoaderProvider = Provider<Future<dynamic> Function()>(
   (ref) => () => SupabaseService.client
-      .rpc('venue_story_activity_today')
+      .rpc('venue_map_activity')
       .timeout(const Duration(seconds: 8)),
 );
 
-/// Errors stay explicit; a failed request must never masquerade as zero stories.
+/// Errors stay explicit; a failed request must never masquerade as zero activity.
 /// During a reload consumers should hide previous values until AsyncData arrives,
 /// because a changed session or relationship may have different visibility.
 final venueStoryActivityProvider =
@@ -24,6 +24,8 @@ final venueStoryActivityProvider =
   ref.watch(authUserProvider);
   ref.watch(sessionUserIdProvider);
   ref.watch(socialVersionProvider);
+  // Publish/delete flows already bump this version across feed and profile.
+  ref.watch(postsVersionProvider);
   final load = ref.watch(venueStoryActivityLoaderProvider);
   var disposed = false;
   var foreground = WidgetsBinding.instance.lifecycleState == null ||

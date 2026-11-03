@@ -466,7 +466,7 @@ class _VenueStoryLegendState extends State<VenueStoryLegend>
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Row(children: [
             const Expanded(
-                child: Text('Өнөөдрийн story хэмнэл',
+                child: Text('Газрын хэмнэл',
                     style:
                         TextStyle(fontSize: 21, fontWeight: FontWeight.w800))),
             IconButton(
@@ -476,8 +476,9 @@ class _VenueStoryLegendState extends State<VenueStoryLegend>
           ]),
           const SizedBox(height: 8),
           const Text(
-              'Энэ газрыг тэмдэглэсэн, танд харагдах идэвхтэй story-ийн тоо. '
-              'Өнөөдрийг Улаанбаатарын цагаар тоолно.',
+              'Энэ газрыг тэмдэглэсэн, танд харагдах нэг story эсвэл post нь 1 идэвх. '
+              'Story — Улаанбаатарын цагаар өнөөдрийн идэвхтэй story. '
+              'Post — нийтэлснээс хойш 7 хоног; post болон байршил нь хэвээр үлдэнэ.',
               style: TextStyle(height: 1.5)),
           const SizedBox(height: 20),
           for (final level in VenueStoryLevel.values)
@@ -504,13 +505,13 @@ class _VenueStoryLegendState extends State<VenueStoryLegend>
                                       fontSize: 16,
                                       fontWeight: FontWeight.w700)),
                               const SizedBox(height: 3),
-                              Text('${level.rangeLabel} story'),
+                              Text('${level.rangeLabel} идэвх'),
                             ])),
                       ])),
                 )),
           const SizedBox(height: 4),
           const Text(
-              'Story-ийн идэвх нь газрын бодит хүнтэй эсэх, ажиллаж байгаа эсэхийг батлахгүй.',
+              'Энэ хэмнэл нь газрын бодит хүнтэй эсэх, ажиллаж байгаа эсэхийг батлахгүй.',
               style: TextStyle(fontSize: 12, height: 1.5)),
         ]),
       );

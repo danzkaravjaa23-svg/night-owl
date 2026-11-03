@@ -1,6 +1,16 @@
 # Night Owl — release бэлтгэл
 
-## 2026-11-03 3D мэдрэмжтэй map emotion — одоогийн хувилбар
+## 2026-11-03 post location — animation-д 7 хоног нөлөөлөх одоогийн хувилбар
+
+Post-ын optional location нь story-той ижил canonical газрын жагсаалтаас хайж сонгох/солих/хасах боломжтой. Хэрэглэгчийн хүссэн **7 хоног нь зөвхөн газрын animation-д тооцогдох хугацаа**: нийтэлснээс хойш 168 цаг. Post болон байршлын тэмдэглэгээ устахгүй. Өнөөдрийн Улаанбаатарын идэвхтэй story болон сүүлийн 168 цагийн танд харагдах post тус бүр 1 идэвх нэмнэ; 0 / 1–4 / 5–14 / 15+ дөрвөн түвшин хэвээр. Map-ийн pin, group, карт дээр story/post тоог тусад нь харуулж, тайлбарт хоёр өөр хугацааг заасан.
+
+`venue_map_activity()` нь SECURITY INVOKER, одоогийн post/story RLS-ээр уншина. Private, block, banned хамгаалалтыг өргөжүүлэхгүй. Шинэ post-ын created_at серверийн цагаар бичигдэж, дараа нь солих боломжгүй; caption/location/moderation засвар долоо хоногийг дахин эхлүүлэхгүй. Хуучин мөрүүдийг өөрчлөөгүй. API-ийн earliest expiry, post version, login/privacy болон resume refresh нь тооллыг шинэчилнэ. Нийт дүн ижил ч private breakdown өөрчлөгдвөл нээлттэй group sheet хуучин мэдээллээ хаана. Нийтлэх retry анхны ID/байршилтайгаа, аккаунт солигдсон хариуг үл тооно.
+
+**Баталгаа:** 814 Flutter PASS, analyzer No issues found, 28 тусгаарласан PostgreSQL fixture бүлэг, 4 composer + 4 legend day/night390px/320px1.5x capture болон 24 frame motion capture, JavaScript web build PASS. Migration007 production дээр COMMIT болсон. 2026-11-03 13:16:40 (Улаанбаатар)-ийн read-only postflight API/clock source MD5, INVOKER/STABLE/search_path/ACL, хоёр RLS policy/index, clock trigger болон хуучин005 API хэвээрийг бүгдийг баталсан. Anonymous HTTP200; тухайн үед тоололд орох нийтэд харагдах мөр0. Шалгалтаар хэрэглэгчийн жинхэнэ post нийтлэх/устгах бичилт хийгээгүй; positive publication/retry/privacy нь synthetic fixture.
+
+Нийтлэлийн бодит commit/hash public `/release.json`; локал receipt `build/audit/2026-11-03/post-week/completion.json`. Дэлгэрэнгүй record `docs/BUILD_VERIFICATION.json` → `post_week_activity`. Өмнөх venue-review болон Apple/native/store ажил тусдаа хэвээр.
+
+## 2026-11-03 3D мэдрэмжтэй map emotion — өмнөх presentation release
 
 Нойрмог нил ягаан, сэрж буй ногоовтор, баяртай шар шар шувуу болон өхөөрдөм улаавтар галын дүрийг сүүдэр, бөөрөнхий гэрэлтүүлэг, гялбаатай болгосон. Амьсгалах/толгой дохих, анивчих/далавч хөдөлгөх, баяртай үсрэх, хөвөх Z болон оч нь зургаан секундээр жигд давтагдана. Map болон тайлбарын дөрвөн дүр өөр өөрийн нэг shared controller ашиглана; pin бүрд ticker үүсгэхгүй. Шинэчлэгдсэн тоолол motion phase-ийг эхнээс нь үсэргэхгүй. Зөвхөн paint өөрчлөгдөж, tile/camera/marker layout-ийг frame бүрээр rebuild хийхгүй.
 

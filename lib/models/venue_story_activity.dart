@@ -1,4 +1,4 @@
-/// Map activity describes readable stories, never a live attendance estimate.
+/// Map activity describes readable tagged content, never live attendance.
 enum VenueStoryLevel {
   sleeping,
   waking,
@@ -28,39 +28,55 @@ enum VenueStoryLevel {
 }
 
 class VenueStoryActivity {
+  /// Today's active stories plus posts created in the last 168 hours.
   final int count;
+  final int postCount;
+
+  /// Keeping the total-count constructor preserves existing story-only callers.
+  int get storyCount => count - postCount;
+  String get breakdownLabel => '$storyCount story · $postCount post';
 
   /// Calendar date in Ulaanbaatar, represented without a device-timezone shift.
   final DateTime? day;
   final DateTime? nextExpiry;
 
-  const VenueStoryActivity({required this.count, this.day, this.nextExpiry})
-      : assert(count >= 0);
+  const VenueStoryActivity({
+    required this.count,
+    this.postCount = 0,
+    this.day,
+    this.nextExpiry,
+  })  : assert(count >= 0),
+        assert(postCount >= 0),
+        assert(postCount <= count);
 
   VenueStoryLevel get level => VenueStoryLevel.forCount(count);
 
   factory VenueStoryActivity.fromJson(Map<String, dynamic> json) {
-    final rawCount = json['story_count'];
+    final rawStories = json['story_count'];
+    // Old cached fixtures omit this key; an explicitly invalid value must fail.
+    final rawPosts = json.containsKey('post_count') ? json['post_count'] : 0;
     final rawDay = json['activity_day'];
     final rawExpiry = json['next_expiry'];
-    if (rawCount is! num ||
-        !rawCount.isFinite ||
-        rawCount < 0 ||
-        rawCount.toInt() != rawCount ||
+    bool validCount(dynamic value) =>
+        value is num && value.isFinite && value >= 0 && value.toInt() == value;
+    if (!validCount(rawStories) ||
+        !validCount(rawPosts) ||
         rawDay is! String ||
         !RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(rawDay) ||
         rawExpiry is! String) {
-      throw const FormatException('Invalid venue story activity');
+      throw const FormatException('Invalid venue map activity');
     }
     final day = DateTime.tryParse('${rawDay}T00:00:00Z');
     final expiry = DateTime.tryParse(rawExpiry);
     if (day == null ||
         day.toIso8601String().substring(0, 10) != rawDay ||
         expiry == null) {
-      throw const FormatException('Invalid venue story activity dates');
+      throw const FormatException('Invalid venue map activity dates');
     }
+    final postCount = (rawPosts as num).toInt();
     return VenueStoryActivity(
-      count: rawCount.toInt(),
+      count: (rawStories as num).toInt() + postCount,
+      postCount: postCount,
       day: day,
       nextExpiry: expiry.toUtc(),
     );
@@ -86,7 +102,7 @@ Map<String, VenueStoryActivity> parseVenueStoryActivities(dynamic rows) {
   return Map.unmodifiable(result);
 }
 
-/// Poll within a minute, and sooner at an expiry or Ulaanbaatar midnight.
+/// Poll within a minute, sooner at a story/post expiry or Ulaanbaatar midnight.
 Duration nextVenueStoryActivityRefresh(
   DateTime now,
   Iterable<VenueStoryActivity> activities,

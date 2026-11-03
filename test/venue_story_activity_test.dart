@@ -1,4 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:night_owl_ub/features/map/providers/venue_story_activity_resolver.dart';
+import 'package:night_owl_ub/models/venue.dart';
 import 'package:night_owl_ub/models/venue_story_activity.dart';
 
 void main() {
@@ -38,6 +40,88 @@ void main() {
     expect(data['osm:node:123']!.day, DateTime.utc(2026, 11, 3));
     expect(data['osm:node:123']!.nextExpiry, DateTime.utc(2026, 11, 3, 15));
     expect(() => data.clear(), throwsUnsupportedError);
+  });
+
+  test('legacy count constructors and rows remain story-only', () {
+    const activity = VenueStoryActivity(count: 7);
+    expect(activity.storyCount, 7);
+    expect(activity.postCount, 0);
+    expect(activity.breakdownLabel, '7 story · 0 post');
+    final parsed = VenueStoryActivity.fromJson(row('x', count: 3));
+    expect(parsed.storyCount, 3);
+    expect(parsed.postCount, 0);
+    expect(parsed.count, 3);
+  });
+
+  test('story and rolling post counts combine at level boundaries', () {
+    final activity = VenueStoryActivity.fromJson({
+      ...row('x', count: 4),
+      'post_count': 11,
+    });
+    expect(activity.storyCount, 4);
+    expect(activity.postCount, 11);
+    expect(activity.count, 15);
+    expect(activity.level, VenueStoryLevel.onFire);
+    expect(activity.breakdownLabel, '4 story · 11 post');
+    final postsOnly = VenueStoryActivity.fromJson({
+      ...row('x', count: 0),
+      'post_count': 5,
+    });
+    expect(postsOnly.count, 5);
+    expect(postsOnly.storyCount, 0);
+    expect(postsOnly.level, VenueStoryLevel.lively);
+  });
+
+  test('supplied malformed post counts fail instead of becoming legacy zero',
+      () {
+    for (final count in [
+      -1,
+      .5,
+      '5',
+      null,
+      double.infinity,
+      double.nan,
+      true
+    ]) {
+      expect(
+        () => VenueStoryActivity.fromJson({...row('x'), 'post_count': count}),
+        throwsFormatException,
+      );
+    }
+    expect(
+      VenueStoryActivity.fromJson({...row('x', count: 0), 'post_count': 0})
+          .count,
+      0,
+    );
+  });
+
+  test('duplicate aliases sum each content group once and retain first expiry',
+      () {
+    final day = DateTime.utc(2026, 11, 3);
+    final storyExpiry = DateTime.utc(2026, 11, 3, 12);
+    final postExpiry = DateTime.utc(2026, 11, 3, 4, 1);
+    final venue = Venue(
+      id: 'community',
+      name: 'Same branch',
+      type: 'bar',
+      lat: 47.918,
+      lng: 106.918,
+      catalogAliases: const ['community', 'osm:node:1', 'osm:node:1'],
+      createdAt: day,
+    );
+    final activity = resolveVenueStoryActivity(venue, {
+      'community': VenueStoryActivity(
+          count: 7, postCount: 3, day: day, nextExpiry: storyExpiry),
+      'osm:node:1': VenueStoryActivity(
+          count: 8, postCount: 6, day: day, nextExpiry: postExpiry),
+      'elsewhere': const VenueStoryActivity(count: 100, postCount: 100),
+    });
+    expect(activity.count, 15);
+    expect(activity.storyCount, 6);
+    expect(activity.postCount, 9);
+    expect(activity.nextExpiry, postExpiry);
+    expect(activity.day, day);
+    expect(activity.level, VenueStoryLevel.onFire);
   });
 
   test('malformed or duplicate responses fail rather than inventing zeros', () {
@@ -80,5 +164,28 @@ void main() {
         nextVenueStoryActivityRefresh(
             now, [VenueStoryActivity(count: 1, nextExpiry: now)]),
         const Duration(seconds: 1));
+  });
+
+  test(
+      'post-only rolling deadline refreshes before the story calendar boundary',
+      () {
+    final now = DateTime.utc(2026, 11, 3, 4);
+    final activities = parseVenueStoryActivities([
+      {
+        ...row('x', count: 0),
+        'post_count': 1,
+        'next_expiry': '2026-11-03T04:00:03Z',
+      },
+      {
+        ...row('y', count: 1),
+        'post_count': 2,
+        'next_expiry': '2026-11-03T04:00:30Z',
+      },
+    ]);
+    expect(nextVenueStoryActivityRefresh(now, activities.values),
+        const Duration(milliseconds: 3100));
+    expect(activities['x']!.day, DateTime.utc(2026, 11, 3),
+        reason:
+            'The UB day identifies today’s stories, not a post cutoff day.');
   });
 }

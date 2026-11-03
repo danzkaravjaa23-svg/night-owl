@@ -231,14 +231,17 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     // counts or turn a network error into a misleading sleeping/zero badge.
     final storiesReady =
         storyState.hasValue && !storyState.isLoading && !storyState.hasError;
-    final activityCounts = storiesReady
+    final activities = storiesReady
         ? {
             for (final venue in located)
               venue.id:
                   resolveVenueStoryActivity(venue, storyState.requireValue)
-                      .count
           }
         : null;
+    final activityCounts =
+        activities?.map((id, value) => MapEntry(id, value.count));
+    final activityPostCounts =
+        activities?.map((id, value) => MapEntry(id, value.postCount));
     final selected =
         savedUnavailable || state.hasError || catalogStatus.notice != null
             ? null
@@ -281,6 +284,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                                   zoom: 14,
                                   controller: _map,
                                   activityCounts: activityCounts,
+                                  activityPostCounts: activityPostCounts,
                                   topOverlayInset: located.isNotEmpty &&
                                           !state.hasError &&
                                           catalogStatus.notice == null
@@ -450,7 +454,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                     fontWeight: FontWeight.w700,
                     letterSpacing: -.6)),
             const SizedBox(height: 4),
-            Text('Газраа сонгоод, story хэмнэлийг нь хараарай.',
+            Text('Газраа сонгоод, хэмнэлийг нь хараарай.',
                 style: AppTextStyles.bodySm.copyWith(color: _muted)),
           ])));
 
@@ -476,8 +480,8 @@ class _MapScreenState extends ConsumerState<MapScreen> {
           borderRadius: BorderRadius.circular(16),
           child: Tooltip(
             message: error
-                ? 'Story-ийн идэвх ачаалсангүй. Дахин оролдох'
-                : 'Story идэвхийн 4 түвшин',
+                ? 'Газрын хэмнэл ачаалсангүй. Дахин оролдох'
+                : 'Газрын хэмнэлийн 4 түвшин',
             child: InkWell(
                 borderRadius: BorderRadius.circular(16),
                 onTap: error
@@ -501,8 +505,8 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                             error
                                 ? 'Идэвх шинэчлэх'
                                 : loading
-                                    ? 'Story уншиж байна…'
-                                    : 'Өнөөдрийн story',
+                                    ? 'Хэмнэл уншиж байна…'
+                                    : 'Газрын хэмнэл',
                             style: TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.w700,
@@ -523,9 +527,9 @@ class _MapScreenState extends ConsumerState<MapScreen> {
         ready ? resolveVenueStoryActivity(venue, state.requireValue) : null;
     final text = activity == null
         ? state.hasError
-            ? 'Story идэвх ачаалсангүй'
-            : 'Story идэвх уншиж байна…'
-        : 'Өнөөдөр ${activity.count} story · ${activity.level.label}';
+            ? 'Газрын хэмнэл ачаалсангүй'
+            : 'Газрын хэмнэл уншиж байна…'
+        : '${activity.breakdownLabel} · ${activity.level.label}';
     return InkWell(
       onTap: _showStoryLevels,
       borderRadius: BorderRadius.circular(10),

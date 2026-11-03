@@ -18,7 +18,7 @@ import 'package:night_owl_ub/core/theme/app_theme.dart';
 import 'package:night_owl_ub/features/map/widgets/venue_story_badge.dart';
 import 'package:night_owl_ub/models/venue_story_activity.dart';
 
-const _output = 'build/audit/2026-11-03/story-3d';
+const _output = 'build/audit/2026-11-03/post-week';
 
 Future<Uint8List> _pixels(GlobalKey key,
     {ui.ImageByteFormat format = ui.ImageByteFormat.png}) async {
@@ -66,7 +66,7 @@ Widget _gallery(Animation<double> phase, Map<VenueStoryLevel, GlobalKey> keys) {
                         height: 1.2,
                         color: Color(0xFFF5F5FC))),
                 const SizedBox(height: 4),
-                Text('${level.rangeLabel} story',
+                Text('${level.rangeLabel} идэвх',
                     style: const TextStyle(
                         fontSize: 11, height: 1.2, color: Color(0xFFB2B8CE))),
               ],
@@ -121,7 +121,7 @@ Widget _gallery(Animation<double> phase, Map<VenueStoryLevel, GlobalKey> keys) {
         ),
         const SizedBox(height: 10),
         const Center(
-          child: Text('Хөдөлгөөний жишээ · бодит story тоо биш',
+          child: Text('Хөдөлгөөний жишээ · бодит идэвхийн тоо биш',
               style: TextStyle(
                   fontSize: 10, height: 1.2, color: Color(0xFFB2B8CE))),
         ),
