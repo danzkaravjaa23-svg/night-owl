@@ -22,10 +22,13 @@ import '../../auth/providers/auth_provider.dart';
 import '../../discovery/services/discovery_service.dart';
 import '../providers/venue_provider.dart';
 import '../providers/venue_bookmarks_provider.dart';
+import '../providers/venue_story_activity_provider.dart';
+import '../providers/venue_story_activity_resolver.dart';
 import '../services/location_service.dart';
 import '../widgets/google_map_view.dart';
 import '../widgets/map_controller.dart';
 import '../widgets/venue_information_sheet.dart';
+import '../widgets/venue_story_badge.dart';
 
 final _venueDescriptionProvider =
     FutureProvider.autoDispose.family<String?, String>((ref, id) async {
@@ -206,6 +209,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(venuesProvider);
+    final storyState = ref.watch(venueStoryActivityProvider);
     final catalogStatus = ref.watch(venueCatalogStatusProvider);
     final bookmarkState = ref.watch(venueBookmarksProvider);
     final bookmarks = bookmarkState.valueOrNull ?? <String>{};
@@ -223,6 +227,18 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                     .contains(query)))
         .toList();
     final located = filtered.where((venue) => venue.hasLocation).toList();
+    // A refresh (especially after switching accounts) must not expose previous
+    // counts or turn a network error into a misleading sleeping/zero badge.
+    final storiesReady =
+        storyState.hasValue && !storyState.isLoading && !storyState.hasError;
+    final activityCounts = storiesReady
+        ? {
+            for (final venue in located)
+              venue.id:
+                  resolveVenueStoryActivity(venue, storyState.requireValue)
+                      .count
+          }
+        : null;
     final selected =
         savedUnavailable || state.hasError || catalogStatus.notice != null
             ? null
@@ -253,7 +269,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                         // Leave streets visible; large text can scroll within
                         // either card without moving or rebuilding the map.
                         final cardHeight = math.min(
-                            expanded ? 420.0 : 232.0 + textGrowth * 7,
+                            expanded ? 450.0 : 268.0 + textGrowth * 7,
                             constraints.maxHeight * (expanded ? .82 : .62));
                         final attributionGap = 12 +
                             MediaQuery.textScalerOf(context).scale(10) * 1.4;
@@ -264,6 +280,12 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                                   lng: AppConstants.ubLng,
                                   zoom: 14,
                                   controller: _map,
+                                  activityCounts: activityCounts,
+                                  topOverlayInset: located.isNotEmpty &&
+                                          !state.hasError &&
+                                          catalogStatus.notice == null
+                                      ? 56
+                                      : 0,
                                   selectedId: selected?.id,
                                   userLocation: _myLocation,
                                   bottomInset: selected == null
@@ -287,6 +309,15 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                                       _select(venue, fromMap: true);
                                     }
                                   })),
+                          if (located.isNotEmpty &&
+                              !state.hasError &&
+                              catalogStatus.notice == null)
+                            Positioned(
+                                left: 12,
+                                top: 10,
+                                child: _storyActivityControl(
+                                    loading: storyState.isLoading,
+                                    error: storyState.hasError)),
                           if (state.isLoading && !state.hasValue)
                             Center(
                                 child: OwlLoading(
@@ -419,9 +450,107 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                     fontWeight: FontWeight.w700,
                     letterSpacing: -.6)),
             const SizedBox(height: 4),
-            Text('Газраа сонгоод, очих замаа хараарай.',
+            Text('Газраа сонгоод, story хэмнэлийг нь хараарай.',
                 style: AppTextStyles.bodySm.copyWith(color: _muted)),
           ])));
+
+  void _showStoryLevels() => showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: _background,
+      showDragHandle: true,
+      sheetAnimationStyle: AppMotion.reduced(context)
+          ? AnimationStyle.noAnimation
+          : const AnimationStyle(
+              duration: AppMotion.enter, reverseDuration: AppMotion.exit),
+      builder: (_) => ConstrainedBox(
+          constraints: BoxConstraints(
+              maxHeight: MediaQuery.sizeOf(context).height * .88),
+          child: const VenueStoryLegend()));
+
+  Widget _storyActivityControl({required bool loading, required bool error}) =>
+      Material(
+          color: _control,
+          elevation: 2,
+          borderRadius: BorderRadius.circular(16),
+          child: Tooltip(
+            message: error
+                ? 'Story-ийн идэвх ачаалсангүй. Дахин оролдох'
+                : 'Story идэвхийн 4 түвшин',
+            child: InkWell(
+                borderRadius: BorderRadius.circular(16),
+                onTap: error
+                    ? () => ref.invalidate(venueStoryActivityProvider)
+                    : _showStoryLevels,
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(minHeight: 44),
+                  child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      child: Row(mainAxisSize: MainAxisSize.min, children: [
+                        Icon(
+                            error
+                                ? Icons.refresh_rounded
+                                : loading
+                                    ? Icons.schedule_rounded
+                                    : Icons.auto_awesome_rounded,
+                            size: 17,
+                            color: _accent),
+                        const SizedBox(width: 7),
+                        Text(
+                            error
+                                ? 'Идэвх шинэчлэх'
+                                : loading
+                                    ? 'Story уншиж байна…'
+                                    : 'Өнөөдрийн story',
+                            style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                color: _foreground)),
+                        if (!error) ...[
+                          const SizedBox(width: 7),
+                          Icon(Icons.info_outline_rounded,
+                              size: 15, color: _muted)
+                        ],
+                      ])),
+                )),
+          ));
+
+  Widget _venueStoryStatus(Venue venue) {
+    final state = ref.watch(venueStoryActivityProvider);
+    final ready = state.hasValue && !state.isLoading && !state.hasError;
+    final activity =
+        ready ? resolveVenueStoryActivity(venue, state.requireValue) : null;
+    final text = activity == null
+        ? state.hasError
+            ? 'Story идэвх ачаалсангүй'
+            : 'Story идэвх уншиж байна…'
+        : 'Өнөөдөр ${activity.count} story · ${activity.level.label}';
+    return InkWell(
+      onTap: _showStoryLevels,
+      borderRadius: BorderRadius.circular(10),
+      child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 3),
+          child: Row(children: [
+            if (activity != null)
+              VenueStoryBadge(level: activity.level, size: 27)
+            else
+              Icon(
+                  state.hasError
+                      ? Icons.cloud_off_rounded
+                      : Icons.schedule_rounded,
+                  size: 19,
+                  color: _muted),
+            const SizedBox(width: 7),
+            Expanded(
+                child: Text(text,
+                    style: TextStyle(fontSize: 12, color: _muted),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis)),
+          ])),
+    );
+  }
+
   Widget _searchField() => Padding(
       padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
       child: TextField(
@@ -867,6 +996,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                                     icon: Icon(Icons.close_rounded,
                                         size: 19, color: secondary)),
                               ]),
+                          _venueStoryStatus(venue),
                           const SizedBox(height: 9),
                           const SizedBox(height: 10),
                           Row(children: [

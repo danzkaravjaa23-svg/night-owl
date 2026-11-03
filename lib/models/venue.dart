@@ -19,6 +19,10 @@ class Venue {
   final DateTime? sourceRetrievedAt;
   final String? websiteUrl;
 
+  /// Canonical catalog refs folded into this map pin by catalog deduplication.
+  /// A story may still point at the original OSM ref after a UUID venue wins.
+  final List<String> catalogAliases;
+
   /// Preserve OSM's native expression; do not guess today's opening status.
   final String? sourceOpeningHours;
   final String? coverUrl; // эзний оруулсан нүүр зураг
@@ -47,6 +51,7 @@ class Venue {
     this.sourceUrl,
     this.sourceRetrievedAt,
     this.websiteUrl,
+    this.catalogAliases = const [],
     this.sourceOpeningHours,
     this.coverUrl,
     this.photos = const [],
@@ -125,6 +130,11 @@ class Venue {
         sourceUrl: sourceUrl ?? supplement.sourceUrl,
         sourceRetrievedAt: sourceRetrievedAt ?? supplement.sourceRetrievedAt,
         websiteUrl: websiteUrl ?? supplement.websiteUrl,
+        catalogAliases: List.unmodifiable({
+          ...catalogAliases,
+          if (supplement.id != id) supplement.id,
+          ...supplement.catalogAliases.where((ref) => ref != id),
+        }),
         sourceOpeningHours: sourceOpeningHours ?? supplement.sourceOpeningHours,
         coverUrl: coverUrl,
         photos: photos,

@@ -144,14 +144,23 @@ class DiscoveryService {
       .order('created_at', ascending: false)
       .limit(30));
   Future<List<JsonRow>> catalog(
-      {String query = '', bool reviewed = false}) async {
+      {String query = '',
+      bool reviewed = false,
+      int offset = 0,
+      int limit = 100}) async {
+    if (offset < 0 || limit < 1 || limit > 100) {
+      throw ArgumentError('Invalid catalog page');
+    }
     var q = client.from('venue_catalog').select();
     if (query.trim().isNotEmpty) {
       q = q.ilike(
           'name', '%${query.trim().replaceAll(RegExp(r'[,()]'), ' ')}%');
     }
     if (reviewed) q = q.not('reviewed_at', 'is', null);
-    return _rows(await q.order('name').limit(100));
+    return _rows(await q
+        .order('name', ascending: true)
+        .order('ref', ascending: true)
+        .range(offset, offset + limit - 1));
   }
 
   Future<Set<String>> savedVenues() async {

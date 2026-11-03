@@ -1,6 +1,18 @@
 # Night Owl — release бэлтгэл
 
-## 2026-11-03 дахин аудитын засвар — одоогийн release
+## 2026-11-03 Story location ба газрын зургийн 4 түвшин — одоогийн хувилбар
+
+Story дээр backend каталогийн газрыг сонгох, солих, хасах үйлдэл нэмсэн. Хайлт нь хуудсалсан, нэр/ref-ээр тогтвортой эрэмбэлэгдсэн, хуучин response-ийг үл хэрэгсдэг, алдаанаас дахин оролдоно. Сонгосон OSM газар UUID-гүй ч зөв идэвхтэй харагдана; backend-д байхгүй bundled-only газарт хиймэл foreign key үүсгэхгүй.
+
+Өнөөдрийн танд харагдах, хугацаа дуусаагүй story-ийн тоогоор map дээр **0 — Нойрмог, 1–4 — Сэрж байна, 5–14 — Идэвхтэй, 15+ — Галтай** хөдөлгөөнт тэмдэг харуулна. Өдрийг Asia/Ulaanbaatar-ийн 00:00-оос тоолж, ирээдүйн/хугацаа дууссан story болон banned author/requester-ийг шүүнэ. Security INVOKER RPC нь одоогийн story RLS-ийг хэвээр ашиглана; private/blocked story-ийн эрхийг өргөжүүлээгүй. Эдгээр нь бодит хүн, ажиллах цаг эсвэл GPS баталгаа биш. Map-д нэгтгэсэн UUID/OSM газрын story refs алдагдахгүй, давхардахгүй.
+
+Animation нь нэг paint clock-оор хоёр зөөлөн цикл хөдөлнө; map/tiles-ийг frame бүрээр rebuild хийхгүй. Reduced motion болон далд map/app-д зогсоно. Тоолол 60 секунд дотор, expiry/midnight болон resume үед шинэчлэгдэнэ; background polling зогсоно. Session/privacy өөрчлөгдөх эсвэл ачаалалт/алдааны үед өмнөх тоо далдлагдана; нээлттэй cluster sheet-ийн хуучин тоо мөн хаагдана. Сүлжээний алдааг 0 story гэж харуулахгүй.
+
+**Баталгаа:** бүтэн **756 Flutter PASS**, analyzer **No issues found**, **17 SQL fixture бүлэг**, **8 өдөр/шөнийн 390px/320px 1.5x бодит widget capture**, web release build PASS. Зохиомол venue бүхий capture-ууд нь production хүний мэдээлэл биш. Backend migration SHA256 `c8240d7f736c7dfdb671e2069d88163dbb3f35cdf3cd4111dcfb1c6512686fed` production дээр COMMIT болсон; embedded assertions болон 2026-11-03 11:48:39 (Улаанбаатар)-ийн source-body MD5/RLS/ACL/index postflight бүгд PASS. Бодит anonymous RPC HTTP200, тухайн үед идэвхтэй story-той газрын мөр 0 байв. Шалгалтаар хэрэглэгчийн story нийтлэх/устгах DML хийгээгүй.
+
+Аппын нийтлэлийн бодит commit болон JS hash: public `/release.json`. Нарийвчилсан шалгалт `docs/BUILD_VERIFICATION.json` → `story_map_activity`; локал ZIP болон completion нотолгоо `build/audit/2026-11-03/story-map/`. Apple/native/signing/store gate хэвээр.
+
+## 2026-11-03 дахин аудитын засвар — өмнөх release
 
 17 илэрсэн доголдлыг зассан. Нэмж Notes-ийн “найзууд харна” тайлбарыг серверийн харилцан дагалтын дүрэм, 24 цагийн expiry-тэй нийцүүлсэн. Аккаунттай холбоотой no-op/stale draft, DM уншсан төлөв, Saved map, Reels болон video lifecycle-ийг regression тестээр шалгасан.
 

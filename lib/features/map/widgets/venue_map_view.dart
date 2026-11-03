@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart' show LatLng;
 import 'package:url_launcher/url_launcher.dart';
@@ -9,7 +10,9 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/night_owl_brand.dart';
 import '../../../core/widgets/sculpted_icon.dart';
 import '../../../core/widgets/app_motion.dart';
+import '../../../models/venue_story_activity.dart';
 import 'map_controller.dart';
+import 'venue_story_badge.dart';
 
 class VenueMapMarker {
   final String id;
@@ -130,8 +133,8 @@ abstract class VenueMarkerGrouping {
 /// Reserve spaced pin rectangles in world pixels, independent of the viewport
 /// and selection. Panning or selecting cannot reshuffle overlapping venues.
 abstract class VenuePinLayout {
-  static const double horizontalSpacing = 60;
-  static const double verticalSpacing = 76;
+  static const double horizontalSpacing = 64;
+  static const double verticalSpacing = 104;
 
   static Map<String, LatLng> positions(List<VenueMapMarker> venues,
       {required double zoom}) {
@@ -208,6 +211,10 @@ class GoogleMapView extends StatefulWidget {
   final String? selectedId;
   final LatLng? userLocation;
   final double bottomInset;
+  final double topOverlayInset;
+
+  /// Null is unavailable/loading; an empty successful map means zero stories.
+  final Map<String, int>? activityCounts;
   final void Function(String venueId)? onVenueTap;
   final LeafletMapController? controller;
   const GoogleMapView(
@@ -219,6 +226,8 @@ class GoogleMapView extends StatefulWidget {
       this.selectedId,
       this.userLocation,
       this.bottomInset = 0,
+      this.topOverlayInset = 0,
+      this.activityCounts,
       this.onVenueTap,
       this.controller});
 
@@ -233,6 +242,7 @@ class _VenueMapState extends State<GoogleMapView> {
   int _tileRetry = 0;
   ({double lat, double lng, int zoom})? _pending;
   List<VenueMapMarker> _venues = [];
+  ModalRoute<dynamic>? _groupSheetRoute;
 
   @override
   void initState() {
@@ -254,6 +264,11 @@ class _VenueMapState extends State<GoogleMapView> {
   @override
   void didUpdateWidget(covariant GoogleMapView old) {
     super.didUpdateWidget(old);
+    if (!mapEquals(old.activityCounts, widget.activityCounts)) {
+      // The modal is a separate route: a parent rebuild alone cannot remove
+      // the previous viewer's private aggregate text from its open sheet.
+      _dismissGroupSheet();
+    }
     if (old.controller != widget.controller) {
       _detach(old.controller);
       _attach();
@@ -271,9 +286,19 @@ class _VenueMapState extends State<GoogleMapView> {
 
   @override
   void dispose() {
+    _dismissGroupSheet();
     _detach(widget.controller);
     _map.dispose();
     super.dispose();
+  }
+
+  void _dismissGroupSheet() {
+    final route = _groupSheetRoute;
+    _groupSheetRoute = null;
+    if (route == null) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (route.isActive) route.navigator?.removeRoute(route);
+    });
   }
 
   void _center(double lat, double lng, {int zoom = 15}) {
@@ -345,6 +370,7 @@ class _VenueMapState extends State<GoogleMapView> {
   }
 
   void _showGroupMembers(VenueMarkerGroup group) {
+    ModalRoute<dynamic>? openedRoute;
     showModalBottomSheet<void>(
       context: context,
       backgroundColor: Theme.of(context).colorScheme.surface,
@@ -356,49 +382,65 @@ class _VenueMapState extends State<GoogleMapView> {
               duration: AppMotion.enter, reverseDuration: AppMotion.exit),
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
-      builder: (sheetContext) => SizedBox(
-        height: math.min(560, MediaQuery.sizeOf(sheetContext).height * .72),
-        child: Column(children: [
-          Padding(
-              padding: const EdgeInsets.fromLTRB(20, 12, 12, 8),
-              child: Row(children: [
-                Expanded(
-                    child: Text('${group.members.length} ойролцоох газар',
-                        style: const TextStyle(
-                            fontSize: 17, fontWeight: FontWeight.w700))),
-                IconButton(
-                    tooltip: 'Хаах',
-                    onPressed: () => Navigator.pop(sheetContext),
-                    icon: const Icon(Icons.close_rounded)),
-              ])),
-          Expanded(
-              child: ListView.builder(
-            padding: const EdgeInsets.only(bottom: 20),
-            itemCount: group.members.length,
-            itemBuilder: (_, index) {
-              final venue = group.members[index];
-              return ListTile(
-                key: ValueKey('venue-group-member-${venue.id}'),
-                leading: Container(
-                    width: 40,
-                    height: 40,
-                    padding: const EdgeInsets.all(7),
-                    decoration: const BoxDecoration(
-                        shape: BoxShape.circle, color: Color(0xFF211737)),
-                    child: const NightOwlMark(size: 26)),
-                title: Text(venue.name.isEmpty ? 'Нэргүй газар' : venue.name),
-                subtitle: const Text('Газрын дэлгэрэнгүйг нээх'),
-                trailing: const Icon(Icons.chevron_right_rounded),
-                onTap: () {
-                  Navigator.pop(sheetContext);
-                  if (mounted) widget.onVenueTap?.call(venue.id);
-                },
-              );
-            },
-          )),
-        ]),
-      ),
-    );
+      builder: (sheetContext) {
+        openedRoute = ModalRoute.of(sheetContext);
+        _groupSheetRoute = openedRoute;
+        return SizedBox(
+          height: math.min(560, MediaQuery.sizeOf(sheetContext).height * .72),
+          child: Column(children: [
+            Padding(
+                padding: const EdgeInsets.fromLTRB(20, 12, 12, 8),
+                child: Row(children: [
+                  Expanded(
+                      child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                        Text('${group.members.length} ойролцоох газар',
+                            style: const TextStyle(
+                                fontSize: 17, fontWeight: FontWeight.w700)),
+                        if (widget.activityCounts != null)
+                          Text(
+                              'Өнөөдөр ${group.members.fold<int>(0, (n, v) => n + (widget.activityCounts?[v.id] ?? 0))} story',
+                              style: const TextStyle(fontSize: 12)),
+                      ])),
+                  IconButton(
+                      tooltip: 'Хаах',
+                      onPressed: () => Navigator.pop(sheetContext),
+                      icon: const Icon(Icons.close_rounded)),
+                ])),
+            Expanded(
+                child: ListView.builder(
+              padding: const EdgeInsets.only(bottom: 20),
+              itemCount: group.members.length,
+              itemBuilder: (_, index) {
+                final venue = group.members[index];
+                return ListTile(
+                  key: ValueKey('venue-group-member-${venue.id}'),
+                  leading: Container(
+                      width: 40,
+                      height: 40,
+                      padding: const EdgeInsets.all(7),
+                      decoration: const BoxDecoration(
+                          shape: BoxShape.circle, color: Color(0xFF211737)),
+                      child: const NightOwlMark(size: 26)),
+                  title: Text(venue.name.isEmpty ? 'Нэргүй газар' : venue.name),
+                  subtitle: Text(widget.activityCounts == null
+                      ? 'Газрын дэлгэрэнгүйг нээх'
+                      : 'Өнөөдөр ${widget.activityCounts?[venue.id] ?? 0} story'),
+                  trailing: const Icon(Icons.chevron_right_rounded),
+                  onTap: () {
+                    Navigator.pop(sheetContext);
+                    if (mounted) widget.onVenueTap?.call(venue.id);
+                  },
+                );
+              },
+            )),
+          ]),
+        );
+      },
+    ).whenComplete(() {
+      if (_groupSheetRoute == openedRoute) _groupSheetRoute = null;
+    });
   }
 
   @override
@@ -476,6 +518,7 @@ class _VenueMapState extends State<GoogleMapView> {
                 selectedId: widget.selectedId,
                 userLocation: widget.userLocation,
                 dark: dark,
+                activityCounts: widget.activityCounts,
                 onVenueTap: widget.onVenueTap,
                 onGroupTap: _openGroup),
           ]),
@@ -512,7 +555,7 @@ class _VenueMapState extends State<GoogleMapView> {
         Positioned(
             left: 12,
             right: 70,
-            top: 12,
+            top: 12 + widget.topOverlayInset,
             child: Material(
                 color: AppColors.bgElevated,
                 borderRadius: BorderRadius.circular(12),
@@ -561,6 +604,7 @@ class _VenueMarkerLayer extends StatefulWidget {
   final String? selectedId;
   final LatLng? userLocation;
   final bool dark;
+  final Map<String, int>? activityCounts;
   final void Function(String)? onVenueTap;
   final void Function(VenueMarkerGroup) onGroupTap;
   const _VenueMarkerLayer(
@@ -568,6 +612,7 @@ class _VenueMarkerLayer extends StatefulWidget {
       required this.selectedId,
       required this.userLocation,
       required this.dark,
+      required this.activityCounts,
       required this.onVenueTap,
       required this.onGroupTap});
 
@@ -575,12 +620,63 @@ class _VenueMarkerLayer extends StatefulWidget {
   State<_VenueMarkerLayer> createState() => _VenueMarkerLayerState();
 }
 
-class _VenueMarkerLayerState extends State<_VenueMarkerLayer> {
+class _VenueMarkerLayerState extends State<_VenueMarkerLayer>
+    with SingleTickerProviderStateMixin, WidgetsBindingObserver {
+  late final _phase = AnimationController(
+      vsync: this, duration: const Duration(milliseconds: 4800));
+  bool _foreground = true;
   double? _cachedZoom;
   String? _cachedSelected;
   List<VenueMapMarker>? _cachedVenues;
   List<VenueMarkerGroup> _groups = [];
   Map<String, LatLng> _pinPositions = {};
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _foreground = WidgetsBinding.instance.lifecycleState == null ||
+        WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed;
+  }
+
+  void _syncMotion({bool restart = false}) {
+    if (!_foreground ||
+        !TickerMode.of(context) ||
+        AppMotion.reduced(context) ||
+        widget.activityCounts == null) {
+      _phase.stop();
+      _phase.value = 0;
+    } else if (restart || (!_phase.isAnimating && _phase.value == 0)) {
+      // Two gentle cycles when data arrives; no permanent per-pin tickers.
+      _phase.forward(from: 0);
+    }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _syncMotion();
+  }
+
+  @override
+  void didUpdateWidget(_VenueMarkerLayer oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _syncMotion(
+        restart: !mapEquals(oldWidget.activityCounts, widget.activityCounts));
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    _foreground = state == AppLifecycleState.resumed;
+    _syncMotion(restart: _foreground);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _phase.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -616,11 +712,24 @@ class _VenueMarkerLayerState extends State<_VenueMarkerLayer> {
             Marker(
                 key: ValueKey('venue-group-${group.members.first.id}'),
                 point: group.point,
-                width: 56,
-                height: 48,
-                child: _VenueGroupBubble(
-                    count: group.members.length,
-                    onTap: () => widget.onGroupTap(group)))
+                width: 64,
+                height: widget.activityCounts == null ? 48 : 80,
+                child: Column(mainAxisSize: MainAxisSize.min, children: [
+                  if (widget.activityCounts != null)
+                    IgnorePointer(
+                        child: VenueStoryBadge(
+                            level: VenueStoryActivity(
+                                    count: _groupStoryCount(group))
+                                .level,
+                            phase: _phase,
+                            size: 32)),
+                  _VenueGroupBubble(
+                      count: group.members.length,
+                      storyCount: widget.activityCounts == null
+                          ? null
+                          : _groupStoryCount(group),
+                      onTap: () => widget.onGroupTap(group)),
+                ]))
           else
             _venuePin(group.members.single),
         if (widget.userLocation != null)
@@ -642,34 +751,56 @@ class _VenueMarkerLayerState extends State<_VenueMarkerLayer> {
     ]);
   }
 
-  Marker _venuePin(VenueMapMarker venue) => Marker(
-      key: ValueKey(venue.id),
-      point: _pinPositions[venue.id] ?? venue.point,
-      width: 52,
-      height: 64,
-      alignment: Alignment.topCenter,
-      child: Tooltip(
-          message: venue.name,
-          child: Semantics(
-              label: venue.name,
-              button: true,
-              selected: venue.id == widget.selectedId,
-              child: GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: () => widget.onVenueTap?.call(venue.id),
-                  child: CustomPaint(
-                      painter: _OwlPinPainter(
-                          dark: widget.dark,
-                          selected: venue.id == widget.selectedId),
-                      child: const Padding(
-                          padding: EdgeInsets.fromLTRB(10, 8, 10, 24),
-                          child: NightOwlMark(size: 30)))))));
+  int _groupStoryCount(VenueMarkerGroup group) => group.members
+      .fold(0, (sum, venue) => sum + (widget.activityCounts?[venue.id] ?? 0));
+
+  Marker _venuePin(VenueMapMarker venue) {
+    final count = widget.activityCounts?[venue.id];
+    final activity = widget.activityCounts == null
+        ? null
+        : VenueStoryActivity(count: count ?? 0);
+    final description = activity == null
+        ? venue.name
+        : '${venue.name} · Өнөөдөр ${activity.count} story · ${activity.level.label}';
+    return Marker(
+        key: ValueKey(venue.id),
+        point: _pinPositions[venue.id] ?? venue.point,
+        width: 60,
+        height: activity == null ? 64 : 96,
+        alignment: Alignment.topCenter,
+        child: Tooltip(
+            message: description,
+            child: Semantics(
+                label: description,
+                button: true,
+                selected: venue.id == widget.selectedId,
+                child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () => widget.onVenueTap?.call(venue.id),
+                    child: Column(mainAxisSize: MainAxisSize.min, children: [
+                      if (activity != null)
+                        VenueStoryBadge(
+                            level: activity.level, phase: _phase, size: 32),
+                      SizedBox(
+                          width: 52,
+                          height: 64,
+                          child: CustomPaint(
+                              painter: _OwlPinPainter(
+                                  dark: widget.dark,
+                                  selected: venue.id == widget.selectedId),
+                              child: const Padding(
+                                  padding: EdgeInsets.fromLTRB(10, 8, 10, 24),
+                                  child: NightOwlMark(size: 30)))),
+                    ])))));
+  }
 }
 
 class _VenueGroupBubble extends StatelessWidget {
   final int count;
+  final int? storyCount;
   final VoidCallback onTap;
-  const _VenueGroupBubble({required this.count, required this.onTap});
+  const _VenueGroupBubble(
+      {required this.count, this.storyCount, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -701,10 +832,12 @@ class _VenueGroupBubble extends StatelessWidget {
           ])),
     );
     return Tooltip(
-        message: '$count газар · Газруудыг харах',
+        message:
+            '$count газар${storyCount == null ? '' : ' · Өнөөдөр $storyCount story'} · Газруудыг харах',
         child: Semantics(
             button: true,
-            label: '$count ойролцоох газар',
+            label:
+                '$count ойролцоох газар${storyCount == null ? '' : ', өнөөдөр $storyCount story'}',
             child: PressFeedback(
                 pressedScale: .96,
                 hover: false,

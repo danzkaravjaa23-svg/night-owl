@@ -1,0 +1,94 @@
+// OFFLINE visual review: real production widgets, fictional venue rows.
+// Copy to test/_venue_story_visual_test.dart; run flutter test; remove copy.
+import 'dart:io';
+import 'dart:ui' as ui;
+import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:night_owl_ub/core/theme/app_colors.dart';
+import 'package:night_owl_ub/core/theme/app_fonts.dart';
+import 'package:night_owl_ub/core/theme/app_theme.dart';
+import 'package:night_owl_ub/features/discovery/widgets/venue_picker.dart';
+import 'package:night_owl_ub/features/map/widgets/venue_story_badge.dart';
+
+void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+  setUpAll(() async {
+    AppFonts.configure();
+    await (FontLoader('MaterialIcons')
+          ..addFont(rootBundle.load('fonts/MaterialIcons-Regular.otf')))
+        .load();
+  });
+  for (final dark in [true, false]) {
+    for (final narrow in [false, true]) {
+      for (final scene in ['legend', 'picker']) {
+        final name =
+            '$scene-${dark ? 'night' : 'day'}-${narrow ? '320-large' : '390'}';
+        testWidgets(name, (tester) async {
+          final capture = GlobalKey();
+          tester.view.physicalSize = Size(narrow ? 320 : 390, 844);
+          tester.view.devicePixelRatio = 1;
+          addTearDown(tester.view.resetPhysicalSize);
+          addTearDown(tester.view.resetDevicePixelRatio);
+          AppColors.isDarkMode = dark;
+          await tester.pumpWidget(MaterialApp(
+            debugShowCheckedModeBanner: false,
+            theme: dark ? AppTheme.dark : AppTheme.light,
+            home: RepaintBoundary(
+                key: capture,
+                child: Scaffold(
+                  body: MediaQuery(
+                      data: MediaQueryData(
+                          size: Size(narrow ? 320 : 390, 844),
+                          disableAnimations: true,
+                          textScaler: TextScaler.linear(narrow ? 1.5 : 1)),
+                      child: scene == 'legend'
+                          ? const VenueStoryLegend()
+                          : DiscoveryVenuePicker(
+                              selectedRef: 'fixture-rooftop',
+                              loader: (
+                                      {required query,
+                                      required offset,
+                                      required limit}) async =>
+                                  [
+                                    {
+                                      'ref': 'fixture-rooftop',
+                                      'name': 'Сарны гэрэл Rooftop',
+                                      'address': 'Сүхбаатар дүүрэг · Demo'
+                                    },
+                                    {
+                                      'ref': 'osm:node:123',
+                                      'name': 'Жазз үдэш',
+                                      'address': 'Чингэлтэй дүүрэг · Demo'
+                                    },
+                                    {
+                                      'ref': 'fixture-lounge',
+                                      'name': 'Найзууд Lounge',
+                                      'address': 'Хан-Уул дүүрэг · Demo'
+                                    },
+                                  ])),
+                )),
+          ));
+          await tester.pumpAndSettle();
+          await tester.runAsync(() => GoogleFonts.pendingFonts());
+          await tester.pumpAndSettle();
+          expect(tester.takeException(), isNull);
+          await tester.runAsync(() async {
+            final boundary = capture.currentContext!.findRenderObject()
+                as RenderRepaintBoundary;
+            final image = await boundary.toImage(pixelRatio: 2);
+            final bytes =
+                await image.toByteData(format: ui.ImageByteFormat.png);
+            final file = File('build/audit/2026-11-03/story-map/$name.png');
+            await file.parent.create(recursive: true);
+            await file.writeAsBytes(bytes!.buffer.asUint8List());
+            image.dispose();
+          });
+          await tester.pumpWidget(const SizedBox());
+        });
+      }
+    }
+  }
+}

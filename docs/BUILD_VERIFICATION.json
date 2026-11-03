@@ -1,6 +1,6 @@
 {
-  "current_record": "audit_repairs",
-  "historical_fields_notice": "Use audit_repairs for the latest local repair verification and deployment status. Earlier records are dated history; native/store gates remain.",
+  "current_record": "story_map_activity",
+  "historical_fields_notice": "Use story_map_activity for the current story/map feature verification. audit_repairs and other sections remain dated history; native/store gates still apply.",
   "admin_security": {
     "date": "2026-11-03",
     "timezone": "Asia/Ulaanbaatar",
@@ -1105,5 +1105,70 @@
       },
       "withheld": "003 admin read/action/private-media expansion; explicit approval pending"
     }
+  },
+  "story_map_activity": {
+    "date": "2026-11-03",
+    "timezone": "Asia/Ulaanbaatar",
+    "branch": "night-owl-features",
+    "status": "Story location and four-level map activity implemented; production API installed and verified; frontend runtime identity at /release.json",
+    "scope": [
+      "Optional canonical venue selection/change/removal in story composer, stable paginated search and retry",
+      "Today in Ulaanbaatar, unexpired/nonfuture readable stories only; existing story RLS preserved",
+      "Levels: 0 sleeping; 1–4 waking; 5–14 lively; 15+ on fire",
+      "UUID/OSM merged aliases count once; clusters preserve venue counts and disclose aggregate story totals",
+      "One bounded paint clock; reduced-motion, hidden-route and app-lifecycle protection",
+      "No stale badge or open group-sheet counts across account/privacy changes; background polling paused"
+    ],
+    "verification": {
+      "flutter_full_passed": 756,
+      "flutter_log": "build/audit/2026-11-03/story-map/flutter-final.log",
+      "analysis": "No issues found",
+      "analysis_log": "build/audit/2026-11-03/story-map/analysis-final.log",
+      "sql_fixture_groups_passed": 17,
+      "sql_log": "build/audit/2026-11-03/story-map/final-sql-fixture.log",
+      "visual_capture_cases_passed": 8,
+      "visual_scope": "Real widgets with offline fictional venue rows, day/night,390px and320px1.5x",
+      "visual_log": "build/audit/2026-11-03/story-map/visual-tests.log",
+      "web_build": "PASS",
+      "web_build_log": "build/audit/2026-11-03/story-map/web-build.log",
+      "tested_main_dart_sha256": "97ddc88acdc1fb364297ab5d1401a60520018d537a3586963689e3abad7b9e96"
+    },
+    "backend": {
+      "project_ref": "jbbdnpsvstwxtgtjoeru",
+      "migration": "supabase/migrations/202611030005_venue_story_activity.sql",
+      "migration_sha256": "c8240d7f736c7dfdb671e2069d88163dbb3f35cdf3cd4111dcfb1c6512686fed",
+      "embedded_assertions": "PASS before COMMIT",
+      "postflight": {
+        "stable": true,
+        "captured_at": "2026-11-03T03:48:39.565699+00:00",
+        "anon_execute": true,
+        "security_invoker": true,
+        "story_rls_active": true,
+        "no_public_execute": true,
+        "pinned_search_path": true,
+        "daily_index_present": true,
+        "authenticated_execute": true,
+        "restrictive_story_policy": true,
+        "function_body_matches_source": true
+      },
+      "anonymous_http": {
+        "http_status": 200,
+        "row_count": 0
+      },
+      "data_mutation_for_verification": false
+    },
+    "delivery": {
+      "client_url": "https://nightowl-ub.netlify.app/",
+      "runtime_frontend_identity": "https://nightowl-ub.netlify.app/release.json",
+      "local_artifact": "build/releases/night-owl-story-map-2026-11-03.zip",
+      "artifact_receipt": "build/audit/2026-11-03/story-map/artifact.json",
+      "completion_receipt": "build/audit/2026-11-03/story-map/completion.json"
+    },
+    "limits": [
+      "Counts reflect viewer visibility, not venue occupancy/open status or location verification",
+      "Only canonical backend catalog locations can be attached; bundled-only OSM entries need backend hydration",
+      "No production user story was published/deleted as a test; posting/session flows covered by synthetic regression tests",
+      "Native signing, device validation, Apple setup, store release and independent PostgreSQL migration remain deferred"
+    ]
   }
 }

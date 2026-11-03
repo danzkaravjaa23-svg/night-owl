@@ -6,11 +6,14 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:image/image.dart' as image;
 import 'package:night_owl_ub/core/theme/app_fonts.dart';
 import 'package:night_owl_ub/features/feed/screens/create_story_screen.dart';
+import 'package:night_owl_ub/features/discovery/services/discovery_service.dart';
+import 'package:night_owl_ub/features/map/providers/venue_story_activity_provider.dart';
 import 'package:night_owl_ub/features/post/screens/create_post_screen.dart';
 import 'package:night_owl_ub/features/post/services/content_publication.dart';
 import 'package:night_owl_ub/features/post/utils/post_media.dart';
@@ -349,6 +352,158 @@ void main() {
       await tester.tap(find.text('Зураг (10 хүртэл) эсвэл видео сонгох'));
       await tester.pumpAndSettle();
     }
+
+    Future<void> pickStoryImage(WidgetTester tester) async {
+      await tester.tap(find.text('Зургийн сан'));
+      await tester.runAsync(() async {
+        await Future<void>.delayed(const Duration(milliseconds: 50));
+      });
+      await tester.pumpAndSettle();
+    }
+
+    final storyVenues = <JsonRow>[
+      {'ref': other, 'venue_id': other, 'name': 'Community газар'},
+      {'ref': 'osm:node:123', 'name': 'Газрын зураг дахь газар'},
+    ];
+    Future<List<JsonRow>> storyVenueLoader(
+            {required String query,
+            required int offset,
+            required int limit}) async =>
+        storyVenues;
+
+    Future<void> chooseStoryVenue(WidgetTester tester, String name) async {
+      await tester.tap(find.byKey(const ValueKey('story-location-picker')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(name));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets(
+        'story location can change and be removed before optional publish',
+        (tester) async {
+      publisher.failure = const PublicationFailure('fixture publish error');
+      await pump(
+          tester,
+          CreateStoryScreen(
+              publicationService: publisher,
+              imagePicker: () async => png,
+              venueLoader: storyVenueLoader));
+      await pickStoryImage(tester);
+      await chooseStoryVenue(tester, 'Community газар');
+      expect(find.text('Community газар'), findsOneWidget);
+      await chooseStoryVenue(tester, 'Газрын зураг дахь газар');
+      expect(find.text('Community газар'), findsNothing);
+      expect(find.text('Газрын зураг дахь газар'), findsOneWidget);
+      await tester.tap(find.byTooltip('Байршлыг хасах'));
+      await tester.pumpAndSettle();
+      expect(find.text('Байршил нэмэх (сонголтоор)'), findsOneWidget);
+      await tester.tap(find.text('Story-д хуваалцах'));
+      await tester.pumpAndSettle();
+      expect(publisher.rows, hasLength(1));
+      expect(publisher.rows.single.containsKey('venue_ref'), isFalse);
+      expect(publisher.rows.single.containsKey('venue_id'), isFalse);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('OSM story location freezes canonical ref across publish retry',
+        (tester) async {
+      publisher.failure = const PublicationFailure('fixture publish error');
+      await pump(
+          tester,
+          CreateStoryScreen(
+              publicationService: publisher,
+              imagePicker: () async => png,
+              venueLoader: storyVenueLoader));
+      await pickStoryImage(tester);
+      await chooseStoryVenue(tester, 'Газрын зураг дахь газар');
+      await tester.tap(find.text('Story-д хуваалцах'));
+      await tester.pumpAndSettle();
+      expect(publisher.rows.single['venue_ref'], 'osm:node:123');
+      expect(publisher.rows.single.containsKey('venue_id'), isFalse);
+      final remove = tester.widget<IconButton>(find.byWidgetPredicate(
+          (widget) =>
+              widget is IconButton && widget.tooltip == 'Байршлыг хасах'));
+      expect(remove.onPressed, isNull);
+      await tester.tap(find.text('Дахин шалгах'));
+      await tester.pumpAndSettle();
+      expect(publisher.uploads, 1);
+      expect(publisher.rows, hasLength(2));
+      expect(publisher.rows[0], publisher.rows[1]);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('successful community location publish refreshes map activity',
+        (tester) async {
+      var loads = 0;
+      final container = ProviderContainer(overrides: [
+        venueStoryActivityProvider.overrideWith((ref) async {
+          loads++;
+          return {};
+        }),
+      ]);
+      addTearDown(container.dispose);
+      final activity = container.listen(venueStoryActivityProvider, (_, __) {});
+      addTearDown(activity.close);
+      await container.read(venueStoryActivityProvider.future);
+      final router = GoRouter(initialLocation: '/story', routes: [
+        GoRoute(
+            path: '/story',
+            builder: (_, __) => CreateStoryScreen(
+                publicationService: publisher,
+                imagePicker: () async => png,
+                venueLoader: storyVenueLoader)),
+        GoRoute(
+            path: '/feed',
+            builder: (_, __) => const Scaffold(body: Text('Feed fixture'))),
+      ]);
+      addTearDown(router.dispose);
+      await tester.pumpWidget(UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp.router(routerConfig: router)));
+      await tester.pumpAndSettle();
+      await pickStoryImage(tester);
+      await chooseStoryVenue(tester, 'Community газар');
+      await tester.tap(find.text('Story-д хуваалцах'));
+      await tester.pumpAndSettle();
+      expect(publisher.rows.single['venue_ref'], other);
+      expect(publisher.rows.single['venue_id'], other);
+      expect(publisher.uploads, 1);
+      expect(loads, 2);
+      expect(find.text('Feed fixture'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets(
+        'account switch while choosing location cannot attach or publish',
+        (tester) async {
+      final locations = Completer<List<JsonRow>>();
+      Future<List<JsonRow>> loader(
+              {required String query,
+              required int offset,
+              required int limit}) =>
+          locations.future;
+      await pump(
+          tester,
+          CreateStoryScreen(
+              publicationService: publisher,
+              imagePicker: () async => png,
+              venueLoader: loader));
+      await pickStoryImage(tester);
+      await tester.tap(find.byKey(const ValueKey('story-location-picker')));
+      await tester.pump();
+      publisher.scope.active = false;
+      locations.complete(storyVenues);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Community газар'));
+      await tester.pumpAndSettle();
+      expect(find.text('Community газар'), findsNothing);
+      await tester.tap(find.text('Story-д хуваалцах'));
+      await tester.pumpAndSettle();
+      expect(publisher.rows, isEmpty);
+      expect(publisher.uploads, 0);
+      expect(find.textContaining('Нэвтрэх хаяг өөрчлөгдсөн'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
 
     testWidgets(
         'post picker prevents duplicate opens and ignores completion after dispose',
