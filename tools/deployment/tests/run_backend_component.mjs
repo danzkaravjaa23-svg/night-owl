@@ -193,11 +193,19 @@ await import('./component_implementation.ts');
       if (filename === bootstrap || migrations.includes(filename)) await sql((filename.endsWith('202611030009_ugc_review.sql') ? `select set_config('app.ugc_storage_origin','${apiOrigin}',false);\n` : '') + source, `install ${path.basename(filename)}`);
     }
     // Fixture-only permissive policies supply owner-scoped baseline Storage
-    // permissions. Actual 008 then provides its real per-account write guard.
+    // permissions. Actual 008/009 guards must reject mutations even when the
+    // baseline owner policies permit them; an absent DELETE policy only tests
+    // Storage's successful empty/no-op response after RLS filters every row.
     await sql(`create policy component_owned_storage_read on storage.objects for select to authenticated using(owner_id=auth.uid()::text);
       create policy component_owned_storage_insert on storage.objects for insert to authenticated with check(
         bucket_id in ('avatars','posts','stories','venues') and
         (split_part(name,'/',1)=auth.uid()::text or name='component-legacy/'||auth.uid()::text||'.bin'));
+      create policy component_owned_storage_update on storage.objects for update to authenticated
+        using(owner_id=auth.uid()::text)
+        with check(owner_id=auth.uid()::text and bucket_id in ('avatars','posts','stories','venues') and
+          split_part(name,'/',1)=auth.uid()::text);
+      create policy component_owned_storage_delete on storage.objects for delete to authenticated
+        using(owner_id=auth.uid()::text);
       notify pgrst,'reload schema';`, 'install isolated Storage fixture policies');
     const envfile = path.join(workdir, 'function.env');
     await writeFile(envfile, 'ACCOUNT_DELETION_ENABLED=true\n', {mode: 0o600});
@@ -271,9 +279,15 @@ await import('./component_implementation.ts');
       body:{bucketId:'posts',sourceKey:attachedPath,destinationKey:`${owner.id}/moved-reviewed.bin`}});
     requireCase(moved.status>=400,'reviewed Storage object could be moved');
     const removed=await api('/storage/v1/object/posts',{method:'DELETE',bearer:owner.token,body:{prefixes:[attachedPath]}});
-    requireCase(removed.status>=400,'reviewed Storage object could be removed while referenced');
     const unchanged=await api(`/storage/v1/object/authenticated/posts/${attachedPath}`,{bearer:owner.token});
-    requireCase(unchanged.status===200&&Buffer.from(unchanged.bytes).equals(Buffer.from(binary)),'failed mutation changed reviewed binary bytes');
+    const retained=await sqlJson(`select json_build_object('present',exists(select 1 from storage.objects
+      where bucket_id='posts' and name='${attachedPath}' and owner_id=${quoted(owner.id)}::text))`);
+    report.storage_immutability={delete_status:removed.status,
+      ...(Array.isArray(removed.data)?{delete_count:removed.data.length}:{}),
+      bytes_unchanged:unchanged.status===200&&Buffer.from(unchanged.bytes).equals(Buffer.from(binary)),
+      metadata_present:retained.present===true};
+    requireCase(report.storage_immutability.bytes_unchanged&&report.storage_immutability.metadata_present,'failed mutation changed reviewed binary bytes or ownership metadata');
+    requireCase(removed.status>=400,'referenced owner Storage deletion did not exercise the mutation guard');
     const draftPath=`${owner.id}/disposable-draft.bin`;
     requireCase((await upload('posts',draftPath,owner)).status===200,'unique unreferenced draft upload failed');
     const draftPost=randomUUID();
