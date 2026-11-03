@@ -97,9 +97,9 @@ const quoted = value => {
   requireCase(typeof value === 'string' && /^[0-9a-f-]{36}$/i.test(value), 'invalid synthetic identifier');
   return `'${value}'`;
 };
-async function localRequest(credentials, pathname, {method = 'GET', bearer, body, binary, timeout = 20000} = {}) {
+async function localRequest(credentials, pathname, {method = 'GET', bearer, body, binary, timeout = 20000, extraHeaders = {}} = {}) {
   requireCase(pathname.startsWith('/') && !pathname.startsWith('//'), 'invalid local API path');
-  const headers = {apikey: credentials.anon, ...(bearer ? {Authorization: `Bearer ${bearer}`} : {})};
+  const headers = {...extraHeaders, apikey: credentials.anon, ...(bearer ? {Authorization: `Bearer ${bearer}`} : {})};
   if (body !== undefined) headers['Content-Type'] = 'application/json';
   if (binary !== undefined) headers['Content-Type'] = 'application/octet-stream';
   const response = await fetch(apiOrigin + pathname, {method, headers, body: binary ?? (body === undefined ? undefined : JSON.stringify(body)), redirect: 'error', signal: AbortSignal.timeout(timeout)});
@@ -190,7 +190,7 @@ await import('./component_implementation.ts');
     for (const filename of [bootstrap, ...migrations, 'supabase/functions/delete-account/index.ts', 'supabase/functions/delete-account/apple_revocation.ts']) {
       const source = await readFile(path.join(repo, filename), 'utf8');
       report.source_sha256[filename] = createHash('sha256').update(source).digest('hex');
-      if (filename === bootstrap || migrations.includes(filename)) await sql(source, `install ${path.basename(filename)}`);
+      if (filename === bootstrap || migrations.includes(filename)) await sql((filename.endsWith('202611030009_ugc_review.sql') ? `select set_config('app.ugc_storage_origin','${apiOrigin}',false);\n` : '') + source, `install ${path.basename(filename)}`);
     }
     // Fixture-only permissive policies supply owner-scoped baseline Storage
     // permissions. Actual 008 then provides its real per-account write guard.
@@ -248,6 +248,48 @@ await import('./component_implementation.ts');
     const inventory = await sqlJson(`select json_build_object('owned',(select count(*) from storage.objects where owner_id=${quoted(owner.id)}::text))`);
     requireCase(inventory.owned === ownerPaths.length, 'real Storage ownership metadata was not recorded');
     pass('real Storage persists retrievable binary bytes and trusted ownership metadata');
+    // Candidate media is append-only. User-controlled replacement bytes must
+    // never alter an already reviewed/public/cached object key.
+
+    const signedPath=`${owner.id}/capability-before-review.bin`;
+    requireCase((await api(`/storage/v1/object/upload/sign/posts/${signedPath}`,{method:'POST',bearer:owner.token,body:{},extraHeaders:{'x-upsert':'true'}})).status>=400,'owner minted a future signed-upload overwrite capability');
+    // A trusted service-minted capability models an already issued legacy
+    // token. Execution must still fail even though Storage uses superuser DB.
+    const capability=await service(`/storage/v1/object/upload/sign/posts/${signedPath}`,{method:'POST',body:{},extraHeaders:{'x-upsert':'true'}});
+    requireCase(capability.status===200&&typeof capability.data?.token==='string','fixture legacy signed-upload capability was not available');
+    requireCase((await api(`/storage/v1/object/upload/sign/posts/${signedPath}?token=${encodeURIComponent(capability.data.token)}`,{method:'PUT',binary:new Uint8Array([99,97,112,97,98,105,108,105,116,121])})).status>=400,'preissued signed-upload capability bypassed media guard');
+    const attachedPath=ownerPaths[0][1];
+    const attachedUrl=`${apiOrigin}/storage/v1/object/public/posts/${attachedPath}`;
+    await sql(`update posts set media_url='${attachedUrl}' where id=${quoted(ownPost)};`);
+    const replacement=new Uint8Array([85,78,82,69,86,73,69,87,69,68]);
+    for(const options of [
+      {method:'PUT',bearer:owner.token,binary:replacement},
+      {method:'POST',bearer:owner.token,binary:replacement,extraHeaders:{'x-upsert':'true'}},
+      {method:'PUT',bearer:other.token,binary:replacement},
+    ]) requireCase((await api(`/storage/v1/object/posts/${attachedPath}`,options)).status>=400,'reviewed Storage bytes accepted overwrite or a foreign account');
+    const moved=await api('/storage/v1/object/move',{method:'POST',bearer:owner.token,
+      body:{bucketId:'posts',sourceKey:attachedPath,destinationKey:`${owner.id}/moved-reviewed.bin`}});
+    requireCase(moved.status>=400,'reviewed Storage object could be moved');
+    const removed=await api('/storage/v1/object/posts',{method:'DELETE',bearer:owner.token,body:{prefixes:[attachedPath]}});
+    requireCase(removed.status>=400,'reviewed Storage object could be removed while referenced');
+    const unchanged=await api(`/storage/v1/object/authenticated/posts/${attachedPath}`,{bearer:owner.token});
+    requireCase(unchanged.status===200&&Buffer.from(unchanged.bytes).equals(Buffer.from(binary)),'failed mutation changed reviewed binary bytes');
+    const draftPath=`${owner.id}/disposable-draft.bin`;
+    requireCase((await upload('posts',draftPath,owner)).status===200,'unique unreferenced draft upload failed');
+    const draftPost=randomUUID();
+    requireCase((await api('/rest/v1/posts',{method:'POST',bearer:owner.token,body:{id:draftPost,user_id:owner.id,
+      media_url:`${apiOrigin}/storage/v1/object/public/posts/${draftPath}`,caption:'Disposable pending immutable fixture'}})).status===201,'owner could not submit a new owned media URL');
+    requireCase((await api(`/rest/v1/posts?id=eq.${draftPost}`,{method:'DELETE',bearer:owner.token})).status===204,'owner could not remove own pending post');
+    const cleaned=await api('/storage/v1/object/posts',{method:'DELETE',bearer:owner.token,body:{prefixes:[draftPath]}});
+    requireCase(cleaned.status===200,'unreferenced owner media cleanup failed');
+    requireCase((await service(`/storage/v1/object/authenticated/posts/${draftPath}`)).status>=400,'draft cleanup left binary bytes');
+    requireCase((await upload('posts',draftPath,owner)).status>=400,'previously attached object key was reused after delete');
+    // A trusted service may finish erasure, while the author still cannot
+    // recreate that referenced path with new bytes afterward.
+    requireCase((await service('/storage/v1/object/posts',{method:'DELETE',body:{prefixes:[attachedPath]}})).status===200,'trusted service media cleanup failed');
+    requireCase((await upload('posts',attachedPath,owner)).status>=400,'service-erased referenced path could be recreated');
+    pass('real Storage rejects overwrite, move and delete/recreate while unique drafts and owner cleanup work');
+
     requireCase((await edge({action: 'prepare'})).status === 401, 'prepare accepted a missing Auth session');
     requireCase((await edge({action: 'status', receipt_token: randomBytes(32).toString('base64url')})).status === 404, 'unknown receipt was accepted');
     const prepared = await edge({action: 'prepare', client_platform: 'native'}, owner.token);

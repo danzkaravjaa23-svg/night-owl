@@ -81,6 +81,7 @@ try {
   await db.exec(await read('supabase/migrations/202611030007_venue_map_activity.sql'));
   await db.exec(migration);
   const activeHash=(await db.query("select md5(prosrc) hash from pg_proc where oid='public.social_active()'::regprocedure")).rows[0].hash;
+  await db.exec("select set_config('app.ugc_storage_origin','https://fixture.test',false)");
   const ugc=await read('supabase/migrations/202611030009_ugc_review.sql');
   await db.exec(ugc);await db.exec(ugc);
   const activeAfter=(await db.query("select md5(prosrc) hash from pg_proc where oid='public.social_active()'::regprocedure")).rows[0].hash;
@@ -103,6 +104,7 @@ try {
   await role('authenticated',owner);
   assert.equal((await db.query('select social_active() active,is_admin() admin,social_admin() social_admin')).rows[0].active,false);
   await reject("select admin_console_review_queue()",'42501');
+  await reject("select get_own_profile_draft()",'42501');
   await assert.rejects(db.query("select admin_console_review('post',$1,$2,'approved','Blocked erasing admin')",[pending.id,pending.moderation_version]),e=>e.code==='42501');
   await reject(`insert into posts(user_id,caption) values('${owner}','Blocked pending publication')`,'42501');
   await reject(`insert into reports(reporter_id,target_type,target_id,reason,status) values('${owner}','user','${other}','spam','pending')`,'42501');

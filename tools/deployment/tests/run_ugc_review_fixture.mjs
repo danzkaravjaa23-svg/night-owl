@@ -42,16 +42,23 @@ try{
  create table fixture_group_members(group_id uuid,user_id uuid);
  alter table group_messages enable row level security;grant select on group_messages,fixture_group_members to authenticated;
  create policy group_message_read on group_messages for select using(exists(select 1 from fixture_group_members where group_id=group_messages.group_id and user_id=auth.uid()));
- create policy post_update on posts for update using(user_id=auth.uid());create policy story_update on stories for update using(user_id=auth.uid());create policy comment_add on comments for insert with check(user_id=auth.uid());
+ create policy post_update on posts for update using(user_id=auth.uid());create policy post_delete on posts for delete using(user_id=auth.uid());create policy story_update on stories for update using(user_id=auth.uid());create policy comment_add on comments for insert with check(user_id=auth.uid());
  create policy comment_update on comments for update using(user_id=auth.uid());create policy event_add on events for insert with check(organizer_id=auth.uid());
  create policy venue_add on venues for insert with check(owner_id=auth.uid());
+ grant insert,update,delete on storage.objects to authenticated;
+ create policy fixture_storage_insert on storage.objects for insert to authenticated with check(split_part(name,'/',1)=auth.uid()::text);
+ create policy fixture_storage_update on storage.objects for update to authenticated using(split_part(name,'/',1)=auth.uid()::text) with check(split_part(name,'/',1)=auth.uid()::text);
+ create policy fixture_storage_delete on storage.objects for delete to authenticated using(split_part(name,'/',1)=auth.uid()::text);
  `);
  await db.exec(await read('supabase/migrations/202610160001_social_discovery.sql'));
+ await db.exec('alter table place_collections add column cover_url text');
+ await db.exec("update posts set media_url='https://legacy-owner.test/unchanged.mp4' where id='30000000-0000-0000-0000-000000000002'");
  await db.exec(await read('supabase_featured_events.sql'));
  await db.exec(await read('supabase/migrations/202611030001_account_deletion_boundaries.sql'));
  await db.exec(await read('supabase/migrations/202611030003_admin_console.sql'));
  await db.exec(await read('supabase/migrations/202611030005_venue_story_activity.sql'));
  await db.exec(await read('supabase/migrations/202611030007_venue_map_activity.sql'));
+ await db.exec("select set_config('app.ugc_storage_origin','https://fixture.test',false)");
  const source=await read('supabase/migrations/202611030009_ugc_review.sql');
  await db.exec(source);await db.exec(source);
  await db.exec(await read('tools/deployment/tests/ugc_review_postflight.sql'));
@@ -98,17 +105,50 @@ try{
   await login(a);assert.equal(await scalar('select moderation_status from posts where id=$1',[post.id]),'rejected');
  });
  await check('profile edits retain approved identity and stage candidate privately',async()=>{
-  await login(a);await db.exec("update profiles set bio='Pending bio',avatar_url='https://fixture.test/new-avatar.jpg' where id=auth.uid()");
+  await login(a);await db.exec(`update profiles set bio='Pending bio',avatar_url='https://fixture.test/storage/v1/object/public/avatars/${a}/new-avatar.jpg' where id=auth.uid()`);
   assert.equal(await scalar('select moderation_status from profiles where id=auth.uid()'),'pending');
   await login(b);assert.notEqual(await scalar('select bio from profiles where id=$1',[a]),'Pending bio');
   await login(admin);const candidate=(await queue('profile')).items.find(r=>r.id===a);assert.equal(candidate.content.bio,'Pending bio');
   await review('profile',a,candidate.review_version);
   await login(b);assert.equal(await scalar('select bio from profiles where id=$1',[a]),'Pending bio');
  });
+ await check('owner profile-draft RPC is session-only, minimal and unavailable to banned/anonymous callers',async()=>{
+  await login(a);await db.exec("update profiles set bio='Restorable pending editor draft' where id=auth.uid()");
+  const own=await scalar('select get_own_profile_draft()');
+  assert.equal(own.candidate.bio,'Restorable pending editor draft');assert.equal(own.moderation_status,'pending');
+  assert.equal(own.moderation_public_ready,true);assert.ok(own.moderation_version);assert.ok(own.moderation_submitted_at);
+  assert.equal(Object.hasOwn(own.candidate,'is_admin'),false);assert.equal(Object.hasOwn(own.candidate,'fcm_token'),false);
+  await login(b);assert.equal((await scalar('select get_own_profile_draft()')).candidate,null);
+  await login(admin);assert.equal((await scalar('select get_own_profile_draft()')).candidate,null);
+  await denied('select get_own_profile_draft($1)','42883',[a]);
+  await login(null);await denied('select get_own_profile_draft()');
+  await system();await db.exec(`update profiles set is_banned=true where id='${a}'`);
+  await login(a);await denied('select get_own_profile_draft()');
+  await system();await db.exec(`update profiles set is_banned=false where id='${a}'`);
+  await login(admin);const pending=(await queue('profile')).items.find(r=>r.id===a);await review('profile',a,pending.review_version,'rejected');
+  await login(a);const rejected=await scalar('select get_own_profile_draft()');
+  assert.equal(rejected.candidate,null);assert.equal(rejected.moderation_status,'rejected');assert.equal(rejected.moderation_public_ready,true);
+ });
+ await check('new external/signed/lookalike/escaped media fail closed; unchanged legacy and exact owl presets remain',async()=>{
+  await login(a);
+  const canonical=`https://fixture.test/storage/v1/object/public/posts/${a}/new.jpg`;
+  for(const value of [
+   'https://owner-controlled.test/photo.jpg',canonical.replace('fixture.test','fixture.test.evil.test'),
+   canonical.replace('fixture.test','fixture.test:444'),canonical.replace('fixture.test','fixture.test@evil.test'),
+   canonical.replace('/new.jpg','/%2e%2e/new.jpg'),canonical.replace('/new.jpg','/../new.jpg'),canonical+'?token=mutable',canonical+'#fragment',
+   canonical.replace('/object/public/','/object/sign/'),canonical.replace('/new.jpg','/a%2fb.jpg'),
+  ]) await denied("insert into posts(user_id,media_url) values(auth.uid(),$1)",'42501',[value]);
+  await denied("update profiles set avatar_url='nightowl://avatar/not-a-preset' where id=auth.uid()");
+  for(const preset of ['young-man','young-woman','older-man','older-woman']){
+   await db.query('update profiles set avatar_url=$1 where id=auth.uid()',['nightowl://avatar/'+preset]);
+  }
+  await db.exec("update posts set caption='Text edit retaining historical URL' where id='30000000-0000-0000-0000-000000000002'");
+  assert.equal(await scalar("select media_url from posts where id='30000000-0000-0000-0000-000000000002'"),'https://legacy-owner.test/unchanged.mp4');
+ });
  await check('all public text/media entry points are pending by default',async()=>{
   await login(a);
   for(const sql of ["insert into comments(user_id,post_id,body) values(auth.uid(),'30000000-0000-0000-0000-000000000001','Review comment') returning moderation_status",
-   "insert into stories(user_id,caption,media_url) values(auth.uid(),'Review story','https://fixture.test/s.jpg') returning moderation_status",
+   `insert into stories(user_id,caption,media_url) values(auth.uid(),'Review story','https://fixture.test/storage/v1/object/public/stories/${a}/s.jpg') returning moderation_status`,
    "insert into events(organizer_id,title) values(auth.uid(),'Review event') returning moderation_status",
    `insert into venue_reviews(user_id,venue_id,rating,comment) values(auth.uid(),'${venue}',5,'Review text') returning moderation_status`,
    "insert into notes(user_id,text) values(auth.uid(),'Review note') returning moderation_status",
@@ -205,6 +245,31 @@ try{
   await denied("update profiles set avatar_url=$1 where id=auth.uid()",'42501',[`https://fixture.test/storage/v1/object/public/avatars/${a}/private.jpg`]);
   await denied("insert into venues(id,owner_id,name,cover_url) values(gen_random_uuid(),auth.uid(),'Forged venue',$1)",'42501',[`https://fixture.test/storage/v1/object/public/venues/${a}/private.jpg`]);
  });
+ await check('existing admin review_venue RPC accepts uploaded cover without changing venue ownership',async()=>{
+  const cover=`https://fixture.test/storage/v1/object/public/venues/${admin}/catalog-admin-cover.jpg`;
+  await login(admin);
+  await scalar('select review_venue($1,$2::jsonb)',[venue,JSON.stringify({cover_url:cover,vibes:[]})]);
+  assert.equal(await scalar('select cover_url from venue_catalog where ref=$1',[venue]),cover);
+  assert.equal(await scalar('select owner_id from venues where id=$1',[venue]),a);
+  assert.equal(await scalar('select moderation_status from venues where id=$1',[venue]),'approved');
+  assert.equal(await scalar("select social_media_readable('venues',$1)",[`${admin}/catalog-admin-cover.jpg`]),true);
+  for(const invalid of [
+   cover.replace('fixture.test','foreign.test'),
+   cover.replace(`/venues/${admin}/`,`/venues/${a}/`),
+   cover.replace('/public/venues/','/public/posts/'),
+   cover+'?v=123',
+   cover.replace('catalog-admin-cover.jpg','../replacement.jpg'),
+  ])await denied('select review_venue($1,$2::jsonb)','42501',[venue,JSON.stringify({cover_url:invalid,vibes:[]})]);
+  await login(a);await denied('select review_venue($1,$2::jsonb)','42501',[venue,JSON.stringify({cover_url:cover,vibes:[]})]);
+  await login(b);await denied('select review_venue($1,$2::jsonb)','42501',[venue,JSON.stringify({cover_url:cover,vibes:[]})]);
+  await system();await db.query('update profiles set is_banned=true where id=$1',[admin]);
+  await login(admin);await denied('select review_venue($1,$2::jsonb)','42501',[venue,JSON.stringify({cover_url:cover,vibes:[]})]);
+  await system();await db.query('update profiles set is_banned=false where id=$1',[admin]);
+  const legacy='https://legacy.example/unchanged-catalog.jpg';
+  await db.query('update venue_catalog set cover_url=$1 where ref=$2',[legacy,venue]);
+  await login(admin);await scalar('select review_venue($1,$2::jsonb)',[venue,JSON.stringify({cover_url:legacy,vibes:[]})]);
+  assert.equal(await scalar('select cover_url from venue_catalog where ref=$1',[venue]),legacy);
+ });
  await check('reports support exact visible story, event, review, note and collection UUIDs',async()=>{
   await login(admin);
   const selected=[];
@@ -223,6 +288,66 @@ try{
   await scalar("select admin_console_action('resolve_report',$1,'Reviewed selected report',null)",[reportId]);
   assert.equal(await scalar("select social_media_readable('stories',$1)",[`${a}/reported.jpg`]),false);
   await system();await db.exec(`update profiles set is_private=false where id='${a}'`);
+ });
+ await check('legacy avatar cache queries and encoded filenames remain signable only on the exact backend origin',async()=>{
+  const url=`https://fixture.test/storage/v1/object/public/avatars/${a}/approved%20old.jpg?v=1700000000000`;
+  await system();await db.query('update profiles set avatar_url=$1,moderation_status=\'approved\',moderation_public_ready=true where id=$2',[url,a]);
+  await login(b);assert.equal(await scalar("select social_media_readable('avatars',$1)",[`${a}/approved old.jpg`]),true);
+  await system();await db.query('update profiles set avatar_url=$1 where id=$2',[url.replace('fixture.test','fixture.test.evil.test'),a]);
+  await login(b);assert.equal(await scalar("select social_media_readable('avatars',$1)",[`${a}/approved old.jpg`]),false);
+  await system();await db.query('update profiles set avatar_url=$1 where id=$2',[url,a]);
+ });
+ await check('Storage overwrite/move, attached delete and delete/recreate are denied; unused drafts clean up',async()=>{
+  const path=`${a}/photo.jpg`;
+  await login(a);
+  await denied('update storage.objects set name=name where bucket_id=$1 and name=$2','42501',['posts',path]);
+  await denied('delete from storage.objects where bucket_id=$1 and name=$2','42501',['posts',path]);
+  const unused=await scalar("insert into storage.objects(bucket_id,name) values('posts',$1) returning id",[`${a}/unused.jpg`]);
+  await denied('update storage.objects set name=$1 where id=$2','42501',[`${a}/renamed.jpg`,unused]);
+  await denied("update storage.objects set bucket_id='avatars' where id=$1",'42501',[unused]);
+  assert.equal(await scalar('delete from storage.objects where id=$1 returning id',[unused]),unused);
+  const usedPath=`${a}/removed-content.jpg`;
+  await db.query("insert into storage.objects(bucket_id,name) values('posts',$1)",[usedPath]);
+  const usedPost=await scalar("insert into posts(user_id,media_url) values(auth.uid(),$1) returning id",[`https://fixture.test/storage/v1/object/public/posts/${usedPath}`]);
+  await db.query('delete from posts where id=$1',[usedPost]);
+  await db.query("delete from storage.objects where bucket_id='posts' and name=$1",[usedPath]);
+  await denied("insert into storage.objects(bucket_id,name) values('posts',$1)",'42501',[usedPath]);
+  await denied('select * from admin_private.ugc_media_locks');
+  await system();await db.query("delete from storage.objects where bucket_id='posts' and name=$1",[path]);
+  await login(a);await denied("insert into storage.objects(bucket_id,name) values('posts',$1)",'42501',[path]);
+  await system();await db.query("insert into storage.objects(bucket_id,name) values('posts',$1)",[path]);
+ });
+ await check('signed-upload minting and privileged execution cannot bypass immutable paths',async()=>{
+  await login(a);await db.exec("select set_config('storage.operation','storage.object.sign_upload_url',false)");
+  await denied("insert into storage.objects(bucket_id,name) values('posts',$1)",'42501',[`${a}/future-signed.jpg`]);
+  await system();await db.exec("select set_config('storage.operation','storage.object.upload_signed',false)");
+  await denied("insert into storage.objects(bucket_id,name) values('posts',$1)",'42501',[`${a}/future-signed.jpg`]);
+  await db.exec("select set_config('storage.operation','',false)");
+ });
+ await check('every public media field, private profile candidate and exact report protects immutable object identity',async()=>{
+  await system();
+  const root=`https://fixture.test/storage/v1/object/public/`;
+  const fields=[['posts','media_urls','posts','gallery.jpg'],['stories','music_url','stories','review-audio.mp3'],
+   ['events','cover_url','posts','event-cover.jpg'],['venues','photos','venues','venue-gallery.jpg'],
+   ['place_collections','cover_url','posts','collection-cover.jpg'],['profiles','cover_url','avatars','profile-cover.jpg']];
+  for(const [table,field,bucket,name] of fields){
+   const id=await scalar(`select id from ${table} where ${table==='events'?'organizer_id':table==='venues'?'owner_id':table==='profiles'?'id':'user_id'}=$1 limit 1`,[a]);
+   const value=root+bucket+'/'+a+'/'+name;
+   await db.query(`update ${table} set ${field}=$1 where id=$2`,[field==='photos'||field==='media_urls'?[value]:value,id]);
+   assert.equal(await scalar('select ugc_media_referenced($1,$2)',[bucket,`${a}/${name}`]),true,`${table}.${field}`);
+  }
+  await db.query("update venue_catalog set cover_url=$1 where ref=$2",[root+'venues/'+a+'/catalog.jpg',venue]);
+  assert.equal(await scalar("select ugc_media_referenced('venues',$1)",[`${a}/catalog.jpg`]),true);
+  await db.query("update reports set target_snapshot=jsonb_build_object('media_url',$1::text,'media_owner',$2::text) where id=$3",[root+'posts/'+a+'/selected-report.jpg',a,report]);
+  assert.equal(await scalar("select ugc_media_referenced('posts',$1)",[`${a}/selected-report.jpg`]),true);
+  // An old stored signed URL loses its token only for object identity matching.
+  await db.query("update profiles set cover_url=$1 where id=$2",[root.replace('/public/','/sign/')+'avatars/'+a+'/old%20cover.jpg?token=old#ignored',a]);
+  assert.equal(await scalar("select ugc_media_referenced('avatars',$1)",[`${a}/old cover.jpg`]),true);
+  await login(a);await db.query('update profiles set avatar_url=$1 where id=auth.uid()',[root+'avatars/'+a+'/private-candidate.jpg']);
+  await system();assert.equal(await scalar("select ugc_media_referenced('avatars',$1)",[`${a}/private-candidate.jpg`]),true);
+  await login(a);for(const [bucket,name] of [['avatars','private-candidate.jpg'],['posts','selected-report.jpg'],['venues','catalog.jpg']]){
+   await denied('insert into storage.objects(bucket_id,name) values($1,$2)','42501',[bucket,`${a}/${name}`]);
+  }
  });
  await check('forged review GUCs and direct version changes cannot authorize publication',async()=>{
   await login(a);await db.exec("select set_config('app.ugc_decision','approved',false)");

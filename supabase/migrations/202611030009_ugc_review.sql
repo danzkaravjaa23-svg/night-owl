@@ -29,6 +29,86 @@ create table if not exists admin_private.ugc_profile_drafts(
 );
 revoke all on admin_private.ugc_action_context,admin_private.ugc_profile_drafts from public,anon,authenticated;
 
+
+-- Trusted deployment configuration, never a caller header or client-writable
+-- setting. The atomic installer supplies the exact Storage API origin once.
+create table if not exists admin_private.ugc_media_config(
+ singleton boolean primary key default true check(singleton),storage_origin text not null
+);
+revoke all on admin_private.ugc_media_config from public,anon,authenticated;
+-- One-way object-key tombstones contain no URL, account ID, token or content.
+-- A previously published path can never be reused to change old cached links.
+create table if not exists admin_private.ugc_media_locks(
+ object_hash bytea primary key check(octet_length(object_hash)=32)
+);
+revoke all on admin_private.ugc_media_locks from public,anon,authenticated;
+
+do $$ declare origin text; begin
+ select storage_origin into origin from admin_private.ugc_media_config where singleton;
+ if origin is null then
+  origin:=nullif(current_setting('app.ugc_storage_origin',true),'');
+  if origin is null or origin !~ '^https://[a-z0-9]([a-z0-9.-]*[a-z0-9])?([:][0-9]{1,5})?$'
+   and origin !~ '^http://(127[.]0[.]0[.]1|localhost)([:][0-9]{1,5})?$' then
+   raise exception 'Set app.ugc_storage_origin to the reviewed exact Storage API origin before first install';
+  end if;
+  insert into admin_private.ugc_media_config(singleton,storage_origin) values(true,origin);
+ end if;
+end $$;
+
+-- Owners can restore only their own pending editor candidate. Staff reasons,
+-- credentials, flags and any other account's draft are intentionally omitted.
+create or replace function public.get_own_profile_draft() returns jsonb
+language plpgsql stable security definer set search_path=pg_catalog,public,pg_temp as $$
+declare result jsonb;
+begin
+ if auth.uid() is null or not public.social_active() then raise exception 'Active owner required' using errcode='42501'; end if;
+ select jsonb_build_object('candidate',d.candidate,'moderation_status',p.moderation_status,
+  'moderation_version',p.moderation_version,'moderation_submitted_at',p.moderation_submitted_at,
+  'moderation_public_ready',p.moderation_public_ready) into result
+ from public.profiles p left join admin_private.ugc_profile_drafts d on d.profile_id=p.id where p.id=auth.uid();
+ if result is null then raise exception 'Profile unavailable' using errcode='42501'; end if;
+ return result;
+end $$;
+revoke all on function public.get_own_profile_draft() from public,anon;
+grant execute on function public.get_own_profile_draft() to authenticated;
+
+-- Curated catalog edits publish immediately, so this older RPC is reserved
+-- for active moderators. Owners submit venue changes through the review queue.
+create or replace function public.review_venue(p_ref text,p_details jsonb) returns void
+language plpgsql security definer set search_path=pg_catalog,public,pg_temp as $$
+declare actor uuid; catalog public.venue_catalog%rowtype; updated text;
+ cover text; origin text; prefix text;
+begin
+ select p.id into actor from public.profiles p
+ where p.id=auth.uid() and p.is_admin is true and p.is_banned is not true
+  and public.is_admin() and public.social_active() for share;
+ if actor is null then raise exception 'Active administrator required' using errcode='42501'; end if;
+ select * into catalog from public.venue_catalog where ref=p_ref for update;
+ if not found then raise exception 'Place no longer exists' using errcode='P0002'; end if;
+ if jsonb_typeof(p_details) is distinct from 'object' or length(p_details::text)>10000 then
+  raise exception 'Invalid details' using errcode='22023'; end if;
+ if coalesce(p_details->>'menu_url','')<>'' and p_details->>'menu_url' !~ '^https://' then
+  raise exception 'HTTPS menu link required' using errcode='22023'; end if;
+ cover:=nullif(trim(p_details->>'cover_url'),'');
+ if cover is not null and cover is distinct from catalog.cover_url then
+  select storage_origin into strict origin from admin_private.ugc_media_config where singleton;
+  prefix:=origin||'/storage/v1/object/public/venues/'||actor::text||'/';
+  if not starts_with(cover,prefix) or substring(cover from char_length(prefix)+1) !~ '^[A-Za-z0-9_./-]+$'
+   or substring(cover from char_length(prefix)+1) ~ '(^|/)[.]{1,2}(/|$)|//' then
+   raise exception 'New catalog cover must use the administrator owned canonical Storage path' using errcode='42501';
+  end if;
+ end if;
+ update public.venue_catalog set address=nullif(trim(p_details->>'address'),''),hours=nullif(trim(p_details->>'hours'),''),
+  cover_url=cover,menu_url=nullif(trim(p_details->>'menu_url'),''),
+  price_min=nullif(p_details->>'price_min','')::integer,price_max=nullif(p_details->>'price_max','')::integer,
+  vibes=array(select jsonb_array_elements_text(coalesce(p_details->'vibes','[]'::jsonb))),reviewed_at=null,reviewed_by=null
+  where ref=p_ref returning ref into updated;
+ if updated is distinct from p_ref then raise exception 'Place update was not confirmed' using errcode='P0002'; end if;
+ delete from public.pilot_venues where venue_ref=p_ref;
+end $$;
+revoke all on function public.review_venue(text,jsonb) from public,anon;
+grant execute on function public.review_venue(text,jsonb) to authenticated;
+
 do $$ declare t text; begin
  foreach t in array array['posts','stories','comments','events','venue_reviews','profiles','notes','place_collections','venues'] loop
   if to_regclass('public.'||t) is null then raise exception 'Missing UGC prerequisite: %',t; end if;
@@ -64,7 +144,7 @@ revoke all on function public.ugc_public_fields(text,jsonb) from public,anon,aut
 
 create or replace function public.ugc_content_guard() returns trigger
 language plpgsql security definer set search_path=pg_catalog,public,pg_temp as $$
-declare c admin_private.ugc_action_context%rowtype; candidate jsonb; old_public jsonb; changed boolean; media_value text; media_owner text;
+declare c admin_private.ugc_action_context%rowtype; candidate jsonb; old_public jsonb; changed boolean; media_value text; media_owner text; media_key text; origin text;
 begin
  if public.admin_console_maintenance() then return new; end if;
  if tg_op='UPDATE' then
@@ -87,11 +167,23 @@ begin
  old_public:=case when tg_op='UPDATE' then public.ugc_public_fields(tg_table_name,to_jsonb(old)) else null end;
  changed:=tg_op='INSERT' or candidate is distinct from old_public;
  if changed then
-  for media_value in select value #>> '{}' from jsonb_each(candidate) where key in ('media_url','avatar_url','cover_url','music_url')
-   union all select v #>> '{}' from jsonb_each(candidate) e cross join lateral jsonb_array_elements(case when jsonb_typeof(e.value)='array' then e.value else '[]'::jsonb end) v where e.key in ('media_urls','photos') loop
-   media_owner:=substring(media_value from '/storage/v1/object/public/(?:posts|stories|avatars|venues)/([^/]+)/');
-   if media_owner is not null and media_owner is distinct from to_jsonb(new)->>tg_argv[0]
-      and not (public.is_admin() and media_owner=auth.uid()::text) then
+  select storage_origin into strict origin from admin_private.ugc_media_config where singleton;
+  for media_key,media_value in select key,value #>> '{}' from jsonb_each(candidate) where key in ('media_url','avatar_url','cover_url','music_url')
+   union all select e.key,v #>> '{}' from jsonb_each(candidate) e cross join lateral jsonb_array_elements(case when jsonb_typeof(e.value)='array' then e.value else '[]'::jsonb end) v where e.key in ('media_urls','photos') loop
+   if media_value is null or media_value='' then continue; end if;
+   -- Editing text never forces replacement of an unchanged historical asset.
+   if tg_op='UPDATE' and ((media_key in ('media_urls','photos') and coalesce(old_public->media_key,'[]'::jsonb) @> jsonb_build_array(media_value))
+     or (media_key not in ('media_urls','photos') and old_public->>media_key=media_value)) then continue; end if;
+   if tg_table_name='profiles' and media_key='avatar_url' and media_value in ('nightowl://avatar/young-man','nightowl://avatar/young-woman','nightowl://avatar/older-man','nightowl://avatar/older-woman') then continue; end if;
+   -- New media must use our immutable owned Storage namespace. No expiring
+   -- signed URL, attacker-origin lookalike, redirect or external URL is saved.
+   if not starts_with(media_value,origin||'/storage/v1/object/public/') or
+     substring(media_value from char_length(origin)+1) !~ '^/storage/v1/object/public/(posts|stories|avatars|venues)/[0-9a-fA-F-]{36}/[A-Za-z0-9_./-]+$' or
+     substring(media_value from char_length(origin)+1) ~ '(^|/)[.]{1,2}(/|$)|//' then
+    raise exception 'New media must use the configured owned Storage origin' using errcode='42501';
+   end if;
+   media_owner:=split_part(substring(media_value from char_length(origin)+char_length('/storage/v1/object/public/')+1),'/',2);
+   if media_owner is distinct from to_jsonb(new)->>tg_argv[0] then
     raise exception 'Media must belong to its submitting author' using errcode='42501';
    end if;
   end loop;
@@ -145,6 +237,35 @@ create policy ugc_catalog_read on public.venue_catalog as restrictive for select
 alter table public.reports add column if not exists target_author_id uuid;
 alter table public.reports add column if not exists target_snapshot jsonb not null default '{}'::jsonb;
 
+-- Decode one URL path layer only when comparing legacy public/signed URLs to
+-- Storage keys. New submitted paths are canonical ASCII UUID/unique filenames.
+create or replace function public.ugc_decode_path(p_value text) returns text
+language plpgsql immutable set search_path=pg_catalog,public,pg_temp as $$
+declare decoded bytea:=''::bytea; pos integer:=1; token text;
+begin
+ while pos<=char_length(p_value) loop
+  token:=substring(p_value from pos for 1);
+  if token='%' then
+   token:=substring(p_value from pos+1 for 2);
+   if token !~ '^[0-9a-fA-F]{2}$' then return null; end if;
+   decoded:=decoded||decode(token,'hex');pos:=pos+3;
+  else decoded:=decoded||convert_to(token,'UTF8');pos:=pos+1;end if;
+ end loop;
+ return convert_from(decoded,'UTF8');
+exception when others then return null;
+end $$;
+create or replace function public.ugc_media_path(p_value text,p_bucket text) returns text
+language sql immutable set search_path=pg_catalog,public,pg_temp as $$
+ select public.ugc_decode_path((regexp_match(p_value,'/storage/v1/object/(?:public|sign|authenticated)/'||p_bucket||'/([^?#]+)(?:[?#].*)?$'))[1]);
+$$;
+-- Read authorization additionally requires the trusted exact backend origin.
+create or replace function public.ugc_owned_media_path(p_value text,p_bucket text) returns text
+language sql stable security definer set search_path=pg_catalog,public,pg_temp as $$
+ select case when starts_with(p_value,storage_origin||'/storage/v1/object/') then public.ugc_media_path(p_value,p_bucket) end
+ from admin_private.ugc_media_config where singleton;
+$$;
+revoke all on function public.ugc_owned_media_path(text,text) from public,anon,authenticated;
+
 -- Buckets are private: pending media is readable only by its owner, or by a
 -- moderator opening a specific submitted/reported piece of content.
 update storage.buckets set public=false where id in ('posts','stories','avatars','venues');
@@ -153,27 +274,27 @@ language sql stable security definer set search_path=pg_catalog,public,pg_temp a
  select (split_part(p_name,'/',1)=auth.uid()::text and public.social_active()) or
  (p_bucket='posts' and exists(select 1 from public.posts p where p.user_id::text=split_part(p_name,'/',1)
   and ((p.moderation_status='approved' and public.can_view_author(p.user_id)) or public.social_admin())
-  and (split_part(p.media_url,'/storage/v1/object/public/posts/',2)=p_name or exists(select 1 from unnest(p.media_urls) u where split_part(u,'/storage/v1/object/public/posts/',2)=p_name)))) or
+  and (public.ugc_owned_media_path(p.media_url,'posts')=p_name or exists(select 1 from unnest(p.media_urls) u where public.ugc_owned_media_path(u,'posts')=p_name)))) or
  (p_bucket='posts' and exists(select 1 from public.events e where e.organizer_id::text=split_part(p_name,'/',1)
-  and (e.moderation_status='approved' or public.social_admin()) and split_part(e.cover_url,'/storage/v1/object/public/posts/',2)=p_name)) or
+  and (e.moderation_status='approved' or public.social_admin()) and public.ugc_owned_media_path(e.cover_url,'posts')=p_name)) or
  (p_bucket='stories' and exists(select 1 from public.stories s where s.user_id::text=split_part(p_name,'/',1)
   and ((s.moderation_status='approved' and s.expires_at>now() and public.can_view_author(s.user_id)) or (s.moderation_status='pending' and public.social_admin()))
-  and split_part(s.media_url,'/storage/v1/object/public/stories/',2)=p_name)) or
+  and public.ugc_owned_media_path(s.media_url,'stories')=p_name)) or
  (p_bucket in ('posts','stories','avatars','venues') and exists(select 1 from public.stories s where s.user_id::text=split_part(p_name,'/',1)
   and ((s.moderation_status='approved' and s.expires_at>now() and public.can_view_author(s.user_id)) or (s.moderation_status='pending' and public.social_admin()))
-  and split_part(to_jsonb(s)->>'music_url','/storage/v1/object/public/'||p_bucket||'/',2)=p_name)) or
+  and public.ugc_owned_media_path(to_jsonb(s)->>'music_url',p_bucket)=p_name)) or
  (p_bucket='avatars' and exists(select 1 from public.profiles p where p.id::text=split_part(p_name,'/',1)
   and p.moderation_public_ready and public.can_view_author(p.id)
-  and (split_part(p.avatar_url,'/storage/v1/object/public/avatars/',2)=p_name or split_part(to_jsonb(p)->>'cover_url','/storage/v1/object/public/avatars/',2)=p_name))) or
+  and (public.ugc_owned_media_path(p.avatar_url,'avatars')=p_name or public.ugc_owned_media_path(to_jsonb(p)->>'cover_url','avatars')=p_name))) or
  (p_bucket='avatars' and public.social_admin() and exists(select 1 from admin_private.ugc_profile_drafts d
-  where d.profile_id::text=split_part(p_name,'/',1) and (split_part(d.candidate->>'avatar_url','/storage/v1/object/public/avatars/',2)=p_name or split_part(d.candidate->>'cover_url','/storage/v1/object/public/avatars/',2)=p_name))) or
+  where d.profile_id::text=split_part(p_name,'/',1) and (public.ugc_owned_media_path(d.candidate->>'avatar_url','avatars')=p_name or public.ugc_owned_media_path(d.candidate->>'cover_url','avatars')=p_name))) or
  (p_bucket='avatars' and public.social_admin() and exists(select 1 from public.profiles p where p.id::text=split_part(p_name,'/',1) and p.moderation_status='pending'
-  and (split_part(p.avatar_url,'/storage/v1/object/public/avatars/',2)=p_name or split_part(to_jsonb(p)->>'cover_url','/storage/v1/object/public/avatars/',2)=p_name))) or
+  and (public.ugc_owned_media_path(p.avatar_url,'avatars')=p_name or public.ugc_owned_media_path(to_jsonb(p)->>'cover_url','avatars')=p_name))) or
  (p_bucket='venues' and exists(select 1 from public.venues v where (v.moderation_status='approved' or public.social_admin())
-  and (split_part(v.cover_url,'/storage/v1/object/public/venues/',2)=p_name or exists(select 1 from jsonb_array_elements_text(case when jsonb_typeof(to_jsonb(v)->'photos')='array' then to_jsonb(v)->'photos' else '[]'::jsonb end) u where split_part(u,'/storage/v1/object/public/venues/',2)=p_name)))) or
- (p_bucket='venues' and exists(select 1 from public.venue_catalog v where v.moderation_status='approved' and split_part(v.cover_url,'/storage/v1/object/public/venues/',2)=p_name)) or
+  and (public.ugc_owned_media_path(v.cover_url,'venues')=p_name or exists(select 1 from jsonb_array_elements_text(case when jsonb_typeof(to_jsonb(v)->'photos')='array' then to_jsonb(v)->'photos' else '[]'::jsonb end) u where public.ugc_owned_media_path(u,'venues')=p_name)))) or
+ (p_bucket='venues' and exists(select 1 from public.venue_catalog v where v.moderation_status='approved' and public.ugc_owned_media_path(v.cover_url,'venues')=p_name)) or
  (p_bucket in ('posts','stories','avatars','venues') and public.social_admin() and exists(select 1 from public.reports r where r.status='pending' and r.target_type in ('post','story','message','event','venue','user')
-  and coalesce(r.target_snapshot->>'media_owner',r.target_author_id::text)=split_part(p_name,'/',1) and split_part(r.target_snapshot->>'media_url','/storage/v1/object/public/'||p_bucket||'/',2)=p_name));
+  and coalesce(r.target_snapshot->>'media_owner',r.target_author_id::text)=split_part(p_name,'/',1) and public.ugc_owned_media_path(r.target_snapshot->>'media_url',p_bucket)=p_name));
 $$;
 revoke all on function public.social_media_readable(text,text) from public;
 grant execute on function public.social_media_readable(text,text) to anon,authenticated;
@@ -181,6 +302,89 @@ grant execute on function public.social_media_readable(text,text) to anon,authen
 drop policy if exists social_media_read on storage.objects;
 create policy social_media_read on storage.objects as restrictive for select to anon,authenticated
  using(bucket_id not in ('posts','stories','avatars','venues') or public.social_media_readable(bucket_id,name));
+
+
+create or replace function public.ugc_media_referenced(p_bucket text,p_name text) returns boolean
+language plpgsql stable security definer set search_path=pg_catalog,public,pg_temp as $$
+declare tbl text; attached boolean;
+begin
+ if p_bucket not in ('posts','stories','avatars','venues') then return false; end if;
+ foreach tbl in array array['posts','stories','profiles','events','venues','place_collections'] loop
+  execute format($q$select exists(select 1 from public.%I t cross join lateral jsonb_each(to_jsonb(t)) e
+   cross join lateral jsonb_array_elements(case when e.key in ('media_urls','photos') and jsonb_typeof(e.value)='array' then e.value else jsonb_build_array(e.value) end) v
+   where e.key in ('media_url','media_urls','avatar_url','cover_url','music_url','photos') and public.ugc_media_path(v #>> '{}',$1)=$2)$q$,tbl) into attached using p_bucket,p_name;
+  if attached then return true; end if;
+ end loop;
+ return exists(select 1 from admin_private.ugc_profile_drafts d cross join lateral jsonb_each(d.candidate) e
+  where e.key in ('avatar_url','cover_url') and public.ugc_media_path(e.value #>> '{}',p_bucket)=p_name)
+  or exists(select 1 from public.venue_catalog v where public.ugc_media_path(v.cover_url,p_bucket)=p_name)
+  or exists(select 1 from public.reports r where public.ugc_media_path(r.target_snapshot->>'media_url',p_bucket)=p_name);
+end $$;
+create or replace function public.ugc_register_media(p_row jsonb) returns void
+language plpgsql security definer set search_path=pg_catalog,public,pg_temp as $$
+declare bucket text; object_path text;
+begin
+ -- Sort decoded identities across every field/nested candidate before locking.
+ for bucket,object_path in
+  select distinct buckets.name,public.ugc_media_path(v #>> '{}',buckets.name) object_path
+  from jsonb_array_elements(jsonb_build_array(p_row,p_row->'candidate',p_row->'target_snapshot')) rowdata
+  cross join lateral jsonb_each(case when jsonb_typeof(rowdata)='object' then rowdata else '{}'::jsonb end) e
+  cross join lateral jsonb_array_elements(case when e.key in ('media_urls','photos') and jsonb_typeof(e.value)='array' then e.value else jsonb_build_array(e.value) end) v
+  cross join unnest(array['posts','stories','avatars','venues']) buckets(name)
+  where e.key in ('media_url','media_urls','avatar_url','cover_url','music_url','photos')
+   and public.ugc_media_path(v #>> '{}',buckets.name) is not null order by buckets.name,object_path
+ loop
+  perform pg_advisory_xact_lock(hashtextextended(bucket||chr(10)||object_path,0));
+  insert into admin_private.ugc_media_locks(object_hash) values(sha256(convert_to(bucket||chr(10)||object_path,'UTF8'))) on conflict do nothing;
+ end loop;
+end $$;
+create or replace function public.ugc_track_media_references() returns trigger
+language plpgsql security definer set search_path=pg_catalog,public,pg_temp as $$
+begin perform public.ugc_register_media(to_jsonb(new));return new;end $$;
+create or replace function public.ugc_media_write_guard() returns trigger
+language plpgsql security definer set search_path=pg_catalog,public,pg_temp as $$
+declare operation text:=regexp_replace(coalesce(current_setting('storage.operation',true),''),'^storage[.]','');
+begin
+ -- Storage signed-upload execution uses a superuser connection. Refuse it
+ -- before the maintenance bypass, including capabilities minted before this
+ -- migration. Supported app uploads use a fresh path and the caller's JWT.
+ if tg_op<>'DELETE' and new.bucket_id in ('posts','stories','avatars','venues')
+  and operation='object.upload_signed' then
+  raise exception 'Signed uploads are disabled; use authenticated unique uploads' using errcode='42501';
+ end if;
+ if public.admin_console_maintenance() then if tg_op='DELETE' then return old; else return new; end if; end if;
+ if tg_op<>'DELETE' and new.bucket_id in ('posts','stories','avatars','venues') and operation='object.sign_upload_url' then
+  raise exception 'Signed upload capabilities are disabled for app media' using errcode='42501';
+ end if;
+ if tg_op='INSERT' and new.bucket_id in ('posts','stories','avatars','venues') then
+  perform pg_advisory_xact_lock(hashtextextended(new.bucket_id||chr(10)||new.name,0));
+ elsif tg_op='DELETE' and old.bucket_id in ('posts','stories','avatars','venues') then
+  perform pg_advisory_xact_lock(hashtextextended(old.bucket_id||chr(10)||old.name,0));
+ end if;
+ if tg_op='UPDATE' and (old.bucket_id in ('posts','stories','avatars','venues') or new.bucket_id in ('posts','stories','avatars','venues')) then
+  raise exception 'Media objects are immutable; upload a new unique path' using errcode='42501';
+ end if;
+ if tg_op='INSERT' and new.bucket_id in ('posts','stories','avatars','venues') and (exists(select 1 from admin_private.ugc_media_locks where object_hash=sha256(convert_to(new.bucket_id||chr(10)||new.name,'UTF8'))) or public.ugc_media_referenced(new.bucket_id,new.name))
+  or tg_op='DELETE' and old.bucket_id in ('posts','stories','avatars','venues') and public.ugc_media_referenced(old.bucket_id,old.name) then
+  raise exception 'Referenced media cannot be replaced or removed; remove its content reference first' using errcode='42501';
+ end if;
+ if tg_op='DELETE' then return old; else return new; end if;
+end $$;
+revoke all on function public.ugc_decode_path(text),public.ugc_media_path(text,text),public.ugc_media_referenced(text,text),public.ugc_register_media(jsonb),public.ugc_track_media_references(),public.ugc_media_write_guard() from public,anon,authenticated;
+drop trigger if exists ugc_media_write_guard on storage.objects;
+create trigger ugc_media_write_guard before insert or update or delete on storage.objects for each row execute function public.ugc_media_write_guard();
+-- Register both existing published URLs and every later reference, including
+-- profile replacement drafts and the selected moderation report snapshot.
+do $$ declare tbl text; begin
+ foreach tbl in array array['posts','stories','profiles','events','venues','place_collections','venue_catalog','reports'] loop
+  execute format('select public.ugc_register_media(to_jsonb(t)) from public.%I t',tbl);
+  execute format('drop trigger if exists ugc_track_media_references on public.%I',tbl);
+  execute format('create trigger ugc_track_media_references after insert or update on public.%I for each row execute function public.ugc_track_media_references()',tbl);
+ end loop;
+ perform public.ugc_register_media(to_jsonb(d)) from admin_private.ugc_profile_drafts d;
+ drop trigger if exists ugc_track_media_references on admin_private.ugc_profile_drafts;
+ create trigger ugc_track_media_references after insert or update on admin_private.ugc_profile_drafts for each row execute function public.ugc_track_media_references();
+end $$;
 
 
 -- Derived counts never include a pending/rejected review or comment.

@@ -1,0 +1,41 @@
+# Coordinated Store backend release
+
+The builder creates reviewable files. It does not deploy SQL or Edge functions, enable account deletion, schedule maintenance, or delete an account. Production acceptance is still required. The existing 001–007 guards/catalog changes must already be present; they are not replayed.
+
+## Prepare and verify
+
+1. Run `tests/store_backend_metadata.sql` and `tests/store_platform_metadata.sql` read-only on the target project. Save both complete results outside the public app. They capture current functions, RLS/policies, grants, table defaults/constraints, triggers, indexes, four bucket flags, role IDs, the Storage bucket enum and standard Auth helpers. An old column/FK inventory is insufficient. Review unexpected tables, functions, triggers, policies and relationships. This is a recovery reference, not a data backup or automatic rollback.
+2. Verify a recent recoverable database backup and Storage recovery arrangement through the service operator. The SQL migration is atomic, but separate Auth/Storage operations are not a distributed transaction. This package does not create or certify a backup.
+3. Generate for the intended exact API origin:
+
+   ```sh
+   node tools/deployment/store_backend_release.mjs https://PROJECT.supabase.co build/store-backend-release
+   node tools/deployment/tests/run_store_backend_rollout_fixture.mjs /absolute/path/to/pglite/dist/index.js
+   node tools/deployment/tests/run_store_backend_metadata_trial.mjs /absolute/path/to/pglite/dist/index.js /private/path/metadata.json /private/path/platform-metadata.json build/store-backend-release/metadata-trial.json https://PROJECT.supabase.co
+   ```
+
+   The origin is public configuration, not a key. The generated manifest records every source hash and the final bundle hash. Only HTTP loopback is accepted for isolated test stacks. Review the generated artifact and match the exact source hashes to tested evidence before execution.
+
+   The captured-schema trial restores the exported application contracts and original default grants into isolated PostgreSQL, then executes the exact bundle for the supplied origin with synthetic records. It includes actual application triggers on Auth but explicitly lists omitted Storage platform triggers. Its result contains hashes and counts, not the private metadata definitions. Platform services, physical files, concurrent hosted sessions and Apple are still separate acceptance tests.
+4. First run the complete bundle on a disposable hosted copy with the actual relevant schema/ACLs and synthetic accounts/media. Test normal member, blocked/banned member and active admin; pending/approved/rejected publication; owner drafts; approved media overwrite/delete/reupload denial; selected-message reports; recovery after interrupted erasure; preservation of other members. Existing local component tests do not establish production schema parity.
+5. Coordinate the compatible client and existing active moderators. All four buckets become private and new public submissions wait for review. Old clients can lose media visibility and cannot manage pending content correctly. No new admin identity is granted, but selected reported DM/group-message context becomes visible to active admins. Confirm this precise scope when the deployment interface requires action-time confirmation.
+
+## Execute and confirm
+
+Run the reviewed `install-008-009.sql` as one complete transaction in the intended project. Its preflight requires prior guards and rejects an existing/partial 008/009 installation. All erasure/UGC postflight assertions execute before COMMIT. A statement or final assertion failure aborts the transaction; issue `ROLLBACK` and inspect the cause. Do not remove failed assertions to force deployment.
+
+If the client loses the response, run generated `postflight.sql` and inspect metadata before retrying. An already committed installation is intentionally refused by the installer. Do not replay an old partial script or restore old permissive Storage policies. After successful installation, use a reviewed forward repair with the compatible client; a client-only rollback to the old public-media build is not compatible.
+
+Deploy the exact tested `delete-account` Edge implementation with its scoped gateway setting. Prepare/delete require server-side authentication; receipt-only status must work after Auth is removed. Keep `ACCOUNT_DELETION_ENABLED` false until the hosted disposable-account and retention/recovery acceptance has passed. Apple provider/keys and actual Apple revocation tests are separate gates. This SQL bundle does not enable the flag or touch Apple configuration.
+
+## Operations and retention
+
+`tests/account_erasure_operations_status.sql` is a read-only, database-owner summary. It emits counts and oldest problem age, never account identities, receipt hashes, content or Apple subjects. Check it after rollout and at least daily; monitor failures and expired running leases promptly. A prepared request alone does not freeze the account. Running/failed requests do, intentionally.
+
+Assign a real operator and private alert destination before enabling deletion. Diagnose a specific support incident through an authorized server session; do not paste receipts, keys or private journal rows into chat/logs. An expired lease allows a new authenticated retry to resume the same work. A failed request must not be declared complete, erased from the journal, or manually unfrozen while Storage/Auth cleanup is incomplete. Never automatically retry destructive account work from a generic monitoring query.
+
+Run `tests/account_erasure_prune.sql` daily using the database owner's approved scheduler, after postflight is valid. It invokes the existing service-only `prune` operation and verifies that no completed journal older than 30 days remains. Prepared/running/failed requests are retained for deliberate recovery; this task never deletes Auth users, application content or Storage objects. Configure the schedule in the actual environment and retain a successful run receipt; creating this file is not evidence of a running retention job. A missing scheduler or unassigned operator remains an enablement gate.
+
+For an already installed and approved `pg_cron`, the separate `account_erasure_schedule.sql` prepares a daily 02:17 job in the scheduler's configured timezone. It refuses a differently configured existing job instead of overwriting it. `tests/account_erasure_schedule_status.sql` reads only this job's configuration and last run status. A created job without a successful execution is not a verified retention operation. These SQL files are preparation; actual scheduler behavior is a hosted acceptance gate. Scheduling signatures and job visibility follow the [official pg_cron documentation](https://github.com/citusdata/pg_cron#creating-a-cron-job).
+
+Before claiming hosted completion record: target project, metadata capture time/hash, bundle/source hashes, successful transaction/postflight, compatible client release hash, exact Edge version/config, synthetic acceptance results, active retention schedule/run receipt, operator responsibility and monitoring handoff. Do not report paid membership/signing or real-device testing as completed by this backend work.
