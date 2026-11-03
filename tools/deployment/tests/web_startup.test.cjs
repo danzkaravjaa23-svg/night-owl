@@ -115,3 +115,199 @@ test('loader rejection or synchronous bootstrap failure exposes retry', async ()
     assertRetry(state);
   }
 });
+
+const updater = index.match(/<script id="night-owl-update-controller">([\s\S]*?)<\/script>/)[1];
+const releaseCommit = 'a'.repeat(40);
+const worker = { scriptURL: 'https://nightowl.example/app/flutter_service_worker.js?v=old' };
+
+function updateFixture(options = {}) {
+  const events = [];
+  const cacheNames = options.cacheNames || [
+    'flutter-app-cache', 'flutter-temp-cache', 'flutter-app-manifest', 'user-saved-items'
+  ];
+  const storage = options.storage || new Map();
+  const registrations = options.registrations || [{
+    scope: 'https://nightowl.example/app/', active: worker,
+    async unregister() { events.push('unregister'); return true; },
+  }];
+  const serviceWorker = {
+    controller: options.controlled === false ? null : worker,
+    getRegistrations: async () => registrations,
+  };
+  const appended = [];
+  const window = {
+    caches: {
+      keys: async () => cacheNames,
+      async delete(key) { events.push('delete:' + key); return true; },
+    },
+    sessionStorage: options.storageBlocked ? {
+      getItem() { throw new Error('Storage blocked'); },
+    } : {
+      getItem: key => storage.get(key),
+      setItem(key, value) { storage.set(key, value); },
+    },
+    location: { reload() { events.push('reload'); } },
+    nightOwlStartup: { stage(label) { events.push('stage:' + label); }, fail() { events.push('failed'); } },
+  };
+  const timers = new Map();
+  const context = vm.createContext({
+    window, URL, Promise, Date, AbortController,
+    navigator: options.noServiceWorker ? {} : { serviceWorker, onLine: options.online !== false },
+    document: {
+      baseURI: 'https://nightowl.example/app/', createElement: () => ({}),
+      body: { appendChild(script) { appended.push(script); events.push('bootstrap'); } },
+    },
+    setTimeout(fn) { timers.set(1, fn); return 1; },
+    clearTimeout(id) { timers.delete(id); },
+    async fetch(url, settings) {
+      events.push('fetch');
+      assert.equal(settings.cache, 'no-store');
+      assert.equal(settings.credentials, 'omit');
+      assert.equal(new URL(url).pathname, '/app/release.json');
+      assert.ok(new URL(url).searchParams.has('night_owl_probe'));
+      if (options.fetch) return options.fetch(url, settings);
+      return { ok: true, redirected: false, json: async () => ({ commit: releaseCommit }) };
+    },
+  });
+  vm.runInContext(updater, context);
+  return {
+    events, storage, appended, timers,
+    async flush() { await new Promise(resolve => setImmediate(resolve)); },
+  };
+}
+
+test('clean browser starts immediately without a network update probe', async () => {
+  for (const options of [{ noServiceWorker: true }, { controlled: false, registrations: [] }]) {
+    const state = updateFixture(options);
+    await state.flush();
+    assert.deepEqual(state.events, ['bootstrap']);
+    assert.equal(state.appended[0].src, 'https://nightowl.example/app/flutter_bootstrap.js');
+  }
+});
+
+test('controlled old-worker navigation retires before Flutter boots and refreshes once', async () => {
+  let finishUnregister;
+  const state = updateFixture({ registrations: [{
+    scope: 'https://nightowl.example/app/', active: worker,
+    unregister: () => new Promise(resolve => { finishUnregister = resolve; }),
+  }] });
+  await state.flush();
+  assert.equal(state.events.includes('bootstrap'), false);
+  assert.equal(state.events.includes('reload'), false);
+  finishUnregister(true);
+  await state.flush();
+  assert.deepEqual(state.events, [
+    'fetch', 'stage:Шинэ хувилбарыг нээж байна',
+    'delete:flutter-app-cache', 'delete:flutter-temp-cache', 'delete:flutter-app-manifest', 'reload'
+  ]);
+  // Even an anomalous second controlled navigation cannot create a reload loop.
+  const repeated = updateFixture({ storage: state.storage });
+  await repeated.flush();
+  assert.equal(repeated.events.includes('reload'), false);
+  assert.equal(repeated.events.at(-1), 'bootstrap');
+});
+
+test('an already unregistered controller still receives one safe online navigation', async () => {
+  const state = updateFixture({ registrations: [] });
+  await state.flush();
+  assert.equal(state.events.at(-1), 'reload');
+  assert.equal(state.events.includes('bootstrap'), false);
+});
+
+test('offline or failed network preserves cached fallback and starts the app', async () => {
+  for (const options of [
+    { online: false },
+    { fetch: async () => { throw new TypeError('Offline'); } },
+    { fetch: async () => ({ ok: false }) },
+    { fetch: async () => ({ ok: true, redirected: true }) },
+    { fetch: async () => ({ ok: true, json: async () => { throw new SyntaxError('HTML'); } }) },
+    { fetch: async () => ({ ok: true, json: async () => ({ commit: 'not-a-release' }) }) },
+  ]) {
+    const state = updateFixture(options);
+    await state.flush();
+    assert.equal(state.events.includes('unregister'), false);
+    assert.equal(state.events.some(event => event.startsWith('delete:')), false);
+    assert.equal(state.events.includes('reload'), false);
+    assert.equal(state.events.at(-1), 'bootstrap');
+  }
+});
+
+test('slow update probe times out without losing the offline cache', async () => {
+  const state = updateFixture({ fetch: (_, { signal }) => new Promise((_, reject) => {
+    signal.addEventListener('abort', () => reject(new Error('Timeout')));
+  }) });
+  await state.flush();
+  assert.equal(state.appended.length, 0);
+  state.timers.get(1)();
+  await state.flush();
+  assert.deepEqual(state.events, ['fetch', 'bootstrap']);
+  assert.equal(state.timers.size, 0);
+});
+
+test('failed unregistration never destroys its caches or traps the startup screen', async () => {
+  for (const unregister of [async () => false, async () => { throw new Error('Denied'); }]) {
+    const state = updateFixture({ registrations: [{
+      scope: 'https://nightowl.example/app/', active: worker, unregister,
+    }] });
+    await state.flush();
+    assert.equal(state.events.some(event => event.startsWith('delete:')), false);
+    assert.equal(state.events.includes('reload'), false);
+    assert.equal(state.events.at(-1), 'bootstrap');
+  }
+});
+
+test('blocked session storage still opens the app without risking a reload loop', async () => {
+  const state = updateFixture({ storageBlocked: true });
+  await state.flush();
+  assert.equal(state.events.includes('reload'), false);
+  assert.equal(state.events.at(-1), 'bootstrap');
+});
+
+test('workers for another app path or origin are left alone', async () => {
+  for (const registration of [
+    { scope: 'https://nightowl.example/other/', active: worker },
+    { scope: 'https://nightowl.example/app/', active: { scriptURL: 'https://other.example/app/flutter_service_worker.js' } },
+    { scope: 'https://nightowl.example/app/', active: { scriptURL: 'https://nightowl.example/app/other_service_worker.js' } },
+  ]) {
+    const state = updateFixture({ controlled: false, registrations: [registration] });
+    await state.flush();
+    assert.deepEqual(state.events, ['bootstrap']);
+  }
+});
+
+test('waiting legacy registration is retired without refreshing an uncontrolled page', async () => {
+  const state = updateFixture({ controlled: false, registrations: [{
+    scope: 'https://nightowl.example/app/', waiting: worker, unregister: async () => true,
+  }] });
+  await state.flush();
+  assert.equal(state.events.includes('reload'), false);
+  assert.equal(state.events.at(-1), 'bootstrap');
+  assert.equal(state.events.filter(event => event.startsWith('delete:')).length, 3);
+});
+
+test('HTML and stable Flutter asset names must revalidate after deployment', () => {
+  const headers = readFileSync(resolve(root, 'web/_headers'), 'utf8');
+  assert.match(headers, /\/\*\s+Cache-Control: public, max-age=0, must-revalidate/);
+  assert.doesNotMatch(updater, /localStorage|\.clear\(/);
+  assert.doesNotMatch(updater, /visibilitychange|controllerchange/);
+});
+
+test('retirement worker unregisters without navigating tabs or deleting cache data', async () => {
+  const source = readFileSync(resolve(root, 'web/flutter_service_worker.js'), 'utf8');
+  const listeners = new Map();
+  const calls = [];
+  vm.runInNewContext(source, {
+    self: {
+      addEventListener: (name, callback) => listeners.set(name, callback),
+      skipWaiting: async () => { calls.push('skipWaiting'); },
+      registration: { unregister: async () => { calls.push('unregister'); return true; } },
+      get clients() { throw new Error('Open tabs must not be touched'); },
+    },
+  });
+  await new Promise(resolve => listeners.get('install')({ waitUntil: work => resolve(work) }));
+  await new Promise(resolve => listeners.get('activate')({ waitUntil: work => resolve(work) }));
+  assert.deepEqual(calls, ['skipWaiting', 'unregister']);
+  assert.equal(listeners.has('fetch'), false);
+  const build = readFileSync(resolve(root, 'tools/deployment/build_web.sh'), 'utf8');
+  assert.match(build, /cp web\/flutter_service_worker\.js build\/web\/flutter_service_worker\.js/);
+});

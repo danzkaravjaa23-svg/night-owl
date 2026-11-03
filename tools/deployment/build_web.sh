@@ -15,6 +15,9 @@ python3 tools/deployment/build_admin_clients.py \
   --output build/client-bundle --defines-output build/backend-defines.json --execute
 flutter build web --release --dart-define=DEVICE_PREVIEW=false \
   --dart-define-from-file=build/backend-defines.json "$@"
+# Flutter generates a retirement worker that navigates every open tab. Use our
+# no-navigation version so a deployment cannot discard an in-progress draft.
+cp web/flutter_service_worker.js build/web/flutter_service_worker.js
 # The admin page is deployed with the same server settings as the app.
 mkdir -p build/web/admin
 cp build/client-bundle/web-admin/index.html build/web/admin/index.html

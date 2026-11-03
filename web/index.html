@@ -138,20 +138,92 @@
       }, { once: true });
     })();
   </script>
-  <script>
-    // Хуучин service worker + кеш нь шинэ хувилбарыг хааж болзошгүй тул цэвэрлэнэ.
-    // (Ингэснээр deploy бүр хэрэглэгчид шууд хүрнэ.)
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.getRegistrations()
-        .then(function (rs) { rs.filter(function (r) { return r.active && /flutter_service_worker\.js/.test(r.active.scriptURL); }).forEach(function (r) { r.unregister(); }); })
-        .catch(function () {});
-    }
-    if (window.caches && caches.keys) {
-      caches.keys()
-        .then(function (ks) { ks.filter(function (k) { return ['flutter-app-cache', 'flutter-temp-cache', 'flutter-app-manifest'].includes(k); }).forEach(function (k) { caches.delete(k); }); })
-        .catch(function () {});
-    }
+  <script id="night-owl-update-controller">
+    (function () {
+      // A retired worker can still control this document until navigation. Finish
+      // cleanup before Flutter starts, and never refresh an already-running app.
+      var base = new URL('.', document.baseURI);
+      var workerUrl = new URL('flutter_service_worker.js', base);
+      var guardKey = 'night-owl-worker-retirement:' + base.pathname;
+      var flutterCaches = ['flutter-app-cache', 'flutter-temp-cache', 'flutter-app-manifest'];
+
+      function isOwnWorker(worker) {
+        if (!worker || !worker.scriptURL) return false;
+        try {
+          var url = new URL(worker.scriptURL);
+          return url.origin === workerUrl.origin && url.pathname === workerUrl.pathname;
+        } catch (_) { return false; }
+      }
+
+      function loadApp() {
+        var script = document.createElement('script');
+        script.src = new URL('flutter_bootstrap.js', base).href;
+        script.async = true;
+        script.onerror = function () {
+          if (window.nightOwlStartup) window.nightOwlStartup.fail();
+        };
+        document.body.appendChild(script);
+      }
+
+      async function onlineRelease() {
+        if (navigator.onLine === false) return null;
+        var abort = new AbortController();
+        var timeout = setTimeout(function () { abort.abort(); }, 3500);
+        try {
+          var url = new URL('release.json', base);
+          // The old Flutter worker only intercepts known resource keys. A unique
+          // query also avoids a successful HTTP cache hit being mistaken for online.
+          url.searchParams.set('night_owl_probe', Date.now().toString(36));
+          var response = await fetch(url.href, {
+            cache: 'no-store', credentials: 'omit', signal: abort.signal
+          });
+          if (!response.ok || response.redirected) return null;
+          var release = await response.json();
+          return /^[a-f0-9]{40}$/.test(release.commit || '') ? release.commit : null;
+        } catch (_) { return null; }
+        finally { clearTimeout(timeout); }
+      }
+
+      async function retireLegacyWorker() {
+        if (!('serviceWorker' in navigator)) return false;
+        var controlled = isOwnWorker(navigator.serviceWorker.controller);
+        var registrations = await navigator.serviceWorker.getRegistrations();
+        var own = registrations.filter(function (registration) {
+          return registration.scope === base.href && [registration.active,
+            registration.waiting, registration.installing].some(isOwnWorker);
+        });
+        if (!controlled && own.length === 0) return false;
+        var commit = await onlineRelease();
+        // Preserve the cached app if the network is unavailable or a captive
+        // portal returned HTML. The next opening can try retirement again.
+        if (!commit) return false;
+        if (window.nightOwlStartup) window.nightOwlStartup.stage('Шинэ хувилбарыг нээж байна');
+        var removed = await Promise.all(own.map(function (registration) {
+          return registration.unregister();
+        }));
+        if (removed.some(function (success) { return !success; })) return false;
+        if (window.caches && window.caches.keys) {
+          var keys = await window.caches.keys();
+          await Promise.all(keys.filter(function (key) {
+            return flutterCaches.indexOf(key) !== -1;
+          }).map(function (key) { return window.caches.delete(key); }));
+        }
+        if (!controlled) return false;
+        // Restrictive browsers may deny sessionStorage. In that case continue
+        // without an automatic navigation; do not risk a refresh loop.
+        try {
+          if (window.sessionStorage.getItem(guardKey) === commit) return false;
+          window.sessionStorage.setItem(guardKey, commit);
+          if (window.sessionStorage.getItem(guardKey) !== commit) return false;
+        } catch (_) { return false; }
+        window.location.reload();
+        return true;
+      }
+
+      retireLegacyWorker().then(function (reloading) {
+        if (!reloading) loadApp();
+      }, loadApp);
+    })();
   </script>
-  <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>
