@@ -1563,5 +1563,59 @@
     "production_rechecked_at": "2026-11-03T07:56:52.796964+00:00",
     "production_commit": "9c8b862d69bed2e4f102c9528a584a32e0ce70dd",
     "package_builder": "tools/deployment/package_app_store_prep.py"
+  },
+  "mobile_web_delivery": {
+    "checked_at": "2026-11-03T08:27:10.847159+00:00",
+    "url": "https://nightowl-ub.netlify.app",
+    "release": {
+      "commit": "7cc568e346c376ec2020c2c3fbeea90f09b0939b",
+      "built_at": "2026-11-03T08:24:42.703081+00:00",
+      "main_dart_sha256": "cc0bbbe187b020a22faabbbe0bdc7ef3128695ce53e546a7d6ab944a1f1d0c5d"
+    },
+    "files": {
+      "release.json": {
+        "sha256": "71578cccc44004750f78293f3916b708ab6a2c0cebe863293667ae893f13840b",
+        "cache_revalidates": true,
+        "security_headers": true
+      },
+      "index.html": {
+        "sha256": "a90b2cbe0e94928d85f4e3edef7bc9c82a1c5db6de49287440efc181344e83e1",
+        "cache_revalidates": true,
+        "security_headers": true
+      },
+      "flutter_bootstrap.js": {
+        "sha256": "5329f363d8fec04d488992903ed380a647cae1bcd5e5f756512c44b9b8fb9e3b",
+        "cache_revalidates": true,
+        "security_headers": true,
+        "local_match_after_empty_build_record_normalization": true
+      },
+      "flutter_service_worker.js": {
+        "sha256": "9abcdd1192e62f5dbded7547797636a33c98872bcf78e73f4da3d97260d9fe40",
+        "cache_revalidates": true,
+        "security_headers": true,
+        "exact_local_match": true
+      },
+      "main.dart.js": {
+        "sha256": "cc0bbbe187b020a22faabbbe0bdc7ef3128695ce53e546a7d6ab944a1f1d0c5d",
+        "cache_revalidates": true,
+        "security_headers": true,
+        "exact_local_match": true
+      }
+    },
+    "unit_tests": 18,
+    "browser_regression": "Isolated real Chrome legacy-worker, offline-reconnect, session-like storage and open-draft tests passed; not a physical phone test",
+    "application_js_matches_previous_production": true,
+    "backend_migrations_deployed": false,
+    "browser_smoke": {
+      "viewport": "390x844",
+      "result": "First Flutter frame rendered after live reload; existing signed-in session remained on profile setup; no profile save or terms acceptance performed",
+      "console_errors": 0,
+      "console_warnings": "Existing Noto fallback missing-character warning observed",
+      "physical_phone_verified": false
+    },
+    "production_branch": "night-owl-features",
+    "preparation_branch": "codex/app-store-preparation",
+    "preparation_code_commit": "7b1eb5e",
+    "scope": "Web startup/cache delivery only; app/backend source unchanged from production 9c8b862. App Store 008/009/Edge rollout remains pending."
   }
 }

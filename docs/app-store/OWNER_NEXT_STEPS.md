@@ -2,7 +2,7 @@
 
 Night Owl UB · 2026-11-03
 
-Бэлтгэлийн код `codex/app-store-preparation` салбарт байна. Нийтийн ажиллаж буй аппын салбар `night-owl-features` хэвээр. Шинэ backend/client-ийг хамтад нь шалгаж гаргана.
+Бэлтгэлийн код `codex/app-store-preparation` салбарт байна. Нийтийн ажиллаж буй аппын салбар `night-owl-features` хэвээр. Шинэ backend/client-ийг хамтад нь шалгаж гаргана. Утасны web cache засвар `7cc568e` live болсон; энэ нь бэлтгэлийн backend/client rollout биш.
 
 1. **Apple эрх.** Developer membership Active болсны дараа Team ID болон App Store Connect хандалтыг батална. Нууц үг, `.p8`/`.p12`, recovery code-ийг чат эсвэл GitHub-д оруулахгүй.
 2. **Apple тохиргоо.** `com.nightowl.ub.nightOwlUb` App ID-ийн эзэмшил, Sign in with Apple capability, web Service ID/callback болон backend-ийн Apple keys тохируулна. [Дэлгэрэнгүй заавар](../APPLE_SIGN_IN_SETUP.md).

@@ -2,6 +2,12 @@
 
 ## App Store хэрэгжилтийн бэлтгэл — 2026-11-03 (одоогийн)
 
+**Утасны web шинэчлэлт — 2026-11-03 16:27 (UTC+8):** cache/startup засвар `7cc568e346c376ec2020c2c3fbeea90f09b0939b` production `night-owl-features` салбар руу push хийгдэж Netlify дээр нийтлэгдсэн. `/release.json` энэ commit-ийг баталсан. HTML update controller болон retirement worker нь шалгасан эхтэй, public `main.dart.js` SHA256 `cc0bbbe187b020a22faabbbe0bdc7ef3128695ce53e546a7d6ab944a1f1d0c5d` локал build/өмнөх app кодтой ижил. Bootstrap нь Netlify-ийн WASM dry-run-аас нэмэгдсэн хоосон build бичлэгээс бусад хэсгээрээ ижил. Таван public asset дээр revalidation болон security headers PASS.
+
+Хуучин Flutter worker-ийн cleanup-ийг startup-аас өмнө хүлээж, online release батлагдсан үед нэг удаагийн guarded refresh хийдэг; offline cache, нэвтрэлтийн localStorage, бусад cache-г хадгална. Flutter-ийн default retirement worker-ийн open-tab navigation-ийг арилгасан тул нээлттэй ноорог автоматаар reload болохгүй. 18 Node тест, isolated real-Chrome legacy-worker/offline/reconnect/draft regression, release web build PASS. Live app 390×844 дээр first frame гарч, өмнөх session profile setup-д хэвээр үлдсэн; console error 0, Noto fallback-ийн өмнөх glyph warning ажиглагдсан. Бодит хэрэглэгчийн утсыг алсаас шалгаагүй.
+
+Энэ cache засвар App Store бэлтгэлийн салбарт мөн `7b1eb5e` commit-оор хадгалагдсан. Бэлтгэлийн салбарын шинэ 008/009/Edge болон түүнд хамаарах client-ийг production-д оруулаагүй; доорх gate-ууд хэвээр. Утсан дээр нээлттэй хуучин аппыг хааж дахин нээх буюу Safari/Chrome табыг refresh хийхэд шинэ web release ачаална. Нийтийн evidence: `docs/BUILD_VERIFICATION.json` → `mobile_web_delivery`; дэлгэрэнгүй local receipt: `build/audit/2026-11-03/mobile-update-delivery/receipt.json`.
+
 **Код/build/материалын бэлтгэл шалгагдсан. Store submission-д Apple тохиргоо, hosted rollout болон signed-device acceptance үлдсэн.** Код `codex/app-store-preparation` салбарт push хийгдсэн. Бүртгэл устгах durable receipt/сэргээх урсгал, fresh Apple authorization/revoke эх, нийтлэхийн өмнөх админ хяналт, бүх UGC-ийн report entry, зөвхөн мэдээлсэн мессежийн context, pending avatar/venue media хамгаалалт бэлэн. Reel нийтлэх урсгалыг нэгтгэж, баталгаажаагүй demo хөгжмийн санг хасав.
 
 **Баталгаа:** 859 Flutter тест, analyzer clean, 16 synthetic UI capture (өдөр/шөнө, 390px/320px, 1.5×), 43 deployment Python тест, iOS source 9/9 PASS. Backend: Node 71, Apple crypto 18, SDK 14/protocol 12 алхам, erasure SQL 22/69FK, UGC 21, хосолсон 008/009 7, web admin 34 PASS. JavaScript release build PASS (`624619a`); public deploy хийгдээгүй.
@@ -12,7 +18,7 @@
 
 **Багцууд:** `build/releases/night-owl-native-unsigned-7cbbeb3.zip` — 93,798,715 byte, SHA256 `028d478107dcf53c0f77914f3c886cbf4496641f0d3142eb1b9a4c798f556f45`; GitHub artifact 13214034348 (2026-11-17 хүртэл), локал хуулбар хадгалсан. Partial source/document handoff ZIP-ийг `python3 tools/deployment/package_app_store_prep.py` үүсгэнэ; committed HEAD, per-file hash, CRC болон reproducibility шалгадаг. ZIP нь signed IPA биш. [Эрх авсны дараах дараалал](app-store/OWNER_NEXT_STEPS.md).
 
-**Үлдсэн:** 008/009 болон Edge function-ийг hosted staging дээр баталгаажуулж client-тэй зохицуулан rollout хийх; Apple membership/provider/keys/signing; signed iPhone/iPad дээр 16 acceptance case; final Store screenshot/review account; хариуцсан moderator, owner privacy/age/export/contact/media rights. Production нийтлэл `9c8b862` хэвээр, 07:56 UTC read-only check-д support/privacy/terms 200. Одоогийн production хэрэглэгч устгах эсвэл Store upload хийгдээгүй.
+**Үлдсэн:** 008/009 болон Edge function-ийг hosted staging дээр баталгаажуулж client-тэй зохицуулан rollout хийх; Apple membership/provider/keys/signing; signed iPhone/iPad дээр 16 acceptance case; final Store screenshot/review account; хариуцсан moderator, owner privacy/age/export/contact/media rights. Өмнөх 07:56 UTC check-ийн production app суурь `9c8b862`; дээрх cache засвар `7cc568e`-д нийтлэгдсэн. Тэр шалгалтаар support/privacy/terms 200. Одоогийн production хэрэглэгч устгах эсвэл Store upload хийгдээгүй.
 
 Доорх нь өмнөх шалгалтын түүх; дээрх current record-ийг ашиглана.
 
