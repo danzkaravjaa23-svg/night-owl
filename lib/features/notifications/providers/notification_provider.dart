@@ -5,7 +5,7 @@ import '../../../core/providers/user_settings_provider.dart';
 
 class AppNotification {
   final String id;
-  final String type;  // 'like' | 'follow' | 'comment' | 'event'
+  final String type; // 'like' | 'follow' | 'comment' | 'event'
   final String actorId;
   final String? actorName;
   final String? actorAvatar;
@@ -26,25 +26,27 @@ class AppNotification {
 
   factory AppNotification.fromJson(Map<String, dynamic> json) =>
       AppNotification(
-        id:          json['id'] as String,
-        type:        json['type'] as String? ?? '',
-        actorId:     json['actor_id'] as String? ?? '',
-        actorName:   json['actor_name'] as String?,
+        id: json['id'] as String,
+        type: json['type'] as String? ?? '',
+        actorId: json['actor_id'] as String? ?? '',
+        actorName: json['actor_name'] as String?,
         actorAvatar: json['actor_avatar'] as String?,
-        message:     json['message'] as String? ?? '',
-        isRead:      json['is_read'] as bool? ?? false,
-        createdAt:   DateTime.tryParse(json['created_at']?.toString() ?? '') ?? DateTime.now(),
+        message: json['message'] as String? ?? '',
+        isRead: json['is_read'] as bool? ?? false,
+        createdAt: DateTime.tryParse(json['created_at']?.toString() ?? '') ??
+            DateTime.now(),
       );
 }
 
 // ─── Notifications stream ───
 // authUserProvider-ийг watch хийснээр хаяг солиход (signOut→signIn) stream
 // шинэ хэрэглэгчээр автоматаар дахин үүснэ (currentProfileProvider-той ижил логик).
-final notificationsProvider =
-    StreamProvider<List<AppNotification>>((ref) {
+final notificationsProvider = StreamProvider<List<AppNotification>>((ref) {
   final me = ref.watch(sessionUserIdProvider);
   final settings = ref.watch(userSettingsProvider);
-  if (me == null || !settings.notifications) return Stream.value(const []);
+  if (me == null || !settings.loaded || !settings.notifications) {
+    return Stream.value(const []);
+  }
 
   return SupabaseService.client
       .from('notifications')
@@ -52,21 +54,21 @@ final notificationsProvider =
       .eq('user_id', me)
       .order('created_at', ascending: false)
       .limit(50)
-      .map((rows) => rows
-          .map((r) => AppNotification.fromJson(r))
-          .toList());
+      .map((rows) => rows.map((r) => AppNotification.fromJson(r)).toList());
 });
 
 // ─── Unread count ───
 final unreadNotifCountProvider = Provider<int>((ref) {
   final notifs = ref.watch(notificationsProvider);
+  // A refreshed provider may carry the previous account's AsyncValue data.
+  if (notifs.isLoading || notifs.hasError) return 0;
   return notifs.valueOrNull?.where((n) => !n.isRead).length ?? 0;
 });
 
 // ─── Mark all as read ───
-Future<void> markAllNotifsRead() async {
-  final me = SupabaseService.currentUser?.id;
-  if (me == null) return;
+Future<void> markAllNotifsRead({required String ownerId}) async {
+  if (SupabaseService.currentUser?.id != ownerId) return;
+  final me = ownerId;
   await SupabaseService.client
       .from('notifications')
       .update({'is_read': true})

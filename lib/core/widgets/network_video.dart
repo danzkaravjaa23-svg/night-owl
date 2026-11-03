@@ -8,8 +8,12 @@ import 'video_view_stub.dart'
 bool isVideoUrl(String? url) {
   if (url == null) return false;
   final u = (Uri.tryParse(url)?.path ?? url).toLowerCase();
-  return u.endsWith('.mp4') || u.endsWith('.mov') || u.endsWith('.webm') ||
-      u.endsWith('.m4v') || u.endsWith('.avi') || u.endsWith('.mkv');
+  return u.endsWith('.mp4') ||
+      u.endsWith('.mov') ||
+      u.endsWith('.webm') ||
+      u.endsWith('.m4v') ||
+      u.endsWith('.avi') ||
+      u.endsWith('.mkv');
 }
 
 /// Сүлжээний видео.
@@ -21,12 +25,18 @@ class NetworkVideo extends StatelessWidget {
   final double? height;
   final bool autoplay;
   final bool showPosterIcon;
+
   /// Идэвхтэй (харагдаж буй) reel эсэх — зөвхөн идэвхтэй нь дуутай тоглоно.
   final bool active;
+
   /// Тоглуулах явц (0..1) — autoplay reel дээр доод progress bar-т хэрэглэнэ.
   final ValueNotifier<double>? progress;
+
   /// 4:5 feed хайрцгийг дүүргэж тайрна (хар зурвасгүй).
   final bool cover;
+
+  /// Keep a keyboard-accessible play/pause control visible during playback.
+  final bool showControls;
   const NetworkVideo({
     super.key,
     required this.url,
@@ -37,11 +47,20 @@ class NetworkVideo extends StatelessWidget {
     this.active = true,
     this.progress,
     this.cover = false,
+    this.showControls = true,
   });
 
   @override
-  Widget build(BuildContext context) =>
-      AuthorizedMedia(url: url, builder: (source) => VideoView(url: source, posterOnly: posterOnly, height: height,
-          autoplay: autoplay, showPosterIcon: showPosterIcon,
-          active: active, progress: progress, cover: cover));
+  Widget build(BuildContext context) => AuthorizedMedia(
+      url: url,
+      builder: (source) => VideoView(
+          url: source,
+          posterOnly: posterOnly,
+          height: height,
+          autoplay: autoplay,
+          showPosterIcon: showPosterIcon,
+          active: active,
+          progress: progress,
+          cover: cover,
+          showControls: showControls));
 }

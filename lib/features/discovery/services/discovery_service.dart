@@ -183,7 +183,11 @@ class DiscoveryService {
           params: {'p_owner': owner, 'p_refs': refs.toList()});
 
   Future<void> activity(String event, {String target = ''}) async {
-    if (me == null) return;
+    if (me == null ||
+        client.auth.currentUser?.userMetadata?['discovery_analytics_consent'] !=
+            true) {
+      return;
+    }
     try {
       await client.rpc('record_discovery_activity',
           params: {'p_event': event, 'p_target': target});

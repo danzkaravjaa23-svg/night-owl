@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:device_preview/device_preview.dart';
 
 import 'core/theme/app_theme.dart';
+import 'core/theme/app_fonts.dart';
 import 'core/theme/theme_provider.dart';
 import 'core/router/app_router.dart';
 import 'core/services/supabase_service.dart';
@@ -19,6 +20,7 @@ import 'features/feed/providers/saved_provider.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  AppFonts.configure();
 
   // Status bar — transparent (dark content shown over aurora)
   SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(

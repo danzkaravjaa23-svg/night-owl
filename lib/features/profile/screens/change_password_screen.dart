@@ -1,131 +1,133 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_text_styles.dart';
-import '../../../core/widgets/gradient_button.dart';
+
+import '../../../core/router/app_router.dart';
+import '../../auth/widgets/auth_ui.dart';
+import '../../auth/services/account_credentials_service.dart';
+import '../../auth/widgets/password_form.dart';
 
 class ChangePasswordScreen extends StatefulWidget {
-  const ChangePasswordScreen({super.key});
+  final AccountCredentialsService? service;
+  const ChangePasswordScreen({super.key, this.service});
+
   @override
   State<ChangePasswordScreen> createState() => _ChangePasswordScreenState();
 }
 
 class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
-  final _newCtrl     = TextEditingController();
-  final _confirmCtrl = TextEditingController();
   bool _loading = false;
-  String? _error; // талбарын доор харуулах Монгол алдаа
+  String? _error;
+  String? _owner;
+  StreamSubscription<AuthState>? _authSubscription;
+  bool _sessionChanged = false;
+  int _operation = 0;
 
   @override
-  void dispose() { _newCtrl.dispose(); _confirmCtrl.dispose(); super.dispose(); }
-
-  void _snack(String msg, {bool err = false}) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(msg),
-      backgroundColor: err ? AppColors.error : null,
-      behavior: SnackBarBehavior.floating));
+  void initState() {
+    super.initState();
+    final auth = Supabase.instance.client.auth;
+    final captured = auth.currentSession;
+    _owner = captured?.user.id;
+    var first = true;
+    _authSubscription = auth.onAuthStateChange.listen((state) {
+      if (first && identical(state.session, captured)) {
+        first = false;
+        return;
+      }
+      first = false;
+      if (state.session?.user.id != _owner ||
+          const {
+            AuthChangeEvent.signedIn,
+            AuthChangeEvent.signedOut,
+            AuthChangeEvent.passwordRecovery
+          }.contains(state.event)) {
+        _invalidateSession();
+      }
+    }, onError: (Object _) => _invalidateSession());
   }
 
-  Future<void> _update() async {
-    final pass = _newCtrl.text;
-    final confirm = _confirmCtrl.text;
+  void _invalidateSession() {
+    ++_operation;
+    if (mounted) {
+      setState(() {
+        _sessionChanged = true;
+        _loading = false;
+      });
+    }
+  }
 
-    // ── Клиент талын шалгалт (сервер рүү илгээхээс өмнө) ──
-    if (pass.isEmpty) {
-      setState(() => _error = 'Шинэ нууц үгээ оруулна уу');
-      return;
-    }
-    if (pass.length < 6) {
-      setState(() => _error = 'Нууц үг дор хаяж 6 тэмдэгт байх ёстой');
-      return;
-    }
-    if (pass != confirm) {
-      setState(() => _error = 'Нууц үг таарахгүй байна');
-      return;
-    }
+  @override
+  void dispose() {
+    _authSubscription?.cancel();
+    super.dispose();
+  }
 
-    setState(() { _loading = true; _error = null; });
+  void _back() {
+    if (_loading) return;
+    if (context.canPop()) {
+      context.pop();
+    } else {
+      context.go(AppRoutes.settings);
+    }
+  }
+
+  Future<void> _update(String password) async {
+    if (_loading || _sessionChanged) return;
+    final client = Supabase.instance.client;
+    if (_owner == null || client.auth.currentUser?.id != _owner) {
+      setState(() => _error = 'Бүртгэл солигдсон байна. Дахин нэвтэрнэ үү.');
+      return;
+    }
+    final operation = ++_operation;
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
     try {
-      await Supabase.instance.client.auth.updateUser(
-        UserAttributes(password: pass));
-      if (mounted) {
-        context.pop();
-        _snack('Нууц үг шинэчлэгдлээ ✓');
+      final applied = await (widget.service ?? AccountCredentialsService())
+          .updatePassword(password, ownerId: _owner!);
+      if (!mounted || operation != _operation || _sessionChanged) return;
+      if (!applied || client.auth.currentUser?.id != _owner) {
+        setState(() => _error = 'Бүртгэл солигдсон байна. Дахин нэвтэрнэ үү.');
+        return;
       }
-    } catch (e) {
-      if (mounted) {
-        setState(() => _error = _friendlyError(e));
+      TextInput.finishAutofillContext(shouldSave: true);
+      final messenger = ScaffoldMessenger.of(context);
+      setState(() => _loading = false);
+      _back();
+      messenger
+          .showSnackBar(const SnackBar(content: Text('Нууц үг шинэчлэгдлээ.')));
+    } on AccountCredentialsFailure catch (error) {
+      if (mounted && operation == _operation) {
+        setState(() => _error = error.message);
+      }
+    } catch (_) {
+      if (mounted && operation == _operation) {
+        setState(() => _error =
+            'Нууц үг шинэчилснийг баталж чадсангүй. Дахин оролдоно уу.');
       }
     } finally {
-      if (mounted) setState(() => _loading = false);
+      if (mounted && operation == _operation) setState(() => _loading = false);
     }
-  }
-
-  // Supabase-ийн англи алдааг ойлгомжтой Монгол текст рүү хөрвүүлнэ
-  String _friendlyError(Object e) {
-    final s = e.toString().toLowerCase();
-    if (s.contains('at least') || s.contains('6 characters')) {
-      return 'Нууц үг дор хаяж 6 тэмдэгт байх ёстой';
-    }
-    if (s.contains('same') || s.contains('different from')) {
-      return 'Шинэ нууц үг хуучнаас өөр байх ёстой';
-    }
-    if (s.contains('network') || s.contains('socket') || s.contains('timeout')) {
-      return 'Сүлжээний алдаа. Дахин оролдоно уу';
-    }
-    return 'Нууц үг шинэчилж чадсангүй';
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-    backgroundColor: AppColors.bgBase,
-    appBar: AppBar(
-      backgroundColor: AppColors.bgBase,
-      leading: IconButton(onPressed: () => context.pop(),
-        icon: const Icon(Icons.arrow_back_ios_new, size: 20)),
-      title: Text('Нууц үг солих', style: AppTextStyles.h2),
-    ),
-    body: Padding(
-      padding: const EdgeInsets.all(32),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text('Шинэ нууц үг', style: AppTextStyles.labelMd.copyWith(
-          color: AppColors.textSecondary)),
-        const SizedBox(height: 8),
-        TextField(controller: _newCtrl, obscureText: true,
-          onChanged: (_) { if (_error != null) setState(() => _error = null); },
-          style: TextStyle(color: AppColors.textPrimary),
-          decoration: const InputDecoration(hintText: '••••••••')),
-        const SizedBox(height: 20),
-        Text('Нууц үг баталгаажуулах', style: AppTextStyles.labelMd.copyWith(
-          color: AppColors.textSecondary)),
-        const SizedBox(height: 8),
-        TextField(controller: _confirmCtrl, obscureText: true,
-          onChanged: (_) { if (_error != null) setState(() => _error = null); },
-          style: TextStyle(color: AppColors.textPrimary),
-          decoration: const InputDecoration(hintText: '••••••••')),
-        // ── Алдааны мессеж (талбарын доор) ──
-        AnimatedSize(
-          duration: const Duration(milliseconds: 180),
-          curve: Curves.easeOut,
-          child: _error == null
-            ? const SizedBox(width: double.infinity)
-            : Padding(
-                padding: const EdgeInsets.only(top: 12),
-                child: Row(children: [
-                  const Icon(Icons.error_outline,
-                    color: AppColors.error, size: 16),
-                  const SizedBox(width: 6),
-                  Expanded(child: Text(_error!,
-                    style: AppTextStyles.bodyXs.copyWith(color: AppColors.error))),
-                ]),
-              ),
+  Widget build(BuildContext context) => PopScope(
+        canPop: !_loading,
+        child: AuthFormScaffold(
+          title: 'Нууц үг солих',
+          description:
+              'Таахад хэцүү, өөр үйлчилгээнд ашиглаагүй нууц үг сонгоно уу.',
+          icon: Icons.lock_reset_rounded,
+          onBack: _loading ? null : _back,
+          child: _sessionChanged
+              ? const AuthErrorBox(
+                  'Нэвтрэх төлөв өөрчлөгдсөн эсвэл баталгаажуулж чадсангүй. Энэ дэлгэцийг хааж, өөрийн бүртгэлийн тохиргооноос дахин нээнэ үү.')
+              : PasswordForm(busy: _loading, error: _error, onSubmit: _update),
         ),
-        const SizedBox(height: 40),
-        GradientButton(
-          label: _loading ? 'Шинэчилж байна...' : 'Нууц үг шинэчлэх',
-          onPressed: _loading ? null : _update),
-      ]),
-    ),
-  );
+      );
 }

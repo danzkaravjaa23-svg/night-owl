@@ -1,16 +1,17 @@
--- ═══════════════════════════════════════════════════════════════════
--- NightOwl UB — Данс устгах (self-service, App Store 5.1.1(v) / GDPR)
--- Хэрэглэгч өөрийн profiles мөрийг устгаж болно. Бусад бүх контент
--- (posts/comments/likes/follows/stories/messages/notifications...) FK
--- on delete cascade-ээр устана. posts устахад storage trigger файлыг
--- цэвэрлэнэ. events.organizer_id / venues.owner_id нь set null.
--- ТЭМДЭГЛЭЛ: auth.users мөрийг client устгаж чадахгүй (service role
---   шаардана) — бүрэн устгалд edit function хэрэгтэй. Энэ нь profiles +
---   бүх контентыг устгана.
--- ═══════════════════════════════════════════════════════════════════
+-- Retired: deleting a profiles row is NOT account deletion. It leaves the Auth
+-- identity and may bypass Apple revocation and Storage API cleanup.
+-- Only the authenticated server deletion workflow may erase the account.
+-- This restrictive policy also intersects any permissive legacy admin policy.
+begin;
 
+alter table public.profiles enable row level security;
 drop policy if exists "Own profile deletable" on public.profiles;
-create policy "Own profile deletable" on public.profiles
-  for delete using (auth.uid() = id or public.is_admin());
+drop policy if exists account_profile_delete_guard on public.profiles;
+create policy account_profile_delete_guard on public.profiles as restrictive
+  for delete to anon, authenticated using (false);
+revoke delete, truncate on public.profiles from public, anon, authenticated;
 
+-- Auth's trusted FK cascade and service-role recovery are unaffected by client
+-- privileges/RLS. Verify the real FK schema on disposable staging before enable.
 notify pgrst, 'reload schema';
+commit;

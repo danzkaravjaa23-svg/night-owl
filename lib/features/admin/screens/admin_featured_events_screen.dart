@@ -7,6 +7,21 @@ import '../../auth/providers/auth_provider.dart';
 import '../../events/providers/event_provider.dart';
 import '../../events/providers/featured_events_provider.dart';
 import '../../events/widgets/events_rail.dart';
+import '../providers/admin_console_provider.dart';
+import '../services/admin_console_service.dart';
+
+final _scopedSelectionsProvider =
+    FutureProvider.autoDispose<List<FeaturedEventSelection>>((ref) async {
+  final access = ref.watch(adminConsoleAccessProvider);
+  if (access == null) return ref.watch(adminFeaturedEventsProvider.future);
+  final rows = await access.service
+      .callRpc(access.session, 'get_admin_featured_events', {});
+  return (rows as List)
+      .map((row) => FeaturedEventSelection(
+          eventId: row['event_id'] as String,
+          rank: (row['rank'] as num).toInt()))
+      .toList();
+}, dependencies: [adminConsoleAccessProvider, adminFeaturedEventsProvider]);
 
 /// Only existing Night Owl administrators curate this public selection.
 /// The server rechecks the role for every change, including deep links.
@@ -27,13 +42,18 @@ class _AdminFeaturedEventsState
   void _refresh() {
     ref.invalidate(upcomingEventsProvider);
     ref.invalidate(adminFeaturedEventsProvider);
+    ref.invalidate(_scopedSelectionsProvider);
     ref.invalidate(featuredEventsProvider);
   }
 
   Future<void> _setFeatured(String id, bool featured) async {
     final profile = ref.read(currentProfileProvider).asData?.value;
+    final access = ref.read(adminConsoleAccessProvider);
     final owner = _owner;
-    if (_saving != null || profile?.isAdmin != true || owner != profile?.id) {
+    if (_saving != null ||
+        (access != null
+            ? !access.session.isCurrent
+            : profile?.isAdmin != true || owner != profile?.id)) {
       return;
     }
     setState(() {
@@ -41,20 +61,35 @@ class _AdminFeaturedEventsState
       _error = null;
     });
     try {
-      await ref
-          .read(eventFeatureServiceProvider)
-          .setFeatured(id, featured: featured);
+      if (access != null) {
+        await access.service.callRpc(access.session, 'set_featured_event', {
+          'p_event_id': id,
+          'p_featured': featured,
+          'p_rank': 0,
+        });
+      } else {
+        await ref
+            .read(eventFeatureServiceProvider)
+            .setFeatured(id, featured: featured);
+      }
+      if (!mounted ||
+          owner != _owner ||
+          (access != null && !access.session.isCurrent)) {
+        return;
+      }
       ref.invalidate(adminFeaturedEventsProvider);
+      ref.invalidate(_scopedSelectionsProvider);
       ref.invalidate(featuredEventsProvider);
-      if (!mounted || owner != _owner) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text(
               featured ? 'Онцгой эвентэд нэмлээ' : 'Онцгой эвентээс хаслаа')));
     } catch (error) {
       if (!mounted || owner != _owner) return;
-      setState(() => _error = error is FeatureEventsUnavailableException
-          ? 'Эвент сонгох үйлчилгээ хараахан бэлэн болоогүй байна.'
-          : 'Өөрчлөлтийг хадгалж чадсангүй. Эрх болон холболтоо шалгаад дахин оролдоно уу.');
+      setState(() => _error = error is AdminConsoleFailure
+          ? error.message
+          : error is FeatureEventsUnavailableException
+              ? 'Эвент сонгох үйлчилгээ хараахан бэлэн болоогүй байна.'
+              : 'Өөрчлөлтийг хадгалж чадсангүй. Эрх болон холболтоо шалгаад дахин оролдоно уу.');
     } finally {
       if (mounted) setState(() => _saving = null);
     }
@@ -63,9 +98,11 @@ class _AdminFeaturedEventsState
   @override
   Widget build(BuildContext context) {
     final profile = ref.watch(currentProfileProvider);
+    final access = ref.watch(adminConsoleAccessProvider);
     final theme = Theme.of(context);
     final dark = theme.brightness == Brightness.dark;
-    final admin = profile.asData?.value?.isAdmin == true;
+    final admin = access?.session.isCurrent == true ||
+        profile.asData?.value?.isAdmin == true;
     return Scaffold(
         appBar: AppBar(
             title: const Text('Онцгой эвентүүд'),
@@ -82,11 +119,11 @@ class _AdminFeaturedEventsState
                     onPressed: _saving == null ? _refresh : null,
                     icon: const Icon(Icons.refresh_rounded)),
             ]),
-        body: profile.isLoading
+        body: access == null && profile.isLoading
             ? Center(
                 child:
                     OwlLoading(message: 'Эрхийг шалгаж байна…', onDark: dark))
-            : profile.hasError
+            : access == null && profile.hasError
                 ? Center(
                     child: TextButton(
                         onPressed: () => ref.invalidate(currentProfileProvider),
@@ -104,7 +141,7 @@ class _AdminFeaturedEventsState
 
   Widget _content(BuildContext context) {
     final candidates = ref.watch(upcomingEventsProvider);
-    final selections = ref.watch(adminFeaturedEventsProvider);
+    final selections = ref.watch(_scopedSelectionsProvider);
     final theme = Theme.of(context);
     final dark = theme.brightness == Brightness.dark;
     if ((candidates.isLoading && !candidates.hasValue) ||

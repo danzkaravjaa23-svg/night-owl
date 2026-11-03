@@ -1,0 +1,238 @@
+// Local-only screenshots of the real profile/settings screens. All backend
+// requests are handled by an in-memory fixture; no live account is accessed.
+import 'dart:convert';
+import 'dart:io';
+import 'dart:ui' as ui;
+
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:night_owl_ub/core/constants/avatar_presets.dart';
+import 'package:night_owl_ub/core/theme/app_colors.dart';
+import 'package:night_owl_ub/core/theme/app_fonts.dart';
+import 'package:night_owl_ub/core/theme/app_theme.dart';
+import 'package:night_owl_ub/core/widgets/authorized_media.dart';
+import 'package:night_owl_ub/features/auth/providers/auth_provider.dart';
+import 'package:night_owl_ub/features/feed/providers/stories_provider.dart';
+import 'package:night_owl_ub/features/profile/screens/profile_screen.dart';
+import 'package:night_owl_ub/features/profile/screens/settings_screen.dart';
+import 'package:night_owl_ub/models/user_profile.dart';
+
+const owner = '10000000-0000-4000-8000-000000000001';
+const output = 'build/audit/2026-11-03/visual-refresh';
+
+void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+  var rows = <Map<String, dynamic>>[];
+  final mediaAssets = [
+    'assets/images/tonight_city.png',
+    NightOwlAvatars.all[1].assetPath,
+    NightOwlAvatars.all[0].assetPath,
+    NightOwlAvatars.all[3].assetPath,
+    'assets/images/tonight_city.png',
+    NightOwlAvatars.all[2].assetPath,
+  ];
+  final profile = UserProfile(
+      id: owner,
+      name: 'Номин Эрдэнэ',
+      username: 'nomin.explores',
+      avatarUrl: NightOwlAvatars.all[1].value,
+      bio: 'Хотын гэрэл, амьд хөгжим, шинэ дурсамж.',
+      interests: ['Амьд хөгжим', 'Кофе', 'Улаанбаатар'],
+      followersCount: 128,
+      followingCount: 86);
+
+  setUpAll(() async {
+    AppFonts.configure();
+    // Responsive label measurements must use the bundled font on first layout.
+    await GoogleFonts.pendingFonts([
+      for (final weight in [FontWeight.w400, FontWeight.w600, FontWeight.w700])
+        GoogleFonts.inter(fontWeight: weight),
+    ]);
+    final icons = FontLoader('MaterialIcons')
+      ..addFont(rootBundle.load('fonts/MaterialIcons-Regular.otf'));
+    await icons.load();
+    SharedPreferences.setMockInitialValues({});
+    await Supabase.initialize(
+        url: 'https://profile-preview.example.test',
+        anonKey: 'fixture-only',
+        debug: false,
+        authOptions: const FlutterAuthClientOptions(
+            autoRefreshToken: false,
+            detectSessionInUri: false,
+            localStorage: EmptyLocalStorage()),
+        httpClient: MockClient((request) async => http.Response(
+            jsonEncode(request.url.path.endsWith('/posts') ? rows : <Object>[]),
+            200,
+            request: request,
+            headers: {'content-type': 'application/json'})));
+    final payload = base64Url
+        .encode(utf8.encode(jsonEncode({
+          'sub': owner,
+          'exp': DateTime.now().millisecondsSinceEpoch ~/ 1000 + 3600,
+        })))
+        .replaceAll('=', '');
+    await Supabase.instance.client.auth.setInitialSession(jsonEncode({
+      'access_token': 'fixture.$payload.fixture',
+      'refresh_token': 'fixture-refresh',
+      'expires_in': 3600,
+      'token_type': 'bearer',
+      'user': {
+        'id': owner,
+        'aud': 'authenticated',
+        'created_at': '2026-11-03T00:00:00Z',
+        'user_metadata': <String, dynamic>{},
+      },
+    }));
+  });
+  tearDownAll(() => Supabase.instance.dispose());
+
+  for (final dark in [true, false]) {
+    for (final compact in [false, true]) {
+      for (final scenario in [(false, false), (false, true), (true, false)]) {
+        final (settings, populated) = scenario;
+        if (compact && populated) continue;
+        final label =
+            '${settings ? 'settings' : populated ? 'profile-populated' : 'profile'}-'
+            '${dark ? 'night' : 'day'}-${compact ? '320-large' : '390'}';
+        testWidgets('visual review $label', (tester) async {
+          final capture = GlobalKey();
+          final size = compact ? const Size(320, 740) : const Size(390, 844);
+          tester.view.physicalSize = size;
+          tester.view.devicePixelRatio = 1;
+          addTearDown(tester.view.resetPhysicalSize);
+          addTearDown(tester.view.resetDevicePixelRatio);
+          addTearDown(() => AppColors.isDarkMode = true);
+          SharedPreferences.setMockInitialValues({
+            'theme_mode': dark ? 'dark' : 'light',
+          });
+          AppColors.isDarkMode = dark;
+          rows = populated
+              ? [
+                  for (var i = 0; i < mediaAssets.length; i++)
+                    {
+                      'id': '20000000-0000-4000-8000-00000000000$i',
+                      'user_id': owner,
+                      'media_url':
+                          'https://media-fixture.example.test/photo-$i.png',
+                      'likes_count': 12 + i * 7,
+                      'created_at': '2026-11-03T00:00:00Z',
+                    }
+                ]
+              : [];
+          // Seed precisely the image-provider keys the real media grid uses.
+          // This exercises actual AuthorizedImage tiles without any network.
+          await tester.runAsync(() async {
+            for (var i = 0; i < rows.length; i++) {
+              final asset = await rootBundle.load(mediaAssets[i]);
+              final codec = await ui.instantiateImageCodec(
+                  asset.buffer.asUint8List(),
+                  targetWidth: 400);
+              final frame = await codec.getNextFrame();
+              codec.dispose();
+              final provider = ResizeImage.resizeIfNeeded(400, null,
+                  CachedNetworkImageProvider(rows[i]['media_url'] as String));
+              final key = await provider.obtainKey(ImageConfiguration.empty);
+              PaintingBinding.instance.imageCache.putIfAbsent(
+                  key,
+                  () => OneFrameImageStreamCompleter(
+                      Future.value(ImageInfo(image: frame.image))));
+            }
+          });
+          await tester.pumpWidget(ProviderScope(
+              overrides: [
+                sessionUserIdProvider.overrideWithValue(owner),
+                authUserProvider.overrideWith((_) =>
+                    Stream.value(Supabase.instance.client.auth.currentUser)),
+                currentProfileProvider.overrideWith(
+                    (_) async => profile.copyWith(postsCount: rows.length)),
+                storiesProvider.overrideWith((_) async => []),
+              ],
+              child: MaterialApp(
+                  theme: dark ? AppTheme.dark : AppTheme.light,
+                  builder: (context, child) => MediaQuery(
+                      data: MediaQuery.of(context).copyWith(
+                          padding: const EdgeInsets.only(top: 24, bottom: 24),
+                          disableAnimations: true,
+                          textScaler: TextScaler.linear(compact ? 1.5 : 1)),
+                      child: RepaintBoundary(key: capture, child: child!)),
+                  home: settings
+                      ? const SettingsScreen()
+                      : const ProfileScreen())));
+          await tester.pumpAndSettle();
+          await tester.runAsync(() async {
+            await GoogleFonts.pendingFonts();
+            final context = capture.currentContext!;
+            for (final asset in [
+              'assets/images/tonight_city.png',
+              'assets/images/owl_emotions.png',
+              NightOwlAvatars.all[1].assetPath,
+            ]) {
+              await precacheImage(AssetImage(asset), context);
+            }
+            // AppAvatar uses a ResizeImage key. Precache the mounted providers,
+            // not just their unresized source, before writing a screenshot.
+            for (final image in tester.widgetList<Image>(find.byType(Image))) {
+              await precacheImage(image.image, context);
+            }
+          });
+          await tester.pumpAndSettle();
+          expect(tester.takeException(), isNull);
+          for (final raw
+              in tester.widgetList<RawImage>(find.byType(RawImage))) {
+            expect(raw.image, isNotNull,
+                reason: 'Mounted image must be decoded before capture: $label');
+          }
+
+          Future<void> save(String suffix) async {
+            if (!const bool.fromEnvironment('CAPTURE_PROFILE_SETTINGS')) return;
+            await tester.runAsync(() async {
+              final boundary = capture.currentContext!.findRenderObject()!
+                  as RenderRepaintBoundary;
+              final image = await boundary.toImage(pixelRatio: 2);
+              try {
+                final data =
+                    await image.toByteData(format: ui.ImageByteFormat.png);
+                await Directory(output).create(recursive: true);
+                await File('$output/$label-$suffix.png')
+                    .writeAsBytes(data!.buffer.asUint8List());
+              } finally {
+                image.dispose();
+              }
+            });
+          }
+
+          await save('overview');
+          if (populated) {
+            expect(find.byType(AuthorizedImage), findsWidgets);
+            await tester.ensureVisible(find.byType(AuthorizedImage).last);
+            await tester.pumpAndSettle();
+            await save('grid');
+          }
+          final target =
+              find.text(settings ? 'Нууцлал, хүсэлтүүд' : 'Хадгалсан');
+          await tester.scrollUntilVisible(target, 160,
+              scrollable: find.byType(Scrollable).first);
+          await tester.ensureVisible(target);
+          if (!settings) await tester.tap(target);
+          await tester.pumpAndSettle();
+          if (!settings) {
+            await tester.ensureVisible(find.text('Постууд үзэх'));
+            await tester.pumpAndSettle();
+          }
+          expect(tester.takeException(), isNull);
+          await save(settings ? 'privacy' : 'saved');
+          await tester.pumpWidget(const SizedBox());
+        });
+      }
+    }
+  }
+}

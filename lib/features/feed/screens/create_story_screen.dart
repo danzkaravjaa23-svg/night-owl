@@ -14,12 +14,12 @@ import '../../../core/theme/app_text_styles.dart';
 import '../../../core/services/supabase_service.dart';
 import '../../../core/widgets/app_avatar.dart';
 import '../../../core/utils/image_uploader.dart';
-import '../../../core/utils/image_compress.dart';
 import '../../../core/constants/stickers.dart';
 import '../../../core/constants/story_music.dart';
 import '../../../core/utils/web_audio.dart';
 import '../../../core/utils/web_media_picker.dart';
 import '../providers/stories_provider.dart';
+import '../../post/services/content_publication.dart';
 import '../widgets/story_video.dart';
 import 'story_camera.dart';
 
@@ -137,7 +137,9 @@ class _DrawPainter extends CustomPainter {
 }
 
 class CreateStoryScreen extends ConsumerStatefulWidget {
-  const CreateStoryScreen({super.key});
+  final ContentPublicationService? publicationService;
+  final Future<Uint8List?> Function()? imagePicker;
+  const CreateStoryScreen({super.key, this.publicationService, this.imagePicker});
   @override
   ConsumerState<CreateStoryScreen> createState() => _CreateStoryScreenState();
 }
@@ -163,6 +165,12 @@ class _CreateStoryScreenState extends ConsumerState<CreateStoryScreen> {
   String? _venueRef;
   String? _venueName;
   final List<Map<String, dynamic>> _mentions = [];
+  late final ContentPublicationService _publisher;
+  late final PublicationSession _session;
+  bool _picking = false;
+  bool _allowExit = false;
+  Map<String, dynamic>? _pendingRow;
+  String _progressLabel = 'Медиа бэлдэж байна…';
   bool _busy = false;
   String? _error;
 
@@ -180,8 +188,49 @@ class _CreateStoryScreenState extends ConsumerState<CreateStoryScreen> {
 
   final _boundaryKey = GlobalKey();
 
+  bool get _canEdit => !_busy && !_picking && _pendingRow == null && _session.isCurrent;
+
+  @override
+  void initState() {
+    super.initState();
+    _publisher = widget.publicationService ?? ContentPublicationService();
+    _session = _publisher.captureSession();
+  }
+
+  Future<void> _requestClose() async {
+    if (_busy || _picking) return;
+    if (_bytes != null) {
+      final discard = await showDialog<bool>(context: context, builder: (ctx) => AlertDialog(
+        title: const Text('Нооргоос гарах уу?'),
+        content: Text(_pendingRow == null
+            ? 'Сонгосон медиа болон засварууд энэ дэлгэцээс гарахад хадгалагдахгүй.'
+            : 'Нийтлэлийн төлөв тодорхойгүй байна. Story-гаа шалгана уу; гарах нь серверийн хүсэлтийг цуцлахгүй.'),
+        actions: [TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Үргэлжлүүлэх')),
+          TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Гарах'))],
+      ));
+      if (!mounted || discard != true) return;
+    }
+    setState(() => _allowExit = true);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) context.canPop() ? context.pop() : context.go('/feed');
+    });
+  }
+
+  Future<void> _acceptImage(Uint8List? bytes) async {
+    if (bytes == null || !mounted || !_session.isCurrent) return;
+    if (bytes.isEmpty || bytes.length > 25 * 1024 * 1024) {
+      throw const PublicationFailure('Зураг хоосон эсвэл 25MB-ээс том байна.');
+    }
+    final codec = await ui.instantiateImageCodec(bytes, targetWidth: 32)
+        .timeout(const Duration(seconds: 10));
+    codec.dispose();
+    if (!mounted || !_session.isCurrent) return;
+    setState(() { _bytes = bytes; _isVideo = false; _error = null; _clearVideoPreview(); });
+  }
+
   @override
   void dispose() {
+    _session.close();
     _previewPlayer.dispose();
     if (_videoPreviewUrl != null) revokeBlobUrl(_videoPreviewUrl!);
     super.dispose();
@@ -201,59 +250,64 @@ class _CreateStoryScreenState extends ConsumerState<CreateStoryScreen> {
 
   // ── Медиа сонгох ──
   Future<void> _pickGallery() async {
+    if (!_canEdit) return;
+    setState(() => _picking = true);
     try {
-      // Веб дээр HTML file input найдвартай; бусад дээр image_picker
-      final b = kIsWeb
-          ? await pickImageBytes()
-          : await ImageUploader.pickBytesFromGallery();
-      if (b != null && mounted) {
-        setState(() { _bytes = b; _isVideo = false; _clearVideoPreview(); });
-      }
-    } catch (e) {
-      if (mounted) _toast('Зураг сонгоход алдаа гарлаа');
+      final bytes = widget.imagePicker != null ? await widget.imagePicker!()
+          : kIsWeb ? await pickImageBytes() : await ImageUploader.pickBytesFromGallery();
+      await _acceptImage(bytes);
+    } catch (error) {
+      if (mounted) _toast(error is PublicationFailure ? error.message : 'Зураг уншиж чадсангүй. Өөр зураг сонгоно уу.');
+    } finally {
+      if (mounted) setState(() => _picking = false);
     }
   }
 
   Future<void> _openCamera() async {
+    if (!_canEdit) return;
+    setState(() => _picking = true);
     try {
-      final r = await openStoryCamera(context); // веб: амьд getUserMedia камер
-      if (!mounted) return;
-      if (r.bytes != null) {
-        setState(() { _bytes = r.bytes; _isVideo = false; _clearVideoPreview(); });
-        return;
-      }
-      // X дарж болиулсан бол file picker гаргахгүй
-      if (!r.unsupported) return;
-      // fallback (веб бус / камер дэмжээгүй)
-      final cam = kIsWeb
-          ? await pickCameraPhoto()
-          : await ImageUploader.pickBytesFromCamera();
-      if (cam != null && mounted) {
-        setState(() { _bytes = cam; _isVideo = false; _clearVideoPreview(); });
-      }
-    } catch (e) {
-      if (mounted) _toast('Камер нээхэд алдаа гарлаа');
+      final result = await openStoryCamera(context);
+      if (!mounted || !_session.isCurrent) return;
+      if (result.bytes != null) { await _acceptImage(result.bytes); return; }
+      if (!result.unsupported) return;
+      final bytes = kIsWeb ? await pickCameraPhoto() : await ImageUploader.pickBytesFromCamera();
+      await _acceptImage(bytes);
+    } catch (_) {
+      if (mounted) _toast('Камер нээж, зураг уншиж чадсангүй. Зөвшөөрлөө шалгана уу.');
+    } finally {
+      if (mounted) setState(() => _picking = false);
     }
   }
 
   Future<void> _pickVideo() async {
+    if (!_canEdit) return;
+    setState(() => _picking = true);
     try {
-      final v = kIsWeb ? await pickVideoBytes() : await ImageUploader.pickVideo();
-      if (v == null || !mounted) return;
-      final mime = _videoContentType(v.ext);
-      // Бодит уртыг metadata-аас хэмжинэ — story үүнээс хойш зөв тоглоно
-      final secs = await videoDurationOf(v.bytes, mime);
-      if (!mounted) return;
+      final video = kIsWeb ? await pickVideoBytes() : await ImageUploader.pickVideo();
+      if (video == null || !mounted || !_session.isCurrent) return;
+      if (video.bytes.isEmpty || video.bytes.length > 50 * 1024 * 1024 ||
+          !const {'mp4', 'mov', 'm4v', 'webm'}.contains(video.ext.toLowerCase())) {
+        throw const PublicationFailure('50MB хүртэл MP4, MOV эсвэл WebM видео сонгоно уу.');
+      }
+      final mime = _videoContentType(video.ext.toLowerCase());
+      final seconds = await videoDurationOf(video.bytes, mime);
+      if (!mounted || !_session.isCurrent) return;
+      if (seconds == null || !seconds.isFinite || seconds <= 0 || seconds > 60) {
+        throw const PublicationFailure('Видео тоглуулах боломжгүй эсвэл 60 секундээс урт байна. Богино видео сонгоно уу.');
+      }
       setState(() {
-        _clearVideoPreview();
-        _bytes = v.bytes; _isVideo = true; _videoExt = v.ext;
-        _videoDurationSecs = (secs ?? 5).clamp(3, 60).round();
-        _videoPreviewUrl = createBlobUrl(v.bytes, mime);
+        _clearVideoPreview(); _error = null;
+        _bytes = video.bytes; _isVideo = true; _videoExt = video.ext.toLowerCase();
+        _videoDurationSecs = seconds.ceil();
+        _videoPreviewUrl = createBlobUrl(video.bytes, mime);
       });
-    } on VideoTooLargeException catch (e) {
-      if (mounted) _toast('Видео хэт том байна (дээд тал нь ${e.limitMb} MB)');
-    } catch (e) {
-      if (mounted) _toast('Видео сонгоход алдаа гарлаа');
+    } on VideoTooLargeException catch (error) {
+      if (mounted) _toast('Видео хэт том байна (дээд тал нь ${error.limitMb} MB)');
+    } catch (error) {
+      if (mounted) _toast(error is PublicationFailure ? error.message : 'Видео сонгоход алдаа гарлаа.');
+    } finally {
+      if (mounted) setState(() => _picking = false);
     }
   }
 
@@ -271,13 +325,15 @@ class _CreateStoryScreenState extends ConsumerState<CreateStoryScreen> {
           fontSize: size, color: c, fontWeight: FontWeight.w700);
       case 2: return GoogleFonts.pacifico(fontSize: size * 0.92, color: c);
       case 3: return GoogleFonts.bebasNeue(
-          fontSize: size * 1.15, color: c, letterSpacing: 1.5);
+          fontSize: size * 1.15, color: c, letterSpacing: 1.5).copyWith(
+            fontFamilyFallback: [GoogleFonts.inter(fontWeight: FontWeight.w700).fontFamily!]);
       default: return GoogleFonts.manrope(
           fontSize: size, color: c, fontWeight: FontWeight.w800);
     }
   }
 
   Future<void> _editText() async {
+    if (!_canEdit) return;
     final ctrl = TextEditingController(text: _text);
     // Диалог/sheet нь энгийн UI гадаргуу — theme-ийг дагана
     // (зөвхөн story канвас өөрөө үргэлж харанхуй)
@@ -300,10 +356,11 @@ class _CreateStoryScreenState extends ConsumerState<CreateStoryScreen> {
         ],
       ),
     );
-    if (res != null && mounted) setState(() => _text = res);
+    if (res != null && mounted && _canEdit) setState(() => _text = res);
   }
 
   Future<void> _pickSticker() async {
+    if (!_canEdit) return;
     final e = await showModalBottomSheet<String>(
       context: context, backgroundColor: AppColors.bgElevated,
       isScrollControlled: true,
@@ -339,19 +396,21 @@ class _CreateStoryScreenState extends ConsumerState<CreateStoryScreen> {
             const SizedBox(height: 12),
           ]))),
     );
-    if (e != null && mounted) {
+    if (e != null && mounted && _canEdit) {
       setState(() => _text = isOwlSticker(e) ? e : '$_text$e');
     }
   }
 
   Future<void> _pickVenue() async {
+    if (!_canEdit) return;
     final v = await pickDiscoveryVenue(context);
-    if (v != null && mounted) {
+    if (v != null && mounted && _canEdit) {
       setState(() { _venueId = v['venue_id'] as String?; _venueRef=v['ref'] as String; _venueName = v['name'] as String; });
     }
   }
 
   Future<void> _pickMentions() async {
+    if (!_canEdit) return;
     final u = await showModalBottomSheet<Map<String, dynamic>>(
       context: context, backgroundColor: AppColors.bgElevated,
       isScrollControlled: true,
@@ -359,13 +418,14 @@ class _CreateStoryScreenState extends ConsumerState<CreateStoryScreen> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (_) => const _PickerSheet(mode: _PickerMode.user),
     );
-    if (u != null && mounted && !_mentions.any((m) => m['id'] == u['id'])) {
+    if (u != null && mounted && _canEdit && !_mentions.any((m) => m['id'] == u['id'])) {
       setState(() => _mentions.add(u));
     }
   }
 
   // Хөгжмийн цуглуулга — дуу сонгох
   Future<void> _musicSheet() async {
+    if (!_canEdit) return;
     final picked = await showModalBottomSheet<int>(
       context: context, backgroundColor: AppColors.bgElevated,
       isScrollControlled: true,
@@ -442,7 +502,7 @@ class _CreateStoryScreenState extends ConsumerState<CreateStoryScreen> {
             ),
           ]))),
     );
-    if (picked == null || !mounted) return;
+    if (picked == null || !mounted || !_canEdit) return;
     if (picked < 0) {
       _previewPlayer.stop();
       setState(() {
@@ -454,6 +514,7 @@ class _CreateStoryScreenState extends ConsumerState<CreateStoryScreen> {
 
   // Сонгосон дууг давталттайгаар тоглуулж сонсгоно
   void _previewSong(StorySong s) {
+    if (!_canEdit) return;
     _previewPlayer.play(s.url, loop: true);
     setState(() {
       _songTitle = s.title; _songArtist = s.artist; _songUrl = s.url;
@@ -461,81 +522,79 @@ class _CreateStoryScreenState extends ConsumerState<CreateStoryScreen> {
   }
 
   Future<void> _share() async {
-    if (_bytes == null || _busy) return;
-    // Зурах горимоос гарч bake-д draw overlay нөлөөлөхгүй болгоно
-    if (_drawMode) setState(() => _drawMode = false);
-    setState(() { _busy = true; _error = null; });
-
+    if (_bytes == null || _busy || _picking) return;
+    if (!_session.isCurrent) {
+      setState(() => _error = 'Нэвтрэх хаяг өөрчлөгдсөн байна. Нооргийг өөр хаягаар нийтлэхгүй.');
+      return;
+    }
+    final bytes = _bytes!;
+    final video = _isVideo;
+    final caption = _text.trim();
+    final metadata = <String, dynamic>{
+      'user_id': _session.ownerId, 'media_type': video ? 'video' : 'image',
+      'duration': video ? _videoDurationSecs : 5,
+      if (_venueId != null) 'venue_id': _venueId,
+      if (_venueRef != null) 'venue_ref': _venueRef,
+      if (_mentions.isNotEmpty) 'mentions': _mentions.map((m) => m['id'] as String).toList(growable: false),
+      if (_songUrl != null) 'music_url': _songUrl,
+      if (_songTitle != null) 'music_title': _songTitle,
+      if (_songArtist != null) 'music_artist': _songArtist,
+    };
+    setState(() { _drawMode = false; _busy = true; _error = null; _progressLabel = 'Медиа бэлдэж байна…'; });
     try {
-      String? url;
-      String? bakedCaption; // видеоны хувьд caption-аар хадгална
-
-      if (_isVideo) {
-        url = await ImageUploader.uploadStory(_bytes!,
-            ext: _videoExt, contentType: _videoContentType(_videoExt))
-            .timeout(const Duration(seconds: 60));
-        bakedCaption = _text.trim().isEmpty ? null : _text.trim();
-      } else {
-        // Зураг — текст/зураас/filter-ийг зураг руу bake хийх (RepaintBoundary)
-        // Хөгжмийн pill bake-д ороогүй — viewer DB-ээс харуулна
-        Uint8List out = _bytes!;
-        final hasOverlay = _text.trim().isNotEmpty
-            || _strokes.isNotEmpty || _filter != 0;
-        if (hasOverlay) {
-          try {
-            // Overlay-ууд (зураас гэх мэт) бүрэн зурагдаж амжихыг хүлээнэ
-            await Future.delayed(const Duration(milliseconds: 60));
-            final boundary = _boundaryKey.currentContext!.findRenderObject()
-                as RenderRepaintBoundary;
-            final image = await boundary
-                .toImage(pixelRatio: 2.0)
-                .timeout(const Duration(seconds: 8));
-            final bd = await image.toByteData(format: ui.ImageByteFormat.png);
-            image.dispose();
-            if (bd != null) { out = bd.buffer.asUint8List(); }
-          } catch (_) {
-            bakedCaption = _text.trim(); // bake амжилтгүй бол caption-аар
+      if (_pendingRow == null) {
+        var output = bytes;
+        var ext = _videoExt;
+        var mime = _videoContentType(ext);
+        if (!video) {
+          final hasOverlay = caption.isNotEmpty || _strokes.isNotEmpty || _filter != 0;
+          if (hasOverlay) {
+            await WidgetsBinding.instance.endOfFrame;
+            await GoogleFonts.pendingFonts().timeout(const Duration(seconds: 10));
+            _session.check();
+            if (!mounted) return;
+            final boundary = _boundaryKey.currentContext?.findRenderObject();
+            if (boundary is! RenderRepaintBoundary) {
+              throw const PublicationFailure('Засвартай зургийг бэлдэж чадсангүй. Ноорог хэвээр байна.');
+            }
+            final image = await boundary.toImage(pixelRatio: 2).timeout(const Duration(seconds: 8));
+            try {
+              final data = await image.toByteData(format: ui.ImageByteFormat.png);
+              if (data == null) throw const PublicationFailure('Засвартай зургийг бэлдэж чадсангүй. Дахин оролдоно уу.');
+              output = data.buffer.asUint8List();
+            } finally { image.dispose(); }
           }
+          output = await _publisher.prepareStoryImage(output);
+          final type = ContentPublicationService.imageType(output);
+          ext = type.ext; mime = type.mime;
         }
-        // 500к scale — story зургийг JPEG болгож багасгана (PNG bake том байдаг)
-        out = await compressToJpeg(out);
-        // Native дээр compress байхгүй — PNG bake хэвээр ирвэл PNG гэж хадгална
-        final isPng = out.length >= 4 && out[0] == 0x89 && out[1] == 0x50
-            && out[2] == 0x4E && out[3] == 0x47;
-        url = await ImageUploader.uploadStory(out,
-            ext: isPng ? 'png' : 'jpg',
-            contentType: isPng ? 'image/png' : 'image/jpeg')
-            .timeout(const Duration(seconds: 60));
+        _session.check();
+        if (!mounted) return;
+        setState(() => _progressLabel = 'Медиа илгээж байна…');
+        final id = ContentPublicationService.newId();
+        final url = await _publisher.uploadStory(_session, output,
+            path: '${_session.ownerId}/$id.$ext', contentType: mime);
+        _session.check();
+        if (!mounted) return;
+        _pendingRow = Map.unmodifiable({...metadata, 'id': id, 'media_url': url,
+          'caption': video && caption.isNotEmpty ? caption : null});
       }
-
-      if (url == null) {
-        if (mounted) setState(() { _busy = false; _error = 'Upload амжилтгүй'; });
-        return;
-      }
-      final err = await StoryService.createStory(
-        mediaUrl: url,
-        mediaType: _isVideo ? 'video' : 'image',
-        caption: bakedCaption,
-        // Видео бодит уртаараа тоглоно (5с дээр тайрахгүй)
-        duration: _isVideo ? _videoDurationSecs : 5,
-        venueId: _venueId,
-        venueRef: _venueRef,
-        mentions: _mentions.map((m) => m['id'] as String).toList(),
-        musicUrl: _songUrl,
-        musicTitle: _songTitle,
-        musicArtist: _songArtist,
-      );
+      setState(() => _progressLabel = 'Нийтлэлийг баталгаажуулж байна…');
+      await _publisher.publish(_session, 'stories', _pendingRow!);
+      if (!mounted || !_session.isCurrent) return;
       _previewPlayer.stop();
-      if (!mounted) return;
-      if (err != null) { setState(() { _busy = false; _error = err; }); return; }
       ref.invalidate(storiesProvider);
-      setState(() => _busy = false);
-      // Шууд URL-ээр орж ирсэн бол pop хийх юмгүй — feed рүү
-      if (context.canPop()) { context.pop(); } else { context.go('/feed'); }
-    } catch (e) {
+      setState(() => _allowExit = true);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _session.isCurrent) context.canPop() ? context.pop() : context.go('/feed');
+      });
+    } catch (error) {
       if (mounted) {
-        setState(() { _busy = false; _error = 'Алдаа гарлаа. Дахин оролдоно уу.'; });
+        setState(() => _error = error is PublicationFailure ? error.message
+            : 'Нийтэлж чадсангүй. Засварууд хэвээр байна; дахин оролдоно уу.');
       }
+    } finally {
+      if (mounted) setState(() => _busy = false);
     }
   }
 
@@ -548,7 +607,15 @@ class _CreateStoryScreenState extends ConsumerState<CreateStoryScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (_bytes == null) return _pickerScreen();
+    return PopScope(
+      canPop: _allowExit || (_bytes == null && !_busy && !_picking),
+      onPopInvokedWithResult: (didPop, result) { if (!didPop) _requestClose(); },
+      child: AbsorbPointer(absorbing: _busy || _picking,
+        child: _bytes == null ? _pickerScreen() : _editorScreen()),
+    );
+  }
+
+  Widget _editorScreen() {
 
     final hasText = _text.trim().isNotEmpty;
     return Scaffold(
@@ -589,11 +656,11 @@ class _CreateStoryScreenState extends ConsumerState<CreateStoryScreen> {
                       left: pos.dx, top: pos.dy,
                       child: GestureDetector(
                         behavior: HitTestBehavior.opaque,
-                        onPanUpdate: _drawMode ? null : (d) => setState(() {
+                        onPanUpdate: (!_canEdit || _drawMode) ? null : (d) => setState(() {
                           final cur = _textPos ?? Offset(w * 0.1, h * 0.42);
                           _textPos = cur + d.delta;
                         }),
-                        onTap: _drawMode ? null : _editText,
+                        onTap: (!_canEdit || _drawMode) ? null : _editText,
                         child: SizedBox(width: w * 0.8, child: Text(
                           _text, textAlign: TextAlign.center,
                           style: _textStyle(30).copyWith(shadows: const [
@@ -610,11 +677,11 @@ class _CreateStoryScreenState extends ConsumerState<CreateStoryScreen> {
                   top: (_songPos ?? Offset(w * 0.16, h * 0.8)).dy,
                   child: GestureDetector(
                     behavior: HitTestBehavior.opaque,
-                    onPanUpdate: _drawMode ? null : (d) => setState(() {
+                    onPanUpdate: (!_canEdit || _drawMode) ? null : (d) => setState(() {
                       final cur = _songPos ?? Offset(w * 0.16, h * 0.8);
                       _songPos = cur + d.delta;
                     }),
-                    onTap: _drawMode ? null : _musicSheet,
+                    onTap: (!_canEdit || _drawMode) ? null : _musicSheet,
                     child: Container(
                       padding: const EdgeInsets.fromLTRB(10, 7, 14, 7),
                       decoration: BoxDecoration(
@@ -668,9 +735,7 @@ class _CreateStoryScreenState extends ConsumerState<CreateStoryScreen> {
         // Дээд: хаах (шууд URL-ээр орсон бол feed рүү)
         SafeArea(child: Align(alignment: Alignment.topLeft, child: Padding(
           padding: const EdgeInsets.all(8),
-          child: _circleBtn(Icons.close, () {
-            if (context.canPop()) { context.pop(); } else { context.go('/feed'); }
-          })))),
+          child: _circleBtn(Icons.close, _requestClose)))),
 
         // Баруун toolbar
         SafeArea(child: Align(alignment: Alignment.topRight, child: Padding(
@@ -802,6 +867,8 @@ class _CreateStoryScreenState extends ConsumerState<CreateStoryScreen> {
                         (m['username'] as String).replaceAll('@', ''),
                         () => setState(() => _mentions.remove(m)))),
                     ])),
+              if (_busy) Padding(padding: const EdgeInsets.only(bottom: 8),
+                child: Text(_progressLabel, style: AppTextStyles.bodyXs.copyWith(color: Colors.white))),
               if (_error != null)
                 Padding(padding: const EdgeInsets.only(bottom: 8),
                   child: Text(_error!, style: AppTextStyles.bodyXs.copyWith(color: AppColors.error))),
@@ -819,14 +886,14 @@ class _CreateStoryScreenState extends ConsumerState<CreateStoryScreen> {
                     ? const SizedBox(width: 22, height: 22, child:
                         CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
                     : Row(mainAxisSize: MainAxisSize.min, children: [
-                        Text('Story-д хуваалцах',
+                        Text(_pendingRow == null ? 'Story-д хуваалцах' : 'Дахин шалгах',
                           style: AppTextStyles.btn.copyWith(color: Colors.white)),
                         const SizedBox(width: 8),
                         const Icon(Icons.send_rounded, color: Colors.white, size: 18),
                       ]))),
               ),
               const SizedBox(height: 6),
-              Text('24 цагийн дараа автоматаар алга болно',
+              Text('24 цагийн дараа харагдахаа болино',
                 style: AppTextStyles.bodyXs.copyWith(color: Colors.white54)),
             ]))),
         ),
@@ -840,27 +907,27 @@ class _CreateStoryScreenState extends ConsumerState<CreateStoryScreen> {
       backgroundColor: Colors.black, elevation: 0,
       // Үргэлж харанхуй — light горимд ч статус бар цайвар дүрстэй
       systemOverlayStyle: SystemUiOverlayStyle.light,
-      leading: IconButton(onPressed: () {
-        if (context.canPop()) { context.pop(); } else { context.go('/feed'); }
-      },
+      leading: IconButton(onPressed: _requestClose,
         icon: const Icon(Icons.close, color: Colors.white)),
       title: Text('Шинэ story', style: AppTextStyles.labelLg.copyWith(color: Colors.white)),
     ),
     body: Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
       const Icon(Icons.auto_awesome, color: Colors.white38, size: 64),
       const SizedBox(height: 20),
-      Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+      Wrap(alignment: WrapAlignment.center, spacing: 12, runSpacing: 12, children: [
         _bigPick(Icons.photo_library_outlined, 'Зургийн сан', _pickGallery),
-        const SizedBox(width: 12),
         _bigPick(Icons.camera_alt_outlined, 'Камер', _openCamera),
-        const SizedBox(width: 12),
         _bigPick(Icons.videocam_outlined, 'Видео', _pickVideo),
       ]),
+      const SizedBox(height: 14),
+      if (_picking) const CircularProgressIndicator(color: Colors.white),
+      const Padding(padding: EdgeInsets.symmetric(horizontal: 20),
+        child: Text('Зураг 25MB · Видео 50MB / 60 секунд хүртэл', textAlign: TextAlign.center, style: TextStyle(color: Colors.white60))),
     ])),
   );
 
   Widget _bigPick(IconData icon, String label, VoidCallback onTap) =>
-      _Pressable(onTap: onTap, child: Container(
+      _Pressable(onTap: _canEdit ? onTap : null, child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
         decoration: BoxDecoration(
           color: AppColors.bgSurfaceDark, borderRadius: BorderRadius.circular(14)),
@@ -881,7 +948,7 @@ class _CreateStoryScreenState extends ConsumerState<CreateStoryScreen> {
 
   Widget _toolBtnChild(Widget child, VoidCallback onTap, {bool active = false}) =>
       Padding(padding: const EdgeInsets.only(bottom: 14),
-        child: _Pressable(onTap: onTap, child: AnimatedContainer(
+        child: _Pressable(onTap: _canEdit ? onTap : null, child: AnimatedContainer(
           duration: const Duration(milliseconds: 180),
           width: 42, height: 42, alignment: Alignment.center,
           decoration: BoxDecoration(shape: BoxShape.circle,
@@ -896,7 +963,7 @@ class _CreateStoryScreenState extends ConsumerState<CreateStoryScreen> {
       const SizedBox(width: 4),
       Text(label, style: const TextStyle(color: Colors.white, fontSize: 12)),
       const SizedBox(width: 2),
-      _Pressable(onTap: onClear,
+      _Pressable(onTap: _canEdit ? onClear : null,
         child: const Padding(padding: EdgeInsets.all(3),
           child: Icon(Icons.close, color: Colors.white60, size: 14))),
     ]));

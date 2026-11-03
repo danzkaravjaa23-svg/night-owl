@@ -1,0 +1,267 @@
+// Synthetic UI fixtures only. Copied into test/ temporarily by capture_social_ui.sh.
+import 'dart:convert';
+import 'dart:io';
+import 'dart:ui' as ui;
+import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:night_owl_ub/core/theme/app_colors.dart';
+import 'package:night_owl_ub/core/theme/app_fonts.dart';
+import 'package:night_owl_ub/core/theme/app_theme.dart';
+import 'package:night_owl_ub/core/theme/theme_provider.dart';
+import 'package:night_owl_ub/features/dm/screens/dm_list_screen.dart';
+import 'package:night_owl_ub/features/search/screens/search_screen.dart';
+import 'package:night_owl_ub/features/notifications/screens/notifications_screen.dart';
+
+const owner = '10000000-0000-4000-8000-000000000001';
+const friends = [
+  '10000000-0000-4000-8000-000000000002',
+  '10000000-0000-4000-8000-000000000003',
+  '10000000-0000-4000-8000-000000000004',
+];
+const names = ['anuka', 'temuulen', 'saruul'];
+const group = '10000000-0000-4000-8000-000000000005';
+String ago(int minutes) => DateTime.now()
+    .toUtc()
+    .subtract(Duration(minutes: minutes))
+    .toIso8601String();
+Map<String, dynamic> person(int i) => {
+      'id': friends[i],
+      'username': names[i],
+      'full_name': ['Анужин', 'Тэмүүлэн', 'Саруул'][i],
+      'avatar_url': null,
+      'is_verified': i == 0,
+    };
+http.Response reply(http.Request request, Object? data) =>
+    http.Response(jsonEncode(data), 200,
+        request: request,
+        headers: {'content-type': 'application/json; charset=utf-8'});
+
+class FixtureApp extends ConsumerWidget {
+  final GoRouter router;
+  final GlobalKey capture;
+  final double scale;
+  const FixtureApp(this.router, this.capture, this.scale, {super.key});
+  @override
+  Widget build(BuildContext context, WidgetRef ref) => MaterialApp.router(
+        debugShowCheckedModeBanner: false,
+        routerConfig: router,
+        theme: AppTheme.light,
+        darkTheme: AppTheme.dark,
+        themeMode: ref.watch(themeModeProvider),
+        builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(context).copyWith(
+                disableAnimations: true, textScaler: TextScaler.linear(scale)),
+            child: RepaintBoundary(key: capture, child: child!)),
+      );
+}
+
+void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+  setUpAll(() async {
+    final icons = FontLoader('MaterialIcons')
+      ..addFont(rootBundle.load('fonts/MaterialIcons-Regular.otf'));
+    await icons.load();
+  });
+  setUp(() async {
+    SharedPreferences.setMockInitialValues({});
+    AppFonts.configure();
+    await Supabase.initialize(
+        url: 'https://fixture.example.test',
+        anonKey: 'fixture-public-key',
+        debug: false,
+        authOptions: const FlutterAuthClientOptions(
+            autoRefreshToken: false,
+            detectSessionInUri: false,
+            localStorage: EmptyLocalStorage()),
+        httpClient: MockClient((request) async {
+          final path = request.url.path;
+          if (path == '/auth/v1/token') {
+            final payload = base64Url
+                .encode(utf8.encode(jsonEncode({
+                  'sub': owner,
+                  'exp': DateTime.now().millisecondsSinceEpoch ~/ 1000 + 3600
+                })))
+                .replaceAll('=', '');
+            return reply(request, {
+              'access_token': 'fixture.$payload.fixture',
+              'refresh_token': 'fixture-refresh',
+              'token_type': 'bearer',
+              'expires_in': 3600,
+              'user': {
+                'id': owner,
+                'aud': 'authenticated',
+                'created_at': ago(100)
+              }
+            });
+          }
+          expect(request.method, anyOf('GET', 'POST'),
+              reason: 'Capture never marks rows read or writes data');
+          if (path.endsWith('/rpc/dm_conversations'))
+            return reply(request, [
+              for (var i = 0; i < 3; i++)
+                {
+                  'partner_id': friends[i],
+                  'partner_username': names[i],
+                  'partner_avatar_url': null,
+                  'partner_last_seen_at': i == 0 ? ago(0) : null,
+                  'last_body': [
+                    'Орой 8-д уулзах уу?',
+                    'Тэгье, удахгүй уулзъя!',
+                    'Шинэ газар олсон шүү.'
+                  ][i],
+                  'last_at': ago([4, 26, 75][i]),
+                  'last_sender_id': i == 1 ? owner : friends[i],
+                  'unread_count': i == 0 ? 3 : 0,
+                }
+            ]);
+          if (path.endsWith('/group_members'))
+            return reply(request, [
+              {
+                'group_id': group,
+                'group_chats': {
+                  'id': group,
+                  'name': 'Баасан гарагийн төлөвлөгөө',
+                  'created_by': owner,
+                  'created_at': ago(90)
+                }
+              }
+            ]);
+          if (path.endsWith('/group_messages'))
+            return reply(request, [
+              {'body': 'Энэ удаа jazz сонсох уу?', 'created_at': ago(12)}
+            ]);
+          if (path.endsWith('/notifications'))
+            return reply(request, [
+              for (var i = 0; i < 4; i++)
+                {
+                  'id': 'notice-$i',
+                  'type': ['like', 'comment', 'follow', 'mention'][i],
+                  'is_read': i > 1,
+                  'created_at': ago([8, 35, 110, 1700][i]),
+                  'message': [
+                    'таны нийтлэлд таалагдлаа.',
+                    '“Ямар гоё газар вэ! Дараа хамт очъё.” гэж сэтгэгдэл бичлээ.',
+                    'таныг дагаж эхэллээ.',
+                    'таныг сэтгэгдэлд дурдлаа.'
+                  ][i],
+                  'profiles': person(i % 3),
+                }
+            ]);
+          if (path.endsWith('/profiles')) {
+            if (request.url.queryParameters['id'] == 'eq.$owner') {
+              return reply(request,
+                  {'id': owner, 'username': 'oyu', 'avatar_url': null});
+            }
+            return reply(request, [for (var i = 0; i < 3; i++) person(i)]);
+          }
+          if (path.endsWith('/notes'))
+            return reply(request, [
+              for (var i = 0; i < 2; i++)
+                {
+                  'user_id': friends[i],
+                  'text': ['Орой хотод', 'Live хөгжим сонсоё'][i],
+                  'venue_id': null,
+                  'created_at': ago(i * 20 + 5)
+                }
+            ]);
+          if (path.endsWith('/venue_catalog'))
+            return reply(request, [
+              {
+                'ref': 'fixture-jazz',
+                'name': 'Jazz Corner',
+                'district': 'Сүхбаатар дүүрэг'
+              },
+              {
+                'ref': 'fixture-rooftop',
+                'name': 'Rooftop Lounge',
+                'district': 'Хан-Уул дүүрэг'
+              },
+            ]);
+          return reply(request, []);
+        }));
+    await Supabase.instance.client.auth.signInWithPassword(
+        email: 'fixture@example.test', password: 'fixture-only');
+  });
+  tearDown(() async {
+    await Supabase.instance.dispose();
+    AppColors.isDarkMode = true;
+  });
+
+  for (final mode in [ThemeMode.dark, ThemeMode.light]) {
+    for (final screen in [
+      'inbox',
+      'notifications',
+      'search-results',
+      'search-discover'
+    ]) {
+      for (final narrow in [false, if (screen != 'search-discover') true]) {
+        testWidgets('$screen ${mode.name} ${narrow ? '320-large-text' : '390'}',
+            (tester) async {
+          SharedPreferences.setMockInitialValues({'theme_mode': mode.name});
+          tester.view.devicePixelRatio = 1;
+          tester.view.physicalSize =
+              Size(narrow ? 320 : 390, narrow ? 780 : 844);
+          addTearDown(tester.view.resetPhysicalSize);
+          addTearDown(tester.view.resetDevicePixelRatio);
+          final capture = GlobalKey();
+          final router = GoRouter(routes: [
+            GoRoute(
+                path: '/',
+                builder: (_, __) => switch (screen) {
+                      'inbox' => const DmListScreen(),
+                      'notifications' => const NotificationsScreen(),
+                      _ => const SearchScreen(),
+                    })
+          ]);
+          addTearDown(router.dispose);
+          await tester.pumpWidget(ProviderScope(
+              child: FixtureApp(router, capture, narrow ? 1.5 : 1)));
+          await tester.runAsync(() => GoogleFonts.pendingFonts());
+          await tester.pumpAndSettle();
+          if (screen == 'search-results') {
+            await tester.enterText(find.byType(TextField).first, 'Jazz');
+            await tester.pump(const Duration(milliseconds: 350));
+            await tester.pumpAndSettle();
+            expect(find.text('Jazz Corner'), findsOneWidget);
+          }
+          await tester.runAsync(() async {
+            final context = tester.element(find.byType(Scaffold).first);
+            for (final avatar in tester.widgetList<Image>(find.byType(Image))) {
+              await precacheImage(avatar.image, context);
+            }
+          });
+          FocusManager.instance.primaryFocus?.unfocus();
+          await tester.pumpAndSettle();
+          expect(tester.takeException(), isNull);
+          if (const bool.fromEnvironment('CAPTURE_SOCIAL_UI')) {
+            await tester.runAsync(() async {
+              final boundary = capture.currentContext!.findRenderObject()!
+                  as RenderRepaintBoundary;
+              final image = await boundary.toImage(pixelRatio: 2);
+              final bytes =
+                  await image.toByteData(format: ui.ImageByteFormat.png);
+              final directory =
+                  Directory('build/audit/2026-11-03/visual-refresh');
+              await directory.create(recursive: true);
+              await File(
+                      '${directory.path}/$screen-${mode.name}${narrow ? '-320-large-text' : ''}.png')
+                  .writeAsBytes(bytes!.buffer.asUint8List());
+              image.dispose();
+            });
+          }
+          await tester.pumpWidget(const SizedBox());
+          await tester.pumpAndSettle();
+        });
+      }
+    }
+  }
+}

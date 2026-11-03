@@ -27,7 +27,8 @@ class _LoginScreenState extends State<LoginScreen> {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Нууц үг амжилттай шинэчлэгдлээ. Шинэ нууц үгээрээ нэвтэрнэ үү.'),
+          content: Text(
+              'Нууц үг амжилттай шинэчлэгдлээ. Шинэ нууц үгээрээ нэвтэрнэ үү.'),
           backgroundColor: Color(0xFF1E8E5A),
           duration: Duration(seconds: 6),
         ));
@@ -36,13 +37,15 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   final _emailCtrl = TextEditingController();
-  final _pwCtrl    = TextEditingController();
-  final _formKey   = GlobalKey<FormState>();
+  final _pwCtrl = TextEditingController();
+  final _formKey = GlobalKey<FormState>();
   // Гар дээрх "Дараах" товч талбараас талбар руу шилжүүлнэ
-  final _pwFocus   = FocusNode();
-  bool _showPw     = false;
-  bool _loading    = false;
-  bool _gLoading   = false;
+  final _pwFocus = FocusNode();
+  bool _showPw = false;
+  bool _loading = false;
+  bool _gLoading = false;
+  bool _aLoading = false;
+  bool get _authBusy => _loading || _gLoading || _aLoading;
   String? _error;
 
   @override
@@ -55,6 +58,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   // Back — шууд URL-ээр орж ирсэн үед pop хийх юмгүй тул landing руу
   void _back() {
+    if (_authBusy) return;
     if (context.canPop()) {
       context.pop();
     } else {
@@ -63,11 +67,14 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _signIn() async {
-    final destination=AuthReturn.destination;
+    final destination = AuthReturn.destination;
     // Enter дарж давхар илгээхээс сэргийлнэ
-    if (_loading) return;
+    if (_authBusy) return;
     if (!_formKey.currentState!.validate()) return;
-    setState(() { _loading = true; _error = null; });
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
 
     try {
       // Хуучин session-ийг бүрэн цэвэрлэж байж шинээр нэвтрэх
@@ -81,7 +88,8 @@ class _LoginScreenState extends State<LoginScreen> {
       );
       if (!mounted) return;
       if (res.session == null) {
-        setState(() => _error = 'Нэвтрэх боломжгүй. И-мэйл баталгаажаагүй байж магадгүй.');
+        setState(() =>
+            _error = 'Нэвтрэх боломжгүй. И-мэйл баталгаажаагүй байж магадгүй.');
         return;
       }
       context.go(destination);
@@ -101,7 +109,10 @@ class _LoginScreenState extends State<LoginScreen> {
         }
       });
     } catch (e) {
-      if (mounted) setState(() => _error = 'Нэвтрэхэд алдаа гарлаа. Сүлжээгээ шалгана уу.');
+      if (mounted) {
+        setState(
+            () => _error = 'Нэвтрэхэд алдаа гарлаа. Сүлжээгээ шалгана уу.');
+      }
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -109,12 +120,17 @@ class _LoginScreenState extends State<LoginScreen> {
 
   // Google OAuth — web дээр бүтэн хуудас redirect хийнэ
   Future<void> _googleSignIn() async {
-    setState(() { _gLoading = true; _error = null; });
+    if (_authBusy) return;
+    setState(() {
+      _gLoading = true;
+      _error = null;
+    });
     try {
       await signInWithGoogle();
     } catch (_) {
       if (mounted) {
-        setState(() => _error = 'Google-ээр нэвтрэхэд алдаа гарлаа. Дахин оролдоно уу.');
+        setState(() =>
+            _error = 'Google-ээр нэвтрэхэд алдаа гарлаа. Дахин оролдоно уу.');
       }
     } finally {
       if (mounted) setState(() => _gLoading = false);
@@ -138,8 +154,9 @@ class _LoginScreenState extends State<LoginScreen> {
                   child: Row(children: [
                     GlassBack(onTap: _back),
                     const Spacer(),
-                    Text('NIGHT OWL', style: AppTextStyles.monoSm.copyWith(
-                      letterSpacing: 3, color: AppColors.textTertiary)),
+                    Text('NIGHT OWL',
+                        style: AppTextStyles.monoSm.copyWith(
+                            letterSpacing: 3, color: AppColors.textTertiary)),
                     const Spacer(),
                     const SizedBox(width: 40),
                   ]),
@@ -152,9 +169,9 @@ class _LoginScreenState extends State<LoginScreen> {
                     Text('Тавтай морил', style: AppTextStyles.h1),
                     const SizedBox(height: 6),
                     Text('Бүртгэлтэй имэйл, нууц үгээрээ нэвтэрнэ үү.',
-                      textAlign: TextAlign.center,
-                      style: AppTextStyles.bodyMd.copyWith(
-                        color: AppColors.textSecondary)),
+                        textAlign: TextAlign.center,
+                        style: AppTextStyles.bodyMd
+                            .copyWith(color: AppColors.textSecondary)),
                   ]),
                 ),
                 const SizedBox(height: 22),
@@ -178,23 +195,32 @@ class _LoginScreenState extends State<LoginScreen> {
                                     AuthEntrance(
                                       index: 2,
                                       child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
                                         children: [
                                           const FieldLabel('И-мэйл'),
                                           const SizedBox(height: 8),
                                           TextFormField(
+                                            enabled: !_authBusy,
                                             controller: _emailCtrl,
-                                            keyboardType: TextInputType.emailAddress,
-                                            autofillHints: const [AutofillHints.username, AutofillHints.email],
+                                            keyboardType:
+                                                TextInputType.emailAddress,
+                                            autofillHints: const [
+                                              AutofillHints.username,
+                                              AutofillHints.email
+                                            ],
                                             style: authFieldStyle,
-                                            textInputAction: TextInputAction.next,
+                                            textInputAction:
+                                                TextInputAction.next,
                                             onFieldSubmitted: (_) =>
                                                 _pwFocus.requestFocus(),
                                             decoration: authInputDec(
-                                              hint: 'name@email.com',
-                                              icon: Icons.mail_outline_rounded),
-                                            validator: (v) =>
-                                                v!.contains('@') ? null : 'И-мэйл хаяг буруу байна',
+                                                hint: 'name@email.com',
+                                                icon:
+                                                    Icons.mail_outline_rounded),
+                                            validator: (v) => v!.contains('@')
+                                                ? null
+                                                : 'И-мэйл хаяг буруу байна',
                                           ),
                                         ],
                                       ),
@@ -205,33 +231,45 @@ class _LoginScreenState extends State<LoginScreen> {
                                     AuthEntrance(
                                       index: 3,
                                       child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
                                         children: [
                                           const FieldLabel('Нууц үг'),
                                           const SizedBox(height: 8),
                                           TextFormField(
+                                            enabled: !_authBusy,
                                             controller: _pwCtrl,
                                             focusNode: _pwFocus,
                                             obscureText: !_showPw,
-                                            autofillHints: const [AutofillHints.password],
+                                            autofillHints: const [
+                                              AutofillHints.password
+                                            ],
                                             style: authFieldStyle,
-                                            textInputAction: TextInputAction.done,
+                                            textInputAction:
+                                                TextInputAction.done,
                                             onFieldSubmitted: (_) => _signIn(),
                                             decoration: authInputDec(
                                               hint: '••••••••',
                                               icon: Icons.lock_outline_rounded,
                                               suffix: IconButton(
-                                                onPressed: () => setState(() => _showPw = !_showPw),
+                                                onPressed: () => setState(
+                                                    () => _showPw = !_showPw),
                                                 icon: Icon(
-                                                  _showPw ? Icons.visibility_off_outlined : Icons.visibility_outlined,
-                                                  color: AppColors.textTertiary, size: 20,
+                                                  _showPw
+                                                      ? Icons
+                                                          .visibility_off_outlined
+                                                      : Icons
+                                                          .visibility_outlined,
+                                                  color: AppColors.textTertiary,
+                                                  size: 20,
                                                 ),
                                               ),
                                             ),
                                             // Нэвтрэхэд зөвхөн хоосон эсэхийг шалгана —
                                             // хуучин богино нууц үгтэй хэрэглэгчийг түгжихгүй
-                                            validator: (v) =>
-                                                v!.isNotEmpty ? null : 'Нууц үгээ оруулна уу',
+                                            validator: (v) => v!.isNotEmpty
+                                                ? null
+                                                : 'Нууц үгээ оруулна уу',
                                           ),
                                         ],
                                       ),
@@ -249,16 +287,21 @@ class _LoginScreenState extends State<LoginScreen> {
                                         alignment: Alignment.centerRight,
                                         // Хүрэх талбай 44px-ээс багагүй, уншигдах хэмжээ
                                         child: TextButton(
-                                          onPressed: () => context.push(AppRoutes.forgotPassword),
+                                          onPressed: _authBusy
+                                              ? null
+                                              : () => context.push(
+                                                  AppRoutes.forgotPassword),
                                           style: TextButton.styleFrom(
                                             minimumSize: const Size(0, 44),
                                             padding: const EdgeInsets.symmetric(
-                                              horizontal: 12, vertical: 12),
+                                                horizontal: 12, vertical: 12),
                                           ),
                                           child: Text('Нууц үг мартсан уу?',
-                                            style: AppTextStyles.bodySm.copyWith(
-                                              color: AppColors.neonCyan,
-                                              fontWeight: FontWeight.w600)),
+                                              style: AppTextStyles.bodySm
+                                                  .copyWith(
+                                                      color: AppColors.neonCyan,
+                                                      fontWeight:
+                                                          FontWeight.w600)),
                                         ),
                                       ),
                                     ),
@@ -267,17 +310,22 @@ class _LoginScreenState extends State<LoginScreen> {
                                     AuthEntrance(
                                       index: 5,
                                       child: GradientButton(
-                                        label: _loading ? 'Нэвтрэж байна...' : 'Нэвтрэх',
-                                        onPressed: _loading ? null : _signIn,
+                                        label: _loading
+                                            ? 'Нэвтрэж байна...'
+                                            : 'Нэвтрэх',
+                                        onPressed: _authBusy ? null : _signIn,
                                         borderRadius: 999,
                                         trailing: _loading
                                             ? const BtnSpinner()
-                                            : const Icon(Icons.arrow_forward_rounded,
-                                                color: Colors.white, size: 19),
+                                            : const Icon(
+                                                Icons.arrow_forward_rounded,
+                                                color: Colors.white,
+                                                size: 19),
                                       ),
                                     ),
                                     const SizedBox(height: 20),
-                                    const AuthEntrance(index: 6, child: OrDivider()),
+                                    const AuthEntrance(
+                                        index: 6, child: OrDivider()),
                                     const SizedBox(height: 20),
                                     AuthEntrance(
                                       index: 7,
@@ -288,10 +336,16 @@ class _LoginScreenState extends State<LoginScreen> {
                                         leading: _gLoading
                                             ? const BtnSpinner()
                                             : const GoogleMark(),
-                                        onTap: _gLoading ? null : _googleSignIn,
+                                        onTap: _authBusy ? null : _googleSignIn,
                                       ),
                                     ),
-                                    const AppleSignInButton(),
+                                    AppleSignInButton(
+                                        enabled: !_authBusy,
+                                        onBusyChanged: (busy) {
+                                          if (mounted) {
+                                            setState(() => _aLoading = busy);
+                                          }
+                                        }),
                                     const SizedBox(height: 12),
                                   ],
                                 ),
@@ -301,17 +355,20 @@ class _LoginScreenState extends State<LoginScreen> {
                           // Footer — sheet-ийн доод захад бэхлэгдсэн
                           Padding(
                             padding: const EdgeInsets.fromLTRB(20, 6, 20, 16),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
+                            child: Wrap(
+                              alignment: WrapAlignment.center,
+                              crossAxisAlignment: WrapCrossAlignment.center,
                               children: [
                                 Text('Шинэ хэрэглэгч үү? ',
-                                  style: AppTextStyles.bodyMd.copyWith(
-                                    color: AppColors.textSecondary)),
-                                TapScale(
-                                  onTap: () => context.push(AppRoutes.register),
+                                    style: AppTextStyles.bodyMd.copyWith(
+                                        color: AppColors.textSecondary)),
+                                TextButton(
+                                  onPressed: _authBusy
+                                      ? null
+                                      : () => context.push(AppRoutes.register),
                                   child: Text('Бүртгүүлэх',
-                                    style: AppTextStyles.labelLg.copyWith(
-                                      color: AppColors.neonCyan)),
+                                      style: AppTextStyles.labelLg
+                                          .copyWith(color: AppColors.neonCyan)),
                                 ),
                               ],
                             ),
@@ -344,29 +401,30 @@ class _GlassSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-    width: double.infinity,
-    decoration: BoxDecoration(
-      color: AppColors.bgElevated.withValues(alpha: 0.85),
-      borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-      border: Border.all(color: AppColors.hairline2),
-      // Цайвар горимд хар 55% сүүдэр бохир харагдах тул зөөлөн ягаан сүүдэр
-      boxShadow: AppColors.isDarkMode ? AppColors.shadowDock : _lightShadow,
-    ),
-    child: ClipRRect(
-      borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-      child: Column(children: [
-        const SizedBox(height: 10),
-        // Grabber — bottom-sheet мэдрэмж
-        Container(
-          width: 40, height: 4,
-          decoration: BoxDecoration(
-            color: AppColors.hairline2,
-            borderRadius: BorderRadius.circular(999)),
+        width: double.infinity,
+        decoration: BoxDecoration(
+          color: AppColors.bgElevated.withValues(alpha: 0.85),
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+          border: Border.all(color: AppColors.hairline2),
+          // Цайвар горимд хар 55% сүүдэр бохир харагдах тул зөөлөн ягаан сүүдэр
+          boxShadow: AppColors.isDarkMode ? AppColors.shadowDock : _lightShadow,
         ),
-        Expanded(child: child),
-      ]),
-    ),
-  );
+        child: ClipRRect(
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+          child: Column(children: [
+            const SizedBox(height: 10),
+            // Grabber — bottom-sheet мэдрэмж
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                  color: AppColors.hairline2,
+                  borderRadius: BorderRadius.circular(999)),
+            ),
+            Expanded(child: child),
+          ]),
+        ),
+      );
 }
 
 /// Pill хэлбэрт glass outline товч (Google г.м хоёрдогч үйлдэл).
@@ -377,30 +435,35 @@ class _GhostBtn extends StatelessWidget {
   const _GhostBtn({required this.label, required this.onTap, this.leading});
 
   @override
-  Widget build(BuildContext context) => SizedBox(
-    height: 52,
-    width: double.infinity,
-    child: DecoratedBox(
-      decoration: BoxDecoration(
-        color: AppColors.bgElevated.withValues(alpha: 0.72),
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: AppColors.hairline2),
-      ),
-      child: TextButton(
-        onPressed: onTap,
-        style: TextButton.styleFrom(
-          foregroundColor: AppColors.textPrimary,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
+  Widget build(BuildContext context) => Container(
+        constraints: const BoxConstraints(minHeight: 52),
+        width: double.infinity,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: AppColors.bgElevated.withValues(alpha: 0.72),
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(color: AppColors.hairline2),
+          ),
+          child: TextButton(
+            onPressed: onTap,
+            style: TextButton.styleFrom(
+              foregroundColor: AppColors.textPrimary,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(999)),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (leading != null) ...[leading!, const SizedBox(width: 10)],
+                Flexible(
+                    child: Text(label,
+                        textAlign: TextAlign.center,
+                        style: AppTextStyles.btn
+                            .copyWith(fontWeight: FontWeight.w600))),
+              ],
+            ),
+          ),
         ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (leading != null) ...[leading!, const SizedBox(width: 10)],
-            Text(label, style: AppTextStyles.btn.copyWith(fontWeight: FontWeight.w600)),
-          ],
-        ),
-      ),
-    ),
-  );
+      );
 }

@@ -114,7 +114,11 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
                 scrollCacheExtent: const ScrollCacheExtent.pixels(1000),
                 slivers: [
                   SliverToBoxAdapter(
-                      child: AppEntrance(child: LiveStoryBar(rings: rings))),
+                      child: AppEntrance(
+                          child: Padding(
+                              padding:
+                                  const EdgeInsets.only(top: 12, bottom: 8),
+                              child: LiveStoryBar(rings: rings)))),
                   SliverToBoxAdapter(
                     child: _FeedToolbar(
                       followingOnly: _followingOnly,
@@ -149,6 +153,7 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
                           child: _EmptyFeed(
                         followingOnly: _followingOnly,
                         onPost: () => context.push(AppRoutes.createPost),
+                        onBrowse: () => setState(() => _followingOnly = false),
                       ))
                     else
                       SliverList.builder(
@@ -219,54 +224,84 @@ class _FeedToolbar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.fromLTRB(16, 0, 12, 4),
-        child: Row(children: [
-          Expanded(
-              child: Text('Нийтлэл',
-                  style: AppTextStyles.h2.copyWith(fontSize: 20))),
-          IconButton(
-            tooltip: 'Reels',
-            onPressed: () => context.push(AppRoutes.reels),
-            icon: SculptedIcon(Icons.movie_rounded,
-                color: AppColors.textSecondary, size: 21),
-          ),
-          PopupMenuButton<String>(
-            tooltip: 'Нийтлэлийн шүүлтүүр',
-            initialValue: followingOnly ? 'following' : 'all',
-            onSelected: (value) {
-              if (value == 'events') {
-                showModalBottomSheet<void>(
-                  context: context,
-                  backgroundColor: AppColors.bgBase,
-                  useSafeArea: true,
-                  isScrollControlled: true,
-                  builder: (_) => const _FeedEventsSheet(),
-                );
-              } else {
-                onFilterChanged(value == 'following');
-              }
-            },
-            color: AppColors.bgElevated,
-            itemBuilder: (_) => const [
-              PopupMenuItem(value: 'all', child: Text('Бүх нийтлэл')),
-              PopupMenuItem(value: 'following', child: Text('Дагаж буй')),
-              PopupMenuDivider(),
-              PopupMenuItem(value: 'events', child: Text('Эвентүүд')),
-            ],
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 12),
-              child: Row(mainAxisSize: MainAxisSize.min, children: [
-                Text(followingOnly ? 'Дагаж буй' : 'Бүгд',
-                    style: AppTextStyles.bodySm.copyWith(
-                      color: AppColors.textPrimary,
-                      fontWeight: FontWeight.w600,
-                    )),
-                const SizedBox(width: 4),
-                Icon(Icons.keyboard_arrow_down_rounded,
-                    color: AppColors.textPrimary, size: 19),
-              ]),
+        padding: const EdgeInsets.fromLTRB(20, 0, 20, 14),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(children: [
+            Expanded(
+                child: Semantics(
+                    header: true,
+                    child: Text('Нийтлэл',
+                        style: AppTextStyles.h2.copyWith(
+                            fontSize: 24,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: -.5)))),
+            IconButton(
+              tooltip: 'Хүн, газар нээх',
+              onPressed: () => context.push('/discovery'),
+              icon: SculptedIcon(Icons.search_rounded,
+                  color: AppColors.textSecondary, size: 22),
             ),
-          ),
+            IconButton(
+              tooltip: 'Reels',
+              onPressed: () => context.push(AppRoutes.reels),
+              icon: SculptedIcon(Icons.movie_rounded,
+                  color: AppColors.textSecondary, size: 22),
+            ),
+          ]),
+          Row(children: [
+            Expanded(
+                child: Text(
+                    followingOnly
+                        ? 'Таны дагадаг хүмүүсийн мөчүүд.'
+                        : 'Хотын хүмүүс, газруудын шинэ мөчүүд.',
+                    style: AppTextStyles.bodySm.copyWith(
+                        color: AppColors.textSecondary, height: 1.4))),
+            const SizedBox(width: 12),
+            PopupMenuButton<String>(
+              tooltip: 'Нийтлэлийн шүүлтүүр',
+              initialValue: followingOnly ? 'following' : 'all',
+              onSelected: (value) {
+                if (value == 'events') {
+                  showModalBottomSheet<void>(
+                    context: context,
+                    backgroundColor: AppColors.bgBase,
+                    useSafeArea: true,
+                    isScrollControlled: true,
+                    builder: (_) => const _FeedEventsSheet(),
+                  );
+                } else {
+                  onFilterChanged(value == 'following');
+                }
+              },
+              color: AppColors.bgElevated,
+              itemBuilder: (_) => const [
+                PopupMenuItem(value: 'all', child: Text('Бүх нийтлэл')),
+                PopupMenuItem(value: 'following', child: Text('Дагаж буй')),
+                PopupMenuDivider(),
+                PopupMenuItem(value: 'events', child: Text('Эвентүүд')),
+              ],
+              child: Container(
+                constraints: const BoxConstraints(minHeight: 44),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                decoration: BoxDecoration(
+                    color: AppColors.accentStart
+                        .withValues(alpha: AppColors.isDarkMode ? .14 : .08),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                        color: AppColors.accentStart.withValues(alpha: .2))),
+                child: Row(mainAxisSize: MainAxisSize.min, children: [
+                  Text(followingOnly ? 'Дагаж буй' : 'Бүгд',
+                      style: AppTextStyles.bodySm.copyWith(
+                          color: AppColors.textPrimary,
+                          fontWeight: FontWeight.w600)),
+                  const SizedBox(width: 6),
+                  Icon(Icons.keyboard_arrow_down_rounded,
+                      color: AppColors.textSecondary, size: 18),
+                ]),
+              ),
+            ),
+          ]),
         ]),
       );
 }
@@ -282,7 +317,7 @@ class _FeedEventsSheet extends ConsumerWidget {
       padding: const EdgeInsets.symmetric(vertical: 16),
       child: Column(mainAxisSize: MainAxisSize.min, children: [
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
+          padding: const EdgeInsets.symmetric(horizontal: 20),
           child: Row(children: [
             Expanded(child: Text('Эвентүүд', style: AppTextStyles.h2)),
             IconButton(
@@ -319,7 +354,7 @@ class _FeedTopBar extends ConsumerWidget {
     final unread = ref.watch(unreadNotifCountProvider);
     return NightOwlAtmosphere(
         child: Container(
-      height: 60,
+      height: 64,
       decoration: BoxDecoration(
           border: Border(
               bottom:
@@ -337,10 +372,6 @@ class _FeedTopBar extends ConsumerWidget {
           ),
         ),
         const ThemeToggleButton(),
-        IconButton(
-            tooltip: 'Хүн, газар нээх',
-            onPressed: () => context.push('/discovery'),
-            icon: const Icon(Icons.search)),
         const SizedBox(width: 4),
         _TopIconBtn(
           icon: SculptedIcon(Icons.notifications_rounded,
@@ -387,8 +418,8 @@ class _TopIconBtn extends StatelessWidget {
       scale: 0.9,
       onTap: onTap,
       child: Container(
-        width: 40,
-        height: 40,
+        width: 44,
+        height: 44,
         decoration: bare
             ? null
             : BoxDecoration(
@@ -611,9 +642,10 @@ class _PostCardState extends ConsumerState<_PostCard>
     void openAuthor() => context.push('/creator/${widget.post.userId}');
 
     return Container(
-      margin: const EdgeInsets.fromLTRB(12, 4, 12, 20),
-      padding: const EdgeInsets.only(top: 6, bottom: 14),
+      margin: const EdgeInsets.fromLTRB(20, 4, 20, 24),
+      padding: const EdgeInsets.only(top: 4, bottom: 14),
       decoration: PremiumSurface.card(),
+      clipBehavior: Clip.antiAlias,
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         // ── Зохиогч: нэр · хугацаа / газар ──
         Padding(
@@ -748,9 +780,9 @@ class _PostCardState extends ConsumerState<_PostCard>
 
         // ── Rounded media; double-tap retains the real like action. ──
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
+          padding: EdgeInsets.zero,
           child: ClipRRect(
-            borderRadius: BorderRadius.circular(18),
+            borderRadius: BorderRadius.zero,
             child: GestureDetector(
               onDoubleTap: _doubleTapLike,
               onTap: openPost,
@@ -762,13 +794,13 @@ class _PostCardState extends ConsumerState<_PostCard>
                       // Reference media frame; full media is available in post detail.
                       // Бүтэн кадр нь пост дэлгэрэнгүй дээр харагдана.
                       ? AspectRatio(
-                          aspectRatio: 3 / 2,
+                          aspectRatio: 4 / 3,
                           child: NetworkVideo(url: mediaUrl, cover: true),
                         )
-                      // 3:2 харьцаанд түгжинэ — зураг ачаалахад пост хэмжээгээ
+                      // 4:3 харьцаанд түгжинэ — зураг ачаалахад пост хэмжээгээ
                       // өөрчилж фийд үсрэхгүй (placeholder ч мөн адил хайрцагт)
                       : AspectRatio(
-                          aspectRatio: 3 / 2,
+                          aspectRatio: 4 / 3,
                           child: AuthorizedImage(
                             imageUrl: mediaUrl,
                             width: double.infinity,
@@ -1073,9 +1105,9 @@ class _PostCarouselState extends State<_PostCarousel> {
 
   @override
   Widget build(BuildContext context) {
-    // Ганц зурагтай посттой ижил 3:2 хайрцаг — фийд үсрэхгүй
+    // Ганц зурагтай посттой ижил 4:3 хайрцаг — фийд үсрэхгүй
     return AspectRatio(
-      aspectRatio: 3 / 2,
+      aspectRatio: 4 / 3,
       child: Stack(children: [
         // Веб дээр хулганаар чирж гүйлгэнэ (анхдагч нь зөвхөн touch —
         // desktop дээр 2 дахь зураг руу хүрэх боломжгүй байсан)
@@ -1104,8 +1136,9 @@ class _PostCarouselState extends State<_PostCarousel> {
                 placeholder: (_, __) => Container(color: AppColors.bgSurface),
                 errorWidget: (_, __, ___) => Container(
                   color: AppColors.bgSurface,
-                  child: const Center(
-                      child: Text('📸', style: TextStyle(fontSize: 48))),
+                  child: Center(
+                      child: Icon(Icons.image_not_supported_outlined,
+                          size: 34, color: AppColors.textTertiary)),
                 ),
               );
             },
@@ -1272,7 +1305,7 @@ class _FeedFooter extends StatelessWidget {
               return Padding(
                 padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
                 child: Center(
-                  child: Text('Шөнө эндээс эхэлсэн 🦉',
+                  child: Text('Одоогийн нийтлэлүүдийг бүгдийг үзлээ.',
                       style: AppTextStyles.bodySm
                           .copyWith(color: AppColors.textTertiary)),
                 ),
@@ -1285,9 +1318,12 @@ class _FeedFooter extends StatelessWidget {
 
 // ─── Empty feed ───
 class _EmptyFeed extends StatelessWidget {
-  final VoidCallback onPost;
+  final VoidCallback onPost, onBrowse;
   final bool followingOnly;
-  const _EmptyFeed({required this.onPost, this.followingOnly = false});
+  const _EmptyFeed(
+      {required this.onPost,
+      required this.onBrowse,
+      this.followingOnly = false});
 
   @override
   Widget build(BuildContext context) => EmptyState(
@@ -1296,10 +1332,13 @@ class _EmptyFeed extends StatelessWidget {
             ? 'Дагаж буй хүмүүсийн нийтлэл'
             : 'Нийтлэл алга байна',
         subtitle: followingOnly
-            ? 'Ачаалсан нийтлэлүүдэд дагаж буй хүмүүсийн пост алга. Бүх нийтлэлээс хүмүүсийг дагаж болно.'
+            ? 'Таны дагадаг хүмүүсийн шинэ нийтлэл энд харагдана. Бүх нийтлэлээс сонирхол нэгтэй хүмүүсээ олоорой.'
             : 'Өнөө шөнийн мөчөө хамгийн түрүүнд хуваалцаарай.',
         action: followingOnly
-            ? null
+            ? TextButton.icon(
+                onPressed: onBrowse,
+                icon: const Icon(Icons.explore_outlined),
+                label: const Text('Бүх нийтлэл үзэх'))
             : ElevatedButton.icon(
                 onPressed: onPost,
                 icon: const Icon(Icons.add, size: 18),
@@ -1322,7 +1361,7 @@ class _ErrorView extends StatelessWidget {
               size: 56,
               state: OwlLoadingState.error,
               message: 'Нийтлэлүүдийг ачаалж чадсангүй',
-              detail: 'Түр хүлээгээд дахин оролдоорой.',
+              detail: 'Холболтоо шалгаад дахин оролдоорой.',
               onRetry: onRetry),
         ),
       );
@@ -1332,9 +1371,8 @@ class _ErrorView extends StatelessWidget {
 class _SkeletonCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Padding(
-        // Жинхэнэ посттой ижил геометр — хайрцаггүй, медиа ирмэгээс ирмэг
-        // (skeleton → контент солигдоход үсрэхгүй)
-        padding: const EdgeInsets.only(bottom: AppSpacing.x4),
+        // Match the card gutters and image ratio while content loads.
+        padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -1351,8 +1389,8 @@ class _SkeletonCard extends StatelessWidget {
               ]),
             ),
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: AspectRatio(aspectRatio: 3 / 2, child: _box(r: 14)),
+              padding: EdgeInsets.zero,
+              child: AspectRatio(aspectRatio: 4 / 3, child: _box(r: 16)),
             ),
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),

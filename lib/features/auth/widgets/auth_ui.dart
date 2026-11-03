@@ -264,7 +264,10 @@ class AuthAura extends StatelessWidget {
 class AppleSignInButton extends StatefulWidget {
   final Future<void> Function()? onSignIn;
   final bool onDark;
-  const AppleSignInButton({super.key, this.onSignIn, this.onDark = false});
+  final bool enabled;
+  final ValueChanged<bool>? onBusyChanged;
+  const AppleSignInButton({super.key, this.onSignIn, this.onDark = false,
+    this.enabled = true, this.onBusyChanged});
   @override
   State<AppleSignInButton> createState() => _AppleSignInButtonState();
 }
@@ -272,8 +275,9 @@ class AppleSignInButton extends StatefulWidget {
 class _AppleSignInButtonState extends State<AppleSignInButton> {
   bool _busy = false;
   Future<void> _signIn() async {
-    if (_busy) return;
+    if (_busy || !widget.enabled) return;
     setState(() => _busy = true);
+    widget.onBusyChanged?.call(true);
     try {
       await (widget.onSignIn ?? signInWithApple)();
     } catch (error) {
@@ -282,13 +286,18 @@ class _AppleSignInButtonState extends State<AppleSignInButton> {
           : 'Apple-ээр нэвтрэхэд алдаа гарлаа. Дахин оролдоно уу.';
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
       }
-    } finally { if (mounted) setState(() => _busy = false); }
+    } finally {
+      if (mounted) {
+        setState(() => _busy = false);
+        widget.onBusyChanged?.call(false);
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Padding(padding: const EdgeInsets.only(top: 12), child: OutlinedButton.icon(
-      onPressed: _busy ? null : _signIn,
+      onPressed: _busy || !widget.enabled ? null : _signIn,
       style: OutlinedButton.styleFrom(
         foregroundColor: widget.onDark ? Colors.white : AppColors.textPrimary,
         minimumSize: const Size.fromHeight(52),

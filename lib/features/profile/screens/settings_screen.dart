@@ -10,12 +10,13 @@ import '../../../core/widgets/app_avatar.dart';
 import '../../../core/widgets/sculpted_icon.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../../models/user_profile.dart';
-import '../../../core/constants/app_constants.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../../../core/providers/user_settings_provider.dart';
+import '../../../core/widgets/policy_links.dart';
+import '../../auth/services/account_metadata_service.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
-  const SettingsScreen({super.key});
+  final AccountMetadataService? metadataService;
+  const SettingsScreen({super.key, this.metadataService});
   @override
   ConsumerState<SettingsScreen> createState() => _SettingsScreenState();
 }
@@ -23,6 +24,43 @@ class SettingsScreen extends ConsumerStatefulWidget {
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   void _toast(String msg) => ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(msg), duration: const Duration(seconds: 2)));
+
+  bool _savingConsent = false;
+  bool _signingOut = false;
+
+  Future<void> _setAnalyticsConsent(bool value) async {
+    if (_savingConsent) return;
+    final owner = ref.read(sessionUserIdProvider);
+    if (owner == null) return;
+    setState(() => _savingConsent = true);
+    try {
+      final applied = await (widget.metadataService ?? AccountMetadataService())
+          .update({'discovery_analytics_consent': value}, ownerId: owner);
+      if (!mounted || owner != ref.read(sessionUserIdProvider)) return;
+      if (!applied) _toast('Хаяг өөрчлөгдсөн байна. Дахин нэвтэрч оролдоорой.');
+    } catch (_) {
+      if (mounted && owner == ref.read(sessionUserIdProvider)) {
+        _toast('Зөвшөөрлийг хадгалж чадсангүй. Дахин оролдоорой.');
+      }
+    } finally {
+      if (mounted) setState(() => _savingConsent = false);
+    }
+  }
+
+  Future<void> _signOut() async {
+    if (_signingOut) return;
+    setState(() => _signingOut = true);
+    try {
+      await Supabase.instance.client.auth.signOut();
+      if (mounted) context.go(AppRoutes.authLanding);
+    } catch (_) {
+      if (mounted) {
+        _toast('Гарч чадсангүй. Холболтоо шалгаад дахин оролдоорой.');
+      }
+    } finally {
+      if (mounted) setState(() => _signingOut = false);
+    }
+  }
 
   /// Профайл засах — тусгай editProfile route (/auth/setup биш: router
   /// бүртгэл дууссан хэрэглэгчийг feed руу буцаадаг). Буцаж ирэхэд шинэчилнэ.
@@ -61,6 +99,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     final profileAsync = ref.watch(currentProfileProvider);
+    final owner = ref.watch(sessionUserIdProvider);
+    final authUser =
+        owner == null ? null : ref.watch(authUserProvider).valueOrNull;
+    final analytics =
+        authUser?.userMetadata?['discovery_analytics_consent'] == true;
     final preferences = ref.watch(userSettingsProvider);
     final notifLikes = preferences.notifications;
     final activityStatus = preferences.activity;
@@ -68,210 +111,176 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.bgBase,
-      body: Stack(
-        children: [
-          // Soft violet accents stay subtle on both daytime and night surfaces.
-          Positioned(
-            top: -160,
-            left: -120,
-            child: Container(
-              width: 360,
-              height: 360,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: RadialGradient(colors: [
-                  AppColors.accentStart.withValues(alpha: 0.08),
-                  Colors.transparent,
-                ]),
-              ),
-            ),
-          ),
-          Positioned(
-            bottom: -140,
-            right: -100,
-            child: Container(
-              width: 320,
-              height: 320,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: RadialGradient(colors: [
-                  AppColors.silver.withValues(alpha: 0.06),
-                  Colors.transparent,
-                ]),
-              ),
-            ),
-          ),
-          SafeArea(
-            child: Column(
-              children: [
-                // Reload/deep link үед stack хоосон байж болно — profile руу fallback
-                _Header(
-                    onBack: () => context.canPop()
-                        ? context.pop()
-                        : context.go(AppRoutes.profile)),
-                Expanded(
-                  child: ListView(
-                    padding: const EdgeInsets.fromLTRB(20, 8, 20, 48),
-                    children: [
-                      // ─── Profile glance card ───
-                      profileAsync.when(
-                        data: (p) => _ProfileCard(
-                          profile: p,
-                          onTap: _openEditProfile,
-                        ),
-                        loading: () => const _ProfileCardSkeleton(),
-                        error: (_, __) => _ProfileCard(
-                          profile: null,
-                          onTap: _openEditProfile,
-                        ),
-                      ),
-
-                      const SizedBox(height: 28),
-
-                      // ─── БҮРТГЭЛ ───
-                      const _SectionLabel('Бүртгэл'),
-                      const SizedBox(height: 10),
-                      _GlassCard(children: [
-                        _SettingRow(
+      body: SafeArea(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 720),
+            child: Column(children: [
+              _Header(
+                  onBack: () => context.canPop()
+                      ? context.pop()
+                      : context.go(AppRoutes.profile)),
+              Expanded(
+                child: ListView(
+                  padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
+                  children: [
+                    profileAsync.when(
+                      data: (p) =>
+                          _ProfileCard(profile: p, onTap: _openEditProfile),
+                      loading: () => const _ProfileCardSkeleton(),
+                      error: (_, __) =>
+                          _ProfileCard(profile: null, onTap: _openEditProfile),
+                    ),
+                    const SizedBox(height: 24),
+                    _GlassCard(children: [
+                      _AppearanceChooser(
+                          selected: themeMode, onChanged: _setThemeMode),
+                    ]),
+                    const SizedBox(height: 28),
+                    const _SectionLabel('Таны бүртгэл'),
+                    const SizedBox(height: 12),
+                    _GlassCard(children: [
+                      _SettingRow(
                           icon: Icons.person_outline,
                           label: 'Профайл засах',
-                          onTap: _openEditProfile,
-                        ),
-                        const _RowDivider(),
-                        _SettingRow(
+                          sub: 'Нэр, зураг, танилцуулга',
+                          onTap: _openEditProfile),
+                      const _RowDivider(),
+                      _SettingRow(
                           icon: Icons.lock_outline,
                           label: 'Нууц үг солих',
-                          onTap: () => context.push(AppRoutes.changePassword),
-                        ),
-                        const _RowDivider(),
-                        _SettingRow(
+                          onTap: () => context.push(AppRoutes.changePassword)),
+                      const _RowDivider(),
+                      _SettingRow(
                           icon: Icons.language_outlined,
                           label: 'Хэл',
                           trailingValue: 'Монгол',
-                          onTap: () => context.push(AppRoutes.langSelect),
-                        ),
-                      ]),
-
-                      const SizedBox(height: 24),
-
-                      // ─── ТОХИРГОО ───
-                      const _SectionLabel('Тохиргоо'),
-                      const SizedBox(height: 10),
-                      _GlassCard(children: [
-                        _AppearanceChooser(
-                            selected: themeMode, onChanged: _setThemeMode),
-                        const _RowDivider(),
-                        _SettingRow(
+                          onTap: () => context.push(AppRoutes.langSelect)),
+                    ]),
+                    const SizedBox(height: 28),
+                    const _SectionLabel('Нууцлал ба мэдэгдэл'),
+                    const SizedBox(height: 12),
+                    _GlassCard(children: [
+                      _SettingRow(
+                          icon: Icons.lock_person_outlined,
+                          label: 'Нууцлал, хүсэлтүүд',
+                          sub: 'Хэн тантай холбогдохыг тохируулах',
+                          onTap: () => context.push('/privacy'),
+                          disabled: profileAsync.isLoading),
+                      const _RowDivider(),
+                      _SettingRow(
                           icon: Icons.notifications_none,
                           label: 'Апп доторх мэдэгдэл',
                           sub: 'Энэ төхөөрөмж дээр',
                           onTap: () => _setNotifLikes(!notifLikes),
                           trailing: _NeonSwitch(
-                            value: notifLikes,
-                            onChanged: _setNotifLikes,
-                          ),
-                        ),
-                      ]),
-
-                      const SizedBox(height: 24),
-
-                      // ─── НУУЦЛАЛ ───
-                      const _SectionLabel('Нууцлал'),
-                      const SizedBox(height: 10),
-                      _GlassCard(children: [
-                        // 'Хувийн данс' — profiles.is_private багана серверт байхгүй тул
-                        // одоохондоо идэвхгүй ("тун удахгүй") болгосон.
-                        _SettingRow(
-                          icon: Icons.lock_person_outlined,
-                          label: 'Нууцлал, хүсэлтүүд',
-                          onTap:()=>context.push('/privacy'),
-                          disabled:profileAsync.isLoading,
-                        ),
-                        const _RowDivider(),
-                        _SettingRow(
+                              value: notifLikes, onChanged: _setNotifLikes)),
+                      const _RowDivider(),
+                      _SettingRow(
                           icon: Icons.radar_outlined,
                           label: 'Идэвхтэй төлөв',
                           sub: 'Энэ төхөөрөмжөөс идэвхтэй төлөв харуулах',
                           onTap: () => _setActivityStatus(!activityStatus),
                           trailing: _NeonSwitch(
-                            value: activityStatus,
-                            onChanged: _setActivityStatus,
-                          ),
-                        ),
-                      ]),
-
-                      const SizedBox(height: 24),
-
-                      const _SectionLabel('Бизнес'),
-                      const SizedBox(height: 10),
-                      _GlassCard(children: [
+                              value: activityStatus,
+                              onChanged: _setActivityStatus)),
+                      const _RowDivider(),
+                      _SettingRow(
+                          icon: Icons.insights_outlined,
+                          label: 'Хэрэглээний статистик',
+                          sub: 'Сайжруулахад туслах зорилгоор нээсэн хуудас, '
+                              'хадгалалт зэрэг үйлдлийг бүртгэхийг зөвшөөрнө. '
+                              'Сонголттой, хүссэн үедээ унтрааж болно.',
+                          disabled: owner == null || _savingConsent,
+                          onTap: () => _setAnalyticsConsent(!analytics),
+                          trailing: _NeonSwitch(
+                              value: analytics,
+                              onChanged: owner == null || _savingConsent
+                                  ? null
+                                  : _setAnalyticsConsent)),
+                    ]),
+                    const SizedBox(height: 28),
+                    const _SectionLabel('Night Owl'),
+                    const SizedBox(height: 12),
+                    _GlassCard(children: [
+                      if (profileAsync.asData?.value?.canModerate(owner) ==
+                          true) ...[
                         _SettingRow(
+                            icon: Icons.admin_panel_settings_outlined,
+                            label: 'Админ панел',
+                            sub: 'Гомдол, хэрэглэгч, контент ба үйлдлийн түүх',
+                            onTap: () => context.push(AppRoutes.adminPanel)),
+                        const _RowDivider(),
+                      ],
+                      _SettingRow(
                           icon: Icons.business_center_outlined,
                           label: 'Бизнес самбар',
-                          onTap: () => context.push(AppRoutes.business),
-                        ),
-                      ]),
-
-                      const SizedBox(height: 24),
-
-                      // ─── ТУХАЙ ───
-                      const _SectionLabel('Тухай'),
-                      const SizedBox(height: 10),
-                      _GlassCard(children: [
-                        _SettingRow(
+                          sub: 'Газрынхаа мэдээллийг удирдах',
+                          onTap: () => context.push(AppRoutes.business)),
+                      const _RowDivider(),
+                      _SettingRow(
                           icon: Icons.person_add_alt_1_outlined,
                           label: 'Найзаа урих',
-                          onTap: () => context.push(AppRoutes.invite),
-                        ),
-                        const _RowDivider(),
-                        _SettingRow(
+                          onTap: () => context.push(AppRoutes.invite)),
+                    ]),
+                    const SizedBox(height: 28),
+                    const _SectionLabel('Тусламж ба мэдээлэл'),
+                    const SizedBox(height: 12),
+                    _GlassCard(children: [
+                      _SettingRow(
                           icon: Icons.help_outline,
                           label: 'Тусламж',
-                          onTap: () => _toast('Тусламж: osokhe@gmail.com'),
-                        ),
-                        const _RowDivider(),
-                        _SettingRow(
-                            icon: Icons.privacy_tip_outlined,
-                            label: 'Нууцлалын бодлого',
-                            onTap: () => launchUrl(Uri.parse(
-                                '${AppConstants.publicAppUrl}/privacy.html'))),
-                        const _RowDivider(),
-                        _SettingRow(
-                            icon: Icons.description_outlined,
-                            label: 'Үйлчилгээний нөхцөл',
-                            onTap: () => launchUrl(Uri.parse(
-                                '${AppConstants.publicAppUrl}/terms.html'))),
-                        const _RowDivider(),
-                        const _SettingRow(
+                          onTap: () =>
+                              openAppPolicy(context, AppPolicy.support)),
+                      const _RowDivider(),
+                      _SettingRow(
+                          icon: Icons.privacy_tip_outlined,
+                          label: 'Нууцлалын бодлого',
+                          onTap: () =>
+                              openAppPolicy(context, AppPolicy.privacy)),
+                      const _RowDivider(),
+                      _SettingRow(
+                          icon: Icons.description_outlined,
+                          label: 'Үйлчилгээний нөхцөл',
+                          onTap: () => openAppPolicy(context, AppPolicy.terms)),
+                      const _RowDivider(),
+                      _SettingRow(
+                          icon: Icons.article_outlined,
+                          label: 'Лицензүүд',
+                          onTap: () => showLicensePage(
+                              context: context,
+                              applicationName: 'Night Owl UB',
+                              applicationVersion: '1.0.0')),
+                      const _RowDivider(),
+                      const _SettingRow(
                           icon: Icons.account_tree_outlined,
                           label: 'Хувилбар · Үнэгүй',
                           trailingValue: '1.0.0',
-                          mono: true,
-                        ),
-                      ]),
-
-                      const SizedBox(height: 32),
-
-                      // ─── Actions ───
-                      // 'Гарах' нь буцаах боломжтой үйлдэл тул саармаг товч
-                      _NeutralButton(
-                        label: 'Гарах',
+                          mono: true),
+                    ]),
+                    const SizedBox(height: 28),
+                    _NeutralButton(
+                        label: _signingOut ? 'Гарч байна…' : 'Гарах',
                         icon: Icons.logout,
-                        onTap: () async {
-                          await Supabase.instance.client.auth.signOut();
-                          if (context.mounted) {
-                            context.go(AppRoutes.authLanding);
-                          }
-                        },
-                      ),
-                      const SizedBox(height: 24),
-                    ],
-                  ),
+                        onTap: _signingOut ? null : _signOut),
+                    const SizedBox(height: 12),
+                    TextButton.icon(
+                        onPressed: () => context.push(AppRoutes.deleteAccount),
+                        style: TextButton.styleFrom(
+                            foregroundColor: AppColors.textSecondary,
+                            minimumSize: const Size.fromHeight(48),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 14)),
+                        icon:
+                            const Icon(Icons.person_remove_outlined, size: 20),
+                        label: const Text('Бүртгэл устгах',
+                            textAlign: TextAlign.center)),
+                  ],
                 ),
-              ],
-            ),
+              ),
+            ]),
           ),
-        ],
+        ),
       ),
     );
   }
@@ -284,22 +293,33 @@ class _AppearanceChooser extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(16),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Text('Харагдах байдал', style: AppTextStyles.h3),
-        const SizedBox(height: 4),
-        Text('Систем: төхөөрөмжийн өдрийн болон шөнийн горимыг дагана.',
-            style:
-                AppTextStyles.bodyXs.copyWith(color: AppColors.textTertiary)),
-        const SizedBox(height: 14),
+        const SizedBox(height: 6),
+        Text('Өөрт эвтэйхэн горимоо сонгоорой.',
+            style: AppTextStyles.bodySm.copyWith(height: 1.45)),
+        const SizedBox(height: 16),
         LayoutBuilder(builder: (context, constraints) {
-          final stacked = MediaQuery.textScalerOf(context).scale(12) > 18;
+          const options = [
+            (ThemeMode.light, 'Өдөр'),
+            (ThemeMode.dark, 'Шөнө'),
+            (ThemeMode.system, 'Систем'),
+          ];
+          final labelWidth = (constraints.maxWidth - 16) / 3 - 20;
+          final stacked = options.any((option) {
+            final painter = TextPainter(
+                text: TextSpan(text: option.$2, style: AppTextStyles.labelLg),
+                textScaler: MediaQuery.textScalerOf(context),
+                textDirection: Directionality.of(context),
+                maxLines: 1)
+              ..layout();
+            final doesNotFit = painter.width > labelWidth;
+            painter.dispose();
+            return doesNotFit;
+          });
           return Wrap(spacing: 8, runSpacing: 8, children: [
-            for (final option in const [
-              (ThemeMode.light, 'Өдөр', Icons.wb_sunny_rounded),
-              (ThemeMode.dark, 'Шөнө', Icons.nightlight_round),
-              (ThemeMode.system, 'Систем', Icons.brightness_auto_rounded),
-            ])
+            for (final option in options)
               SizedBox(
                   width: stacked
                       ? constraints.maxWidth
@@ -309,39 +329,116 @@ class _AppearanceChooser extends StatelessWidget {
                       selected: selected == option.$1,
                       child: Material(
                           color: selected == option.$1
-                              ? AppColors.accentStart.withValues(alpha: 0.12)
-                              : AppColors.bgSurface,
+                              ? AppColors.silver.withValues(alpha: .08)
+                              : AppColors.bgBase,
                           shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(14),
                               side: BorderSide(
+                                  width: selected == option.$1 ? 1.5 : 1,
                                   color: selected == option.$1
                                       ? AppColors.silver
-                                      : AppColors.hairline2)),
+                                      : AppColors.hairline)),
                           clipBehavior: Clip.antiAlias,
                           child: InkWell(
                               onTap: () => onChanged(option.$1),
                               child: Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 6, vertical: 12),
-                                  child: Column(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        SculptedIcon(option.$3,
-                                            size: 22,
-                                            active: selected == option.$1),
-                                        const SizedBox(height: 8),
-                                        Text(option.$2,
-                                            textAlign: TextAlign.center,
-                                            style: TextStyle(
-                                                color: selected == option.$1
-                                                    ? AppColors.silver
-                                                    : AppColors.textSecondary,
-                                                fontSize: 12,
-                                                fontWeight: FontWeight.w600)),
-                                      ])))))),
+                                  padding: const EdgeInsets.all(10),
+                                  child: stacked
+                                      ? Row(children: [
+                                          SizedBox(
+                                              width: 64,
+                                              child: _AppearancePreview(
+                                                  mode: option.$1)),
+                                          const SizedBox(width: 14),
+                                          Expanded(
+                                              child: Text(option.$2,
+                                                  style:
+                                                      AppTextStyles.labelLg)),
+                                          if (selected == option.$1)
+                                            Icon(Icons.check_circle_rounded,
+                                                size: 20,
+                                                color: AppColors.silver),
+                                        ])
+                                      : Column(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                              _AppearancePreview(
+                                                  mode: option.$1),
+                                              const SizedBox(height: 10),
+                                              Text(option.$2,
+                                                  textAlign: TextAlign.center,
+                                                  style: AppTextStyles.labelLg
+                                                      .copyWith(
+                                                          color: selected ==
+                                                                  option.$1
+                                                              ? AppColors.silver
+                                                              : AppColors
+                                                                  .textSecondary)),
+                                            ])))))),
           ]);
         }),
+        const SizedBox(height: 12),
+        Text('Систем горим төхөөрөмжийн тохиргоог дагана.',
+            style: AppTextStyles.bodySm.copyWith(height: 1.45)),
       ]));
+}
+
+/// Small previews make each appearance choice recognizable before selecting it.
+class _AppearancePreview extends StatelessWidget {
+  final ThemeMode mode;
+  const _AppearancePreview({required this.mode});
+
+  @override
+  Widget build(BuildContext context) {
+    final dark = mode == ThemeMode.dark;
+    final surface = dark ? const Color(0xFF252C43) : const Color(0xFFE4E1EF);
+    return ExcludeSemantics(
+        child: Container(
+            height: 48,
+            padding: const EdgeInsets.all(7),
+            decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(8),
+                color: dark ? AppColors.bgBaseDark : AppColors.bgElevatedLight,
+                gradient: mode == ThemeMode.system
+                    ? const LinearGradient(colors: [
+                        AppColors.bgElevatedLight,
+                        AppColors.bgElevatedLight,
+                        AppColors.bgBaseDark,
+                        AppColors.bgBaseDark,
+                      ], stops: [
+                        0,
+                        .5,
+                        .5,
+                        1
+                      ])
+                    : null),
+            child:
+                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Row(children: [
+                Container(
+                    width: 7,
+                    height: 7,
+                    decoration: const BoxDecoration(
+                        color: AppColors.accentStart, shape: BoxShape.circle)),
+                const SizedBox(width: 4),
+                Expanded(child: Container(height: 3, color: surface)),
+              ]),
+              const SizedBox(height: 6),
+              Expanded(
+                  child: Container(
+                      decoration: BoxDecoration(
+                          color: surface,
+                          borderRadius: BorderRadius.circular(4)),
+                      alignment: Alignment.centerLeft,
+                      padding: const EdgeInsets.symmetric(horizontal: 5),
+                      child: Container(
+                          width: 15,
+                          height: 4,
+                          decoration: BoxDecoration(
+                              color: AppColors.accentStart,
+                              borderRadius: BorderRadius.circular(3))))),
+            ])));
+  }
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -354,26 +451,21 @@ class _Header extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
+      padding: const EdgeInsets.fromLTRB(12, 8, 20, 8),
       child: Row(
         children: [
           IconButton(
               tooltip: 'Буцах',
               onPressed: onBack,
-              style: IconButton.styleFrom(
-                  backgroundColor: AppColors.bgSurface,
-                  minimumSize: const Size(44, 44),
-                  side: BorderSide(color: AppColors.hairline2)),
+              style: IconButton.styleFrom(minimumSize: const Size(48, 48)),
               icon: SculptedIcon(Icons.chevron_left,
                   color: AppColors.textPrimary, size: 22)),
-          const SizedBox(width: 16),
+          const SizedBox(width: 8),
           Expanded(
               child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('NIGHT OWL', style: AppTextStyles.labelSm),
-              const SizedBox(height: 2),
-              Text('Тохиргоо', style: AppTextStyles.h1),
+              Text('Тохиргоо', style: AppTextStyles.h1.copyWith(fontSize: 26)),
             ],
           )),
         ],
@@ -396,32 +488,20 @@ class _ProfileCard extends StatelessWidget {
     final name = (p?.name?.trim().isNotEmpty ?? false)
         ? p!.name!.trim()
         : (p?.username ?? 'Профайл');
-    final username = p?.username;
-    final bio = (p?.bio?.trim().isNotEmpty ?? false) ? p!.bio!.trim() : null;
-    final sub = [
-      if (username != null && username.isNotEmpty) '@$username',
-      if (bio != null) bio,
-    ].join(' · ');
+    final username = p?.username?.trim().replaceFirst(RegExp(r'^@+'), '');
+    final sub = username != null && username.isNotEmpty
+        ? '@$username'
+        : 'Мэдээллээ шинэчлэх';
     final avatarUrl = p?.avatarUrl;
 
-    return MouseRegion(
-      cursor: SystemMouseCursors.click,
-      child: GestureDetector(
+    return Material(
+      color: AppColors.bgElevated,
+      borderRadius: BorderRadius.circular(20),
+      child: InkWell(
         onTap: onTap,
+        borderRadius: BorderRadius.circular(20),
         child: Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: AppColors.bgElevated,
-            borderRadius: BorderRadius.circular(22),
-            border: Border.all(color: AppColors.hairline2),
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.accentStart.withValues(alpha: 0.06),
-                blurRadius: 28,
-                spreadRadius: -8,
-              ),
-            ],
-          ),
+          padding: const EdgeInsets.all(18),
           child: Row(
             children: [
               // Keep the person's image inside the reference violet ring.
@@ -454,9 +534,9 @@ class _ProfileCard extends StatelessWidget {
                   children: [
                     Text(
                       name,
-                      maxLines: 1,
+                      maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: AppTextStyles.h2,
+                      style: AppTextStyles.h2.copyWith(height: 1.25),
                     ),
                     if (sub.isNotEmpty) ...[
                       const SizedBox(height: 3),
@@ -465,7 +545,7 @@ class _ProfileCard extends StatelessWidget {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: AppTextStyles.bodySm
-                            .copyWith(color: AppColors.textTertiary),
+                            .copyWith(color: AppColors.textSecondary),
                       ),
                     ],
                   ],
@@ -474,7 +554,7 @@ class _ProfileCard extends StatelessWidget {
               const SizedBox(width: 10),
               // 'LIVE' pill байсан нь худал (жинхэнэ live төлөвтэй холбоогүй) —
               // "Профайл засах" гэдгийг илэрхийлсэн саармаг chevron-оор солив.
-              SculptedIcon(Icons.chevron_right,
+              Icon(Icons.chevron_right_rounded,
                   color: AppColors.textTertiary, size: 20),
             ],
           ),
@@ -546,11 +626,8 @@ class _SectionLabel extends StatelessWidget {
   Widget build(BuildContext context) => Padding(
         padding: const EdgeInsets.only(left: 6),
         child: Text(
-          label.toUpperCase(),
-          style: AppTextStyles.labelSm.copyWith(
-            color: AppColors.textTertiary,
-            letterSpacing: 1.2,
-          ),
+          label,
+          style: AppTextStyles.labelLg.copyWith(color: AppColors.textSecondary),
         ),
       );
 }
@@ -565,9 +642,8 @@ class _GlassCard extends StatelessWidget {
   Widget build(BuildContext context) => Container(
         padding: const EdgeInsets.all(6),
         decoration: BoxDecoration(
-          color: AppColors.bgElevated.withValues(alpha: 0.72),
+          color: AppColors.bgElevated,
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: AppColors.hairline),
         ),
         child: Column(children: children),
       );
@@ -577,7 +653,12 @@ class _RowDivider extends StatelessWidget {
   const _RowDivider();
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.only(left: 56, right: 12),
+        padding: EdgeInsets.only(
+            left: MediaQuery.sizeOf(context).width < 380 &&
+                    MediaQuery.textScalerOf(context).scale(14) > 19
+                ? 12
+                : 56,
+            right: 12),
         child: Divider(height: 1, thickness: 1, color: AppColors.hairline),
       );
 }
@@ -608,25 +689,27 @@ class _SettingRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final iconColor = disabled ? AppColors.textTertiary : AppColors.silver;
+    final largeText = MediaQuery.sizeOf(context).width < 380 &&
+        MediaQuery.textScalerOf(context).scale(14) > 19;
     final row = Opacity(
       opacity: disabled ? 0.55 : 1.0,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 11),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 15),
         child: Row(
           children: [
-            // Violet relief icon tile.
-            Container(
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(
-                color: iconColor.withValues(alpha: 0.10),
-                borderRadius: BorderRadius.circular(11),
-                border: Border.all(color: iconColor.withValues(alpha: 0.22)),
+            // At larger text sizes, give the description the icon's space.
+            if (!largeText) ...[
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: iconColor.withValues(alpha: 0.10),
+                  borderRadius: BorderRadius.circular(11),
+                ),
+                child: Center(child: Icon(icon, size: 21, color: iconColor)),
               ),
-              child:
-                  Center(child: SculptedIcon(icon, size: 18, color: iconColor)),
-            ),
-            const SizedBox(width: 12),
+              const SizedBox(width: 12),
+            ],
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -634,11 +717,11 @@ class _SettingRow extends StatelessWidget {
                 children: [
                   Text(label, style: AppTextStyles.h3),
                   if (sub != null) ...[
-                    const SizedBox(height: 2),
+                    const SizedBox(height: 5),
                     Text(
                       sub!,
-                      style: AppTextStyles.bodyXs
-                          .copyWith(color: AppColors.textTertiary),
+                      style: AppTextStyles.bodySm.copyWith(
+                          color: AppColors.textSecondary, height: 1.45),
                     ),
                   ],
                   if (trailingValue != null) ...[
@@ -660,7 +743,7 @@ class _SettingRow extends StatelessWidget {
               trailing!,
             ] else if (onTap != null && !disabled) ...[
               const SizedBox(width: 4),
-              SculptedIcon(Icons.chevron_right,
+              Icon(Icons.chevron_right_rounded,
                   size: 18, color: AppColors.textTertiary),
             ],
           ],
@@ -688,60 +771,53 @@ class _SettingRow extends StatelessWidget {
 // ─────────────────────────────────────────────────────────────
 class _NeonSwitch extends StatelessWidget {
   final bool value;
-  final ValueChanged<bool> onChanged;
+  final ValueChanged<bool>? onChanged;
   const _NeonSwitch({required this.value, required this.onChanged});
 
   @override
   Widget build(BuildContext context) {
     // Дүрс нь 46×28 хэвээр, харин дарах талбайг 44px өндөр болгов
-    return MouseRegion(
-      cursor: SystemMouseCursors.click,
-      child: GestureDetector(
-        onTap: () => onChanged(!value),
-        behavior: HitTestBehavior.opaque,
-        child: SizedBox(
-          height: 44,
-          child: Center(
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 180),
-              curve: Curves.easeOut,
-              width: 46,
-              height: 28,
-              padding: const EdgeInsets.all(3),
-              alignment: value ? Alignment.centerRight : Alignment.centerLeft,
-              decoration: BoxDecoration(
-                color: value
-                    ? AppColors.silver.withValues(alpha: 0.22)
-                    : AppColors.bgSurface,
-                borderRadius: BorderRadius.circular(999),
-                border: Border.all(
-                  color: value
-                      ? AppColors.silver.withValues(alpha: 0.55)
-                      : AppColors.hairline2,
-                ),
-                boxShadow: value
-                    ? [
-                        BoxShadow(
-                          color: AppColors.silver.withValues(alpha: 0.30),
-                          blurRadius: 12,
-                          spreadRadius: -2,
-                        ),
-                      ]
-                    : null,
-              ),
-              child: Container(
-                width: 22,
-                height: 22,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: value ? AppColors.silver : AppColors.textTertiary,
+    return Semantics(
+        toggled: value,
+        enabled: onChanged != null,
+        child: MouseRegion(
+          cursor:
+              onChanged == null ? MouseCursor.defer : SystemMouseCursors.click,
+          child: GestureDetector(
+            onTap: onChanged == null ? null : () => onChanged!(!value),
+            behavior: HitTestBehavior.opaque,
+            child: SizedBox(
+              height: 44,
+              child: Center(
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 180),
+                  curve: Curves.easeOut,
+                  width: 46,
+                  height: 28,
+                  padding: const EdgeInsets.all(3),
+                  alignment:
+                      value ? Alignment.centerRight : Alignment.centerLeft,
+                  decoration: BoxDecoration(
+                    color: value ? AppColors.accentStart : AppColors.bgSurface,
+                    borderRadius: BorderRadius.circular(999),
+                    border: Border.all(
+                      color:
+                          value ? AppColors.accentStart : AppColors.hairline2,
+                    ),
+                  ),
+                  child: Container(
+                    width: 22,
+                    height: 22,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: value ? Colors.white : AppColors.textTertiary,
+                    ),
+                  ),
                 ),
               ),
             ),
           ),
-        ),
-      ),
-    );
+        ));
   }
 }
 
@@ -751,7 +827,7 @@ class _NeonSwitch extends StatelessWidget {
 class _NeutralButton extends StatelessWidget {
   final String label;
   final IconData icon;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
   const _NeutralButton({
     required this.label,
     required this.icon,
@@ -759,33 +835,17 @@ class _NeutralButton extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    return MouseRegion(
-      cursor: SystemMouseCursors.click,
-      child: GestureDetector(
-        onTap: onTap,
-        behavior: HitTestBehavior.opaque,
-        child: Container(
-          height: 52,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: AppColors.bgSurface.withValues(alpha: 0.7),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: AppColors.hairline2),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              SculptedIcon(icon, size: 18, color: AppColors.textSecondary),
-              const SizedBox(width: 8),
-              Text(
-                label,
-                style: AppTextStyles.btn.copyWith(color: AppColors.textPrimary),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
+  Widget build(BuildContext context) => OutlinedButton.icon(
+      onPressed: onTap,
+      style: OutlinedButton.styleFrom(
+          minimumSize: const Size.fromHeight(52),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+          backgroundColor: AppColors.bgSurface.withValues(alpha: .7),
+          foregroundColor: AppColors.textPrimary,
+          side: BorderSide(color: AppColors.hairline2),
+          textStyle: AppTextStyles.btn,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
+      icon: Icon(icon, size: 20),
+      label: Text(label, textAlign: TextAlign.center));
 }

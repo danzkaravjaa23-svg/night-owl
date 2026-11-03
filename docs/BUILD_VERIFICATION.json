@@ -1,4 +1,640 @@
 {
+  "current_record": "audit_repairs",
+  "historical_fields_notice": "Use audit_repairs for the latest local repair verification and deployment status. Earlier records are dated history; native/store gates remain.",
+  "admin_security": {
+    "date": "2026-11-03",
+    "timezone": "Asia/Ulaanbaatar",
+    "status": "Existing admin console improved and integrated; local web/backend artifacts verified; no live deployment",
+    "branch": "night-owl-features",
+    "head_before_uncommitted_changes": "230d9c30aaf787e6896540cda4f0c313dc4607ef",
+    "entry_points": [
+      "Profile → Админ панел",
+      "Settings → Админ панел",
+      "/admin/ web console"
+    ],
+    "scope": [
+      "Server-authorized dashboard, reports, users, posts/comments and audit; preserved featured event and pilot/venue flows",
+      "Captured session transport, shared revocation, stale-result rejection, route-return reauthorization and account-change clearing",
+      "Reasoned atomic moderation with report/target validation, strict audit receipts, duplicate-submit and uncertain-result handling",
+      "Private SQL action context, privilege guards, append-only audit and attached-post-only admin media access",
+      "Report validation, active-user insertion, duplicate and rate guards; legacy owner behavior retained",
+      "Existing web admin refresh, pinned SDK with SRI, safe rendering and signed media path validation",
+      "Day/night mobile layouts and Settings/Profile integration; privacy disclosures"
+    ],
+    "review": {
+      "native_and_backend_model": "gpt-6-astra",
+      "reasoning_effort": "ultra",
+      "final_cross_review": "No remaining concrete issue reported in captured scopes, receipts, featured calls or PageRoute return handling"
+    },
+    "verification": {
+      "flutter": {
+        "passed": 686,
+        "failed": 0,
+        "log": "build/audit/2026-11-03/admin-security/flutter-tests-final.log"
+      },
+      "analysis": {
+        "status": "No issues found",
+        "log": "build/audit/2026-11-03/admin-security/analysis.log"
+      },
+      "sql_security": {
+        "groups_passed": 24,
+        "log": "build/audit/2026-11-03/admin-security/sql-security.log",
+        "scope": "Isolated PGlite synthetic PostgreSQL fixtures; not hosted compatibility or concurrent connections"
+      },
+      "web_admin_node": {
+        "passed": 29,
+        "log": "build/audit/2026-11-03/admin-security/web-admin-tests.log"
+      },
+      "deployment_python": {
+        "passed": 34,
+        "admin_config_subset": 11,
+        "subset_note": "Included in 34, not additional",
+        "log": "build/audit/2026-11-03/admin-security/deployment-tests.log"
+      },
+      "flutter_visual": {
+        "cases_passed": 20,
+        "png_files": 20,
+        "screens": [
+          "dashboard",
+          "reports",
+          "users",
+          "content",
+          "audit"
+        ],
+        "themes": [
+          "day",
+          "night"
+        ],
+        "widths": [
+          390,
+          320
+        ],
+        "narrow_text_scale": 1.5,
+        "log": "build/audit/2026-11-03/admin-security/visual-capture.log",
+        "scope": "Actual widgets, bundled fonts and synthetic fixture accounts; not device screenshots"
+      },
+      "web_visual": {
+        "screenshots": 5,
+        "log": "build/audit/2026-11-03/admin-refresh/web-admin-browser.log",
+        "scope": "Fresh offline Chrome with all backend/CDN requests intercepted; no user browser or live credentials"
+      },
+      "visual_inspection": "Root and screen owners reviewed representative views across all screen families and both themes. Final dashboard order recaptured and night390/day320-large inspected.",
+      "gallery": "build/audit/2026-11-03/admin-security/index.html",
+      "web_build": {
+        "status": "pass",
+        "type": "JavaScript release",
+        "log": "build/audit/2026-11-03/admin-security/web-build.log"
+      },
+      "packaging": [
+        "ZIP CRC and every payload match",
+        "4 public support/policy pages match source",
+        "Generated admin client matches bundle",
+        "Finder metadata absent",
+        "Filename/private-key-marker smoke check only"
+      ],
+      "diff_check": "pass",
+      "capture_and_build_shell_syntax": "pass",
+      "fixed_during_verification": [
+        "Gate retry awaited cancellation delayed visible recovery; reset is now synchronous with scoped late-result guards",
+        "Shared authorization revocation and PageRoute return reauthorization",
+        "Entry fixture now pumps after ensureVisible before tapping"
+      ]
+    },
+    "packages": {
+      "web": {
+        "file": "build/releases/night-owl-admin-security-2026-11-03.zip",
+        "files": 89,
+        "bytes": 22905036,
+        "sha256": "5c984355248ecf6e0b7a3408583797b1e5f88960ce7626a99c92a97c2a14e922",
+        "crc_and_payload_match": true,
+        "main_dart_js_sha256": "6d8444bce1024b3ab59ace7bc0de7e9c8e27fade74459d5f9c1980164167826e"
+      },
+      "backend": {
+        "file": "build/releases/night-owl-admin-backend-2026-11-03.zip",
+        "files": 7,
+        "bytes": 16256,
+        "sha256": "97930fafdf633df5f9dccb04b31b30a879007132d53a7ac2311e41802283fde6",
+        "crc_and_payload_match": true
+      }
+    },
+    "rollout": {
+      "pending_migrations": [
+        "202610220001_storage_account_guards.sql",
+        "202611030001_account_deletion_boundaries.sql",
+        "202611030002_discovery_analytics_consent.sql",
+        "202611030003_admin_console.sql"
+      ],
+      "required_order": "Verify existing social/featured prerequisites; pending SQL timestamp order; admin preflight before003/postflight after003; do not replay old root SQL wholesale",
+      "admin_requires_account_deletion_boundaries": true,
+      "live_migration_applied": false,
+      "client_deployed": false,
+      "account_role_granted": false,
+      "git_commit_or_push": false,
+      "backend": "Existing Supabase unchanged; independent PostgreSQL migration deferred",
+      "billing": "Free app; payments deferred"
+    },
+    "remaining_limits": [
+      "Hosted staging with real admin/member/banned sessions, private media, legacy owner operations and concurrent transactions",
+      "No client administrator-role promotion or all-DM reader; no actual account role was changed",
+      "Database operators can alter schema; append-only application audit is not tamper-proof against the database owner",
+      "Legacy venue/event/pilot audit reasons are server descriptions rather than moderator-entered reasons",
+      "Existing disabled account-deletion function and native/Xcode/device/Apple/signing/store gates remain",
+      "Moderation tooling does not establish prepublication filtering, staffed response or operational escalation",
+      "Secret filename/private-key-marker smoke check is not comprehensive"
+    ]
+  },
+  "visual_refresh": {
+    "date": "2026-11-03",
+    "timezone": "Asia/Ulaanbaatar",
+    "status": "Professional UX/UI refresh implemented and locally verified; JavaScript web build packaged; not deployed",
+    "branch": "night-owl-features",
+    "head_before_uncommitted_changes": "230d9c30aaf787e6896540cda4f0c313dc4607ef",
+    "scope": [
+      "Feed hierarchy/filter/photos",
+      "Explore search/categories/discovery bridge and large-text viewport",
+      "Profile identity/actions/media grid/empty states",
+      "Settings appearance/privacy/account organization",
+      "Inbox/search/notification readability and recovery",
+      "Shared controls, adaptive shadows, focus, busy context, navigation and motion"
+    ],
+    "verification": {
+      "flutter": {
+        "passed": 636,
+        "failed": 0,
+        "log": "build/audit/2026-11-03/visual-refresh/flutter-tests.log"
+      },
+      "analysis": {
+        "status": "No issues found",
+        "log": "build/audit/2026-11-03/visual-refresh/analysis.log"
+      },
+      "web_build": {
+        "type": "JavaScript release",
+        "status": "pass",
+        "log": "build/audit/2026-11-03/visual-refresh/web-build.log"
+      },
+      "visual_fixtures": {
+        "cases_passed": 36,
+        "png_files": 48,
+        "themes": [
+          "day",
+          "night"
+        ],
+        "widths": [
+          390,
+          320
+        ],
+        "narrow_text_scale": 1.5,
+        "inspection": "Representative rendered views across every screen family and both themes inspected by root and screen owners; corrected defects recaptured.",
+        "scope": "Actual Flutter widgets with synthetic data, bundled fonts/icons/images. Explore shown in list/discovery mode; no live tiles, accounts, browser or device E2E.",
+        "runners": [
+          "tools/deployment/capture_social_ui.sh",
+          "tools/visual_review/capture_profile_settings.sh",
+          "tools/visual_review/capture_feed_explore.sh"
+        ],
+        "gallery": "build/audit/2026-11-03/visual-refresh/index.html"
+      },
+      "interaction_coverage": [
+        "44px+ primary/icon targets",
+        "Keyboard activation and visible focus",
+        "Busy action context and duplicate activation guard",
+        "Short recovery viewport at 2x text",
+        "Navigation/compose sheet at 320px 2x text",
+        "Search retry with keyboard open",
+        "Profile/appearance scaled labels",
+        "Explore usable list viewport and retained map state"
+      ],
+      "diff_check": "pass",
+      "capture_runner_shell_syntax": "pass",
+      "initial_failures": "Two old Explore-heading selectors updated to the new copy; font and image fixture setup repaired. One const lint fixed after the 636-test run; no behavioral changes after that run."
+    },
+    "package": {
+      "date": "2026-11-03",
+      "scope": "Local JavaScript web release; not deployed or native",
+      "file": "build/releases/night-owl-ux-refresh-2026-11-03.zip",
+      "files": 89,
+      "bytes": 22890482,
+      "sha256": "955cef5825c840ac05ad2038ad1edf9119bf8852b593016be33d5bf005192f71",
+      "main_dart_js_sha256": "b70d9f655af1390fe9c28c1a7e39ae2f2d47eed383a1f4386d72887f5e152d66",
+      "verification": [
+        "ZIP CRC pass",
+        "every archived payload equals build/web",
+        "4 public support/policy pages match source",
+        "no Finder metadata or known secret-file markers"
+      ],
+      "secret_check_limit": "Filename/private-key-marker smoke check; not a comprehensive secret audit"
+    },
+    "unchanged_external_state": {
+      "deployed": false,
+      "git_push": false,
+      "backend": "Existing Supabase unchanged; migration deferred",
+      "billing": "Free app; payments deferred",
+      "apple_native": "No Apple configuration, signing, native compile or device verification in this pass"
+    },
+    "remaining_limits": [
+      "Live staging/browser and real-device UX verification",
+      "Existing backend/native/store gates in astra_api_readiness and APP_STORE_SUBMISSION.md remain"
+    ]
+  },
+  "astra_api_readiness": {
+    "date": "2026-11-03",
+    "timezone": "Asia/Ulaanbaatar",
+    "status": "Astra-reviewed local code and JavaScript web build verified; backend staging package prepared; not deployed or store-ready",
+    "branch": "night-owl-features",
+    "head_before_uncommitted_changes": "230d9c30aaf787e6896540cda4f0c313dc4607ef",
+    "review": {
+      "model": "gpt-6-astra",
+      "reasoning_effort": "ultra",
+      "independent_agents": 2,
+      "scope": [
+        "Auth and publication transport",
+        "Pending backend SQL and account-deletion function",
+        "Read-only follow-up on group scope and event raw HTTP"
+      ],
+      "root_integration": "Implemented group fixes, integrated event work, verified full suite and build"
+    },
+    "runtime": {
+      "flutter": "3.44.0",
+      "dart": "3.12.0",
+      "backend": "existing Supabase unchanged",
+      "billing": "free; deferred"
+    },
+    "verification": {
+      "flutter_regression": {
+        "passed": 625,
+        "failed": 0,
+        "previous_passed": 589,
+        "additional_tests": 36,
+        "log": "build/audit/2026-11-03/astra-pass/flutter-tests.log"
+      },
+      "focused_tests": {
+        "publication_auth_password": 66,
+        "group_scope": 12,
+        "events": 19,
+        "note": "Already included in 625; not additional totals"
+      },
+      "analysis": {
+        "status": "no issues found",
+        "log": "build/audit/2026-11-03/astra-pass/analysis.log"
+      },
+      "node_deletion": {
+        "passed": 66,
+        "log": "build/audit/2026-11-03/astra-pass/deletion-tests.log",
+        "pre_fix_reproduced": true
+      },
+      "deno": {
+        "typecheck": "pass",
+        "pinned_sdk_loopback_steps_passed": 13,
+        "scope": "loopback API doubles, not hosted Auth/Storage",
+        "evidence": "Astra backend agent tool outputs; not persisted as standalone log"
+      },
+      "sql": {
+        "passed": 7,
+        "fixtures": [
+          "social discovery",
+          "hosted client RPC",
+          "featured events",
+          "backend readiness",
+          "Storage account guards",
+          "account deletion boundaries",
+          "analytics consent"
+        ],
+        "scope": "Isolated PGlite 0.5.8 / PostgreSQL 18.3 synthetic fixtures; not hosted concurrency",
+        "evidence": "Astra backend agent tool outputs; pre-fix Storage failure saved under astra-pass"
+      },
+      "deployment_python": {
+        "passed": 34,
+        "log": "build/audit/2026-11-03/astra-pass/deployment-tests.log"
+      },
+      "ios_source": {
+        "passed": 8,
+        "log": "build/audit/2026-11-03/astra-pass/ios-source-preflight.log",
+        "native_compile": false
+      },
+      "packaging": "Web script passes sh -n; Finder metadata scrub applied and archive verified against final build",
+      "regression_fixture_repairs": "Private group layout tests now sign in a synthetic account; no assertions removed. Event async fixture and held double-tap response corrected before full green run.",
+      "diff_check": "passed"
+    },
+    "improvements": [
+      "Publication insertion and duplicate recovery use captured raw HTTP credentials without ambient SDK refresh; expired requests fail safely and never restore an older login",
+      "Conflicting auth/header casing normalized and malformed duplicate lookups rejected",
+      "Group thread, subscriptions, drafts and member dialogs reset across account/new-login/route changes; token refresh retains the current draft",
+      "Group send preserves text on failure, prevents concurrent edits, bounds stalled writes with explicit uncertain feedback, and supports direct-link back navigation",
+      "Event UTC storage/filtering, future-date validation, frozen payload and stable-ID recovery; failed cover cannot silently publish a coverless event",
+      "Event drafts/private venue picker clear on session invalidation; post-frame navigation and owner-bound requests cannot affect a newer session",
+      "RSVP writes serialize and re-read server counts; failed/malformed reads are retryable errors rather than fabricated zero counts",
+      "Account deletion validates Storage/Auth response shapes and owner, rechecks all four prefixes before Auth erasure, and stops on leftover/no-op cleanup",
+      "Storage write guard rejects empty/trailing path segments consistently with deletion enumeration",
+      "Web release omits Finder metadata; reproducible artifact checks and local backend staging manifest prepared"
+    ],
+    "web": {
+      "status": "JavaScript release passed; not deployed",
+      "archive": "build/releases/night-owl-astra-reviewed-2026-11-03.zip",
+      "archive_bytes": 22818207,
+      "archive_sha256": "44bb229fe4af3a804c98363f94393b96cfff897eb917b8aa2f5e67a0ab85a4cd",
+      "files": 89,
+      "main_dart_js_sha256": "105977ed474b10e9ff522a3de5954455d94a5d0381b56718917293c727fabc91",
+      "zip_crc_and_all_payload_hashes_match": true,
+      "public_documents_match_source": true,
+      "private_key_and_filename_smoke_check": "passed; not a comprehensive secret audit",
+      "native_binary": false,
+      "finder_metadata_absent": true
+    },
+    "backend_package": {
+      "archive": "build/releases/night-owl-astra-backend-2026-11-03.zip",
+      "sha256": "1c953b64e9217ad9ff5eebbc8a0e8176b5e5dc80219210d0137a7aaf43de1371",
+      "bytes": 10703,
+      "files": 6,
+      "crc_and_source_match": true,
+      "enabled_or_deployed": false
+    },
+    "limits": [
+      "No production deployment, server schema/function enablement, live data writes, or Git commit/push in this pass.",
+      "Three pending Storage/deletion/consent migrations and deletion function still require disposable hosted staging, legacy/FK/recovery verification and rollout. Deletion remains disabled.",
+      "Final Storage prefix checks are not a concurrency lock or atomic transaction; Apple-linked grant revocation remains gated.",
+      "Composer drafts/recovery IDs remain memory-only; interrupted uploads may leave orphan files. Group write timeouts do not cancel an accepted server request and do not promise exactly-once messaging.",
+      "Full Xcode/iOS SDK, native compile/device/real media/auth tests, Apple provider/signing/store setup and operational moderation gates remain as documented in APP_STORE_SUBMISSION.md.",
+      "No new browser/native visual proof; group 320px / 1.5x and day/night layout regressions are local synthetic widget tests. Prior actual-font visual receipts remain historical.",
+      "Public support/legal document publication and content verification remain part of the later rollout."
+    ],
+    "external_mutations": {
+      "production_data": false,
+      "schema_or_function": false,
+      "git_commit_or_push": false,
+      "web_deployment": false,
+      "os_or_apple_enrollment": false,
+      "store_upload": false
+    }
+  },
+  "professional_ux_audit": {
+    "date": "2026-11-03",
+    "timezone": "Asia/Ulaanbaatar",
+    "status": "professional logic/UX review fixes verified locally; web build ready; not deployed or store-ready",
+    "branch": "night-owl-features",
+    "head_before_uncommitted_changes": "230d9c30aaf787e6896540cda4f0c313dc4607ef",
+    "starting_worktree_preserved": "build/audit/2026-11-03/ux-pass/starting-worktree.patch",
+    "runtime": {
+      "flutter": "3.44.0",
+      "dart": "3.12.0",
+      "backend": "existing Supabase unchanged",
+      "billing": "free; deferred"
+    },
+    "verification": {
+      "flutter_regression": {
+        "passed": 589,
+        "failed": 0,
+        "previous_passed": 504,
+        "additional_tests": 85,
+        "log": "build/audit/2026-11-03/ux-pass/flutter-tests-final.log"
+      },
+      "last_copy_and_layout_polish": {
+        "focused_tests_passed": 41,
+        "log": "build/audit/2026-11-03/ux-pass/last-polish-tests.log",
+        "note": "Full589 passed before the final helper-text/background/copy polish; relevant41 passed after it."
+      },
+      "analysis": {
+        "status": "no issues found",
+        "log": "build/audit/2026-11-03/ux-pass/analysis-final.log"
+      },
+      "visuals": {
+        "captured_tests": 2,
+        "root_inspected": 2,
+        "font_network_requests": 0,
+        "auth_network_requests": 0,
+        "themes": [
+          "390x844 night,1x",
+          "320x720 day,1.5x"
+        ],
+        "receipt": "build/audit/2026-11-03/ux-pass/visuals/receipt.json",
+        "scope": "actual bundled fonts and widgets with synthetic local session; not native/browser/live-auth proof"
+      },
+      "new_test_files": [
+        "test/profile_flow_test.dart",
+        "test/inbox_search_scope_test.dart",
+        "test/content_publication_test.dart",
+        "test/password_workflow_test.dart",
+        "test/auth_gate_recovery_test.dart"
+      ],
+      "updated_tests": [
+        "test/setup_avatar_test.dart",
+        "test/bundled_fonts_test.dart"
+      ],
+      "checks_not_repeated": "Earlier Python/Node/Deno/SQL/OSV results remain in pre_apple_audit; this client-only pass did not change backend schema or Edge code.",
+      "temporary_tool_failure": "One concurrent Flutter runner hit a missing native_assets manifest; switched to serial test runs. Final regression and build passed; this was not treated as an app success or unresolved source failure.",
+      "diff_check": "passed"
+    },
+    "improvements": [
+      "Account-keyed inbox, notifications and search; request generations prevent stale A-B-A search results",
+      "Explicit notification read acknowledgement, deduplicated read writes, visible failure/retry without false read success",
+      "Partial group outage preserves working direct conversations and unread counts; group names participate in search",
+      "Group sheet binds selections, search, submission and navigation to its opening auth session; guarded legacy creation",
+      "Profile cover picker/upload/update guards, confirmed PATCH row, working refresh retry, deletion versus refresh race protection",
+      "Profile validation moves focus/scroll to the username error",
+      "Session-scoped immutable post/story publication; same-UUID recovery after uncertain insert;50MB validation, media MIME and timeouts",
+      "Draft-safe picker cancellation/error and route-discard confirmation; story overlay failures never silently publish a different image",
+      "Shared guarded Auth update transport for metadata and password; late same-owner/new-owner results cannot overwrite or log out a new session",
+      "Recovery rebinds a new verified recovery link, clears old secrets, and ignores old operation results; fresh login clears stale recovery flags",
+      "Password autofill cancels on unconfirmed dispose and commits only after confirmed success; shared8-character validation and sanitized server errors",
+      "Responsive password forms, full length guidance, semantic labels/tooltips, continuous day/night background, disabled duplicate actions",
+      "Forgot-password snapshots trimmed plus-addresses, uses native callback and non-enumerating confirmation copy",
+      "Onboarding asks no unnecessary browser notification/location permission; map requests location in context"
+    ],
+    "web": {
+      "status": "JavaScript release build passed; not deployed",
+      "main_dart_js_sha256": "41a51ccc90450455c751baeea8337a0ee5d8377e9591b96d412de66a8fc51880",
+      "archive": "build/releases/night-owl-professional-ux-2026-11-03.zip",
+      "archive_bytes": 22881778,
+      "archive_sha256": "713f7cac1a288592669d1c97ded4e5ed89ae344cfba85ffa469709bc30cfdca9",
+      "files": 89,
+      "zip_crc_and_all_payload_hashes_match": true,
+      "public_documents_match_source": true,
+      "native_binary": false
+    },
+    "limits": [
+      "Composer drafts and pending recovery UUIDs are in memory only; reload/closing discards them. Leaving cannot cancel a server request already accepted.",
+      "Interrupted upload can leave orphan files; no unsafe cleanup deletion was added.",
+      "No live backend writes, real media-format/browser/phone/autofill/password-provider E2E or production deployment in this pass.",
+      "Full Xcode/native builds and Apple provider/signing remain unverified/unconfigured as documented in pre_apple_audit.",
+      "Earlier pending storage/deletion/analytics server migrations, real deletion/recovery/Apple revoke and operational moderation gates remain.",
+      "Actual production support/legal pages still need publication and content verification after rollout gates."
+    ],
+    "external_mutations": {
+      "production_data": false,
+      "schema_or_function": false,
+      "git_commit_or_push": false,
+      "web_deployment": false,
+      "os_or_apple_enrollment": false,
+      "store_upload": false
+    }
+  },
+  "pre_apple_audit": {
+    "date": "2026-11-03",
+    "timezone": "Asia/Ulaanbaatar",
+    "status": "local audit complete; not ready for App Store submission",
+    "reviewed_git_head": "230d9c30aaf787e6896540cda4f0c313dc4607ef",
+    "branch": "night-owl-features",
+    "existing_worktree_changes_preserved": true,
+    "starting_worktree_snapshot": "build/audit/2026-11-03/starting-worktree.patch",
+    "runtime": {
+      "flutter": "3.44.0",
+      "dart": "3.12.0",
+      "backend": "existing Supabase; independent migration deferred",
+      "payments": "free; billing deferred"
+    },
+    "verification": {
+      "flutter_tests": {
+        "passed": 504,
+        "failed": 0,
+        "scope": "local unit/widget regression; includes bundled font checks",
+        "log": "build/audit/2026-11-03/flutter-tests-final.log"
+      },
+      "analysis": {
+        "status": "no issues found",
+        "log": "build/audit/2026-11-03/analysis-final.log"
+      },
+      "python_tests": {
+        "passed": 132,
+        "deployment": 34,
+        "migration": 59,
+        "venues": 24,
+        "backend": 15,
+        "details": "build/audit/2026-11-03/offline-verification.json"
+      },
+      "web_startup_tests": {
+        "passed": 7,
+        "scope": "offline Node tests"
+      },
+      "deletion_node_tests": {
+        "passed": 52,
+        "scope": "real handler in Node VM with SDK doubles; successful tool output, no saved standalone log"
+      },
+      "deletion_deno": {
+        "typecheck": "passed",
+        "tests": 1,
+        "steps": 8,
+        "scope": "pinned real SDK with synthetic loopback Auth/Storage HTTP; successful tool output, no saved standalone log"
+      },
+      "isolated_sql_fixtures": {
+        "passed": 7,
+        "runtime": "PGlite 0.5.8 / PostgreSQL 18.3 WASM",
+        "suites": [
+          "social discovery",
+          "hosted client RPCs",
+          "featured events",
+          "backend readiness",
+          "storage account guards",
+          "account deletion boundaries",
+          "discovery analytics consent"
+        ],
+        "production_connections": 0,
+        "real_postgresql_concurrency": false,
+        "receipt_note": "First four logs saved; final three have successful tool outputs without saved standalone logs"
+      },
+      "pub_advisories": {
+        "checked_at": "2026-11-02T21:23:55.648167+00:00",
+        "ecosystem": "Pub",
+        "source": "https://api.osv.dev/v1/querybatch",
+        "public_hosted_dependencies_checked": 214,
+        "known_advisory_matches": [],
+        "scope_limit": "Known OSV records for exact locked hosted Pub versions only; not a full security audit of Flutter engine, platform SDKs, native transitives, or application code."
+      },
+      "ios_source_preflight": {
+        "passed": 8,
+        "failed": 0,
+        "preflight_python_tests": 20,
+        "included_in_python_total": true,
+        "native_compile": false
+      },
+      "visuals": {
+        "receipt": "build/audit/2026-11-03/visuals/receipt.json",
+        "accepted_local_widget_fixtures": 3,
+        "root_inspected_all": true,
+        "native_device_or_browser_proof": false
+      },
+      "ci": "YAML parses; security SQL fixtures and missing-artifact checks added; remote CI not run",
+      "diff_check": "passed"
+    },
+    "web": {
+      "status": "passed",
+      "archive": "build/releases/night-owl-pre-apple-audit-2026-11-03.zip",
+      "archive_bytes": 22871015,
+      "files": 89,
+      "archive_sha256": "876d124d40eb0efe0e6e98fea0b11dff33cbea5784739826ab8f3e85a2a503bc",
+      "main_dart_js_sha256": "c6e6a4e0610ff52217851d423cb095358b54b240f9bcac26cba86590f029d4f0",
+      "all_archive_entries_match_build": true,
+      "crc_check": true,
+      "bundled_font_files": 10,
+      "public_documents_match_source": true,
+      "deployment_performed": false,
+      "native_binary": false
+    },
+    "ios": {
+      "status": "blocked before compile",
+      "reason": "Full Xcode/iPhoneOS SDK absent; CommandLineTools only",
+      "macos": "15.5 (24F74)",
+      "cocoapods": "1.17.0",
+      "build_wrapper_exit_code": 1,
+      "app_or_ipa_created": false,
+      "signing_and_device_test": "not performed",
+      "privacy_manifest": "Runner resources wired; C617.1 and CA92.1; actual archive/SDK/privacy report still required",
+      "log": "build/audit/2026-11-03/ios-build-attempt.log"
+    },
+    "android": {
+      "status": "not built locally",
+      "reason": "Android SDK/JDK unavailable; current request focuses on pre-Apple audit"
+    },
+    "public_read_only_checks": {
+      "checked_on": "2026-11-03",
+      "auth_flags": {
+        "apple": false,
+        "google": true,
+        "email": true
+      },
+      "deletion_GET": {
+        "status": 404,
+        "body_code": "NOT_FOUND",
+        "destructive_request_sent": false
+      },
+      "support_html": "HTTP 200 app-shell fallback, not the actual support document; new local page requires deployment",
+      "membership": "not rechecked; earlier pending status is historical"
+    },
+    "source_improvements": [
+      "auth submission coordination and account/session metadata race guards",
+      "18+ self-declaration and versioned community agreement; public guest venue browsing",
+      "default-off optional analytics UI/client plus unapplied authoritative server guard",
+      "320px/large-text auth and Reels layouts, follow-list retry/private-request states, scrollable desktop navigation",
+      "foreground-only non-overlapping presence heartbeat",
+      "10 bundled offline fonts, six licenses, story Cyrillic fallback, license viewer",
+      "direct profile deletion/TRUNCATE and unsafe privileged storage cleanup boundaries",
+      "account deletion failure validation, owner guards and bounded local logout",
+      "iOS required-reason privacy manifest and source/toolchain preflight",
+      "updated full public legal/support documents and navigation fallback"
+    ],
+    "unapplied_server_changes": [
+      "supabase/migrations/202610220001_storage_account_guards.sql",
+      "supabase/migrations/202611030001_account_deletion_boundaries.sql",
+      "supabase/migrations/202611030002_discovery_analytics_consent.sql",
+      "supabase/functions/delete-account/index.ts (ACCOUNT_DELETION_ENABLED remains disabled by default)"
+    ],
+    "remaining_release_gates": [
+      "compatible macOS/Xcode + native dependency resolution, foreground-only location configuration, unsigned build and real device testing",
+      "disposable staging Auth/Storage/FK/legacy cleanup, recovery, concurrent upload/deletion and Apple grant revocation",
+      "server analytics consent rollout before making new privacy behavior live; no automatic historical metric erasure",
+      "individual-post orphan binary cleanup worker/retention verification",
+      "Apple provider, signing/team, review account, store privacy/age-rating declarations and actual native screenshots",
+      "pre-publication UGC filtering and an operational report/moderation process",
+      "deploy and verify actual public support/privacy/terms pages after server staging gates"
+    ],
+    "external_mutations": {
+      "production_data": false,
+      "migrations": false,
+      "function_deploy_or_enable": false,
+      "git_commit_or_push": false,
+      "web_deployment": false,
+      "os_upgrade": false,
+      "apple_enrollment_or_purchase": false,
+      "store_upload": false
+    }
+  },
   "date": "2026-10-06",
   "flutter": "3.44.0",
   "dart": "3.12.0",
@@ -320,5 +956,84 @@
     "visual_preview": "build/releases/avatar-profile-preview.png; actual SetupScreen widget rendered with synthetic profile and local test font; not production-browser proof",
     "public_verification": "Pending. This combined release includes admin-featured Explore events whose Supabase confirmation remains unanswered.",
     "current_public_runtime_commit": "7c277c713d59217da24116f7c227f6ddf4d1c8ba"
+  },
+  "audit_repairs": {
+    "date": "2026-11-03",
+    "timezone": "Asia/Ulaanbaatar",
+    "status": "17 re-audit findings repaired and verified locally; web build ready; hosted admin-access approval pending",
+    "branch": "night-owl-features",
+    "base_commit": "230d9c30aaf787e6896540cda4f0c313dc4607ef",
+    "scope": [
+      "Visible-parent story/comment interactions and private view metadata",
+      "Active-only reviews, RPC-only check-ins, immutable profile/interaction identity, no public-table TRUNCATE",
+      "Mutual-friend Notes with server timestamps and captured-login drafts",
+      "Venue upload/save ownership and affected-row verification",
+      "DM draft preservation, manual-unread and covered/background read-receipt guards",
+      "Privacy policy selection rollback",
+      "Saved-map loading/error/retry states",
+      "Video pause controls, media error/retry and bounded Reels metadata",
+      "Account-scoped Reels likes, keyboard semantics and static web player factories"
+    ],
+    "verification": {
+      "flutter": {
+        "passed": 732,
+        "failed": 0,
+        "log": "build/audit/2026-11-03/release-fixes/flutter-full.log"
+      },
+      "analysis": {
+        "status": "No issues found",
+        "log": "build/audit/2026-11-03/release-fixes/analysis.log"
+      },
+      "node": {
+        "passed": 95,
+        "log": "build/audit/2026-11-03/release-fixes/web-node.log"
+      },
+      "deployment_python": {
+        "passed": 34
+      },
+      "migration_python": {
+        "passed": 59
+      },
+      "backend_python": {
+        "passed": 15
+      },
+      "sql_interaction_groups": 22,
+      "sql_admin_groups": 24,
+      "hosted_rpc_fixture": "PASS",
+      "web_build": {
+        "status": "PASS",
+        "log": "build/audit/2026-11-03/release-fixes/web-build.log"
+      }
+    },
+    "artifacts": [
+      {
+        "path": "build/releases/night-owl-audit-repairs-2026-11-03.zip",
+        "bytes": 22911137,
+        "sha256": "86654e3470df830679639273fd8382db5df15e0b2946783f66b7cebb4140c2e3"
+      },
+      {
+        "path": "build/releases/night-owl-audit-backend-2026-11-03.zip",
+        "bytes": 35857,
+        "sha256": "ebd57e2028537ab93f007cbdf8b8558a1bb1223b004e5f132d40d3e0678ec71b"
+      }
+    ],
+    "backend_bundle_sha256": "b9b1d72f012ecf3601f9cdf67a5d7732f7ff3327573f835b513cc7072804e55e",
+    "hosted_metadata": {
+      "preflight": "build/audit/2026-11-03/release-fixes/hosted-preflight.csv",
+      "recovery_schema": "build/audit/2026-11-03/release-fixes/hosted-schema-snapshot.json",
+      "scope": "Functions, policies, ACLs, triggers; no application row export"
+    },
+    "deployment": {
+      "client_url": "https://nightowl-ub.netlify.app/",
+      "release_identity": "/release.json",
+      "backend": "Pending action-time confirmation for existing-admin private post/comment access",
+      "git_push": "Requested; not yet executed at this record"
+    },
+    "limits": [
+      "Synthetic regression tests and production metadata checks do not certify concurrent live-user Auth/Storage flows",
+      "Apple provider setup, native signing/device verification and store submission are deferred",
+      "Account deletion Edge Function remains disabled/unpublished; no real account deletion tested",
+      "Independent PostgreSQL migration remains deferred; existing hosted Supabase backend retained"
+    ]
   }
 }

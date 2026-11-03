@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/sculpted_icon.dart';
 import '../../../core/widgets/theme_toggle_button.dart';
@@ -21,10 +22,90 @@ class GroupThreadScreen extends StatefulWidget {
   const GroupThreadScreen({super.key, required this.groupId, this.groupName});
 
   @override
-  State<GroupThreadScreen> createState() => _GroupThreadScreenState();
+  State<GroupThreadScreen> createState() => _GroupThreadScopeState();
 }
 
-class _GroupThreadScreenState extends State<GroupThreadScreen> {
+class _GroupThreadScopeState extends State<GroupThreadScreen> {
+  Session? _session;
+  StreamSubscription<AuthState>? _auth;
+  int _generation = 0;
+  String? _routeNameOwner;
+
+  @override
+  void initState() {
+    super.initState();
+    _session = SupabaseService.client.auth.currentSession;
+    _routeNameOwner = _session?.user.id;
+    final initial = _session;
+    var first = true;
+    _auth = SupabaseService.client.auth.onAuthStateChange.listen((state) {
+      if (!mounted) return;
+      if (first && identical(state.session, initial)) {
+        first = false;
+        return;
+      }
+      first = false;
+      final sameLogin = state.session?.user.id == _session?.user.id &&
+          (state.event == AuthChangeEvent.tokenRefreshed ||
+              state.event == AuthChangeEvent.userUpdated);
+      setState(() {
+        _session = state.session;
+        if (!sameLogin) ++_generation;
+      });
+    }, onError: (Object _) {
+      if (mounted) {
+        setState(() {
+          _session = null;
+          ++_generation;
+        });
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _auth?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final owner = _session?.user.id;
+    final generation = _generation;
+    final group = widget.groupId;
+    if (owner == null) {
+      return const Scaffold(
+          body: Center(child: Text('Мессеж үзэхийн тулд нэвтэрнэ үү.')));
+    }
+    return _ScopedGroupThread(
+        key: ValueKey((owner, group, generation)),
+        accountId: owner,
+        groupId: group,
+        groupName: owner == _routeNameOwner ? widget.groupName : null,
+        isCurrent: () =>
+            mounted &&
+            generation == _generation &&
+            group == widget.groupId &&
+            owner == SupabaseService.currentUser?.id &&
+            identical(_session, SupabaseService.client.auth.currentSession));
+  }
+}
+
+class _ScopedGroupThread extends StatefulWidget {
+  final String accountId, groupId;
+  final String? groupName;
+  final bool Function() isCurrent;
+  const _ScopedGroupThread(
+      {super.key,
+      required this.accountId,
+      required this.groupId,
+      this.groupName,
+      required this.isCurrent});
+  @override
+  State<_ScopedGroupThread> createState() => _GroupThreadScreenState();
+}
+
+class _GroupThreadScreenState extends State<_ScopedGroupThread> {
   final _ctrl = TextEditingController();
   final _scroll = ScrollController();
 
@@ -38,31 +119,36 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
   bool _streamError = false; // realtime stream алдаа
   String? _name; // группийн нэр (query байхгүй бол refetch хийнэ)
   StreamSubscription? _sub;
+  int _subscriptionVersion = 0;
+  bool _memberActionBusy = false;
 
-  String get _myId => SupabaseService.currentUser?.id ?? '';
+  String get _myId => widget.accountId;
+  bool get _isCurrent => mounted && widget.isCurrent();
+  void _back() => context.canPop() ? context.pop() : context.go('/dm');
 
   @override
   void initState() {
     super.initState();
     _name = widget.groupName;
-    if (_name == null || _name!.isEmpty) _fetchName();
+    _fetchName();
     _ctrl.addListener(_syncCanSend);
     _loadMembers();
     _subscribe();
   }
 
   // Composer хоосон эсэхээс илгээх товчны төлөв хамаарна
-  void _syncCanSend() => _canSend.value = _ctrl.text.trim().isNotEmpty;
+  void _syncCanSend() =>
+      _canSend.value = _isCurrent && _ctrl.text.trim().isNotEmpty;
 
   // Deep-link / reload үед name query байхгүй тул DB-ээс авна
   Future<void> _fetchName() async {
     final n = await GroupService.groupName(widget.groupId);
-    if (mounted && n != null) setState(() => _name = n);
+    if (_isCurrent && n != null) setState(() => _name = n);
   }
 
   Future<void> _loadMembers() async {
     final members = await GroupService.members(widget.groupId);
-    if (mounted) {
+    if (_isCurrent) {
       setState(() {
         _profiles = {for (final m in members) m['id'] as String: m};
       });
@@ -70,13 +156,15 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
   }
 
   void _subscribe() {
+    if (!mounted || !_isCurrent) return;
+    final version = ++_subscriptionVersion;
     _sub = SupabaseService.client
         .from('group_messages')
         .stream(primaryKey: ['id'])
         .eq('group_id', widget.groupId)
         .order('created_at')
         .listen((data) {
-          if (!mounted) return;
+          if (!_isCurrent || version != _subscriptionVersion) return;
           final msgs = data.cast<Map<String, dynamic>>().toList()
             ..sort((a, b) => (a['created_at'] as String? ?? '')
                 .compareTo(b['created_at'] as String? ?? ''));
@@ -91,7 +179,7 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
           if (grew && wasNearBottom) _scrollToBottom();
         }, onError: (e) {
           // Stream алдаа — мөнхийн spinner-ээс сэргийлж error төлөв рүү
-          if (mounted) {
+          if (_isCurrent && version == _subscriptionVersion) {
             setState(() {
               _loading = false;
               _streamError = true;
@@ -101,6 +189,7 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
   }
 
   void _retrySubscribe() {
+    if (!mounted || !_isCurrent) return;
     _sub?.cancel();
     setState(() {
       _loading = true;
@@ -116,7 +205,7 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
 
   void _scrollToBottom() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_scroll.hasClients) {
+      if (_isCurrent && _scroll.hasClients) {
         _scroll.animateTo(_scroll.position.maxScrollExtent,
             duration: const Duration(milliseconds: 200), curve: Curves.easeOut);
       }
@@ -125,75 +214,92 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
 
   Future<void> _send() async {
     final text = _ctrl.text.trim();
-    if (text.isEmpty || _sending) return;
-    _ctrl.clear();
+    if (!_isCurrent || text.isEmpty || _sending) return;
     setState(() => _sending = true);
-    final ok = await GroupService.sendMessage(widget.groupId, text);
-    if (!ok && mounted) {
-      _ctrl.text = text;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Илгээж чадсангүй. Дахин оролдоно уу.'),
+    final ok = await GroupService.sendMessage(widget.groupId, text)
+        .then<bool?>((result) => result)
+        .timeout(const Duration(seconds: 20), onTimeout: () => null);
+    if (!mounted || !_isCurrent) return;
+    if (ok == true) {
+      _ctrl.clear();
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(ok == null
+              ? 'Илгээсэн эсэхийг баталж чадсангүй. Давтан илгээхээс өмнө яриагаа шалгаарай.'
+              : 'Илгээж чадсангүй. Дахин оролдоно уу.'),
           backgroundColor: AppColors.error));
     }
-    if (mounted) setState(() => _sending = false);
+    setState(() => _sending = false);
   }
 
   // Гишүүдийн жагсаалт — нэмэх / гарах үйлдэлтэй
   void _showMembers() {
+    if (!_isCurrent || _memberActionBusy) return;
     showModalBottomSheet(
       context: context,
       backgroundColor: AppColors.bgElevated,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
-      builder: (sheetCtx) => SafeArea(
-          child: Padding(
-        padding: const EdgeInsets.only(bottom: 8),
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
-          const SizedBox(height: 10),
-          Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                  color: AppColors.hairline,
-                  borderRadius: BorderRadius.circular(2))),
-          const SizedBox(height: 14),
-          Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Row(children: [
-                Text('Гишүүд (${_profiles.length})',
-                    style: AppTextStyles.labelLg),
-              ])),
-          const SizedBox(height: 8),
-          ConstrainedBox(
-              constraints: BoxConstraints(
-                  maxHeight: MediaQuery.of(context).size.height * 0.42),
-              child: ListView(shrinkWrap: true, children: [
-                for (final m in _profiles.values) _memberTile(m),
-              ])),
-          Divider(height: 1, color: AppColors.hairline),
-          ListTile(
-              leading: const SculptedIcon(Icons.person_add_alt_1_outlined,
-                  color: AppColors.accentStart, size: 22),
-              title: Text('Гишүүн нэмэх',
-                  style: AppTextStyles.bodyMd
-                      .copyWith(color: AppColors.textPrimary)),
-              onTap: () {
-                Navigator.pop(sheetCtx);
-                _addMembers();
-              }),
-          ListTile(
-              leading: const SculptedIcon(Icons.logout_rounded,
-                  color: AppColors.error, size: 22),
-              title: Text('Группээс гарах',
-                  style: AppTextStyles.bodyMd.copyWith(color: AppColors.error)),
-              onTap: () {
-                Navigator.pop(sheetCtx);
-                _leaveGroup();
-              }),
-          const SizedBox(height: 8),
-        ]),
-      )),
+      builder: (sheetCtx) => StreamBuilder<AuthState>(
+          stream: SupabaseService.client.auth.onAuthStateChange,
+          builder: (_, __) => !_isCurrent
+              ? const SafeArea(
+                  child: Padding(
+                      padding: EdgeInsets.all(24),
+                      child: Text('Нэвтрэх хаяг өөрчлөгдсөн байна.')))
+              : SafeArea(
+                  child: Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Column(mainAxisSize: MainAxisSize.min, children: [
+                    const SizedBox(height: 10),
+                    Container(
+                        width: 40,
+                        height: 4,
+                        decoration: BoxDecoration(
+                            color: AppColors.hairline,
+                            borderRadius: BorderRadius.circular(2))),
+                    const SizedBox(height: 14),
+                    Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        child: Row(children: [
+                          Text('Гишүүд (${_profiles.length})',
+                              style: AppTextStyles.labelLg),
+                        ])),
+                    const SizedBox(height: 8),
+                    ConstrainedBox(
+                        constraints: BoxConstraints(
+                            maxHeight:
+                                MediaQuery.of(context).size.height * 0.42),
+                        child: ListView(shrinkWrap: true, children: [
+                          for (final m in _profiles.values) _memberTile(m),
+                        ])),
+                    Divider(height: 1, color: AppColors.hairline),
+                    ListTile(
+                        leading: const SculptedIcon(
+                            Icons.person_add_alt_1_outlined,
+                            color: AppColors.accentStart,
+                            size: 22),
+                        title: Text('Гишүүн нэмэх',
+                            style: AppTextStyles.bodyMd
+                                .copyWith(color: AppColors.textPrimary)),
+                        onTap: () {
+                          Navigator.pop(sheetCtx);
+                          _addMembers();
+                        }),
+                    ListTile(
+                        leading: const SculptedIcon(Icons.logout_rounded,
+                            color: AppColors.error, size: 22),
+                        title: Text('Группээс гарах',
+                            style: AppTextStyles.bodyMd
+                                .copyWith(color: AppColors.error)),
+                        onTap: () {
+                          Navigator.pop(sheetCtx);
+                          _leaveGroup();
+                        }),
+                    const SizedBox(height: 8),
+                  ]),
+                ))),
     );
   }
 
@@ -216,6 +322,8 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
   }
 
   Future<void> _addMembers() async {
+    if (!_isCurrent || _memberActionBusy) return;
+    setState(() => _memberActionBusy = true);
     final existing = _profiles.keys.toSet();
     final picked = await showModalBottomSheet<List<String>>(
       context: context,
@@ -223,24 +331,36 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
-      builder: (_) => _AddMemberSheet(existingIds: existing),
+      builder: (_) => _AddMemberSheet(
+          existingIds: existing, ownerId: _myId, isCurrent: () => _isCurrent),
     );
-    if (picked == null || picked.isEmpty || !mounted) return;
-    final ok = await GroupService.addMembers(widget.groupId, picked);
-    if (!mounted) return;
-    if (ok) {
+    if (!mounted || !_isCurrent) return;
+    if (picked == null || picked.isEmpty) {
+      setState(() => _memberActionBusy = false);
+      return;
+    }
+    final ok = await GroupService.addMembers(widget.groupId, picked)
+        .then<bool?>((result) => result)
+        .timeout(const Duration(seconds: 20), onTimeout: () => null);
+    if (!mounted || !_isCurrent) return;
+    setState(() => _memberActionBusy = false);
+    if (ok == true) {
       _loadMembers();
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: const Text('Гишүүн нэмэгдлээ'),
           backgroundColor: AppColors.bgElevated));
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Нэмж чадсангүй. Дахин оролдоно уу.'),
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(ok == null
+              ? 'Нэмэгдсэн эсэхийг баталж чадсангүй. Гишүүдийн жагсаалтаа дахин шалгаарай.'
+              : 'Нэмж чадсангүй. Дахин оролдоно уу.'),
           backgroundColor: AppColors.error));
     }
   }
 
   Future<void> _leaveGroup() async {
+    if (!_isCurrent || _memberActionBusy) return;
+    setState(() => _memberActionBusy = true);
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -262,20 +382,30 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
         ],
       ),
     );
-    if (confirm != true || !mounted) return;
-    final ok = await GroupService.leaveGroup(widget.groupId);
-    if (!mounted) return;
-    if (ok) {
-      context.pop();
+    if (!mounted || !_isCurrent) return;
+    if (confirm != true) {
+      setState(() => _memberActionBusy = false);
+      return;
+    }
+    final ok = await GroupService.leaveGroup(widget.groupId)
+        .then<bool?>((result) => result)
+        .timeout(const Duration(seconds: 20), onTimeout: () => null);
+    if (!mounted || !_isCurrent) return;
+    setState(() => _memberActionBusy = false);
+    if (ok == true) {
+      _back();
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Гарч чадсангүй. Дахин оролдоно уу.'),
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(ok == null
+              ? 'Группээс гарсан эсэхийг баталж чадсангүй. Жагсаалтаа дахин нээгээрэй.'
+              : 'Гарч чадсангүй. Дахин оролдоно уу.'),
           backgroundColor: AppColors.error));
     }
   }
 
   @override
   void dispose() {
+    ++_subscriptionVersion;
     _sub?.cancel();
     _ctrl.removeListener(_syncCanSend);
     _ctrl.dispose();
@@ -294,7 +424,7 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
         height: chatToolbarHeight(context),
         name: _name ?? 'Групп',
         memberCount: _profiles.length,
-        onBack: () => context.pop(),
+        onBack: _back,
         onTapHeader: _showMembers,
       ),
       body: Stack(children: [
@@ -406,6 +536,8 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
                                       Expanded(
                                           child: TextField(
                                               controller: _ctrl,
+                                              enabled: !_sending,
+                                              maxLength: 4000,
                                               style: AppTextStyles.bodyMd
                                                   .copyWith(
                                                       color: AppColors
@@ -415,6 +547,7 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
                                               cursorColor: AppColors.neonCyan,
                                               onSubmitted: (_) => _send(),
                                               decoration: InputDecoration(
+                                                  counterText: '',
                                                   hintText: 'Мессеж бичих...',
                                                   hintStyle: AppTextStyles
                                                       .bodyMd
@@ -890,7 +1023,12 @@ class _GroupErrorState extends StatelessWidget {
 /// Группд гишүүн нэмэх sheet — debounce хайлт + сонголт → id жагсаалт буцаана
 class _AddMemberSheet extends StatefulWidget {
   final Set<String> existingIds;
-  const _AddMemberSheet({required this.existingIds});
+  final String ownerId;
+  final bool Function() isCurrent;
+  const _AddMemberSheet(
+      {required this.existingIds,
+      required this.ownerId,
+      required this.isCurrent});
   @override
   State<_AddMemberSheet> createState() => _AddMemberSheetState();
 }
@@ -900,10 +1038,12 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
   List<Map<String, dynamic>> _results = [];
   final Map<String, Map<String, dynamic>> _selected = {};
   bool _loading = false;
+  bool _failed = false;
   Timer? _debounce;
   int _reqSeq = 0; // stale-response race-ээс сэргийлэх дараалал
 
-  String get _myId => SupabaseService.currentUser?.id ?? '';
+  String get _myId => widget.ownerId;
+  bool get _active => mounted && widget.isCurrent();
 
   @override
   void initState() {
@@ -912,21 +1052,44 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
   }
 
   void _onChanged(String q) {
+    if (!_active) return;
     _debounce?.cancel();
+    ++_reqSeq;
+    setState(() {
+      _results = [];
+      _loading = true;
+      _failed = false;
+    });
     _debounce = Timer(const Duration(milliseconds: 300), () => _search(q));
   }
 
   Future<void> _search(String q) async {
+    if (!_active) return;
     final seq = ++_reqSeq;
-    setState(() => _loading = true);
+    setState(() {
+      _loading = true;
+      _failed = false;
+    });
     try {
       var query = SupabaseService.client
           .from('profiles')
           .select('id, username, avatar_url')
           .neq('id', _myId);
-      if (q.trim().isNotEmpty) query = query.ilike('username', '%$q%');
-      final rows = await query.limit(30);
-      if (!mounted || seq != _reqSeq) return; // хуучирсан хариуг алгасна
+      final term = q
+          .trim()
+          .replaceAll(RegExp(r'[%*]'), '')
+          .replaceAll(r'\', r'\\')
+          .replaceAll('_', r'\_');
+      if (q.trim().isNotEmpty && term.isEmpty) {
+        setState(() {
+          _results = [];
+          _loading = false;
+        });
+        return;
+      }
+      if (term.isNotEmpty) query = query.ilike('username', '%$term%');
+      final rows = await query.limit(30).timeout(const Duration(seconds: 15));
+      if (!_active || seq != _reqSeq) return;
       setState(() {
         _results = (rows as List)
             .cast<Map<String, dynamic>>()
@@ -935,10 +1098,11 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
         _loading = false;
       });
     } catch (_) {
-      if (!mounted || seq != _reqSeq) return;
+      if (!_active || seq != _reqSeq) return;
       setState(() {
         _results = [];
         _loading = false;
+        _failed = true;
       });
     }
   }
@@ -952,116 +1116,150 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding:
-          EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-      child: SizedBox(
-        height: MediaQuery.of(context).size.height * 0.72,
-        child: Column(children: [
-          const SizedBox(height: 12),
-          Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                  color: AppColors.hairline2,
-                  borderRadius: BorderRadius.circular(2))),
-          const SizedBox(height: 14),
-          Text('Гишүүн нэмэх', style: AppTextStyles.h2),
-          const SizedBox(height: 12),
-          // Хайлт — апп даяарх нэгдсэн шилэн pill талбар (48)
-          Padding(
-              padding: const EdgeInsets.fromLTRB(20, 4, 20, 4),
-              child: SearchField(
-                  controller: _searchCtrl,
-                  onChanged: _onChanged,
-                  hint: 'Хэрэглэгч хайх...')),
-          Expanded(
-              child: _loading && _results.isEmpty
-                  ? const Center(
-                      child: CircularProgressIndicator(
-                          color: AppColors.accentStart, strokeWidth: 2))
-                  : _results.isEmpty
-                      ? Center(
-                          child: Text('Хэрэглэгч олдсонгүй',
-                              style: AppTextStyles.bodyMd
-                                  .copyWith(color: AppColors.textSecondary)))
-                      : ListView.builder(
-                          itemCount: _results.length,
-                          itemBuilder: (_, i) {
-                            final u = _results[i];
-                            final id = u['id'] as String;
-                            final uname = (u['username'] as String? ?? 'user')
-                                .replaceAll('@', '');
-                            final sel = _selected.containsKey(id);
-                            return ListTile(
-                              onTap: () => setState(() => sel
-                                  ? _selected.remove(id)
-                                  : _selected[id] = u),
-                              leading: AppAvatar(
-                                  imageUrl: u['avatar_url'] as String?,
-                                  initial: uname.isNotEmpty
-                                      ? uname[0].toUpperCase()
-                                      : '?',
-                                  size: 40),
-                              title: Text('@$uname',
-                                  style: AppTextStyles.labelMd
-                                      .copyWith(color: AppColors.textPrimary)),
-                              trailing: Container(
-                                  width: 24,
-                                  height: 24,
-                                  decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      gradient:
-                                          sel ? AppColors.accentGradient : null,
-                                      border: sel
-                                          ? null
-                                          : Border.all(
-                                              color: AppColors.hairline2,
-                                              width: 1.5)),
-                                  child: sel
-                                      ? const SculptedIcon(Icons.check,
-                                          size: 15,
-                                          color: Colors.white,
-                                          onDark: true)
-                                      : null),
-                            );
-                          })),
-          SafeArea(
-              top: false,
-              child: Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 14),
-                  child: _ScaleTap(
-                      onTap: _selected.isEmpty
-                          ? null
-                          : () =>
-                              Navigator.pop(context, _selected.keys.toList()),
-                      // Primary товч — pill 52 + gradient glow
-                      child: Container(
-                          height: 52,
-                          width: double.infinity,
-                          decoration: BoxDecoration(
-                              gradient: _selected.isEmpty
-                                  ? null
-                                  : AppColors.accentGradient,
-                              color: _selected.isEmpty
-                                  ? AppColors.bgSurface
-                                  : null,
-                              borderRadius: BorderRadius.circular(999),
-                              boxShadow: _selected.isEmpty
-                                  ? null
-                                  : AppColors.glowShadow(
-                                      AppColors.accentStart)),
-                          alignment: Alignment.center,
-                          child: Text(
-                              _selected.isEmpty
-                                  ? 'Хэрэглэгч сонгоно уу'
-                                  : 'Нэмэх (${_selected.length})',
-                              style: AppTextStyles.btn.copyWith(
-                                  color: _selected.isEmpty
-                                      ? AppColors.textTertiary
-                                      : Colors.white)))))),
-        ]),
-      ),
-    );
+    return StreamBuilder<AuthState>(
+        stream: SupabaseService.client.auth.onAuthStateChange,
+        builder: (_, __) => !_active
+            ? const SafeArea(
+                child: Padding(
+                    padding: EdgeInsets.all(24),
+                    child: Text('Нэвтрэх хаяг өөрчлөгдсөн байна.')))
+            : Padding(
+                padding: EdgeInsets.only(
+                    bottom: MediaQuery.of(context).viewInsets.bottom),
+                child: SizedBox(
+                  height: MediaQuery.of(context).size.height * 0.72,
+                  child: Column(children: [
+                    const SizedBox(height: 12),
+                    Container(
+                        width: 40,
+                        height: 4,
+                        decoration: BoxDecoration(
+                            color: AppColors.hairline2,
+                            borderRadius: BorderRadius.circular(2))),
+                    const SizedBox(height: 14),
+                    Text('Гишүүн нэмэх', style: AppTextStyles.h2),
+                    const SizedBox(height: 12),
+                    // Хайлт — апп даяарх нэгдсэн шилэн pill талбар (48)
+                    Padding(
+                        padding: const EdgeInsets.fromLTRB(20, 4, 20, 4),
+                        child: SearchField(
+                            controller: _searchCtrl,
+                            onChanged: _onChanged,
+                            hint: 'Хэрэглэгч хайх...')),
+                    Expanded(
+                        child: _loading && _results.isEmpty
+                            ? const Center(
+                                child: CircularProgressIndicator(
+                                    color: AppColors.accentStart,
+                                    strokeWidth: 2))
+                            : _failed
+                                ? Center(
+                                    child: TextButton(
+                                        onPressed: () =>
+                                            _search(_searchCtrl.text),
+                                        child: const Text(
+                                            'Хайж чадсангүй. Дахин оролдох')))
+                                : _results.isEmpty
+                                    ? Center(
+                                        child: Text('Хэрэглэгч олдсонгүй',
+                                            style: AppTextStyles.bodyMd
+                                                .copyWith(
+                                                    color: AppColors
+                                                        .textSecondary)))
+                                    : ListView.builder(
+                                        itemCount: _results.length,
+                                        itemBuilder: (_, i) {
+                                          final u = _results[i];
+                                          final id = u['id'] as String;
+                                          final uname =
+                                              (u['username'] as String? ??
+                                                      'user')
+                                                  .replaceAll('@', '');
+                                          final sel = _selected.containsKey(id);
+                                          return ListTile(
+                                            onTap: () {
+                                              if (!_active) return;
+                                              setState(() => sel
+                                                  ? _selected.remove(id)
+                                                  : _selected[id] = u);
+                                            },
+                                            leading: AppAvatar(
+                                                imageUrl:
+                                                    u['avatar_url'] as String?,
+                                                initial: uname.isNotEmpty
+                                                    ? uname[0].toUpperCase()
+                                                    : '?',
+                                                size: 40),
+                                            title: Text('@$uname',
+                                                style: AppTextStyles.labelMd
+                                                    .copyWith(
+                                                        color: AppColors
+                                                            .textPrimary)),
+                                            trailing: Container(
+                                                width: 24,
+                                                height: 24,
+                                                decoration: BoxDecoration(
+                                                    shape: BoxShape.circle,
+                                                    gradient: sel
+                                                        ? AppColors
+                                                            .accentGradient
+                                                        : null,
+                                                    border: sel
+                                                        ? null
+                                                        : Border.all(
+                                                            color: AppColors
+                                                                .hairline2,
+                                                            width: 1.5)),
+                                                child: sel
+                                                    ? const SculptedIcon(
+                                                        Icons.check,
+                                                        size: 15,
+                                                        color: Colors.white,
+                                                        onDark: true)
+                                                    : null),
+                                          );
+                                        })),
+                    SafeArea(
+                        top: false,
+                        child: Padding(
+                            padding: const EdgeInsets.fromLTRB(20, 8, 20, 14),
+                            child: _ScaleTap(
+                                onTap: _selected.isEmpty
+                                    ? null
+                                    : () {
+                                        if (_active) {
+                                          Navigator.pop(
+                                              context, _selected.keys.toList());
+                                        }
+                                      },
+                                // Primary товч — pill 52 + gradient glow
+                                child: Container(
+                                    height: 52,
+                                    width: double.infinity,
+                                    decoration: BoxDecoration(
+                                        gradient: _selected.isEmpty
+                                            ? null
+                                            : AppColors.accentGradient,
+                                        color: _selected.isEmpty
+                                            ? AppColors.bgSurface
+                                            : null,
+                                        borderRadius:
+                                            BorderRadius.circular(999),
+                                        boxShadow: _selected.isEmpty
+                                            ? null
+                                            : AppColors.glowShadow(
+                                                AppColors.accentStart)),
+                                    alignment: Alignment.center,
+                                    child: Text(
+                                        _selected.isEmpty
+                                            ? 'Хэрэглэгч сонгоно уу'
+                                            : 'Нэмэх (${_selected.length})',
+                                        style: AppTextStyles.btn.copyWith(
+                                            color: _selected.isEmpty
+                                                ? AppColors.textTertiary
+                                                : Colors.white)))))),
+                  ]),
+                ),
+              ));
   }
 }

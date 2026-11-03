@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/sculpted_icon.dart';
 import '../../../core/theme/app_text_styles.dart';
@@ -12,18 +13,20 @@ import 'search_field.dart';
 /// Амжилттай бол {'id': ..., 'name': ...} буцаана (нэрийг refetch хүлээлгүй
 /// шууд thread гарчигт харуулахын тулд).
 Future<Map<String, String>?> showCreateGroupSheet(BuildContext context) {
+  final session = SupabaseService.client.auth.currentSession;
   return showModalBottomSheet<Map<String, String>>(
     context: context,
     backgroundColor: AppColors.bgElevated,
     isScrollControlled: true,
     shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
-    builder: (_) => const _CreateGroupSheet(),
+    builder: (_) => _CreateGroupSheet(session: session),
   );
 }
 
 class _CreateGroupSheet extends StatefulWidget {
-  const _CreateGroupSheet();
+  final Session? session;
+  const _CreateGroupSheet({required this.session});
   @override
   State<_CreateGroupSheet> createState() => _CreateGroupSheetState();
 }
@@ -38,21 +41,65 @@ class _CreateGroupSheetState extends State<_CreateGroupSheet> {
   Timer? _debounce;
   int _reqSeq = 0; // stale-response race-ээс сэргийлэх дараалал
 
-  String get _myId => SupabaseService.currentUser?.id ?? '';
+  Session? _allowedSession;
+  StreamSubscription<AuthState>? _authSubscription;
+  bool _accountChanged = false;
+  String get _myId => widget.session?.user.id ?? '';
+  bool get _active =>
+      mounted &&
+      !_accountChanged &&
+      _myId.isNotEmpty &&
+      SupabaseService.currentUser?.id == _myId &&
+      identical(SupabaseService.client.auth.currentSession, _allowedSession);
+
+  void _invalidateAccount() {
+    if (!mounted || _accountChanged) return;
+    _debounce?.cancel();
+    ++_reqSeq;
+    _nameCtrl.clear();
+    _searchCtrl.clear();
+    setState(() {
+      _accountChanged = true;
+      _results = [];
+      _selected.clear();
+      _busy = false;
+      _searching = false;
+    });
+  }
 
   @override
   void initState() {
     super.initState();
+    _allowedSession = widget.session;
+    var firstEvent = true;
+    _authSubscription =
+        SupabaseService.client.auth.onAuthStateChange.listen((state) {
+      if (firstEvent && identical(state.session, widget.session)) {
+        firstEvent = false;
+        return;
+      }
+      firstEvent = false;
+      if (!_accountChanged &&
+          state.event == AuthChangeEvent.tokenRefreshed &&
+          state.session?.user.id == _myId) {
+        _allowedSession = state.session;
+      } else {
+        _invalidateAccount();
+      }
+    }, onError: (Object _) => _invalidateAccount());
     _search('');
   }
 
   // Товчлол бүрт бус — 300мс debounce хийж хайна
   void _onSearchChanged(String q) {
+    if (!_active) return;
     _debounce?.cancel();
+    ++_reqSeq; // Invalidate the previous response during the debounce window.
     _debounce = Timer(const Duration(milliseconds: 300), () => _search(q));
   }
 
   Future<void> _search(String q) async {
+    if (!_active) return;
     final seq = ++_reqSeq;
     setState(() => _searching = true);
     try {
@@ -63,13 +110,13 @@ class _CreateGroupSheetState extends State<_CreateGroupSheet> {
       if (q.trim().isNotEmpty) query = query.ilike('username', '%$q%');
       final rows = await query.limit(30);
       // Хуучирсан хариуг (шинэ хайлт эхэлсэн бол) алгасна
-      if (!mounted || seq != _reqSeq) return;
+      if (!_active || seq != _reqSeq) return;
       setState(() {
         _results = (rows as List).cast<Map<String, dynamic>>();
         _searching = false;
       });
     } catch (_) {
-      if (!mounted || seq != _reqSeq) return;
+      if (!_active || seq != _reqSeq) return;
       setState(() {
         _results = [];
         _searching = false;
@@ -79,10 +126,11 @@ class _CreateGroupSheetState extends State<_CreateGroupSheet> {
 
   Future<void> _create() async {
     final name = _nameCtrl.text.trim();
-    if (name.isEmpty || _selected.isEmpty || _busy) return;
+    if (!_active || name.isEmpty || _selected.isEmpty || _busy) return;
     setState(() => _busy = true);
-    final gid = await GroupService.createGroup(name, _selected.keys.toList());
-    if (!mounted) return;
+    final gid = await GroupService.createGroup(name, _selected.keys.toList(),
+        isCurrent: () => _active);
+    if (!mounted || !_active) return;
     if (gid == null) {
       setState(() => _busy = false);
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
@@ -95,6 +143,7 @@ class _CreateGroupSheetState extends State<_CreateGroupSheet> {
 
   @override
   void dispose() {
+    _authSubscription?.cancel();
     _debounce?.cancel();
     _nameCtrl.dispose();
     _searchCtrl.dispose();
@@ -103,8 +152,24 @@ class _CreateGroupSheetState extends State<_CreateGroupSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final canCreate =
-        _nameCtrl.text.trim().isNotEmpty && _selected.isNotEmpty && !_busy;
+    if (_accountChanged) {
+      return SafeArea(
+          child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(mainAxisSize: MainAxisSize.min, children: [
+                const Text(
+                    'Нэвтрэх бүртгэл өөрчлөгдсөн. Групп үүсгэх цонхыг дахин нээнэ үү.',
+                    textAlign: TextAlign.center),
+                const SizedBox(height: 12),
+                TextButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: const Text('Хаах')),
+              ])));
+    }
+    final canCreate = _active &&
+        _nameCtrl.text.trim().isNotEmpty &&
+        _selected.isNotEmpty &&
+        !_busy;
     return Padding(
       padding:
           EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),

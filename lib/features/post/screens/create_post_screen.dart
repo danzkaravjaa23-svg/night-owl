@@ -6,23 +6,24 @@ import 'package:video_player/video_player.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/widgets/gradient_button.dart';
-import '../../../core/constants/app_constants.dart';
-import '../../../core/services/supabase_service.dart';
 import '../../../core/router/app_router.dart' show AppRoutes;
 import '../../auth/providers/auth_provider.dart';
 import '../../feed/providers/feed_provider.dart';
 import '../utils/post_media.dart';
+import '../services/content_publication.dart';
 import '../../map/providers/venue_provider.dart';
 import '../../../core/widgets/owl_loading.dart';
 import '../../../models/venue.dart';
 
 const int _maxImages = 10;
 // Файлын дээд хэмжээ — placeholder дээр амласантай нийцнэ
-const int _maxVideoBytes = 500 * 1024 * 1024; // 500MB
+const int _maxVideoBytes = 50 * 1024 * 1024; // Storage bucket limit
 const int _maxImageBytes = 25 * 1024 * 1024;  // 25MB
 
 class CreatePostScreen extends ConsumerStatefulWidget {
-  const CreatePostScreen({super.key});
+  final ContentPublicationService? publicationService;
+  final Future<List<PickedMediaFile>> Function({bool multiple})? mediaPicker;
+  const CreatePostScreen({super.key, this.publicationService, this.mediaPicker});
 
   @override
   ConsumerState<CreatePostScreen> createState() => _CreatePostScreenState();
@@ -41,11 +42,51 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
   Venue? _selectedVenue;
   bool _loading = false;
   String? _error;
+  late final ContentPublicationService _publisher;
+  late final PublicationSession _session;
+  bool _picking = false;
+  bool _allowExit = false;
+  Map<String, dynamic>? _pendingRow;
   double? _uploadProgress;
   int _uploadIndex = 0;
 
   bool get _hasMedia    => _media.isNotEmpty;
   bool get _isVideoPost => _media.length == 1 && _media.first.isVideo;
+
+  bool get _canEdit => !_loading && !_picking && _pendingRow == null && _session.isCurrent;
+  bool get _hasDraft => _hasMedia || _captionCtrl.text.trim().isNotEmpty || _venueName != null;
+
+  @override
+  void initState() {
+    super.initState();
+    _publisher = widget.publicationService ?? ContentPublicationService();
+    _session = _publisher.captureSession();
+    _captionCtrl.addListener(_draftChanged);
+  }
+
+  void _draftChanged() { if (mounted) setState(() {}); }
+
+  Future<void> _requestClose() async {
+    if (_loading || _picking) {
+      _toast('Илгээх эсвэл файл сонгох үйлдэл дуусахыг хүлээнэ үү.');
+      return;
+    }
+    if (_hasDraft) {
+      final discard = await showDialog<bool>(context: context, builder: (ctx) => AlertDialog(
+        title: const Text('Нооргоос гарах уу?'),
+        content: Text(_pendingRow == null
+            ? 'Сонгосон медиа, бичсэн тайлбар энэ дэлгэцээс гарахад хадгалагдахгүй.'
+            : 'Нийтлэлийн төлөв тодорхойгүй байна. Feed-ээ шалгана уу; гарснаар серверийн хүсэлт цуцлагдахгүй.'),
+        actions: [TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Үргэлжлүүлэх')),
+          TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Гарах'))],
+      ));
+      if (!mounted || discard != true) return;
+    }
+    setState(() => _allowExit = true);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) context.canPop() ? context.pop() : context.go(AppRoutes.feed);
+    });
+  }
 
   void _toast(String msg) {
     if (!mounted) return;
@@ -55,76 +96,64 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
 
   // ─── Media сонгох (олон зураг эсвэл нэг видео) ───
   Future<void> _pickMedia({bool append = false}) async {
-    final picked = await pickPostMedia(multiple: !append || !_isVideoPost);
-    if (picked.isEmpty) return; // цуцалсан
-
-    final firstIsVideo = picked.first.isVideo;
-
-    if (!append) {
-      // Цэвэрлэх
-      _videoCtrl?.dispose();
-      _videoCtrl = null;
-      for (final m in _media) {
-        revokePreviewUrl(m.previewUrl);
-      }
-      _media.clear();
-      _page = 0;
-    }
-
-    if (firstIsVideo && !append) {
-      // Нэг видеоны пост
-      final f = picked.first;
-      for (final extra in picked.skip(1)) {
-        revokePreviewUrl(extra.previewUrl);
-      }
-      // Хэмжээ шалгана — амласан 500MB-с хэтэрвэл upload эхлэхээс өмнө хаана
-      if (f.size > _maxVideoBytes) {
-        revokePreviewUrl(f.previewUrl);
-        setState(() =>
-            _error = 'Файл хэтэрхий том байна — видео 500MB хүртэл');
+    if (!_canEdit) return;
+    setState(() { _picking = true; _error = null; });
+    try {
+      final picked = await (widget.mediaPicker ?? pickPostMedia)(multiple: !append || !_isVideoPost);
+      if (!mounted || !_session.isCurrent) {
+        for (final media in picked) { revokePreviewUrl(media.previewUrl); }
         return;
       }
-      _media.add(f);
-      setState(() {
-        _error = null;
-        _uploadProgress = null;
-        _videoPlaying = false;
-      });
-      final ctrl = previewVideoController(f);
-      try {
-        await ctrl.initialize();
-        if (mounted && _media.contains(f)) {
-          setState(() => _videoCtrl = ctrl);
-          return;
+      if (picked.isEmpty) return;
+      final acceptVideo = !append && picked.first.isVideo;
+      final accepted = <PickedMediaFile>[];
+      final room = acceptVideo ? 1 : _maxImages - (append ? _media.length : 0);
+      for (final file in picked) {
+        final supported = file.isVideo
+            ? const {'video/mp4', 'video/webm', 'video/quicktime', 'video/x-m4v'}.contains(file.mimeType)
+            : file.mimeType.startsWith('image/');
+        if (accepted.length >= room || file.isVideo != acceptVideo || !supported ||
+            file.size <= 0 || file.size > (file.isVideo ? _maxVideoBytes : _maxImageBytes)) {
+          revokePreviewUrl(file.previewUrl);
+        } else {
+          accepted.add(file);
         }
-      } catch (_) {}
-      ctrl.dispose();
-      return;
-    }
-
-    // Зургийн carousel (видео/том файлуудыг алгасаад мэдэгдэнэ)
-    var skippedVideos = 0;
-    var skippedBig = 0;
-    for (final f in picked) {
-      if (_media.length >= _maxImages) { revokePreviewUrl(f.previewUrl); continue; }
-      if (f.isVideo) { skippedVideos++; revokePreviewUrl(f.previewUrl); continue; }
-      if (f.size > _maxImageBytes) { skippedBig++; revokePreviewUrl(f.previewUrl); continue; }
-      _media.add(f);
-    }
-    setState(() {
-      _error = null;
-      _uploadProgress = null;
-    });
-    if (skippedVideos > 0) {
-      _toast('Видео файл алгасагдлаа — зургийн цомогт зөвхөн зураг нэмнэ');
-    }
-    if (skippedBig > 0) {
-      _toast('$skippedBig зураг хэтэрхий том тул алгаслаа (25MB хүртэл)');
+      }
+      if (accepted.isEmpty) {
+        setState(() => _error = 'Тохирох файл алга. Зураг 25MB, видео 50MB хүртэл; MP4, MOV, WebM эсвэл зураг сонгоно уу.');
+        return;
+      }
+      // Validate replacement before releasing the existing draft.
+      if (!append) {
+        _videoCtrl?.dispose(); _videoCtrl = null;
+        for (final media in _media) { revokePreviewUrl(media.previewUrl); }
+        _media.clear(); _page = 0;
+      }
+      setState(() { _media.addAll(accepted); _uploadProgress = null; _videoPlaying = false; });
+      if (accepted.length < picked.length) _toast('Зөвшөөрөгдсөн ${accepted.length} файл нэмлээ. Бусад файлыг төрөл, хэмжээ эсвэл тооны хязгаараар алгаслаа.');
+      if (acceptVideo) {
+        final file = accepted.first;
+        final controller = previewVideoController(file);
+        try {
+          await controller.initialize().timeout(const Duration(seconds: 15));
+          if (mounted && _session.isCurrent && _media.contains(file)) {
+            setState(() => _videoCtrl = controller);
+            return;
+          }
+        } catch (_) {
+          if (mounted && _session.isCurrent) _toast('Видео урьдчилан тоглуулах боломжгүй байна.');
+        }
+        controller.dispose();
+      }
+    } catch (_) {
+      if (mounted) setState(() => _error = 'Медиа сонгож чадсангүй. Зөвшөөрлөө шалгаад дахин оролдоно уу.');
+    } finally {
+      if (mounted) setState(() => _picking = false);
     }
   }
 
   void _removeAt(int i) {
-    if (i < 0 || i >= _media.length) return;
+    if (!_canEdit || i < 0 || i >= _media.length) return;
     revokePreviewUrl(_media[i].previewUrl);
     if (_media[i].isVideo) {
       _videoCtrl?.dispose();
@@ -138,81 +167,64 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
 
   // ─── Хуваалцах ───
   Future<void> _post() async {
-    if (_media.isEmpty) {
-      setState(() => _error = 'Зураг эсвэл видео сонгоно уу');
+    if (_loading || _picking) return;
+    if (!_session.isCurrent) {
+      setState(() => _error = 'Нэвтрэх хаяг өөрчлөгдсөн байна. Нооргийг өөр хаягаар нийтлэхгүй.');
       return;
     }
+    if (_media.isEmpty) { setState(() => _error = 'Зураг эсвэл видео сонгоно уу'); return; }
+    final media = List<PickedMediaFile>.of(_media);
+    final caption = _captionCtrl.text.trim();
+    final venueName = _venueName;
+    final venue = _selectedVenue;
+    final video = _isVideoPost;
     setState(() { _loading = true; _error = null; _uploadProgress = 0; _uploadIndex = 0; });
-    // Upload удаан — энэ хооронд дэлгэц хаагдсан ч provider-уудыг шинэчилж чадна
-    final container = ProviderScope.containerOf(context, listen: false);
-
     try {
-      final user = SupabaseService.currentUser;
-      if (user == null) { if (mounted) context.pop(); return; }
-
-      final token = SupabaseService.client.auth.currentSession?.accessToken
-          ?? AppConstants.supabaseAnonKey;
-
-      final urls = <String>[];
-      for (var i = 0; i < _media.length; i++) {
-        final m = _media[i];
-        if (mounted) setState(() { _uploadIndex = i; _uploadProgress = 0; });
-        final ts = DateTime.now().millisecondsSinceEpoch;
-
-        Object blob;
-        String mime;
-        String ext;
-        if (m.isVideo) {
-          // Видеог хэвээр нь (browser-д найдвартай compress хийх боломжгүй)
-          blob = m.file!;
-          mime = m.mimeType.isNotEmpty ? m.mimeType : 'video/mp4';
-          ext = (m.name.contains('.')
-              ? m.name.split('.').last.toLowerCase()
-              : 'mp4');
-        } else {
-          // Зургийг resize + compress (decode алдаа/гацалтад timeout-той)
-          blob = await resizeImageForUpload(m);
-          mime = 'image/jpeg';
-          ext = 'jpg';
+      if (_pendingRow == null) {
+        final id = ContentPublicationService.newId();
+        final urls = <String>[];
+        for (var i = 0; i < media.length; i++) {
+          _session.check();
+          if (!mounted) return;
+          setState(() { _uploadIndex = i; _uploadProgress = 0; });
+          final file = media[i];
+          final blob = file.isVideo ? file.file! : await _publisher.preparePostImage(file);
+          _session.check();
+          if (!mounted) return;
+          final ext = file.isVideo ? file.name.split('.').last.toLowerCase() : 'jpg';
+          urls.add(await _publisher.uploadPost(_session, blob,
+            path: '${_session.ownerId}/${id}_$i.$ext',
+            contentType: file.isVideo ? file.mimeType : 'image/jpeg',
+            onProgress: (progress) {
+              if (mounted && _session.isCurrent) setState(() => _uploadProgress = progress.clamp(0, 1));
+            }));
         }
-
-        final path = '${user.id}/${ts}_$i.$ext';
-        final url =
-            '${AppConstants.supabaseUrl}/storage/v1/object/posts/$path';
-        await uploadBlobWithProgress(
-          blob: blob,
-          url: url,
-          token: token,
-          mime: mime,
-          onProgress: (p) {
-            if (mounted) setState(() => _uploadProgress = p);
-          },
-        );
-        urls.add(SupabaseService.client.storage.from('posts').getPublicUrl(path));
+        _session.check();
+        if (!mounted) return;
+        _pendingRow = Map.unmodifiable({
+          'id': id, 'user_id': _session.ownerId, 'caption': caption,
+          'media_url': urls.first, 'media_urls': List<String>.unmodifiable(urls),
+          'media_type': video ? 'video' : 'image',
+          if (venueName != null) 'venue_name': venueName,
+          if (venue != null) 'venue_ref': venue.id,
+          if (venue?.communityEnabled == true) 'venue_id': venue!.id,
+        });
       }
-
-      await SupabaseService.client.from('posts').insert({
-        'user_id':    user.id,
-        'caption':    _captionCtrl.text.trim(),
-        'media_url':  urls.first,
-        'media_urls': urls,
-        'media_type': _isVideoPost ? 'video' : 'image',
-        if (_venueName != null) 'venue_name': _venueName,
-        if (_selectedVenue != null) 'venue_ref': _selectedVenue!.id,
-        if (_selectedVenue?.communityEnabled == true) 'venue_id': _selectedVenue!.id,
+      setState(() => _uploadProgress = null);
+      await _publisher.publish(_session, 'posts', _pendingRow!);
+      if (!mounted || !_session.isCurrent) return;
+      ref.invalidate(feedProvider);
+      ref.read(postsVersionProvider.notifier).state++;
+      ref.invalidate(currentProfileProvider);
+      setState(() => _allowExit = true);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _session.isCurrent) context.canPop() ? context.pop() : context.go(AppRoutes.feed);
       });
-
-      container.read(feedProvider.notifier).loadFeed(refresh: true);
-      // Профайлын grid + ПОСТ тоо шинэчлэгдэнэ (posts_count trigger ажилласан).
-      // ProfileScreen доор нь mounted хэвээр тул өөрөө дахин уншихгүй.
-      container.read(postsVersionProvider.notifier).state++;
-      container.invalidate(currentProfileProvider);
-      if (!mounted) return;
-      // Линк/reload-оор нээгдсэн бол pop хийх хуудас байхгүй
-      context.canPop() ? context.pop() : context.go(AppRoutes.feed);
-    } catch (e) {
-      if (!mounted) return;
-      setState(() => _error = e.toString().replaceAll('Exception: ', ''));
+    } catch (error) {
+      if (mounted) {
+        setState(() => _error = error is PublicationFailure
+            ? error.message : 'Илгээж чадсангүй. Ноорог хэвээр байна; дахин оролдоно уу.');
+      }
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -220,6 +232,8 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
 
   @override
   void dispose() {
+    _session.close();
+    _captionCtrl.removeListener(_draftChanged);
     _captionCtrl.dispose();
     _pageCtrl.dispose();
     _videoCtrl?.dispose();
@@ -231,20 +245,23 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
 
   // ─── Build ───
   @override
-  Widget build(BuildContext context) => Scaffold(
+  Widget build(BuildContext context) => PopScope(
+    canPop: _allowExit || (!_hasDraft && !_loading && !_picking),
+    onPopInvokedWithResult: (didPop, result) { if (!didPop) _requestClose(); },
+    child: Scaffold(
     backgroundColor: AppColors.bgBase,
     appBar: AppBar(
       backgroundColor: AppColors.bgBase,
       leading: IconButton(
-        onPressed: _loading ? null : () => context.canPop()
-            ? context.pop() : context.go(AppRoutes.feed),
+        tooltip: 'Хаах',
+        onPressed: (_loading || _picking) ? null : _requestClose,
         icon: const Icon(Icons.close)),
       title: Text('Шинэ пост', style: AppTextStyles.h2),
       actions: [
         Padding(
           padding: const EdgeInsets.only(right: 8),
           child: TextButton(
-            onPressed: (_loading || !_hasMedia) ? null : _post,
+            onPressed: (_loading || _picking || !_hasMedia) ? null : _post,
             style: TextButton.styleFrom(
               backgroundColor: _hasMedia
                   ? AppColors.accentStart : AppColors.bgSurface,
@@ -256,7 +273,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                 ? const SizedBox(width: 16, height: 16,
                     child: CircularProgressIndicator(
                         strokeWidth: 2, color: Colors.white))
-                : Text('Хуваалцах',
+                : Text(_pendingRow == null ? 'Хуваалцах' : 'Дахин шалгах',
                     style: AppTextStyles.labelMd.copyWith(
                       color: _hasMedia ? Colors.white : AppColors.textTertiary)),
           ),
@@ -264,6 +281,10 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
       ],
     ),
     body: ListView(padding: const EdgeInsets.all(20), children: [
+      if (_picking) const Padding(padding: EdgeInsets.only(bottom: 16),
+        child: Row(children: [SizedBox(width: 18, height: 18,
+          child: CircularProgressIndicator(strokeWidth: 2)), SizedBox(width: 12),
+          Expanded(child: Text('Медиа сонгож байна…'))])),
       if (_error != null)
         Container(
           margin: const EdgeInsets.only(bottom: 16),
@@ -284,7 +305,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
       // ── Media picker / carousel preview ──
       _hasMedia ? _buildPreview() : _Press(
         scale: 0.98,
-        onTap: _loading ? null : () => _pickMedia(),
+        onTap: _canEdit ? () => _pickMedia() : null,
         child: Container(
           height: 280,
           decoration: BoxDecoration(
@@ -315,11 +336,11 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                         duration: const Duration(milliseconds: 250),
                         curve: Curves.easeOut);
                   },
-                  onRemove: _loading ? null : () => _removeAt(i),
+                  onRemove: _canEdit ? () => _removeAt(i) : null,
                 ),
               if (_media.length < _maxImages)
                 _Press(
-                  onTap: _loading ? null : () => _pickMedia(append: true),
+                  onTap: _canEdit ? () => _pickMedia(append: true) : null,
                   child: Container(
                     width: 56, height: 56,
                     margin: const EdgeInsets.only(right: 8),
@@ -344,6 +365,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
       const SizedBox(height: 8),
       TextField(
         controller: _captionCtrl,
+        enabled: _canEdit,
         maxLines: 4,
         maxLength: 300,
         style: AppTextStyles.bodyMd.copyWith(color: AppColors.textPrimary),
@@ -359,7 +381,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
       const SizedBox(height: 8),
       _Press(
         scale: 0.98,
-        onTap: _showVenuePicker,
+        onTap: _canEdit ? _showVenuePicker : null,
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           decoration: BoxDecoration(
@@ -383,7 +405,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                     ? AppColors.textPrimary : AppColors.textTertiary))),
             if (_venueName != null)
               _Press(
-                onTap: () => setState(() { _venueName = null; _selectedVenue=null; }),
+                onTap: _canEdit ? () => setState(() { _venueName = null; _selectedVenue=null; }) : null,
                 child: Icon(Icons.close,
                     color: AppColors.textTertiary, size: 18))
             else
@@ -394,12 +416,12 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
       const SizedBox(height: 40),
 
       GradientButton(
-        label: _media.length > 1 ? 'Хуваалцах (${_media.length})' : 'Хуваалцах',
-        onPressed: (!_hasMedia || _loading) ? null : _post,
+        label: _pendingRow != null ? 'Дахин шалгах' : _media.length > 1 ? 'Хуваалцах (${_media.length})' : 'Хуваалцах',
+        onPressed: (!_hasMedia || _loading || _picking) ? null : _post,
       ),
       const SizedBox(height: 40),
     ]),
-  );
+  ));
 
   Widget _buildPreview() {
     return ClipRRect(
@@ -457,7 +479,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
             )),
 
           // Remove current
-          if (!_loading)
+          if (_canEdit)
             Positioned(top: 12, right: 12, child: _Press(
               scale: 0.85,
               onTap: () => _removeAt(_page),
@@ -514,6 +536,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
   }
 
   void _showVenuePicker() {
+    if (!_canEdit) return;
     showModalBottomSheet(
       context: context,
       backgroundColor: AppColors.bgElevated,
@@ -521,7 +544,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
       builder: (_) => _VenuePicker(
-        onSelect: (venue) => setState(() { _venueName = venue.name; _selectedVenue=venue; }),
+        onSelect: (venue) { if (mounted && _canEdit) setState(() { _venueName = venue.name; _selectedVenue=venue; }); },
       ),
     );
   }
@@ -622,7 +645,7 @@ class _PickerPlaceholder extends StatelessWidget {
       Text('Зураг (10 хүртэл) эсвэл видео сонгох',
           style: AppTextStyles.labelLg, textAlign: TextAlign.center),
       const SizedBox(height: 6),
-      Text('500MB хүртэл  ·  MP4, MOV, JPG, PNG',
+      Text('Зураг 25MB · Видео 50MB хүртэл\nMP4, MOV, WebM, JPG, PNG', textAlign: TextAlign.center,
           style: AppTextStyles.bodyXs.copyWith(
               color: AppColors.textTertiary)),
     ],

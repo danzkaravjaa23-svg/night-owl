@@ -6,6 +6,7 @@ import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/utils/auth_callback.dart';
+import 'account_metadata_service.dart';
 
 class AppleSignInFailure implements Exception {
   final String message;
@@ -92,9 +93,13 @@ Future<void> signInWithApple() async {
         .join(' ');
     final existing =
         response.user?.userMetadata?['full_name']?.toString().trim() ?? '';
-    if (name.isNotEmpty && existing.isEmpty) {
+    final ownerId = response.user!.id;
+    if (name.isNotEmpty &&
+        existing.isEmpty &&
+        auth.currentUser?.id == ownerId) {
       try {
-        await auth.updateUser(UserAttributes(data: {'full_name': name}));
+        await AccountMetadataService()
+            .update({'full_name': name}, ownerId: ownerId);
       } catch (_) {
         // Identity is already verified; name can still be entered in setup.
         debugPrint('Apple profile name could not be saved');

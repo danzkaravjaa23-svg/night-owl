@@ -1,15 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/widgets/owl_loading.dart';
 import '../../../core/widgets/app_avatar.dart';
+import '../../../core/widgets/app_motion.dart';
 import '../../../core/services/supabase_service.dart';
+import '../../auth/providers/auth_provider.dart';
+import '../../discovery/services/discovery_service.dart';
 import '../providers/follow_provider.dart';
 
 /// Дагагч / Дагаж буй хүмүүсийн жагсаалт — таб солих боломжтой.
 /// Мөр бүр дээр follow/unfollow товч (өөрөөс бусад хүнд).
-class FollowListScreen extends StatefulWidget {
+class FollowListScreen extends ConsumerStatefulWidget {
   final String userId;
   final bool showFollowers; // true=Дагагч, false=Дагаж буй
   const FollowListScreen({
@@ -19,15 +23,16 @@ class FollowListScreen extends StatefulWidget {
   });
 
   @override
-  State<FollowListScreen> createState() => _FollowListScreenState();
+  ConsumerState<FollowListScreen> createState() => _FollowListScreenState();
 }
 
-class _FollowListScreenState extends State<FollowListScreen> {
+class _FollowListScreenState extends ConsumerState<FollowListScreen> {
   late bool _followers = widget.showFollowers;
   bool _loading = true;
   bool _error = false; // ачаалал бүтэлгүйтсэн эсэх (хоосон төлөвөөс ялгах)
   List<Map<String, dynamic>> _people = const [];
   Set<String> _iFollow = {};
+  Set<String> _requested = {};
   final _busy = <String>{}; // товч дарж байгаа id-ууд
   int _reqToken = 0; // таб солих race-аас сэргийлэх токен
 
@@ -39,71 +44,129 @@ class _FollowListScreenState extends State<FollowListScreen> {
     _load();
   }
 
-  void _toast(String msg) => ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(content: Text(msg), behavior: SnackBarBehavior.floating,
-      duration: const Duration(seconds: 2)));
+  @override
+  void didUpdateWidget(FollowListScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.userId != widget.userId ||
+        oldWidget.showFollowers != widget.showFollowers) {
+      _followers = widget.showFollowers;
+      _resetList();
+      _load();
+    }
+  }
+
+  void _resetList() {
+    _people = const [];
+    _iFollow = {};
+    _requested = {};
+    _loading = true;
+    _error = false;
+  }
+
+  void _selectTab(bool followers) {
+    if (_followers == followers) return;
+    setState(() {
+      _followers = followers;
+      _resetList();
+    });
+    _load();
+  }
+
+  Future<Set<String>> _outgoingRequests(String? me) async {
+    if (me == null) return {};
+    final rows = await SupabaseService.client
+        .from('follow_requests')
+        .select('target_id')
+        .eq('requester_id', me);
+    return {for (final row in rows) row['target_id'] as String};
+  }
+
+  void _toast(String msg) =>
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(msg),
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 2)));
 
   Future<void> _load() async {
     // Хүсэлт бүрт токен — сүүлчийнх нь л _people-д бичнэ (таб солих гулгалтаас сэргийлнэ)
     final token = ++_reqToken;
+    final me = _me;
     final wantFollowers = _followers;
     // Анхны/хоосон үед л бүтэн spinner; refresh үед хуучин мөрүүд харагдана
-    setState(() { _error = false; if (_people.isEmpty) _loading = true; });
+    setState(() {
+      _error = false;
+      if (_people.isEmpty) _loading = true;
+    });
     try {
       final results = await Future.wait([
         wantFollowers
             ? FollowService.getFollowers(widget.userId)
             : FollowService.getFollowing(widget.userId),
         FollowService.myFollowingIds(),
+        _outgoingRequests(me),
       ]);
-      if (!mounted || token != _reqToken) return; // хуучирсан хүсэлт — үл тоомсорло
+      if (!mounted || token != _reqToken || me != _me) return;
       setState(() {
         _people = results[0] as List<Map<String, dynamic>>;
         _iFollow = results[1] as Set<String>;
+        _requested = results[2] as Set<String>;
         _loading = false;
       });
     } catch (_) {
-      if (!mounted || token != _reqToken) return;
-      setState(() { _loading = false; _error = true; });
+      if (!mounted || token != _reqToken || me != _me) return;
+      setState(() {
+        _loading = false;
+        _error = true;
+      });
     }
   }
 
   Future<void> _toggle(String id) async {
-    if (_busy.contains(id)) return;
+    final me = _me;
+    if (me == null || id.isEmpty || id == me || _busy.contains(id)) return;
     final wasFollowing = _iFollow.contains(id);
+    final wasRequested = _requested.contains(id);
+    // A refresh started before this mutation must not replace the new status.
+    ++_reqToken;
     setState(() {
       _busy.add(id);
-      if (wasFollowing) {
-        _iFollow.remove(id);
-      } else {
-        _iFollow.add(id);
-      }
+      _loading = false;
     });
     try {
-      if (wasFollowing) {
-        await FollowService.unfollow(id);
-      } else {
-        await FollowService.follow(id);
-      }
+      final status =
+          await DiscoveryService().follow(id, !wasFollowing && !wasRequested);
+      if (!mounted || me != _me) return;
+      setState(() {
+        status == 'following' ? _iFollow.add(id) : _iFollow.remove(id);
+        status == 'requested' ? _requested.add(id) : _requested.remove(id);
+      });
+      ref.read(socialVersionProvider.notifier).state++;
+      ref.invalidate(followProvider(id));
+      ref.invalidate(isFollowingProvider(id));
+      ref.invalidate(followCountsProvider(id));
+      ref.invalidate(followCountsProvider(me));
+      ref.invalidate(currentProfileProvider);
+      // Reload the currently selected tab after the server change, including
+      // when the user switched tabs while the mutation was in flight.
+      _load();
     } catch (_) {
-      // rollback + хэрэглэгчид мэдэгдэх (чимээгүй эргэх нь glitch мэт харагддаг)
-      if (mounted) {
-        setState(() {
-          if (wasFollowing) {
-            _iFollow.add(id);
-          } else {
-            _iFollow.remove(id);
-          }
-        });
+      if (mounted && me == _me) {
         _toast('Үйлдэл амжилтгүй, дахин оролдоно уу');
       }
     } finally {
-      if (mounted) setState(() => _busy.remove(id));
+      if (mounted && me == _me) setState(() => _busy.remove(id));
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    ref.listen(sessionUserIdProvider, (_, __) {
+      setState(() {
+        _resetList();
+        _busy.clear();
+      });
+      _load();
+    });
     return Scaffold(
       backgroundColor: AppColors.bgBase,
       body: SafeArea(
@@ -113,12 +176,11 @@ class _FollowListScreenState extends State<FollowListScreen> {
             padding: const EdgeInsets.fromLTRB(20, 10, 20, 8),
             child: Row(children: [
               _GlassBackBtn(
-                onTap: () => context.canPop()
-                    ? context.pop()
-                    : context.go('/profile'),
+                onTap: () =>
+                    context.canPop() ? context.pop() : context.go('/profile'),
               ),
               const SizedBox(width: 14),
-              Text('Хүмүүс', style: AppTextStyles.h2),
+              Expanded(child: Text('Хүмүүс', style: AppTextStyles.h2)),
             ]),
           ),
           // ── Таб солигч — pill segmented ──
@@ -135,19 +197,11 @@ class _FollowListScreenState extends State<FollowListScreen> {
                 _TabBtn(
                     label: 'Дагагч',
                     selected: _followers,
-                    onTap: () {
-                      if (_followers) return;
-                      setState(() => _followers = true);
-                      _load();
-                    }),
+                    onTap: () => _selectTab(true)),
                 _TabBtn(
                     label: 'Дагаж буй',
                     selected: !_followers,
-                    onTap: () {
-                      if (!_followers) return;
-                      setState(() => _followers = false);
-                      _load();
-                    }),
+                    onTap: () => _selectTab(false)),
               ]),
             ),
           ),
@@ -171,12 +225,23 @@ class _FollowListScreenState extends State<FollowListScreen> {
           : ListView.separated(
               physics: const AlwaysScrollableScrollPhysics(),
               padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
-              itemCount: _people.length,
+              itemCount: _people.length + (_error ? 1 : 0),
               separatorBuilder: (_, __) => const SizedBox(height: 4),
-              itemBuilder: (_, i) => _row(_people[i]),
+              itemBuilder: (_, i) => _error && i == 0
+                  ? _refreshError()
+                  : _row(_people[i - (_error ? 1 : 0)]),
             ),
     );
   }
+
+  Widget _refreshError() => Padding(
+        padding: const EdgeInsets.only(bottom: 12),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text('Жагсаалтыг шинэчилж чадсангүй. Өмнөх мэдээллийг харуулж байна.',
+              style: AppTextStyles.bodySm),
+          TextButton(onPressed: _load, child: const Text('Дахин оролдох')),
+        ]),
+      );
 
   // Анхны ачаалалд — spinner-ийн оронд зөөлөн skeleton мөрүүд
   Widget _skeleton() => ListView.separated(
@@ -186,41 +251,35 @@ class _FollowListScreenState extends State<FollowListScreen> {
         itemBuilder: (_, i) => i == 0
             ? Padding(
                 padding: const EdgeInsets.symmetric(vertical: 16),
-                child: OwlLoading(size: 40, message: _followers
-                    ? 'Дагагчдыг ачаалж байна'
-                    : 'Дагаж буй хүмүүсийг ачаалж байна'))
+                child: OwlLoading(
+                    size: 40,
+                    message: _followers
+                        ? 'Дагагчдыг ачаалж байна'
+                        : 'Дагаж буй хүмүүсийг ачаалж байна'))
             : const _RowSkeleton(),
       );
 
   // Ачаалал бүтэлгүйтсэн — хоосон төлөвөөс ялгаатай (дахин оролдох товчтой)
   Widget _errorState() => ListView(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.only(top: 120),
+        padding: const EdgeInsets.fromLTRB(20, 80, 20, 24),
         children: [
           Column(mainAxisSize: MainAxisSize.min, children: [
             Icon(Icons.cloud_off_outlined,
                 color: AppColors.textTertiary, size: 48),
             const SizedBox(height: 12),
             Text('Ачаалж чадсангүй',
+                textAlign: TextAlign.center,
                 style: AppTextStyles.bodyMd
                     .copyWith(color: AppColors.textSecondary)),
             const SizedBox(height: 14),
             Center(
-              child: GestureDetector(
-                onTap: _load,
-                child: MouseRegion(
-                  cursor: SystemMouseCursors.click,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 22, vertical: 10),
-                    decoration: BoxDecoration(
-                      gradient: AppColors.accentGradient,
-                      borderRadius: BorderRadius.circular(999)),
-                    child: Text('Дахин оролдох',
-                        style: AppTextStyles.btn.copyWith(color: Colors.white)),
-                  ),
-                ),
-              ),
+              child: FilledButton(
+                  onPressed: _load,
+                  style: FilledButton.styleFrom(
+                      backgroundColor: AppColors.accentStart,
+                      minimumSize: const Size(0, 48)),
+                  child: const Text('Дахин оролдох')),
             ),
           ]),
         ],
@@ -229,7 +288,7 @@ class _FollowListScreenState extends State<FollowListScreen> {
   // Хоосон төлөв — pull-to-refresh ажиллахын тулд scrollable
   Widget _emptyScrollable() => ListView(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.only(top: 120),
+        padding: const EdgeInsets.fromLTRB(20, 80, 20, 24),
         children: [
           Column(mainAxisSize: MainAxisSize.min, children: [
             Icon(
@@ -239,8 +298,7 @@ class _FollowListScreenState extends State<FollowListScreen> {
                 color: AppColors.textTertiary,
                 size: 48),
             const SizedBox(height: 12),
-            Text(
-                _followers ? 'Дагагч алга байна' : 'Хэнийг ч дагаагүй байна',
+            Text(_followers ? 'Дагагч алга байна' : 'Хэнийг ч дагаагүй байна',
                 textAlign: TextAlign.center,
                 style: AppTextStyles.bodyMd
                     .copyWith(color: AppColors.textTertiary)),
@@ -261,56 +319,79 @@ class _FollowListScreenState extends State<FollowListScreen> {
     // AppAvatar initial-д зөвхөн эхний тэмдэгт (бүтэн нэр өгвөл дугуйнаас халина)
     final initial = username.isNotEmpty ? username[0] : '?';
 
-    return MouseRegion(
-      cursor: SystemMouseCursors.click,
-      child: GestureDetector(
-      onTap: () => context.push('/creator/$id'),
-      behavior: HitTestBehavior.opaque,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        child: Row(children: [
-          AppAvatar(imageUrl: avatar, initial: initial, size: 44),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Row(children: [
-                  Flexible(
-                    child: Text(username,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: AppTextStyles.labelLg.copyWith(
-                            color: AppColors.textPrimary,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 0)),
-                  ),
-                  if (verified) ...[
-                    const SizedBox(width: 4),
-                    Icon(Icons.verified_rounded,
-                        color: AppColors.neonCyan, size: 15),
-                  ],
-                ]),
-                if (fullName != null && fullName.isNotEmpty) ...[
-                  const SizedBox(height: 2),
-                  Text(fullName,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: AppTextStyles.bodySm
-                          .copyWith(color: AppColors.textSecondary)),
-                ],
-              ],
-            ),
-          ),
-          if (!isMe) ...[
-            const SizedBox(width: 10),
-            _RowFollowBtn(
-                following: following, busy: busy, onTap: () => _toggle(id)),
+    final button = _RowFollowBtn(
+      following: following,
+      requested: _requested.contains(id),
+      busy: busy,
+      onTap: () => _toggle(id),
+    );
+    final identity = Row(children: [
+      AppAvatar(imageUrl: avatar, initial: initial, size: 44),
+      const SizedBox(width: 14),
+      Expanded(
+          child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(children: [
+            Flexible(
+                child: Text(username,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTextStyles.labelLg.copyWith(
+                        color: AppColors.textPrimary,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0))),
+            if (verified) ...[
+              const SizedBox(width: 4),
+              Icon(Icons.verified_rounded,
+                  semanticLabel: 'Баталгаажсан',
+                  color: AppColors.neonCyan,
+                  size: 15),
+            ],
+          ]),
+          if (fullName != null && fullName.isNotEmpty) ...[
+            const SizedBox(height: 2),
+            Text(fullName,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: AppTextStyles.bodySm
+                    .copyWith(color: AppColors.textSecondary)),
           ],
-        ]),
-      ),
-      ),
+        ],
+      )),
+    ]);
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: LayoutBuilder(builder: (context, constraints) {
+        final stacked = constraints.maxWidth < 360 &&
+            MediaQuery.textScalerOf(context).scale(14) > 18;
+        final profileLink = InkWell(
+          onTap: id.isEmpty ? null : () => context.push('/creator/$id'),
+          borderRadius: BorderRadius.circular(12),
+          child: Semantics(
+              button: true,
+              child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  child: identity)),
+        );
+        final canFollow = !isMe && _me != null && id.isNotEmpty;
+        if (stacked) {
+          return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                profileLink,
+                if (canFollow) ...[
+                  const SizedBox(height: 6),
+                  Align(alignment: Alignment.centerRight, child: button),
+                ],
+              ]);
+        }
+        return Row(children: [
+          Expanded(child: profileLink),
+          if (canFollow) ...[const SizedBox(width: 10), button],
+        ]);
+      }),
     );
   }
 }
@@ -321,22 +402,16 @@ class _GlassBackBtn extends StatelessWidget {
   const _GlassBackBtn({required this.onTap});
 
   @override
-  Widget build(BuildContext context) => MouseRegion(
-        cursor: SystemMouseCursors.click,
-        child: GestureDetector(
-          onTap: onTap,
-          child: Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: AppColors.bgElevated.withValues(alpha: 0.72),
-              border: Border.all(color: AppColors.hairline2),
-            ),
-            child: Icon(Icons.arrow_back_ios_new,
-                color: AppColors.textPrimary, size: 17),
-          ),
+  Widget build(BuildContext context) => IconButton(
+        tooltip: 'Буцах',
+        onPressed: onTap,
+        style: IconButton.styleFrom(
+          minimumSize: const Size(44, 44),
+          backgroundColor: AppColors.bgElevated.withValues(alpha: 0.72),
+          side: BorderSide(color: AppColors.hairline2),
         ),
+        icon: Icon(Icons.arrow_back_ios_new,
+            color: AppColors.textPrimary, size: 17),
       );
 }
 
@@ -348,30 +423,38 @@ class _RowSkeleton extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 8),
         child: Row(children: [
           Container(
-            width: 44, height: 44,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle, color: AppColors.bgSurface)),
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                  shape: BoxShape.circle, color: AppColors.bgSurface)),
           const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(height: 12, width: 120,
-                  decoration: BoxDecoration(color: AppColors.bgSurface,
-                    borderRadius: BorderRadius.circular(6))),
+                Container(
+                    height: 12,
+                    width: 120,
+                    decoration: BoxDecoration(
+                        color: AppColors.bgSurface,
+                        borderRadius: BorderRadius.circular(6))),
                 const SizedBox(height: 7),
-                Container(height: 10, width: 80,
-                  decoration: BoxDecoration(color: AppColors.bgSurface,
-                    borderRadius: BorderRadius.circular(6))),
+                Container(
+                    height: 10,
+                    width: 80,
+                    decoration: BoxDecoration(
+                        color: AppColors.bgSurface,
+                        borderRadius: BorderRadius.circular(6))),
               ],
             ),
           ),
           const SizedBox(width: 10),
           Container(
-            width: 96, height: 36,
-            decoration: BoxDecoration(
-              color: AppColors.bgSurface,
-              borderRadius: BorderRadius.circular(999))),
+              width: 96,
+              height: 36,
+              decoration: BoxDecoration(
+                  color: AppColors.bgSurface,
+                  borderRadius: BorderRadius.circular(999))),
         ]),
       );
 }
@@ -386,92 +469,84 @@ class _TabBtn extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Expanded(
-        child: MouseRegion(
-          cursor: SystemMouseCursors.click,
-          child: GestureDetector(
-          onTap: onTap,
-          behavior: HitTestBehavior.opaque,
+        child: MergeSemantics(
+            child: Semantics(
+          selected: selected,
           child: AnimatedContainer(
-            duration: const Duration(milliseconds: 220),
-            curve: Curves.easeOut,
-            padding: const EdgeInsets.symmetric(vertical: 9),
+            duration: AppMotion.duration(context, AppMotion.exit),
             decoration: BoxDecoration(
               gradient: selected ? AppColors.accentGradient : null,
               borderRadius: BorderRadius.circular(999),
-              boxShadow: selected
-                  ? [
-                      BoxShadow(
-                        color: AppColors.accentStart.withValues(alpha: 0.35),
-                        blurRadius: 18,
-                        spreadRadius: -2,
-                      ),
-                    ]
-                  : null,
             ),
-            child: Text(label,
-                textAlign: TextAlign.center,
-                style: AppTextStyles.labelMd.copyWith(
-                    color:
-                        selected ? Colors.white : AppColors.textTertiary,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 0)),
+            child: TextButton(
+              onPressed: onTap,
+              style: TextButton.styleFrom(
+                minimumSize: const Size(0, 44),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+                foregroundColor:
+                    selected ? Colors.white : AppColors.textSecondary,
+              ),
+              child: Text(label,
+                  textAlign: TextAlign.center,
+                  style: AppTextStyles.labelMd.copyWith(
+                      color: selected ? Colors.white : AppColors.textSecondary,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0)),
+            ),
           ),
-        ),
-        ),
+        )),
       );
 }
 
-// ── Мөрийн follow/unfollow товч — pill 96×36 ──
 class _RowFollowBtn extends StatelessWidget {
   final bool following;
+  final bool requested;
   final bool busy;
   final VoidCallback onTap;
   const _RowFollowBtn(
-      {required this.following, required this.busy, required this.onTap});
+      {required this.following,
+      required this.requested,
+      required this.busy,
+      required this.onTap});
 
   @override
   Widget build(BuildContext context) {
-    final filled = !following;
-    return MouseRegion(
-      cursor: busy ? MouseCursor.defer : SystemMouseCursors.click,
-      child: GestureDetector(
-      onTap: busy ? null : onTap,
+    final filled = !following && !requested;
+    final label = requested
+        ? 'Хүсэлттэй'
+        : following
+            ? 'Дагасан'
+            : 'Дагах';
+    return Semantics(
+      label: busy ? 'Хүлээнэ үү' : null,
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        curve: Curves.easeOut,
-        width: 96,
-        height: 36,
-        alignment: Alignment.center,
+        duration: AppMotion.duration(context, AppMotion.exit),
         decoration: BoxDecoration(
           gradient: filled ? AppColors.accentGradient : null,
           color: filled ? null : AppColors.bgSurface.withValues(alpha: 0.7),
           borderRadius: BorderRadius.circular(999),
           border: filled ? null : Border.all(color: AppColors.hairline2),
-          // Primary (Дагах) үед неон glow
-          boxShadow: filled && !busy
-              ? [
-                  BoxShadow(
-                    color: AppColors.accentStart.withValues(alpha: 0.35),
-                    blurRadius: 18,
-                    spreadRadius: -2,
-                  ),
-                ]
-              : null,
         ),
-        child: busy
-            ? SizedBox(
-                width: 15,
-                height: 15,
-                child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: filled ? Colors.white : AppColors.textSecondary))
-            : Text(following ? 'Дагасан' : 'Дагах',
-                style: TextStyle(
-                    color:
-                        filled ? Colors.white : AppColors.textSecondary,
-                    fontSize: 12.5,
-                    fontWeight: FontWeight.w700)),
-      ),
+        child: TextButton(
+          onPressed: busy ? null : onTap,
+          style: TextButton.styleFrom(
+            minimumSize: const Size(96, 44),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            foregroundColor: filled ? Colors.white : AppColors.textSecondary,
+          ),
+          child: busy
+              ? SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: filled ? Colors.white : AppColors.textSecondary))
+              : Text(label,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                      fontSize: 12.5, fontWeight: FontWeight.w700)),
+        ),
       ),
     );
   }

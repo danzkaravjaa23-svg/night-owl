@@ -1,5 +1,6 @@
 // Native (Android/iOS) хэрэгжилт — image_picker + dart:io HttpClient.
 import 'dart:convert';
+import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -80,7 +81,7 @@ Future<List<PickedMediaFile>> pickPostMedia({bool multiple = true}) async {
     ];
   } catch (e) {
     debugPrint('pickPostMedia failed: $e');
-    return const [];
+    throw Exception('Медиа сонгож чадсангүй. Зургийн сангийн зөвшөөрлөө шалгана уу.');
   }
 }
 
@@ -147,6 +148,7 @@ Future<void> uploadBlobWithProgress({
   }
 
   final client = HttpClient()..connectionTimeout = const Duration(seconds: 30);
+  final deadline = Timer(const Duration(seconds: 120), () => client.close(force: true));
   var status = 0;
   var body = '';
   try {
@@ -181,6 +183,7 @@ Future<void> uploadBlobWithProgress({
     debugPrint('uploadBlobWithProgress failed: $e');
     throw Exception('Сүлжээний алдаа — интернэт холболтоо шалгана уу');
   } finally {
+    deadline.cancel();
     client.close(force: true);
   }
 

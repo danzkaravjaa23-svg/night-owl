@@ -10,7 +10,9 @@ import '../../discovery/services/discovery_service.dart';
 /// identifies them. Validate those matches after fetching as well.
 class ReelsRepository {
   final SupabaseClient client;
-  const ReelsRepository(this.client);
+  final Duration requestTimeout;
+  const ReelsRepository(this.client,
+      {this.requestTimeout = const Duration(seconds: 15)});
 
   static const _columns =
       'id, user_id, caption, media_url, media_urls, media_type, '
@@ -63,13 +65,14 @@ class ReelsRepository {
         .or(_videoFilter)
         .order('created_at', ascending: false)
         .order('id', ascending: false)
-        .limit(50);
+        .limit(50)
+        .timeout(requestTimeout);
     return rows.map(normalize).whereType<Map<String, dynamic>>().toList();
   }
 
   Future<List<Map<String, dynamic>>> loadFollowing() async {
-    final data =
-        await client.rpc('get_following_reels', params: {'p_limit': 50});
+    final data = await client.rpc('get_following_reels',
+        params: {'p_limit': 50}).timeout(requestTimeout);
     return (data as List)
         .map((row) => normalize(Map<String, dynamic>.from(row as Map)))
         .whereType<Map<String, dynamic>>()
@@ -77,8 +80,12 @@ class ReelsRepository {
   }
 
   Future<Map<String, dynamic>?> find(String id) async {
-    final row =
-        await client.from('posts').select(_columns).eq('id', id).maybeSingle();
+    final row = await client
+        .from('posts')
+        .select(_columns)
+        .eq('id', id)
+        .maybeSingle()
+        .timeout(requestTimeout);
     return row == null ? null : normalize(row);
   }
 }

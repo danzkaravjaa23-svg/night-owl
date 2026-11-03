@@ -8,11 +8,15 @@ import 'package:http/testing.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:night_owl_ub/main.dart' show NightOwlApp;
+import 'package:night_owl_ub/core/constants/avatar_presets.dart';
+import 'package:night_owl_ub/core/constants/community_rules.dart';
+import 'package:night_owl_ub/core/theme/app_fonts.dart';
 
 const fixtureUser = '10000000-0000-0000-0000-000000000001';
 const fixturePeer = '10000000-0000-0000-0000-000000000002';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  AppFonts.configure();
   SharedPreferences.setMockInitialValues({});
   final source = jsonDecode(await rootBundle
       .loadString('assets/data/ulaanbaatar_osm_venues.json')) as Map;
@@ -37,7 +41,7 @@ Future<void> main() async {
     'username': 'fixture_owner',
     'full_name': 'Шалгалтын профайл',
     'bio': 'Локал шалгалтын өгөгдөл',
-    'avatar_url': 'nightowl://avatar/owl-young-woman',
+    'avatar_url': NightOwlAvatars.all[1].value,
     'is_admin': true,
     'is_banned': false,
     'is_verified': false,
@@ -79,6 +83,9 @@ Future<void> main() async {
           localStorage: EmptyLocalStorage()),
       httpClient: MockClient((r) async {
         final path = r.url.path;
+        if (path == '/functions/v1/delete-account') {
+          return result(r, {'code': 'deletion_unavailable'}, 503);
+        }
         if (path == '/auth/v1/token') {
           final payload = base64Url
               .encode(utf8.encode(jsonEncode({
@@ -96,7 +103,10 @@ Future<void> main() async {
               'aud': 'authenticated',
               'email': 'fixture@example.test',
               'created_at': profile['created_at'],
-              'user_metadata': {'setup_complete': true}
+              'user_metadata': {
+                'setup_complete': true,
+                ...CommunityRules.acceptance(DateTime.utc(2026, 11, 3)),
+              }
             }
           });
         }

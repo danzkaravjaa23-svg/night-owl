@@ -17,6 +17,7 @@ class VideoView extends StatefulWidget {
 
   /// true бол бүх талбайг товшиж play/pause хийнэ (веб дээрх native контролын оронд).
   final bool showControls;
+
   /// Хүрээг дүүргэж тайрах (cover); false бол бүтэн видео (contain).
   final bool cover;
   const VideoView({
@@ -218,13 +219,21 @@ class _VideoViewState extends State<VideoView> {
       return Stack(fit: StackFit.expand, children: [
         const _Backdrop(),
         if (widget.showPosterIcon) ...[
-          const IgnorePointer(child: Center(child: Icon(
-              Icons.play_circle_fill_rounded, color: Colors.white, size: 34))),
-          const Positioned(top: 6, right: 6, child: IgnorePointer(
-              child: Icon(Icons.videocam_rounded, color: Colors.white70, size: 16))),
+          const IgnorePointer(
+              child: Center(
+                  child: Icon(Icons.play_circle_fill_rounded,
+                      color: Colors.white, size: 34))),
+          const Positioned(
+              top: 6,
+              right: 6,
+              child: IgnorePointer(
+                  child: Icon(Icons.videocam_rounded,
+                      color: Colors.white70, size: 16))),
         ] else
-          const IgnorePointer(child: Center(child: Icon(
-              Icons.play_arrow_rounded, color: Colors.white38, size: 30))),
+          const IgnorePointer(
+              child: Center(
+                  child: Icon(Icons.play_arrow_rounded,
+                      color: Colors.white38, size: 30))),
       ]);
     }
 
@@ -237,9 +246,12 @@ class _VideoViewState extends State<VideoView> {
         child: Stack(fit: StackFit.expand, children: [
           _surface(),
           if (_playing && !_ready && !_failed)
-            const Center(child: SizedBox(width: 28, height: 28,
-                child: CircularProgressIndicator(
-                    strokeWidth: 2, color: Colors.white70))),
+            const Center(
+                child: SizedBox(
+                    width: 28,
+                    height: 28,
+                    child: CircularProgressIndicator(
+                        strokeWidth: 2, color: Colors.white70))),
           widget.showControls ? _controlsOverlay() : _playOverlay(),
         ]),
       );
@@ -249,7 +261,9 @@ class _VideoViewState extends State<VideoView> {
   Widget _surface() {
     if (_failed) return const _Backdrop(icon: Icons.videocam_off_rounded);
     final c = _ctrl;
-    if (c == null || !_ready || !c.value.isInitialized) return const _Backdrop();
+    if (c == null || !_ready || !c.value.isInitialized) {
+      return const _Backdrop();
+    }
     final v = c.value;
     if (widget.cover || widget.autoplay) {
       final w = v.size.width > 0 ? v.size.width : 1.0;
@@ -275,8 +289,8 @@ class _VideoViewState extends State<VideoView> {
           shape: BoxShape.circle,
           color: Colors.black.withValues(alpha: 0.45),
         ),
-        child: const Icon(Icons.play_arrow_rounded,
-            color: Colors.white, size: 32),
+        child:
+            const Icon(Icons.play_arrow_rounded, color: Colors.white, size: 32),
       );
 
   // Зөвхөн төвийн товч товшилт авна — картын onTap/onDoubleTap хэвээр ажиллана
@@ -298,18 +312,23 @@ class _VideoViewState extends State<VideoView> {
     );
   }
 
-  Widget _controlsOverlay() {
-    final hidden = _playing || _failed;
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: _toggle,
-      child: AnimatedOpacity(
-        opacity: hidden ? 0 : 1,
-        duration: const Duration(milliseconds: 180),
-        child: Center(child: _playBadge()),
-      ),
-    );
-  }
+  Widget _controlsOverlay() => Align(
+        alignment: Alignment.bottomLeft,
+        child: Padding(
+          padding: const EdgeInsets.all(8),
+          child: IconButton.filled(
+            tooltip: _playing ? 'Түр зогсоох' : 'Тоглуулах',
+            onPressed: _failed ? null : _toggle,
+            style: IconButton.styleFrom(
+              minimumSize: const Size(48, 48),
+              backgroundColor: Colors.black54,
+              foregroundColor: Colors.white,
+            ),
+            icon:
+                Icon(_playing ? Icons.pause_rounded : Icons.play_arrow_rounded),
+          ),
+        ),
+      );
 }
 
 /// video_view_stub.dart-ийн харанхуй gradient — poster / ачаалж буй / алдаа.

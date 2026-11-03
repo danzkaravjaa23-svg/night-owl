@@ -141,8 +141,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       final saved =
           ref.read(venueBookmarksProvider).valueOrNull?.contains(venue.id) ??
               false;
-      _message(
-          saved ? 'Газар хадгаллаа' : 'Хадгалсан газраас хаслаа');
+      _message(saved ? 'Газар хадгаллаа' : 'Хадгалсан газраас хаслаа');
     } catch (_) {
       if (mounted) _message('Газар хадгалж чадсангүй. Дахин оролдоно уу.');
     } finally {
@@ -176,7 +175,10 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   }
 
   void _openVenue(Venue venue) {
-    if(!venue.communityEnabled){_showInformation(venue);return;}
+    if (!venue.communityEnabled) {
+      _showInformation(venue);
+      return;
+    }
     context.push('/place/${Uri.encodeComponent(venue.id)}');
   }
 
@@ -205,8 +207,10 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   Widget build(BuildContext context) {
     final state = ref.watch(venuesProvider);
     final catalogStatus = ref.watch(venueCatalogStatusProvider);
-    final bookmarks =
-        ref.watch(venueBookmarksProvider).valueOrNull ?? <String>{};
+    final bookmarkState = ref.watch(venueBookmarksProvider);
+    final bookmarks = bookmarkState.valueOrNull ?? <String>{};
+    final savedUnavailable =
+        _onlySaved && (bookmarkState.isLoading || bookmarkState.hasError);
     final all = state.valueOrNull ?? <Venue>[];
     final query = _query.trim().toLowerCase();
     final filtered = all
@@ -219,10 +223,11 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                     .contains(query)))
         .toList();
     final located = filtered.where((venue) => venue.hasLocation).toList();
-    final selected = state.hasError || catalogStatus.notice != null
-        ? null
-        : located.where((venue) => venue.id == _selectedId).firstOrNull ??
-            (!_dismissedSelection ? located.firstOrNull : null);
+    final selected =
+        savedUnavailable || state.hasError || catalogStatus.notice != null
+            ? null
+            : located.where((venue) => venue.id == _selectedId).firstOrNull ??
+                (!_dismissedSelection ? located.firstOrNull : null);
     return Scaffold(
         backgroundColor: _background,
         body: SafeArea(
@@ -313,7 +318,9 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                                     retry: true,
                                     maxHeight: math.max(
                                         0, constraints.maxHeight - 32))),
-                          if (state.hasValue && located.isEmpty)
+                          if (state.hasValue &&
+                              located.isEmpty &&
+                              !savedUnavailable)
                             Positioned(
                                 left: 16,
                                 right: 74,
@@ -345,7 +352,23 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                     ),
                   ),
                 ),
-                if (_showList) _venueList(filtered, state, bookmarks),
+                if (_showList && !savedUnavailable)
+                  _venueList(filtered, state, bookmarks),
+                if (savedUnavailable)
+                  ColoredBox(
+                      color: _background,
+                      child: Center(
+                          child: Padding(
+                        padding: const EdgeInsets.all(24),
+                        child: bookmarkState.isLoading
+                            ? OwlLoading(
+                                message: 'Хадгалсан газруудыг уншиж байна…',
+                                onDark: _dark)
+                            : _notice('Хадгалсан газруудыг ачаалж чадсангүй.',
+                                retry: true,
+                                onRetry: () =>
+                                    ref.invalidate(venueBookmarksProvider)),
+                      ))),
               ])),
             ])));
   }
@@ -371,7 +394,10 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                       child: FittedBox(
                           fit: BoxFit.scaleDown,
                           child: NightOwlBrand(size: 28, onDark: _dark)))),
-              IconButton(tooltip:'Хүмүүс, шалгасан газрууд',onPressed:()=>context.push('/discovery'),icon:const Icon(Icons.travel_explore)),
+              IconButton(
+                  tooltip: 'Хүмүүс, шалгасан газрууд',
+                  onPressed: () => context.push('/discovery'),
+                  icon: const Icon(Icons.travel_explore)),
               IconButton(
                   tooltip: _showList
                       ? 'Газрын зураг харах'
@@ -386,20 +412,22 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                       onDark: _dark)),
             ]),
             const SizedBox(height: 8),
-            Text('Өнөө орой',
+            Text('Шинэ газар нээе',
                 style: AppTextStyles.h1.copyWith(
                     color: _foreground,
-                    fontSize: 30,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: -.8)),
+                    fontSize: 28,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: -.6)),
             const SizedBox(height: 4),
-            Text('Өнөө орой шинэ газруудыг нээ.',
+            Text('Газраа сонгоод, очих замаа хараарай.',
                 style: AppTextStyles.bodySm.copyWith(color: _muted)),
           ])));
   Widget _searchField() => Padding(
       padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
       child: TextField(
           controller: _search,
+          textInputAction: TextInputAction.search,
+          autocorrect: false,
           onChanged: (value) => setState(() {
                 _query = value;
                 _selectedId = null;
@@ -429,17 +457,17 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                       });
                     }),
             filled: true,
-            fillColor: _dark ? const Color(0xFF1E1C32) : Colors.white,
+            fillColor: _surface,
             contentPadding:
-                const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(28),
+                borderRadius: BorderRadius.circular(16),
                 borderSide: BorderSide(color: _line)),
             enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(28),
+                borderRadius: BorderRadius.circular(16),
                 borderSide: BorderSide(color: _line)),
             focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(28),
+                borderRadius: BorderRadius.circular(16),
                 borderSide: BorderSide(color: _accent)),
           )));
   Widget _filters() => SizedBox(
@@ -479,29 +507,15 @@ class _MapScreenState extends ConsumerState<MapScreen> {
               duration: AppMotion.duration(context, AppMotion.release),
               curve: Curves.easeOutCubic,
               decoration: BoxDecoration(
-                gradient: LinearGradient(
-                    colors: selected
-                        ? const [Color(0xFF9879EC), _violet, Color(0xFF5838A3)]
-                        : [_surface, _background]),
-                borderRadius: BorderRadius.circular(24),
-                border: Border.all(
-                    color: selected
-                        ? AppColors.silverNeon.withValues(alpha: .5)
-                        : _line),
-                boxShadow: selected
-                    ? [
-                        BoxShadow(
-                            color: _violet.withValues(alpha: .22),
-                            blurRadius: 12,
-                            offset: const Offset(0, 3))
-                      ]
-                    : [],
+                color: selected ? _violet : _surface,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: selected ? _violet : _line),
               ),
               child: Material(
                   color: Colors.transparent,
                   child: InkWell(
                       onTap: onTap,
-                      borderRadius: BorderRadius.circular(24),
+                      borderRadius: BorderRadius.circular(14),
                       child: Padding(
                           padding: const EdgeInsets.symmetric(
                               horizontal: 16, vertical: 7),
@@ -515,7 +529,10 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                             ],
                             Text(label,
                                 style: AppTextStyles.bodySm.copyWith(
-                                    color: selected ? _light : _muted)),
+                                    color: selected ? _light : _foreground,
+                                    fontWeight: selected
+                                        ? FontWeight.w600
+                                        : FontWeight.w500)),
                           ]))))));
   Widget _locationButton() => Material(
       color: _control,
@@ -533,7 +550,10 @@ class _MapScreenState extends ConsumerState<MapScreen> {
               : SculptedIcon(Icons.my_location_rounded,
                   size: 22, color: _accent, active: true, onDark: _dark)));
   Widget _notice(String message,
-      {bool retry = false, bool showList = false, double? maxHeight}) {
+      {bool retry = false,
+      bool showList = false,
+      double? maxHeight,
+      VoidCallback? onRetry}) {
     final text = Row(children: [
       if (retry) ...[
         const OwlEmotion(mood: OwlMood.patient, size: 32),
@@ -558,9 +578,11 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                     text,
                   if (retry)
                     TextButton(
-                        onPressed: ref.read(venuesProvider).isLoading
-                            ? null
-                            : () => ref.read(refreshVenueCatalogProvider)(),
+                        onPressed: onRetry ??
+                            (ref.read(venuesProvider).isLoading
+                                ? null
+                                : () =>
+                                    ref.read(refreshVenueCatalogProvider)()),
                         child: const Text('Дахин оролдох')),
                   if (showList)
                     TextButton(
@@ -730,11 +752,13 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                         mainAxisSize: MainAxisSize.min,
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(source == null
-                              ? 'Байршил баталгаажаагүй · очихын өмнө шалгаарай'
-                              : 'Байршлын эх сурвалжтай · очихын өмнө шалгаарай',
-                              style:AppTextStyles.bodyXs.copyWith(color:secondary,height:1.4)),
-                          const SizedBox(height:9),
+                          Text(
+                              source == null
+                                  ? 'Байршил баталгаажаагүй · очихын өмнө шалгаарай'
+                                  : 'Байршлын эх сурвалжтай · очихын өмнө шалгаарай',
+                              style: AppTextStyles.bodyXs
+                                  .copyWith(color: secondary, height: 1.4)),
+                          const SizedBox(height: 9),
                           Row(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [

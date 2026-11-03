@@ -21,7 +21,7 @@ class AuthReturn {
             .hasMatch(uri.path) &&
         !RegExp(r'^/dm/[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$')
             .hasMatch(uri.path) &&
-        !{'/feed', '/explore', '/discovery', '/profile', '/dm', '/privacy'}
+        !{'/feed', '/explore', '/discovery', '/profile', '/dm', '/privacy', '/settings/delete-account'}
             .contains(uri.path)) {
       return null;
     }

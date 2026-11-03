@@ -1,37 +1,22 @@
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
-import '../../../core/widgets/sculpted_icon.dart';
-import '../../../core/theme/app_radii.dart';
 import '../../../core/theme/app_text_styles.dart';
 
-/// Шилэн pill хайлтын талбар — апп даяар НЭГ хувилбар.
-/// (Өмнө нь ижил "хэрэглэгч хайх" талбар гурван өөр хэлбэртэй байв: pill,
-/// сэдвийн бүдүүн хайрцаг, 52 өндөртэй glow-той pill.)
-///
-/// Хэмжээ: өндөр 48 · pill радиус · bgSurface 0.7 дүүргэлт · hairline хүрээ ·
-/// зүүн icon 19, дараа нь 10px зай. Focus үед неон cyan ирмэг + зөөлөн glow.
-/// Энгийн pill input (жишээ нь группийн нэр) болгон ч ашиглаж болно.
+/// Shared search input with a visible focus ring and an accessible clear action.
 class SearchField extends StatefulWidget {
   final TextEditingController controller;
   final ValueChanged<String>? onChanged;
   final String hint;
-
-  /// Зүүн талын icon (хайлтад Icons.search).
   final IconData icon;
   final bool autofocus;
-
-  /// Текст байх үед баруун талд цэвэрлэх ✕ товч харуулах эсэх.
   final bool showClear;
-
-  /// ✕ дарсны дараа эцэг дэлгэц нэмэлт үйлдэл хийх бол (жишээ нь хайлт цэвэрлэх).
-  /// Байхгүй бол зөвхөн controller цэвэрлэгдэж [onChanged]('') дуудагдана.
   final VoidCallback? onClear;
 
   const SearchField({
     super.key,
     required this.controller,
     required this.hint,
-    this.icon = Icons.search,
+    this.icon = Icons.search_rounded,
     this.onChanged,
     this.autofocus = false,
     this.showClear = true,
@@ -43,25 +28,32 @@ class SearchField extends StatefulWidget {
 }
 
 class _SearchFieldState extends State<SearchField> {
-  bool _focus = false;
-  bool _hasText = false;
+  final _focusNode = FocusNode();
 
   @override
   void initState() {
     super.initState();
-    _hasText = widget.controller.text.isNotEmpty;
-    widget.controller.addListener(_onCtrl);
+    widget.controller.addListener(_refresh);
+    _focusNode.addListener(_refresh);
   }
 
-  // Зөвхөн "хоосон ↔ хоосон биш" солигдоход л дахин зурна
-  void _onCtrl() {
-    final has = widget.controller.text.isNotEmpty;
-    if (has != _hasText && mounted) setState(() => _hasText = has);
+  @override
+  void didUpdateWidget(SearchField oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.controller != widget.controller) {
+      oldWidget.controller.removeListener(_refresh);
+      widget.controller.addListener(_refresh);
+    }
+  }
+
+  void _refresh() {
+    if (mounted) setState(() {});
   }
 
   @override
   void dispose() {
-    widget.controller.removeListener(_onCtrl);
+    widget.controller.removeListener(_refresh);
+    _focusNode.dispose();
     super.dispose();
   }
 
@@ -69,96 +61,78 @@ class _SearchFieldState extends State<SearchField> {
     widget.controller.clear();
     widget.onChanged?.call('');
     widget.onClear?.call();
+    _focusNode.requestFocus();
   }
 
   @override
   Widget build(BuildContext context) => AnimatedContainer(
-      duration: const Duration(milliseconds: 180),
-      curve: Curves.easeOut,
-      height: 48,
-      decoration: BoxDecoration(
-          color: AppColors.bgSurface.withValues(alpha: 0.7),
-          borderRadius: AppRadii.pillR,
+        duration: MediaQuery.disableAnimationsOf(context)
+            ? Duration.zero
+            : const Duration(milliseconds: 160),
+        constraints: const BoxConstraints(minHeight: 54),
+        decoration: BoxDecoration(
+          color: AppColors.bgElevated,
+          borderRadius: BorderRadius.circular(18),
           border: Border.all(
-              color: _focus
-                  ? AppColors.neonCyan.withValues(alpha: 0.6)
-                  : AppColors.hairline),
-          boxShadow: _focus
+            color: _focusNode.hasFocus
+                ? AppColors.neonCyan.withValues(alpha: .65)
+                : AppColors.hairline2,
+            width: _focusNode.hasFocus ? 1.5 : 1,
+          ),
+          boxShadow: _focusNode.hasFocus
               ? [
                   BoxShadow(
-                      color: AppColors.neonCyan.withValues(alpha: 0.18),
-                      blurRadius: 16,
-                      spreadRadius: -2),
+                      color: AppColors.accentStart.withValues(alpha: .08),
+                      blurRadius: 14)
                 ]
-              : null),
-      child: Row(children: [
-        const SizedBox(width: 16),
-        SculptedIcon(widget.icon,
-            size: 19,
-            color: _focus ? AppColors.neonCyan : AppColors.textTertiary),
-        const SizedBox(width: 10),
-        Expanded(
-            child: Focus(
-                onFocusChange: (f) => setState(() => _focus = f),
-                child: TextField(
-                    controller: widget.controller,
-                    onChanged: widget.onChanged,
-                    autofocus: widget.autofocus,
-                    style: AppTextStyles.bodyMd
-                        .copyWith(color: AppColors.textPrimary),
-                    cursorColor: AppColors.neonCyan,
-                    decoration: InputDecoration(
-                        hintText: widget.hint,
-                        hintStyle: AppTextStyles.bodyMd
-                            .copyWith(color: AppColors.textTertiary),
-                        border: InputBorder.none,
-                        enabledBorder: InputBorder.none,
-                        focusedBorder: InputBorder.none,
-                        isDense: true,
-                        contentPadding: EdgeInsets.zero)))),
-        // Цэвэрлэх — хүрэх талбар 44×44, глиф 16 хэвээр
-        if (widget.showClear && _hasText)
-          _ClearBtn(onTap: _clear)
-        else
+              : null,
+        ),
+        child: Row(children: [
           const SizedBox(width: 16),
-      ]));
-}
-
-/// ✕ цэвэрлэх товч — 44×44 хүрэх талбар, ripple-гүй агших press идиом
-class _ClearBtn extends StatefulWidget {
-  final VoidCallback onTap;
-  const _ClearBtn({required this.onTap});
-  @override
-  State<_ClearBtn> createState() => _ClearBtnState();
-}
-
-class _ClearBtnState extends State<_ClearBtn> {
-  bool _down = false;
-  @override
-  Widget build(BuildContext context) => Semantics(
-      button: true,
-      label: 'Цэвэрлэх',
-      child: Tooltip(
-          message: 'Цэвэрлэх',
-          child: MouseRegion(
-            cursor: SystemMouseCursors.click,
-            child: GestureDetector(
-              onTap: widget.onTap,
-              onTapDown: (_) => setState(() => _down = true),
-              onTapUp: (_) => setState(() => _down = false),
-              onTapCancel: () => setState(() => _down = false),
-              behavior: HitTestBehavior.opaque,
-              child: AnimatedScale(
-                scale: _down ? 0.9 : 1,
-                duration: const Duration(milliseconds: 120),
-                curve: Curves.easeOut,
-                child: SizedBox(
-                    width: 44,
-                    height: 44,
-                    child: Center(
-                        child: SculptedIcon(Icons.close,
-                            size: 16, color: AppColors.textTertiary))),
+          Icon(widget.icon,
+              size: 21,
+              color: _focusNode.hasFocus
+                  ? AppColors.neonCyan
+                  : AppColors.textSecondary),
+          const SizedBox(width: 12),
+          Expanded(
+            child: TextField(
+              controller: widget.controller,
+              focusNode: _focusNode,
+              onChanged: widget.onChanged,
+              autofocus: widget.autofocus,
+              textInputAction: TextInputAction.search,
+              style: AppTextStyles.bodyMd.copyWith(fontSize: 15),
+              cursorColor: AppColors.neonCyan,
+              decoration: InputDecoration(
+                hintText: widget.hint,
+                hintStyle: AppTextStyles.bodyMd
+                    .copyWith(color: AppColors.textTertiary),
+                border: InputBorder.none,
+                enabledBorder: InputBorder.none,
+                focusedBorder: InputBorder.none,
+                filled: false,
+                isDense: true,
+                contentPadding: const EdgeInsets.symmetric(vertical: 14),
               ),
             ),
-          )));
+          ),
+          if (widget.showClear && widget.controller.text.isNotEmpty)
+            IconButton(
+              tooltip: 'Цэвэрлэх',
+              constraints: const BoxConstraints.tightFor(width: 48, height: 48),
+              style: IconButton.styleFrom(
+                minimumSize: const Size(48, 48),
+                fixedSize: const Size(48, 48),
+                padding: EdgeInsets.zero,
+                visualDensity: VisualDensity.standard,
+              ),
+              onPressed: _clear,
+              icon: Icon(Icons.cancel_rounded,
+                  size: 20, color: AppColors.textSecondary),
+            )
+          else
+            const SizedBox(width: 16),
+        ]),
+      );
 }

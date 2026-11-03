@@ -84,8 +84,8 @@ class _DmThreadScreenState extends State<_ScopedDmThread>
   Map<String, dynamic>? _partner;
   bool _loading = true;
   bool _sending = false;
-  SocialRelationship _relationship=const SocialRelationship();
-  bool _relationshipError=false;
+  SocialRelationship _relationship = const SocialRelationship();
+  bool _relationshipError = false;
   Future<void>? _relationshipRequest;
   bool _responding = false;
   Timer? _relationshipTimer;
@@ -158,9 +158,10 @@ class _DmThreadScreenState extends State<_ScopedDmThread>
           .from('profiles')
           .select('id, username, avatar_url, last_seen_at')
           .eq('id', widget.threadId)
-          .maybeSingle().timeout(const Duration(seconds: 15));
+          .maybeSingle()
+          .timeout(const Duration(seconds: 15));
       if (!_isCurrent) return;
-      final relation=await DiscoveryService().relationship(widget.threadId);
+      final relation = await DiscoveryService().relationship(widget.threadId);
       if (_isCurrent) {
         final wasBlocked = _relationship.blocked;
         setState(() {
@@ -186,6 +187,7 @@ class _DmThreadScreenState extends State<_ScopedDmThread>
       }
     }
   }
+
   Future<void> _respond(bool accept) async {
     if (!_isCurrent || _responding) return;
     setState(() => _responding = true);
@@ -194,8 +196,8 @@ class _DmThreadScreenState extends State<_ScopedDmThread>
       await _loadPartner(force: true);
     } catch (error) {
       if (mounted && _isCurrent) {
-        ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(discoveryError(error))));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(discoveryError(error))));
       }
     } finally {
       if (_isCurrent) setState(() => _responding = false);
@@ -214,7 +216,9 @@ class _DmThreadScreenState extends State<_ScopedDmThread>
         .order('created_at')
         .listen((data) {
           if (!_isCurrent) return;
-          final msgs = (_relationship.blocked ? <Map<String, dynamic>>[] : (data as List).cast<Map<String, dynamic>>().toList())
+          final msgs = (_relationship.blocked
+              ? <Map<String, dynamic>>[]
+              : (data as List).cast<Map<String, dynamic>>().toList())
             ..sort((a, b) => (a['created_at'] as String? ?? '')
                 .compareTo(b['created_at'] as String? ?? ''));
           final prevLen = _msgs.length;
@@ -289,7 +293,15 @@ class _DmThreadScreenState extends State<_ScopedDmThread>
 
   // Партнёроос ирсэн мессежийг "уншсан" болгож тэмдэглэнэ
   Future<void> _markRead() async {
-    if (!_isCurrent || _relationship.dmState != 'accepted') return;
+    if (!_isCurrent ||
+        _markedUnread ||
+        _relationship.dmState != 'accepted' ||
+        ModalRoute.of(context)?.isCurrent != true ||
+        (WidgetsBinding.instance.lifecycleState != null &&
+            WidgetsBinding.instance.lifecycleState !=
+                AppLifecycleState.resumed)) {
+      return;
+    }
     final me = _myId;
     if (me.isEmpty) return;
     try {
@@ -390,25 +402,30 @@ class _DmThreadScreenState extends State<_ScopedDmThread>
     );
   }
 
-  Future<void> _send() => _sendText(_ctrl.text);
+  Future<void> _send() => _sendText(_ctrl.text, fromComposer: true);
 
-  Future<void> _sendText(String raw) async {
+  Future<void> _sendText(String raw, {bool fromComposer = false}) async {
     final text = raw.trim();
-    if (!_isCurrent || text.isEmpty || _sending || !_relationship.canSend) return;
-    _ctrl.clear();
+    if (!_isCurrent || text.isEmpty || _sending || !_relationship.canSend) {
+      return;
+    }
     final noteRef = _pendingNote; // эхний мессежид л note ишлэлийг хавсаргана
     setState(() {
       _sending = true;
-      _pendingNote = null;
     });
     try {
-      await DiscoveryService().send(widget.threadId,text,note:noteRef);
+      await DiscoveryService().send(widget.threadId, text, note: noteRef);
+      if (!_isCurrent) return;
+      // Keep the draft until the server accepts it. Stickers must not erase
+      // independently typed text, and a newer programmatic draft is retained.
+      if (fromComposer && _ctrl.text.trim() == text) _ctrl.clear();
+      if (_pendingNote == noteRef) setState(() => _pendingNote = null);
       await _loadPartner(force: true);
     } catch (error) {
-      // Илгээж чадаагүй — текст + note ишлэлийг сэргээж, мэдэгдэнэ
+      // Илгээж чадаагүй үед ноорог болон note ишлэл хэвээр үлдэнэ
       if (mounted && _isCurrent) {
-        _ctrl.text = text;
-        setState(() => _pendingNote = noteRef);
+        // The composer and note were never cleared; failure cannot overwrite
+        // text entered after this request began.
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
             content: Text(discoveryError(error)),
             backgroundColor: AppColors.error));
@@ -419,6 +436,7 @@ class _DmThreadScreenState extends State<_ScopedDmThread>
   }
 
   void _onEmojiTap(String e) {
+    if (_sending || !_isCurrent) return;
     if (_emojiTab == 'sticker' || _emojiTab == 'owl') {
       _sendText(e); // sticker → шууд илгээх
     } else {
@@ -605,14 +623,54 @@ class _DmThreadScreenState extends State<_ScopedDmThread>
                   top: false,
                   child: Column(mainAxisSize: MainAxisSize.min, children: [
                     const SizedBox(height: 10),
-                    if(_relationshipError)ListTile(title:const Text('Мессежийн эрхийг шалгаж чадсангүй'),trailing:IconButton(tooltip:'Дахин шалгах',onPressed:_loadPartner,icon:const Icon(Icons.refresh))),
-                    if(_relationship.dmState=='new')const ListTile(leading:Icon(Icons.mark_chat_unread_outlined),title:Text('Эхний мессеж хүсэлт болж очно')),
-                    if(_relationship.dmState=='requested')const ListTile(leading:Icon(Icons.hourglass_empty),title:Text('Хүсэлт илгээгдсэн · Зөвшөөрөл хүлээж байна')),
-                    if(_relationship.dmState=='incoming')ListTile(title:const Text('Мессежийн хүсэлт'),trailing:Row(mainAxisSize:MainAxisSize.min,children:[
-                      IconButton(tooltip:'Татгалзах',onPressed:_responding ? null : ()=>_respond(false),icon:const Icon(Icons.close)),
-                      IconButton(tooltip:'Зөвшөөрөх',onPressed:_responding ? null : ()=>_respond(true),icon:const Icon(Icons.check)),
-                      IconButton(tooltip:'Блоклох, мэдээлэх',onPressed:()=>showUserOptionsSheet(context,userId:widget.threadId,username:username,onBlocked:(){_loadPartner();_retrySubscribe();}),icon:const Icon(Icons.shield_outlined))])),
-                    if(!_relationshipError&&{'blocked','closed'}.contains(_relationship.dmState))const ListTile(leading:Icon(Icons.lock_outline),title:Text('Нууцлалын тохиргоогоор мессеж хязгаарлагдсан')),
+                    if (_relationshipError)
+                      ListTile(
+                          title:
+                              const Text('Мессежийн эрхийг шалгаж чадсангүй'),
+                          trailing: IconButton(
+                              tooltip: 'Дахин шалгах',
+                              onPressed: _loadPartner,
+                              icon: const Icon(Icons.refresh))),
+                    if (_relationship.dmState == 'new')
+                      const ListTile(
+                          leading: Icon(Icons.mark_chat_unread_outlined),
+                          title: Text('Эхний мессеж хүсэлт болж очно')),
+                    if (_relationship.dmState == 'requested')
+                      const ListTile(
+                          leading: Icon(Icons.hourglass_empty),
+                          title: Text(
+                              'Хүсэлт илгээгдсэн · Зөвшөөрөл хүлээж байна')),
+                    if (_relationship.dmState == 'incoming')
+                      ListTile(
+                          title: const Text('Мессежийн хүсэлт'),
+                          trailing:
+                              Row(mainAxisSize: MainAxisSize.min, children: [
+                            IconButton(
+                                tooltip: 'Татгалзах',
+                                onPressed:
+                                    _responding ? null : () => _respond(false),
+                                icon: const Icon(Icons.close)),
+                            IconButton(
+                                tooltip: 'Зөвшөөрөх',
+                                onPressed:
+                                    _responding ? null : () => _respond(true),
+                                icon: const Icon(Icons.check)),
+                            IconButton(
+                                tooltip: 'Блоклох, мэдээлэх',
+                                onPressed: () => showUserOptionsSheet(context,
+                                        userId: widget.threadId,
+                                        username: username, onBlocked: () {
+                                      _loadPartner();
+                                      _retrySubscribe();
+                                    }),
+                                icon: const Icon(Icons.shield_outlined))
+                          ])),
+                    if (!_relationshipError &&
+                        {'blocked', 'closed'}.contains(_relationship.dmState))
+                      const ListTile(
+                          leading: Icon(Icons.lock_outline),
+                          title: Text(
+                              'Нууцлалын тохиргоогоор мессеж хязгаарлагдсан')),
                     // Note-д хариулж байгаа бол ишлэл харуулна
                     if (_pendingNote != null)
                       Container(
@@ -646,8 +704,9 @@ class _DmThreadScreenState extends State<_ScopedDmThread>
                               ])),
                           IconButton(
                               tooltip: 'Note ишлэл арилгах',
-                              onPressed: () =>
-                                  setState(() => _pendingNote = null),
+                              onPressed: _sending
+                                  ? null
+                                  : () => setState(() => _pendingNote = null),
                               icon: SculptedIcon(Icons.close,
                                   size: 18, color: AppColors.textTertiary)),
                         ]),
@@ -672,8 +731,10 @@ class _DmThreadScreenState extends State<_ScopedDmThread>
                                 const SizedBox(width: 4),
                                 // Emoji/sticker панел toggle (нээлттэй үед keyboard icon)
                                 IconButton(
-                                    onPressed: () => setState(
-                                        () => _showEmoji = !_showEmoji),
+                                    onPressed: _sending
+                                        ? null
+                                        : () => setState(
+                                            () => _showEmoji = !_showEmoji),
                                     tooltip: 'Emoji / Sticker',
                                     icon: SculptedIcon(
                                         _showEmoji
@@ -686,6 +747,7 @@ class _DmThreadScreenState extends State<_ScopedDmThread>
                                 Expanded(
                                     child: TextField(
                                         controller: _ctrl,
+                                        readOnly: _sending,
                                         style: AppTextStyles.bodyMd.copyWith(
                                             color: AppColors.textPrimary),
                                         textInputAction: TextInputAction.send,
@@ -1411,7 +1473,8 @@ class _Bubble extends StatelessWidget {
                 child: SizedBox(
                     width: 30,
                     height: 42,
-                    child: AuthorizedImage(imageUrl:storyMediaUrl!,
+                    child: AuthorizedImage(
+                        imageUrl: storyMediaUrl!,
                         fit: BoxFit.cover,
                         errorWidget: (_, __, ___) => Container(
                             color: AppColors.bgSurface,

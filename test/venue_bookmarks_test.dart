@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -11,12 +12,26 @@ import 'package:night_owl_ub/core/theme/app_colors.dart';
 import 'package:night_owl_ub/core/theme/app_theme.dart';
 import 'package:night_owl_ub/core/widgets/sculpted_icon.dart';
 import 'package:night_owl_ub/features/auth/providers/auth_provider.dart';
+import 'package:night_owl_ub/features/discovery/services/discovery_service.dart';
 import 'package:night_owl_ub/features/map/providers/venue_provider.dart';
 import 'package:night_owl_ub/features/map/providers/venue_bookmarks_provider.dart';
 import 'package:night_owl_ub/features/map/screens/explore_screen.dart';
 import 'package:night_owl_ub/features/map/screens/map_screen.dart';
 import 'package:night_owl_ub/features/map/widgets/venue_map_view.dart';
 import 'package:night_owl_ub/models/venue.dart';
+
+class _PendingBookmarksBackend extends DiscoveryService {
+  final Future<Set<String>> Function() read;
+  _PendingBookmarksBackend(this.read)
+      : super(
+            client: SupabaseClient(
+                'https://bookmarks-fixture.example.test', 'fixture-key',
+                authOptions: const AuthClientOptions(autoRefreshToken: false)));
+  @override
+  String get me => 'test-account';
+  @override
+  Future<Set<String>> savedVenues() => read();
+}
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -94,6 +109,138 @@ void main() {
     expect(prefs.getString(bookmarks.storageKey), 'damaged-storage');
   });
 
+  for (final listView in [false, true]) {
+    testWidgets(
+        'Saved ${listView ? 'list' : 'map'} distinguishes loading and failure from empty, and retries',
+        (tester) async {
+      var pending = Completer<Set<String>>();
+      var reads = 0;
+      final backend =
+          (await tester.runAsync(() async => _PendingBookmarksBackend(() {
+                reads++;
+                return pending.future;
+              })))!;
+      addTearDown(() => tester.runAsync(backend.client.dispose));
+      tester.view.physicalSize = const Size(320, 844);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final saved = Venue(
+          id: 'saved-place',
+          name: 'Saved fixture venue',
+          type: 'pub',
+          lat: 47.9152,
+          lng: 106.9174,
+          createdAt: DateTime(2026));
+      final other = Venue(
+          id: 'other-place',
+          name: 'Other fixture venue',
+          type: 'pub',
+          lat: 47.919,
+          lng: 106.919,
+          createdAt: DateTime(2026));
+      await tester.pumpWidget(ProviderScope(
+          overrides: [
+            sessionUserIdProvider.overrideWithValue('test-account'),
+            venuesProvider.overrideWith((ref) async => [saved, other]),
+            venueBookmarksProvider.overrideWith((ref) =>
+                VenueBookmarksNotifier('test-account', backend: backend)),
+          ],
+          child: MaterialApp(
+              theme: AppTheme.dark,
+              builder: (context, child) => MediaQuery(
+                  data: MediaQuery.of(context).copyWith(
+                      disableAnimations: true,
+                      textScaler: const TextScaler.linear(1.5)),
+                  child: child!),
+              home: const MapScreen(embedded: true))));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+      final retainedMap = tester.state(find.byType(GoogleMapView));
+      if (listView) {
+        await tester.tap(find.byTooltip('Бүх газрыг жагсаалтаар харах'));
+        await tester.pump(const Duration(milliseconds: 500));
+      }
+      final filterScroll = find.descendant(
+          of: find.byWidgetPredicate((widget) =>
+              widget is ListView && widget.scrollDirection == Axis.horizontal),
+          matching: find.byType(Scrollable));
+      await tester.scrollUntilVisible(find.text('Хадгалсан'), 300,
+          scrollable: filterScroll);
+      await tester.tap(find.text('Хадгалсан'));
+      await tester.pump();
+      expect(reads, 1);
+      expect(find.text('Хадгалсан газруудыг уншиж байна…'), findsOneWidget);
+      expect(find.text('Хайлтад тохирох газар алга.'), findsNothing);
+      expect(find.text('0 газар'), findsNothing);
+
+      pending.completeError(StateError('Fixture network unavailable'));
+      await tester.pumpAndSettle();
+      expect(
+          find.text('Хадгалсан газруудыг ачаалж чадсангүй.'), findsOneWidget);
+      expect(find.text('Хайлтад тохирох газар алга.'), findsNothing);
+      expect(find.text('0 газар'), findsNothing);
+      pending = Completer<Set<String>>();
+      await tester.tap(find.text('Дахин оролдох'));
+      await tester.pump();
+      expect(reads, 2);
+      expect(find.text('Хадгалсан газруудыг уншиж байна…'), findsOneWidget);
+      pending.complete({'saved-place'});
+      await tester.pumpAndSettle();
+      expect(find.text('Saved fixture venue'), findsOneWidget);
+      expect(find.text('Other fixture venue'), findsNothing);
+      expect(find.text('Хадгалсан газруудыг ачаалж чадсангүй.'), findsNothing);
+      expect(find.text('Хайлтад тохирох газар алга.'), findsNothing);
+      expect(tester.state(find.byType(GoogleMapView, skipOffstage: false)),
+          same(retainedMap));
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox());
+    });
+  }
+
+  testWidgets(
+      'Saved filter may show empty only after bookmarks load successfully',
+      (tester) async {
+    final pending = Completer<Set<String>>();
+    final backend = (await tester
+        .runAsync(() async => _PendingBookmarksBackend(() => pending.future)))!;
+    addTearDown(() => tester.runAsync(backend.client.dispose));
+    await tester.pumpWidget(ProviderScope(
+        overrides: [
+          sessionUserIdProvider.overrideWithValue('test-account'),
+          venuesProvider.overrideWith((ref) async => [
+                Venue(
+                    id: 'place',
+                    name: 'Fixture venue',
+                    type: 'pub',
+                    lat: 47.9152,
+                    lng: 106.9174,
+                    createdAt: DateTime(2026))
+              ]),
+          venueBookmarksProvider.overrideWith((ref) =>
+              VenueBookmarksNotifier('test-account', backend: backend)),
+        ],
+        child: MaterialApp(
+            theme: AppTheme.dark, home: const MapScreen(embedded: true))));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+    final filterScroll = find.descendant(
+        of: find.byWidgetPredicate((widget) =>
+            widget is ListView && widget.scrollDirection == Axis.horizontal),
+        matching: find.byType(Scrollable));
+    await tester.scrollUntilVisible(find.text('Хадгалсан'), 300,
+        scrollable: filterScroll);
+    await tester.tap(find.text('Хадгалсан'));
+    await tester.pump();
+    expect(find.text('Хайлтад тохирох газар алга.'), findsNothing);
+    pending.complete({});
+    await tester.pumpAndSettle();
+    expect(find.text('Хайлтад тохирох газар алга.'), findsOneWidget);
+    expect(find.text('Хадгалсан газруудыг уншиж байна…'), findsNothing);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox());
+  });
+
   Future<void> pumpExplore(WidgetTester tester, List<Venue> venues,
       {bool dark = true,
       bool disableAnimations = false,
@@ -143,7 +290,7 @@ void main() {
                   .first)
               .backgroundColor,
           dark ? AppColors.bgBaseDark : AppColors.bgBaseLight);
-      expect(tester.widget<Text>(find.text('Өнөө орой')).style?.color,
+      expect(tester.widget<Text>(find.text('Шинэ газар нээе')).style?.color,
           dark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight);
       final filter = tester
           .widget<ColorFiltered>(find
@@ -235,7 +382,9 @@ void main() {
           tester
               .getRect(find.byKey(cardKey))
               .contains(tester.getCenter(find.text(warning))),
-          isTrue,reason:'card=${tester.getRect(find.byKey(cardKey))}; warning=${tester.getRect(find.text(warning))}');
+          isTrue,
+          reason:
+              'card=${tester.getRect(find.byKey(cardKey))}; warning=${tester.getRect(find.text(warning))}');
       expect(
           tester.widget<Text>(find.text('Long test venue name')).style?.color,
           dark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight);
@@ -279,7 +428,8 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('Дэлгэрэнгүй'));
       await tester.pumpAndSettle();
-      await tester.ensureVisible(find.byTooltip('Бүх газрыг жагсаалтаар харах'));
+      await tester
+          .ensureVisible(find.byTooltip('Бүх газрыг жагсаалтаар харах'));
       await tester.pumpAndSettle();
       await tester.tap(find.byTooltip('Бүх газрыг жагсаалтаар харах'));
       await tester.pumpAndSettle();

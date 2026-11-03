@@ -1,15 +1,17 @@
+import 'dart:async';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
-import '../../../core/services/supabase_service.dart';
 import '../../../core/utils/image_uploader.dart';
 import '../../../core/widgets/gradient_button.dart';
 import '../../../core/router/app_router.dart';
 import '../../map/providers/venue_provider.dart';
 import '../../../models/venue.dart';
+import '../../post/services/content_publication.dart';
+import '../services/venue_editor_service.dart';
 
 /// Газрын төрөл — түлхүүр нь өгөгдлийн санд (venue_type) хэвээр англиар
 /// хадгалагдана, харин дэлгэц дээр монголоор харагдана.
@@ -26,7 +28,10 @@ const _kVenueTypes = <String, String>{
 
 class VenueEditScreen extends ConsumerStatefulWidget {
   final String? venueId;
-  const VenueEditScreen({super.key, this.venueId});
+  final VenueEditorService? service;
+  final Future<Uint8List?> Function()? coverPicker;
+  const VenueEditScreen(
+      {super.key, this.venueId, this.service, this.coverPicker});
   @override
   ConsumerState<VenueEditScreen> createState() => _VenueEditScreenState();
 }
@@ -46,31 +51,70 @@ class _VenueEditScreenState extends ConsumerState<VenueEditScreen> {
   Uint8List? _coverBytes;
   bool _loading = true;
   bool _busy = false;
+  bool _picking = false;
+  bool _invalidated = false;
   bool _loadFailed =
       false; // ачаалал бүтэлгүйтвэл save-ийг хориглоно (давхар venue үүсэхээс сэргийлнэ)
   String? _error;
 
-  String get _myId => SupabaseService.currentUser?.id ?? '';
+  late final VenueEditorService _service;
+  late final PublicationSession _session;
+  StreamSubscription<void>? _authSubscription;
+
+  bool get _active => mounted && !_invalidated && _session.isCurrent;
+  bool get _canEdit =>
+      _active && !_loading && !_loadFailed && !_busy && !_picking;
 
   @override
   void initState() {
     super.initState();
-    _load();
+    _service = widget.service ?? VenueEditorService();
+    _session = _service.captureSession();
+    _authSubscription = _service.sessionChanges.listen((_) {
+      if (!_session.isCurrent) _invalidateSession();
+    }, onError: (Object _) => _invalidateSession());
+    if (_session.isCurrent) {
+      _load();
+    } else {
+      _invalidated = true;
+    }
+  }
+
+  void _invalidateSession() {
+    if (!mounted || _invalidated) return;
+    setState(() {
+      _invalidated = true;
+      _loading = false;
+      _busy = false;
+      _picking = false;
+      _coverBytes = null;
+      _coverUrl = null;
+      _venueId = null;
+      _error = null;
+      for (final controller in [
+        _nameCtrl,
+        _districtCtrl,
+        _descCtrl,
+        _latCtrl,
+        _lngCtrl,
+        _phoneCtrl,
+        _openCtrl,
+        _closeCtrl,
+      ]) {
+        controller.clear();
+      }
+    });
   }
 
   Future<void> _load() async {
-    if (mounted) {
-      setState(() {
-        _loading = true;
-        _loadFailed = false;
-      });
-    }
+    if (!_active) return;
+    setState(() {
+      _loading = true;
+      _loadFailed = false;
+    });
     try {
-      var query =
-          SupabaseService.client.from('venues').select().eq('owner_id', _myId);
-      if (widget.venueId != null) query = query.eq('id', widget.venueId!);
-      final data = await query.limit(1).maybeSingle();
-      if (!mounted) return;
+      final data = await _service.load(_session, venueId: widget.venueId);
+      if (!_active) return;
       if (data != null) {
         _venueId = data['id'] as String;
         _nameCtrl.text = data['name'] as String? ?? '';
@@ -96,23 +140,35 @@ class _VenueEditScreenState extends ConsumerState<VenueEditScreen> {
     } catch (_) {
       // Ачаалал бүтэлгүйтвэл _venueId null хэвээр — save хийвэл давхар venue үүсэх
       // эрсдэлтэй тул save-ийг хориглож, дахин оролдох сонголт харуулна.
-      if (mounted) _loadFailed = true;
+      if (!_session.isCurrent) _invalidateSession();
+      if (_active) _loadFailed = true;
     }
-    if (mounted) setState(() => _loading = false);
+    if (_active) setState(() => _loading = false);
   }
 
   Future<void> _pickCover() async {
-    final b = await ImageUploader.pickBytesFromGallery();
-    if (b != null && mounted) setState(() => _coverBytes = b);
+    if (!_canEdit) return;
+    setState(() => _picking = true);
+    try {
+      final bytes =
+          await (widget.coverPicker ?? ImageUploader.pickBytesFromGallery)();
+      if (_active && bytes != null) setState(() => _coverBytes = bytes);
+    } catch (_) {
+      if (_active) {
+        setState(() => _error = 'Зураг сонгож чадсангүй. Дахин оролдоно уу');
+      }
+    } finally {
+      if (!_session.isCurrent) _invalidateSession();
+      if (_active) setState(() => _picking = false);
+    }
   }
 
   Future<void> _save() async {
-    if (_busy) return;
+    if (!_canEdit) return;
     if (_nameCtrl.text.trim().isEmpty) {
       setState(() => _error = 'Газрын нэр шаардлагатай');
       return;
     }
-    if (_myId.isEmpty || _loadFailed) return;
     final lat = double.tryParse(_latCtrl.text.trim());
     final lng = double.tryParse(_lngCtrl.text.trim());
     if ((_latCtrl.text.trim().isNotEmpty || _lngCtrl.text.trim().isNotEmpty) &&
@@ -128,50 +184,34 @@ class _VenueEditScreenState extends ConsumerState<VenueEditScreen> {
           'Өргөрөг -90…90, уртраг -180…180 хүрээнд хоёр координатыг зөв оруулна уу.');
       return;
     }
+    // Freeze the draft before any upload can yield to edits or a login change.
+    final venueId = _venueId;
+    final coverBytes =
+        _coverBytes == null ? null : Uint8List.fromList(_coverBytes!);
+    final row = <String, dynamic>{
+      'owner_id': _session.ownerId,
+      'name': _nameCtrl.text.trim(),
+      'venue_type': _type,
+      'district': _districtCtrl.text.trim(),
+      'description': _descCtrl.text.trim(),
+      'lat': lat,
+      'lng': lng,
+      'phone': _phoneCtrl.text.trim(),
+      'open_time': _openCtrl.text.trim(),
+      'close_time': _closeCtrl.text.trim(),
+      if (_coverUrl != null) 'cover_url': _coverUrl,
+    };
     setState(() {
       _busy = true;
       _error = null;
     });
     try {
-      String? coverUrl = _coverUrl;
-      if (_coverBytes != null) {
-        final ts = DateTime.now().millisecondsSinceEpoch;
-        final uploaded = await ImageUploader.uploadBytes(
-            bytes: _coverBytes!,
-            bucket: 'venues',
-            path: '$_myId/cover_$ts.jpg');
-        // Upload бүтэлгүйтвэл (null) — хуучин cover-оор чимээгүй хадгалахгүй, алдаа мэдэгдэнэ
-        if (uploaded == null) {
-          setState(() {
-            _busy = false;
-            _error = 'Зураг илгээж чадсангүй. Дахин оролдоно уу';
-          });
-          return;
-        }
-        coverUrl = uploaded;
+      if (coverBytes != null) {
+        row['cover_url'] = await _service.uploadCover(_session, coverBytes);
+        if (!_active) return;
       }
-      final row = <String, dynamic>{
-        'owner_id': _myId,
-        'name': _nameCtrl.text.trim(),
-        'venue_type': _type,
-        'district': _districtCtrl.text.trim(),
-        'description': _descCtrl.text.trim(),
-        'lat': lat,
-        'lng': lng,
-        'phone': _phoneCtrl.text.trim(),
-        'open_time': _openCtrl.text.trim(),
-        'close_time': _closeCtrl.text.trim(),
-        if (coverUrl != null) 'cover_url': coverUrl,
-      };
-      if (_venueId != null) {
-        await SupabaseService.client
-            .from('venues')
-            .update(row)
-            .eq('id', _venueId!);
-      } else {
-        await SupabaseService.client.from('venues').insert(row);
-      }
-      if (!mounted) return;
+      await _service.save(_session, row, venueId: venueId);
+      if (!mounted || !_active) return;
       ref.read(refreshVenueCatalogProvider)();
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
           content: Text('Хадгалагдлаа ✓'),
@@ -182,11 +222,14 @@ class _VenueEditScreenState extends ConsumerState<VenueEditScreen> {
       } else {
         context.go(AppRoutes.business);
       }
-    } catch (_) {
-      if (mounted) {
+    } catch (error) {
+      if (!_session.isCurrent) _invalidateSession();
+      if (_active) {
         setState(() {
           _busy = false;
-          _error = 'Хадгалж чадсангүй. Дахин оролдоно уу';
+          _error = error is PublicationFailure
+              ? error.message
+              : 'Хадгалж чадсангүй. Дахин оролдоно уу';
         });
       }
     }
@@ -194,6 +237,8 @@ class _VenueEditScreenState extends ConsumerState<VenueEditScreen> {
 
   @override
   void dispose() {
+    _authSubscription?.cancel();
+    _session.close();
     _nameCtrl.dispose();
     _districtCtrl.dispose();
     _descCtrl.dispose();
@@ -220,123 +265,146 @@ class _VenueEditScreenState extends ConsumerState<VenueEditScreen> {
         title: Text(_venueId != null ? 'Газар засах' : 'Газар үүсгэх',
             style: AppTextStyles.h2),
       ),
-      body: _loading
-          ? const Center(
-              child: CircularProgressIndicator(
-                  color: AppColors.accentStart, strokeWidth: 2))
-          : _loadFailed
-              ? _loadError()
-              : ListView(
-                  padding: EdgeInsets.fromLTRB(
-                      20, 20, 20, 20 + MediaQuery.paddingOf(context).bottom),
-                  children: [
-                      // Cover
-                      GestureDetector(
-                        onTap: _pickCover,
-                        child: Container(
-                            height: 150,
-                            decoration: BoxDecoration(
-                                color: AppColors.bgElevated,
-                                borderRadius: BorderRadius.circular(16),
-                                border: Border.all(color: AppColors.hairline),
-                                image: _coverBytes != null
-                                    ? DecorationImage(
-                                        image: MemoryImage(_coverBytes!),
-                                        fit: BoxFit.cover)
-                                    : (_coverUrl != null
+      body: _invalidated
+          ? Center(
+              child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(mainAxisSize: MainAxisSize.min, children: [
+                    const Text(
+                        'Нэвтрэх хаяг өөрчлөгдсөн байна. Газрын засварыг дахин нээнэ үү.',
+                        textAlign: TextAlign.center),
+                    const SizedBox(height: 16),
+                    TextButton(
+                        onPressed: () => context.go(AppRoutes.business),
+                        child: const Text('Бизнес самбар руу буцах')),
+                  ])))
+          : _loading
+              ? const Center(
+                  child: CircularProgressIndicator(
+                      color: AppColors.accentStart, strokeWidth: 2))
+              : _loadFailed
+                  ? _loadError()
+                  : ListView(
+                      padding: EdgeInsets.fromLTRB(20, 20, 20,
+                          20 + MediaQuery.paddingOf(context).bottom),
+                      children: [
+                          // Cover
+                          GestureDetector(
+                            onTap: _canEdit ? _pickCover : null,
+                            child: Container(
+                                height: 150,
+                                decoration: BoxDecoration(
+                                    color: AppColors.bgElevated,
+                                    borderRadius: BorderRadius.circular(16),
+                                    border:
+                                        Border.all(color: AppColors.hairline),
+                                    image: _coverBytes != null
                                         ? DecorationImage(
-                                            image: NetworkImage(_coverUrl!),
+                                            image: MemoryImage(_coverBytes!),
                                             fit: BoxFit.cover)
-                                        : null)),
-                            child: (_coverBytes == null && _coverUrl == null)
-                                ? Center(
-                                    child: Column(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                        Icon(Icons.add_photo_alternate_outlined,
-                                            color: AppColors.textTertiary,
-                                            size: 36),
-                                        const SizedBox(height: 6),
-                                        Text('Cover зураг',
-                                            style: TextStyle(
-                                                color: AppColors.textTertiary)),
-                                      ]))
-                                : null),
-                      ),
-                      const SizedBox(height: 16),
-                      _field(_nameCtrl, 'Газрын нэр'),
-                      const SizedBox(height: 14),
-                      Text('ТӨРӨЛ',
-                          style: AppTextStyles.labelSm.copyWith(
-                              color: AppColors.textSecondary,
-                              letterSpacing: 0.8)),
-                      const SizedBox(height: 8),
-                      Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: _kVenueTypes.entries.map((e) {
-                            final active = _type == e.key;
-                            return GestureDetector(
-                              onTap: () => setState(() => _type = e.key),
-                              child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 14, vertical: 8),
-                                  decoration: BoxDecoration(
-                                      color: active
-                                          ? AppColors.accentStart
-                                          : AppColors.bgElevated,
-                                      borderRadius: BorderRadius.circular(20),
-                                      border: Border.all(
+                                        : (_coverUrl != null
+                                            ? DecorationImage(
+                                                image: NetworkImage(_coverUrl!),
+                                                fit: BoxFit.cover)
+                                            : null)),
+                                child: (_coverBytes == null &&
+                                        _coverUrl == null)
+                                    ? Center(
+                                        child: Column(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                            Icon(
+                                                Icons
+                                                    .add_photo_alternate_outlined,
+                                                color: AppColors.textTertiary,
+                                                size: 36),
+                                            const SizedBox(height: 6),
+                                            Text('Cover зураг',
+                                                style: TextStyle(
+                                                    color: AppColors
+                                                        .textTertiary)),
+                                          ]))
+                                    : null),
+                          ),
+                          const SizedBox(height: 16),
+                          _field(_nameCtrl, 'Газрын нэр'),
+                          const SizedBox(height: 14),
+                          Text('ТӨРӨЛ',
+                              style: AppTextStyles.labelSm.copyWith(
+                                  color: AppColors.textSecondary,
+                                  letterSpacing: 0.8)),
+                          const SizedBox(height: 8),
+                          Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: _kVenueTypes.entries.map((e) {
+                                final active = _type == e.key;
+                                return GestureDetector(
+                                  onTap: _canEdit
+                                      ? () => setState(() => _type = e.key)
+                                      : null,
+                                  child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 14, vertical: 8),
+                                      decoration: BoxDecoration(
                                           color: active
                                               ? AppColors.accentStart
-                                              : AppColors.hairline)),
-                                  child: Text(e.value,
-                                      style: AppTextStyles.bodyXs.copyWith(
-                                          color: active
-                                              ? Colors.white
-                                              : AppColors.textSecondary,
-                                          fontWeight: active
-                                              ? FontWeight.w700
-                                              : FontWeight.w500))),
-                            );
-                          }).toList()),
-                      const SizedBox(height: 14),
-                      _field(_districtCtrl, 'Дүүрэг'),
-                      const SizedBox(height: 14),
-                      _field(_descCtrl, 'Тайлбар', lines: 3),
-                      const SizedBox(height: 14),
-                      Row(children: [
-                        Expanded(
-                            child: _field(_latCtrl, 'Өргөрөг (lat)',
-                                number: true)),
-                        const SizedBox(width: 12),
-                        Expanded(
-                            child:
-                                _field(_lngCtrl, 'Уртраг (lng)', number: true)),
-                      ]),
-                      const SizedBox(height: 14),
-                      _field(_phoneCtrl, 'Холбоо барих утас', number: true),
-                      const SizedBox(height: 14),
-                      Row(children: [
-                        Expanded(
-                            child: _field(_openCtrl, 'Нээх цаг (ж: 18:00)')),
-                        const SizedBox(width: 12),
-                        Expanded(
-                            child: _field(_closeCtrl, 'Хаах цаг (ж: 03:00)')),
-                      ]),
-                      if (_error != null) ...[
-                        const SizedBox(height: 12),
-                        Text(_error!,
-                            style: AppTextStyles.bodyXs
-                                .copyWith(color: AppColors.error)),
-                      ],
-                      const SizedBox(height: 22),
-                      GradientButton(
-                        label: 'Хадгалах',
-                        busy: _busy,
-                        onPressed: _save,
-                      ),
-                    ]),
+                                              : AppColors.bgElevated,
+                                          borderRadius:
+                                              BorderRadius.circular(20),
+                                          border: Border.all(
+                                              color: active
+                                                  ? AppColors.accentStart
+                                                  : AppColors.hairline)),
+                                      child: Text(e.value,
+                                          style: AppTextStyles.bodyXs.copyWith(
+                                              color: active
+                                                  ? Colors.white
+                                                  : AppColors.textSecondary,
+                                              fontWeight: active
+                                                  ? FontWeight.w700
+                                                  : FontWeight.w500))),
+                                );
+                              }).toList()),
+                          const SizedBox(height: 14),
+                          _field(_districtCtrl, 'Дүүрэг'),
+                          const SizedBox(height: 14),
+                          _field(_descCtrl, 'Тайлбар', lines: 3),
+                          const SizedBox(height: 14),
+                          Row(children: [
+                            Expanded(
+                                child: _field(_latCtrl, 'Өргөрөг (lat)',
+                                    number: true)),
+                            const SizedBox(width: 12),
+                            Expanded(
+                                child: _field(_lngCtrl, 'Уртраг (lng)',
+                                    number: true)),
+                          ]),
+                          const SizedBox(height: 14),
+                          _field(_phoneCtrl, 'Холбоо барих утас', number: true),
+                          const SizedBox(height: 14),
+                          Row(children: [
+                            Expanded(
+                                child:
+                                    _field(_openCtrl, 'Нээх цаг (ж: 18:00)')),
+                            const SizedBox(width: 12),
+                            Expanded(
+                                child:
+                                    _field(_closeCtrl, 'Хаах цаг (ж: 03:00)')),
+                          ]),
+                          if (_error != null) ...[
+                            const SizedBox(height: 12),
+                            Text(_error!,
+                                style: AppTextStyles.bodyXs
+                                    .copyWith(color: AppColors.error)),
+                          ],
+                          const SizedBox(height: 22),
+                          GradientButton(
+                            label: 'Хадгалах',
+                            busy: _busy,
+                            onPressed: _canEdit ? _save : null,
+                          ),
+                        ]),
     );
   }
 
@@ -374,6 +442,7 @@ class _VenueEditScreenState extends ConsumerState<VenueEditScreen> {
           {int lines = 1, bool number = false}) =>
       TextField(
           controller: c,
+          enabled: _canEdit,
           maxLines: lines,
           keyboardType: number
               ? const TextInputType.numberWithOptions(decimal: true)

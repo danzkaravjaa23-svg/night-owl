@@ -5,6 +5,7 @@ import 'dart:html' as html;
 
 import 'package:flutter/painting.dart';
 import 'package:video_player/video_player.dart';
+import '../../../core/constants/app_constants.dart';
 
 /// Сонгосон медиа файл — html.File + preview object URL
 class PickedMediaFile {
@@ -57,7 +58,7 @@ void revokePreviewUrl(String url) => html.Url.revokeObjectUrl(url);
 /// Зураг resize + JPEG compress (canvas).
 /// 500к scale — түүхий 5–20MB зургийг ~1440px / JPEG q0.82 болгож
 /// багасгана (ихэвчлэн 200–600KB). Decode алдаа/гацвал (эвдэрсэн файл,
-/// HEIC support-гүй browser) onError + 15с timeout → эх файлаараа буцаана.
+/// HEIC support-гүй browser) алдаа өгнө; JPEG нэрээр эх файлыг илгээхгүй.
 Future<Object> resizeImageForUpload(PickedMediaFile media,
     {int maxDim = 1440, num quality = 0.82}) async {
   final file = media.file;
@@ -73,7 +74,7 @@ Future<Object> resizeImageForUpload(PickedMediaFile media,
 
     final w = img.naturalWidth;
     final h = img.naturalHeight;
-    if (w == 0 || h == 0) return file;
+    if (w == 0 || h == 0) throw Exception('Зураг уншиж чадсангүй');
 
     final longest = w > h ? w : h;
     final scale = longest > maxDim ? maxDim / longest : 1.0;
@@ -85,11 +86,10 @@ Future<Object> resizeImageForUpload(PickedMediaFile media,
     ctx.drawImageScaled(img, 0, 0, tw.toDouble(), th.toDouble());
 
     final blob = await canvas.toBlob('image/jpeg', quality);
-    // Хэрэв ямар нэг шалтгаанаар томрсон бол эх файлаа хэрэглэнэ
-    if (blob.size >= file.size && scale == 1.0) return file;
+    if (blob.size == 0 || blob.type != 'image/jpeg') {
+      throw Exception('Зургийг JPEG болгож чадсангүй');
+    }
     return blob;
-  } catch (_) {
-    return file; // fallback — эх файл
   } finally {
     html.Url.revokeObjectUrl(objUrl);
   }
@@ -109,7 +109,9 @@ Future<void> uploadBlobWithProgress({
   final completer = Completer<void>();
   final xhr = html.HttpRequest()
     ..open('POST', url)
+    ..timeout = 120000
     ..setRequestHeader('Authorization', 'Bearer $token')
+    ..setRequestHeader('apikey', AppConstants.supabaseAnonKey)
     ..setRequestHeader('Content-Type', mime)
     ..setRequestHeader('x-upsert', 'true');
 
@@ -119,6 +121,7 @@ Future<void> uploadBlobWithProgress({
     }
   });
   xhr.onLoad.listen((_) {
+    if (completer.isCompleted) return;
     final s = xhr.status ?? 0;
     if (s >= 200 && s < 300) {
       completer.complete();
@@ -128,8 +131,12 @@ Future<void> uploadBlobWithProgress({
       completer.completeError('Илгээхэд алдаа гарлаа ($s)');
     }
   });
-  xhr.onError.listen((_) => completer.completeError(
-      'Сүлжээний алдаа — интернэт холболтоо шалгана уу'));
+  void fail(String message) {
+    if (!completer.isCompleted) completer.completeError(message);
+  }
+  xhr.onError.listen((_) => fail('Сүлжээний алдаа — интернэт холболтоо шалгана уу'));
+  xhr.onTimeout.listen((_) => fail('Илгээх хугацаа дууслаа. Холболтоо шалгаад дахин оролдоно уу.'));
+  xhr.onAbort.listen((_) => fail('Медиа илгээх үйлдэл цуцлагдлаа.'));
   xhr.send(blob as html.Blob);
   await completer.future;
 }

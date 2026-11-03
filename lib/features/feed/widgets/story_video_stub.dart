@@ -21,6 +21,7 @@ class StoryVideoView extends StatelessWidget {
   final ValueNotifier<double>? progress;
   final ValueChanged<double>? onDuration;
   final VoidCallback? onEnded;
+  final VoidCallback? onRetry;
   const StoryVideoView({
     super.key,
     required this.url,
@@ -32,6 +33,7 @@ class StoryVideoView extends StatelessWidget {
     this.progress,
     this.onDuration,
     this.onEnded,
+    this.onRetry,
   });
 
   @override

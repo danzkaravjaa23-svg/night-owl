@@ -16,8 +16,11 @@ class AuthLandingScreen extends StatefulWidget {
 
 class _AuthLandingScreenState extends State<AuthLandingScreen> {
   bool _gLoading = false;
+  bool _aLoading = false;
+  bool get _authBusy => _gLoading || _aLoading;
 
   Future<void> _googleSignIn() async {
+    if (_authBusy) return;
     setState(() => _gLoading = true);
     try {
       await signInWithGoogle();
@@ -155,12 +158,14 @@ class _AuthLandingScreenState extends State<AuthLandingScreen> {
                                             Icons.arrow_forward_rounded,
                                             color: Colors.white,
                                             size: 18),
-                                        onPressed: () =>
-                                            context.push(AppRoutes.login)),
+                                        onPressed: _authBusy
+                                            ? null
+                                            : () =>
+                                                context.push(AppRoutes.login)),
                                     const SizedBox(height: 12),
                                     OutlinedButton(
                                         onPressed:
-                                            _gLoading ? null : _googleSignIn,
+                                            _authBusy ? null : _googleSignIn,
                                         style: OutlinedButton.styleFrom(
                                             foregroundColor:
                                                 AppColors.textPrimary,
@@ -189,14 +194,36 @@ class _AuthLandingScreenState extends State<AuthLandingScreen> {
                                                       ? 'Түр хүлээнэ үү...'
                                                       : 'Google-ээр үргэлжлүүлэх')),
                                             ])),
-                                    const AppleSignInButton(),
+                                    AppleSignInButton(
+                                        enabled: !_authBusy,
+                                        onBusyChanged: (busy) {
+                                          if (mounted) {
+                                            setState(() => _aLoading = busy);
+                                          }
+                                        }),
                                     const SizedBox(height: 16),
                                     TextButton(
-                                        onPressed: () =>
-                                            context.push(AppRoutes.register),
+                                        onPressed: _authBusy
+                                            ? null
+                                            : () => context
+                                                .push(AppRoutes.register),
                                         style: TextButton.styleFrom(
                                             foregroundColor: AppColors.silver),
                                         child: const Text('Шинээр бүртгүүлэх')),
+                                    TextButton.icon(
+                                        onPressed: _authBusy
+                                            ? null
+                                            : () =>
+                                                context.go(AppRoutes.explore),
+                                        icon:
+                                            const Icon(Icons.explore_outlined),
+                                        label: const Text(
+                                            'Бүртгэлгүйгээр газрууд үзэх')),
+                                    Text('18+ · Хүндэтгэлтэй хамтын орчин',
+                                        textAlign: TextAlign.center,
+                                        style: TextStyle(
+                                            color: AppColors.textSecondary,
+                                            fontSize: 12)),
                                   ])),
                         ]))),
           )),

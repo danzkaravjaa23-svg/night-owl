@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../auth/providers/auth_provider.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/sculpted_icon.dart';
@@ -9,6 +11,7 @@ import '../../../core/widgets/glass_icon_button.dart';
 import '../../../core/widgets/owl_loading.dart';
 import '../../../core/widgets/skeleton.dart';
 import '../../../core/widgets/premium_surface.dart';
+import '../../../core/widgets/empty_state.dart' as states;
 import '../../../core/services/supabase_service.dart';
 import '../../../core/services/legacy_rpc_fallback.dart';
 import '../widgets/notes_row.dart';
@@ -16,13 +19,27 @@ import '../widgets/create_group_sheet.dart';
 import '../widgets/search_field.dart';
 import '../providers/group_provider.dart';
 
-class DmListScreen extends StatefulWidget {
+class DmListScreen extends ConsumerWidget {
   const DmListScreen({super.key});
   @override
-  State<DmListScreen> createState() => _DmListScreenState();
+  Widget build(BuildContext context, WidgetRef ref) {
+    final ownerId = ref.watch(sessionUserIdProvider);
+    // Account changes dispose private rows, notes, drafts and pending requests.
+    return _AccountDmList(key: ValueKey(ownerId), ownerId: ownerId);
+  }
 }
 
-class _DmListScreenState extends State<DmListScreen> {
+class _AccountDmList extends StatefulWidget {
+  final String? ownerId;
+  const _AccountDmList({super.key, required this.ownerId});
+  @override
+  State<_AccountDmList> createState() => _DmListScreenState();
+}
+
+class _DmListScreenState extends State<_AccountDmList> {
+  bool get _active =>
+      mounted && SupabaseService.currentUser?.id == widget.ownerId;
+  bool _groupSheetOpen = false;
   static final _userIdPattern = RegExp(
       r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$',
       caseSensitive: false);
@@ -48,7 +65,7 @@ class _DmListScreenState extends State<DmListScreen> {
   }
 
   Future<void> _load() async {
-    if (!mounted || _loadInFlight) return;
+    if (!_active || _loadInFlight) return;
     _loadInFlight = true;
     // Анхны ачаалалд л skeleton харуулна — refresh үед хуучин жагсаалт хэвээр
     setState(() {
@@ -58,7 +75,7 @@ class _DmListScreenState extends State<DmListScreen> {
     // Notes мөрийг зэрэг сэргээнэ
     _notesKey.currentState?.reload();
     try {
-      final me = SupabaseService.currentUser?.id;
+      final me = widget.ownerId;
       if (me == null) {
         if (mounted) setState(() => _loading = false);
         return;
@@ -67,15 +84,9 @@ class _DmListScreenState extends State<DmListScreen> {
       // RPC нэг conversation тутам НЭГ мөр буцаана. Зөвхөн хуучин managed
       // сервер RPC байхгүйг тодорхой мэдэгдсэн үед messages-fallback ашиглана.
       final rpcConvos = await _loadViaRpc(me);
+      if (!_active) return;
       if (rpcConvos != null) {
-        final groups = await GroupService.myGroups();
-        if (!mounted) return;
-        setState(() {
-          _convos = rpcConvos;
-          _groups = groups;
-          _loading = false;
-          _error = false;
-        });
+        await _publishConversations(rpcConvos, me);
         return;
       }
 
@@ -88,7 +99,7 @@ class _DmListScreenState extends State<DmListScreen> {
           .or('sender_id.eq.$me,receiver_id.eq.$me')
           .order('created_at', ascending: false)
           .limit(400);
-      if (!mounted) return;
+      if (!_active) return;
 
       final Map<String, Map<String, dynamic>> seen = {};
       final Map<String, int> unread = {};
@@ -119,16 +130,9 @@ class _DmListScreenState extends State<DmListScreen> {
         e.value['unread_count'] = c;
         if (c > 0) e.value['is_read'] = false;
       }
-      final groups = await GroupService.myGroups();
-      if (!mounted) return;
-      setState(() {
-        _convos = seen.values.toList();
-        _groups = groups;
-        _loading = false;
-        _error = false;
-      });
+      await _publishConversations(seen.values.toList(), me);
     } catch (_) {
-      if (!mounted) return;
+      if (!_active) return;
       // Хуучин жагсаалтыг хадгална — алдааг мэдэгдэнэ
       setState(() {
         _loading = false;
@@ -137,6 +141,25 @@ class _DmListScreenState extends State<DmListScreen> {
     } finally {
       _loadInFlight = false;
     }
+  }
+
+  Future<void> _publishConversations(
+      List<Map<String, dynamic>> conversations, String ownerId) async {
+    var groups = _groups;
+    var groupError = false;
+    try {
+      groups = await GroupService.myGroups(ownerId: ownerId);
+    } catch (_) {
+      // A group-service outage must not hide successful direct conversations.
+      groupError = true;
+    }
+    if (!_active) return;
+    setState(() {
+      _convos = conversations;
+      _groups = groups;
+      _loading = false;
+      _error = groupError;
+    });
   }
 
   /// dm_conversations RPC-ээр нэг яриа тутам нэг мөр авна (unread count-той).
@@ -213,8 +236,7 @@ class _DmListScreenState extends State<DmListScreen> {
           padding: EdgeInsets.fromLTRB(20, top, 20, 10),
           child: Row(children: [
             Text(t,
-                style: AppTextStyles.sectionLabel
-                    .copyWith(fontSize: 12, color: AppColors.textSecondary)),
+                style: AppTextStyles.h3.copyWith(color: AppColors.textPrimary)),
             const Spacer(),
             if (trailing != null)
               Text(trailing,
@@ -224,8 +246,11 @@ class _DmListScreenState extends State<DmListScreen> {
 
   Future<void> _newGroup() async {
     // Sheet нь {id, name} буцаана — нэрийг refetch хүлээлгүйгээр шууд дамжуулна
+    if (!_active || _groupSheetOpen) return;
+    _groupSheetOpen = true;
     final res = await showCreateGroupSheet(context);
-    if (res != null && mounted) {
+    _groupSheetOpen = false;
+    if (res != null && mounted && _active) {
       final gid = res['id'];
       if (gid == null) return;
       final name = res['name'];
@@ -234,7 +259,7 @@ class _DmListScreenState extends State<DmListScreen> {
           .push(
               '/group/$gid${name != null && name.isNotEmpty ? '?name=${Uri.encodeComponent(name)}' : ''}')
           .then((_) {
-        if (mounted) _load();
+        if (_active) _load();
       });
     }
   }
@@ -249,6 +274,16 @@ class _DmListScreenState extends State<DmListScreen> {
               .toLowerCase()
               .contains(_search.toLowerCase());
     }).toList();
+  }
+
+  List<Map<String, dynamic>> get _filteredGroups {
+    final query = _search.trim().toLowerCase();
+    if (query.isEmpty) return _groups;
+    return _groups
+        .where((g) =>
+            (g['name'] as String? ?? '').toLowerCase().contains(query) ||
+            (g['last_msg'] as String? ?? '').toLowerCase().contains(query))
+        .toList();
   }
 
   @override
@@ -281,11 +316,14 @@ class _DmListScreenState extends State<DmListScreen> {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: AppTextStyles.h1),
-                if (unreadCount > 0)
-                  Text('$unreadCount шинэ',
-                      style: AppTextStyles.bodySm.copyWith(
-                          color: AppColors.neonCyan,
-                          fontWeight: FontWeight.w700)),
+                Text(
+                    unreadCount > 0
+                        ? '$unreadCount шинэ'
+                        : 'Яриагаа үргэлжлүүлээрэй',
+                    style: AppTextStyles.bodySm.copyWith(
+                        color: AppColors.neonCyan,
+                        fontWeight: FontWeight.w500,
+                        fontSize: 12)),
               ],
             )),
             const ThemeToggleButton(),
@@ -295,12 +333,6 @@ class _DmListScreenState extends State<DmListScreen> {
                 iconSize: 21,
                 tooltip: 'Групп чат үүсгэх',
                 onTap: _newGroup),
-            const SizedBox(width: 4),
-            GlassIconButton(
-                icon: Icons.refresh_rounded,
-                iconSize: 19,
-                tooltip: 'Дахин ачаалах',
-                onTap: _load),
           ]),
         )),
 
@@ -309,8 +341,8 @@ class _DmListScreenState extends State<DmListScreen> {
           padding: const EdgeInsets.symmetric(horizontal: 20),
           child: SearchField(
               controller: _searchCtrl,
-              onChanged: (v) => setState(() => _search = v),
-              hint: 'Мессеж хайх...'),
+              onChanged: (v) => setState(() => _search = v.trim()),
+              hint: 'Нэр эсвэл мессежээр хайх'),
         ),
         const SizedBox(height: 4),
 
@@ -324,8 +356,26 @@ class _DmListScreenState extends State<DmListScreen> {
               physics: const AlwaysScrollableScrollPhysics(),
               children: [
                 // Notes / online rail — контенттой хамт гүйлгэгдэнэ (Instagram-маяг)
-                _sectionHeader('ШӨНИЙН NOTES', top: 10),
-                NotesRow(key: _notesKey),
+                if (_search.isEmpty) ...[
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 16, 16, 4),
+                    child: Row(children: [
+                      Expanded(
+                          child: Text('Найзуудын тэмдэглэл',
+                              style: AppTextStyles.h3)),
+                      IconButton(
+                          tooltip: 'Дахин ачаалах',
+                          onPressed: _load,
+                          icon: Icon(Icons.refresh_rounded,
+                              size: 20, color: AppColors.textSecondary)),
+                    ]),
+                  ),
+                  NotesRow(key: _notesKey),
+                ] else
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 18, 20, 4),
+                    child: Text('Хайлтын илэрц', style: AppTextStyles.h3),
+                  ),
                 if (_error && (_convos.isNotEmpty || _groups.isNotEmpty))
                   _RefreshError(onRetry: _load),
                 if (_loading)
@@ -335,7 +385,7 @@ class _DmListScreenState extends State<DmListScreen> {
                       constraints: BoxConstraints(
                           minHeight: MediaQuery.of(context).size.height * 0.4),
                       child: _ErrorState(onRetry: _load))
-                else if (_filtered.isEmpty && _groups.isEmpty)
+                else if (_filtered.isEmpty && _filteredGroups.isEmpty)
                   ConstrainedBox(
                       constraints: BoxConstraints(
                           minHeight: MediaQuery.of(context).size.height * 0.45),
@@ -346,19 +396,24 @@ class _DmListScreenState extends State<DmListScreen> {
                             setState(() => _search = '');
                           }))
                 else ...[
-                  if (_groups.isNotEmpty) ...[
-                    _sectionHeader('ГРУПП ЧАТ', trailing: '${_groups.length}'),
+                  if (_filteredGroups.isNotEmpty) ...[
+                    _sectionHeader('Групп чат',
+                        trailing: '${_filteredGroups.length}'),
                     _SectionCard(children: [
-                      for (final g in _groups)
+                      for (final g in _filteredGroups)
                         _GroupTile(group: g, onChanged: _load),
                     ]),
                   ],
                   if (_filtered.isNotEmpty) ...[
-                    _sectionHeader('МЕССЕЖ',
+                    _sectionHeader('Ярианууд',
                         trailing: '${_filtered.length} чат'),
                     _SectionCard(children: [
                       for (final c in _filtered)
-                        _ConvoTile(convo: c, onChanged: _load),
+                        _ConvoTile(
+                            key: ValueKey(c['partner_id']),
+                            convo: c,
+                            ownerId: widget.ownerId!,
+                            onChanged: _load),
                     ]),
                   ],
                 ],
@@ -399,18 +454,43 @@ bool _isOnline(String? lastSeenIso) {
   return DateTime.now().toUtc().difference(t.toUtc()).inMinutes < 2;
 }
 
-class _ConvoTile extends StatelessWidget {
+class _ConvoTile extends StatefulWidget {
   final Map<String, dynamic> convo;
   final VoidCallback onChanged;
-  const _ConvoTile({required this.convo, required this.onChanged});
+  final String ownerId;
+  const _ConvoTile(
+      {super.key,
+      required this.convo,
+      required this.ownerId,
+      required this.onChanged});
 
-  String get _myId => SupabaseService.currentUser?.id ?? '';
+  @override
+  State<_ConvoTile> createState() => _ConvoTileState();
+}
+
+class _ConvoTileState extends State<_ConvoTile> {
+  Map<String, dynamic> get convo => widget.convo;
+  String get ownerId => widget.ownerId;
+  VoidCallback get onChanged => widget.onChanged;
+  bool _readInFlight = false;
+  bool _opening = false;
+  bool get _active => mounted && SupabaseService.currentUser?.id == ownerId;
+
+  Future<void> _openThread(String partnerId) async {
+    if (!_active || _opening) return;
+    _opening = true;
+    await context.push('/dm/$partnerId');
+    if (!_active) return;
+    _opening = false;
+    onChanged();
+  }
 
   // Партнёроос ирсэн мессежийг уншсан/уншаагүй болгоно
   Future<void> _setRead(
       BuildContext context, String partnerId, bool read) async {
-    final me = _myId;
-    if (me.isEmpty) return;
+    if (!context.mounted || !_active || _readInFlight) return;
+    setState(() => _readInFlight = true);
+    final me = ownerId;
     try {
       await SupabaseService.client
           .from('messages')
@@ -418,16 +498,19 @@ class _ConvoTile extends StatelessWidget {
           .eq('sender_id', partnerId)
           .eq('receiver_id', me);
     } catch (_) {
-      if (context.mounted) {
+      if (context.mounted && _active) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
             content: Text('Амжилтгүй боллоо. Дахин оролдоно уу.'),
             backgroundColor: AppColors.error));
       }
+    } finally {
+      if (_active) setState(() => _readInFlight = false);
     }
   }
 
   void _showOptions(
       BuildContext context, String partnerId, String username, bool isRead) {
+    if (!_active || _readInFlight) return;
     showModalBottomSheet(
       context: context,
       backgroundColor: AppColors.bgElevated,
@@ -446,7 +529,9 @@ class _ConvoTile extends StatelessWidget {
         Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
             child: Row(children: [
-              Text(username.replaceAll('@', ''), style: AppTextStyles.labelLg),
+              Expanded(
+                  child: Text(username.replaceAll('@', ''),
+                      style: AppTextStyles.labelLg)),
             ])),
         const SizedBox(height: 8),
         if (!isRead)
@@ -456,7 +541,7 @@ class _ConvoTile extends StatelessWidget {
               onTap: () async {
                 Navigator.pop(sheetCtx);
                 await _setRead(context, partnerId, true);
-                onChanged();
+                if (context.mounted && _active) onChanged();
               })
         else
           _OptTile(
@@ -465,21 +550,25 @@ class _ConvoTile extends StatelessWidget {
               onTap: () async {
                 Navigator.pop(sheetCtx);
                 await _setRead(context, partnerId, false);
-                onChanged();
+                if (context.mounted && _active) onChanged();
               }),
         _OptTile(
             icon: Icons.chat_bubble_outline,
             label: 'Чат нээх',
             onTap: () {
               Navigator.pop(sheetCtx);
-              context.push('/dm/$partnerId').then((_) => onChanged());
+              if (context.mounted && _active) {
+                _openThread(partnerId);
+              }
             }),
         _OptTile(
             icon: Icons.person_outline,
             label: 'Профайл харах',
             onTap: () {
               Navigator.pop(sheetCtx);
-              context.push('/creator/$partnerId');
+              if (context.mounted && _active) {
+                context.push('/creator/$partnerId');
+              }
             }),
         const SizedBox(height: 12),
       ])),
@@ -502,93 +591,112 @@ class _ConvoTile extends StatelessWidget {
     final time = _ago(convo['created_at'] as String?);
 
     // Messenger-маягийн мөр: avatar 54 · нэр+сүүлийн мессеж · баруун талд цаг+badge
-    return InkWell(
-      onTap: () => context.push('/dm/$partnerId').then((_) => onChanged()),
-      onLongPress: () => _showOptions(context, partnerId, username, isRead),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 11),
-        child: Row(children: [
-          Stack(children: [
-            AppAvatar(imageUrl: avatarUrl, initial: initial, size: 54),
-            // Online/offline цэг — online үед lime glow-той
-            Positioned(
-                bottom: 2,
-                right: 2,
-                child: Builder(builder: (_) {
-                  final online = _isOnline(partner?['last_seen_at'] as String?);
-                  return Container(
-                      width: 13,
-                      height: 13,
-                      decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: online
-                              ? AppColors.success
-                              : const Color(0xFF6E6E78),
-                          // Хавтгай жагсаалт тул хүрээ нь суурь дэвсгэртэй нийлнэ
-                          border: Border.all(color: AppColors.bgBase, width: 2),
-                          boxShadow: online
-                              ? [
-                                  BoxShadow(
-                                      color: AppColors.success
-                                          .withValues(alpha: 0.55),
-                                      blurRadius: 8),
-                                ]
-                              : null));
-                })),
-          ]),
-          const SizedBox(width: 14),
-          // Нэр + сүүлийн мессеж (1 мөр)
-          Expanded(
-              child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                Text(username,
-                    style: AppTextStyles.labelLg.copyWith(
-                        fontWeight:
-                            isRead ? FontWeight.w600 : FontWeight.w700)),
-                const SizedBox(height: 3),
-                Text('${isMe ? 'Та: ' : ''}$lastMsg',
-                    maxLines: 1,
-                    style: AppTextStyles.bodySm.copyWith(
-                        color: isRead
-                            ? AppColors.textSecondary
-                            : AppColors.textPrimary,
-                        fontWeight: isRead ? FontWeight.w400 : FontWeight.w600),
-                    overflow: TextOverflow.ellipsis),
-              ])),
-          const SizedBox(width: 10),
-          // Баруун багана: цаг (micro) + unread gradient badge 20
-          Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-            Text(time,
-                style: AppTextStyles.bodyXs.copyWith(
-                    fontSize: 12,
-                    color: isRead
-                        ? AppColors.textSecondary
-                        : AppColors.accentStart,
-                    fontWeight: isRead ? FontWeight.w400 : FontWeight.w600)),
-            const SizedBox(height: 5),
-            if (!isRead)
-              Container(
-                  width: 20,
-                  height: 20,
-                  decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: AppColors.accentGradient,
-                      boxShadow: AppColors.glowShadow(AppColors.accentStart,
-                          blur: 10, offset: const Offset(0, 2))),
-                  alignment: Alignment.center,
-                  child: Text(
-                      unreadCnt > 9 ? '9+' : '${unreadCnt > 0 ? unreadCnt : 1}',
-                      style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 10,
-                          fontWeight: FontWeight.w700)))
-            else
-              const SizedBox(height: 20),
-          ]),
-        ]),
-      ),
-    );
+    return Semantics(
+        button: true,
+        label: isRead ? 'Яриа' : 'Уншаагүй яриа',
+        child: Ink(
+            color: isRead
+                ? Colors.transparent
+                : AppColors.accentStart.withValues(alpha: .055),
+            child: InkWell(
+              onTap: () => _openThread(partnerId),
+              onLongPress: () =>
+                  _showOptions(context, partnerId, username, isRead),
+              child: Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
+                child: Row(children: [
+                  Stack(children: [
+                    AppAvatar(imageUrl: avatarUrl, initial: initial, size: 54),
+                    // Online/offline цэг — online үед lime glow-той
+                    Positioned(
+                        bottom: 2,
+                        right: 2,
+                        child: Builder(builder: (_) {
+                          final online =
+                              _isOnline(partner?['last_seen_at'] as String?);
+                          return Container(
+                              width: 13,
+                              height: 13,
+                              decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: online
+                                      ? AppColors.success
+                                      : const Color(0xFF6E6E78),
+                                  // Хавтгай жагсаалт тул хүрээ нь суурь дэвсгэртэй нийлнэ
+                                  border: Border.all(
+                                      color: AppColors.bgBase, width: 2),
+                                  boxShadow: online
+                                      ? [
+                                          BoxShadow(
+                                              color: AppColors.success
+                                                  .withValues(alpha: 0.55),
+                                              blurRadius: 8),
+                                        ]
+                                      : null));
+                        })),
+                  ]),
+                  const SizedBox(width: 14),
+                  // Нэр + сүүлийн мессеж (1 мөр)
+                  Expanded(
+                      child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                        Text(username,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: AppTextStyles.labelLg.copyWith(
+                                fontSize: 15,
+                                fontWeight: isRead
+                                    ? FontWeight.w600
+                                    : FontWeight.w700)),
+                        const SizedBox(height: 5),
+                        Text('${isMe ? 'Та: ' : ''}$lastMsg',
+                            maxLines: 1,
+                            style: AppTextStyles.bodySm.copyWith(
+                                color: isRead
+                                    ? AppColors.textSecondary
+                                    : AppColors.textPrimary,
+                                fontWeight:
+                                    isRead ? FontWeight.w400 : FontWeight.w600),
+                            overflow: TextOverflow.ellipsis),
+                      ])),
+                  const SizedBox(width: 10),
+                  // Баруун багана: цаг (micro) + unread gradient badge 20
+                  Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+                    Text(time,
+                        style: AppTextStyles.bodyXs.copyWith(
+                            fontSize: 12,
+                            color: isRead
+                                ? AppColors.textSecondary
+                                : AppColors.accentStart,
+                            fontWeight:
+                                isRead ? FontWeight.w400 : FontWeight.w600)),
+                    const SizedBox(height: 5),
+                    if (!isRead)
+                      Container(
+                          constraints:
+                              const BoxConstraints(minWidth: 24, minHeight: 24),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 6, vertical: 3),
+                          decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(20),
+                              gradient: AppColors.accentGradient),
+                          alignment: Alignment.center,
+                          child: Text(
+                              unreadCnt > 9
+                                  ? '9+'
+                                  : '${unreadCnt > 0 ? unreadCnt : 1}',
+                              style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w700)))
+                    else
+                      const SizedBox(height: 20),
+                  ]),
+                ]),
+              ),
+            )));
   }
 
   // Монгол товч хугацаа — notes_row-ийн хэв маягтай нийцүүлэв
@@ -626,51 +734,22 @@ class _EmptyState extends StatelessWidget {
   const _EmptyState({required this.isSearching, required this.onClearSearch});
 
   @override
-  Widget build(BuildContext context) => Center(
-          child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
-          Container(
-            width: 88,
-            height: 88,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: AppColors.bgElevated,
-              border: Border.all(color: AppColors.hairline2),
-              boxShadow: [
-                BoxShadow(
-                    color: AppColors.accentStart.withValues(alpha: .12),
-                    blurRadius: 24,
-                    offset: const Offset(0, 8))
-              ],
-            ),
-            child: Center(
-                child: SculptedIcon(Icons.chat_bubble_outline_rounded,
-                    size: 42, color: AppColors.neonCyan)),
-          ),
-          const SizedBox(height: 20),
-          Text(isSearching ? 'Тохирох мессеж олдсонгүй' : 'Мессеж алга байна',
-              style: AppTextStyles.h3, textAlign: TextAlign.center),
-          const SizedBox(height: 8),
-          Text(
-              isSearching
-                  ? 'Хэрэглэгчийн нэр эсвэл мессежийн өөр үгээр хайгаарай.'
-                  : 'Найзаа хайж, профайлаас нь мессеж бичээрэй.',
-              style:
-                  AppTextStyles.bodyMd.copyWith(color: AppColors.textSecondary),
-              textAlign: TextAlign.center),
-          const SizedBox(height: 14),
-          TextButton.icon(
-              onPressed:
-                  isSearching ? onClearSearch : () => context.push('/search'),
-              icon: Icon(
-                  isSearching ? Icons.close_rounded : Icons.search_rounded,
-                  size: 20),
-              label: Text(isSearching ? 'Хайлтыг цэвэрлэх' : 'Хүн хайх',
-                  style: AppTextStyles.btnSm
-                      .copyWith(color: AppColors.accentStart))),
-        ]),
-      ));
+  Widget build(BuildContext context) => states.EmptyState(
+        icon: isSearching
+            ? Icons.search_off_rounded
+            : Icons.chat_bubble_outline_rounded,
+        title: isSearching ? 'Тохирох мессеж олдсонгүй' : 'Мессеж алга байна',
+        subtitle: isSearching
+            ? 'Хэрэглэгчийн нэр эсвэл мессежийн өөр үгээр хайгаарай.'
+            : 'Найзаа хайж, профайлаас нь мессеж бичээрэй.',
+        action: TextButton.icon(
+          onPressed:
+              isSearching ? onClearSearch : () => context.push('/search'),
+          icon: Icon(isSearching ? Icons.close_rounded : Icons.search_rounded,
+              size: 20),
+          label: Text(isSearching ? 'Хайлтыг цэвэрлэх' : 'Хүн хайх'),
+        ),
+      );
 }
 
 /// Сүлжээний алдааны төлөв — retry товчтой
@@ -792,7 +871,7 @@ class _GroupTile extends StatelessWidget {
           .push('/group/${group['id']}?name=${Uri.encodeComponent(name)}')
           .then((_) => onChanged()),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 11),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
         child: Row(children: [
           // Stacked avatar — ард гишүүний дугуй, урд gradient групп дугуй
           SizedBox(
@@ -835,6 +914,8 @@ class _GroupTile extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                 Text(name,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                     style: AppTextStyles.labelLg
                         .copyWith(fontWeight: FontWeight.w700)),
                 const SizedBox(height: 3),

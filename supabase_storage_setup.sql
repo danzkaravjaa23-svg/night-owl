@@ -18,8 +18,8 @@
 -- ───────────────────────────────────────────────────────────────────
 -- file_size_limit нэгж = byte.
 --   avatars  2 MB   (профайл зураг — жижиг)
---   posts   50 MB   (feed зураг + видео)
---   stories 50 MB   (24ц story, видео)
+--   posts   50 MB   (feed зураг + видео; private signed URLs)
+--   stories 50 MB   (24ц story, видео; private signed URLs)
 --   venues   5 MB   (газрын зураг — admin/business)
 -- ⚠️ Видео 50MB-ийн дотор багтах ёстой. UB дата хэмнэхийн тулд апп талд
 --    видеог compress хийх / 15-30сек хязгаарлахыг зөвлөнө (video_compress).
@@ -27,13 +27,14 @@
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values
   ('avatars', 'avatars', true,  2097152,  array['image/jpeg','image/png','image/webp','image/heic','image/heif']),
-  ('posts',   'posts',   true, 52428800,  array['image/jpeg','image/png','image/webp','image/heic','image/heif','image/gif','video/mp4','video/webm','video/quicktime','video/x-m4v']),
-  ('stories', 'stories', true, 52428800,  array['image/jpeg','image/png','image/webp','image/heic','image/heif','image/gif','video/mp4','video/webm','video/quicktime','video/x-m4v']),
+  ('posts',   'posts',   false, 52428800, array['image/jpeg','image/png','image/webp','image/heic','image/heif','image/gif','video/mp4','video/webm','video/quicktime','video/x-m4v']),
+  ('stories', 'stories', false, 52428800, array['image/jpeg','image/png','image/webp','image/heic','image/heif','image/gif','video/mp4','video/webm','video/quicktime','video/x-m4v']),
   ('venues',  'venues',  true,  5242880,  array['image/jpeg','image/png','image/webp','image/heic','image/heif'])
 on conflict (id) do update set
-  public             = excluded.public,
   file_size_limit    = excluded.file_size_limit,
   allowed_mime_types = excluded.allowed_mime_types;
+-- Never overwrite an existing bucket's privacy choice. In particular, re-running
+-- bootstrap must not undo social discovery's private posts/stories migration.
 
 
 -- ───────────────────────────────────────────────────────────────────
@@ -41,7 +42,8 @@ on conflict (id) do update set
 -- ───────────────────────────────────────────────────────────────────
 -- Аппын upload зам үргэлж '<user_id>/файл.jpg' бүтэцтэй (image_uploader.dart),
 -- тиймээс хэрэглэгч ЗӨВХӨН өөрийн id-тэй фолдерт бичиж/устгаж чадна.
--- Унших нь public (feed/profile/story бүгдэд харагдана).
+-- Base read grants intersect the social_media_read restrictive privacy policy.
+-- Apply social discovery before serving post/story media in production.
 
 -- 2a. Бүх 4 bucket-аас унших — public
 drop policy if exists "NightOwl public read" on storage.objects;

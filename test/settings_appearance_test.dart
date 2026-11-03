@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -8,6 +9,7 @@ import 'package:night_owl_ub/core/theme/theme_provider.dart';
 import 'package:night_owl_ub/features/auth/providers/auth_provider.dart';
 import 'package:night_owl_ub/features/profile/screens/settings_screen.dart';
 import 'package:night_owl_ub/models/user_profile.dart';
+import 'package:night_owl_ub/core/constants/app_constants.dart';
 
 class _SettingsFixture extends ConsumerWidget {
   const _SettingsFixture();
@@ -27,6 +29,43 @@ class _SettingsFixture extends ConsumerWidget {
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   setUp(() => GoogleFonts.config.allowRuntimeFetching = false);
+  for (final outcome in ['opened', 'refused', 'error']) {
+    testWidgets(
+        'Settings support link handles $outcome without a network request',
+        (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      const channel = MethodChannel('plugins.flutter.io/url_launcher');
+      final requests = <String>[];
+      final messenger =
+          TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+      messenger.setMockMethodCallHandler(channel, (call) async {
+        expect(call.method, 'launch');
+        requests.add((call.arguments as Map)['url'] as String);
+        if (outcome == 'error') throw PlatformException(code: 'unavailable');
+        return outcome == 'opened';
+      });
+      addTearDown(() => messenger.setMockMethodCallHandler(channel, null));
+      await tester.pumpWidget(ProviderScope(overrides: [
+        sessionUserIdProvider.overrideWithValue(null),
+        currentProfileProvider.overrideWith((_) async => null),
+      ], child: const _SettingsFixture()));
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(find.text('Тусламж'), 180,
+          scrollable: find.byType(Scrollable).first);
+      await tester.ensureVisible(find.text('Тусламж'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Тусламж'));
+      await tester.pumpAndSettle();
+      expect(requests, ['${AppConstants.publicAppUrl}/support.html']);
+      final fallback = find.byWidgetPredicate((widget) =>
+          widget is SelectableText &&
+          widget.data!.contains('${AppConstants.publicAppUrl}/support.html') &&
+          widget.data!.contains('Тусламж: osokhe@gmail.com'));
+      expect(fallback, outcome == 'opened' ? findsNothing : findsOneWidget);
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox());
+    });
+  }
   for (final initial in [ThemeMode.dark, ThemeMode.light]) {
     testWidgets(
         'Settings at 320px in ${initial.name} exposes and saves all modes',

@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/gestures.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/widgets/gradient_button.dart';
 import '../../../core/router/app_router.dart';
+import '../../../core/widgets/policy_links.dart';
+import '../../../core/constants/community_rules.dart';
 import '../widgets/auth_ui.dart';
 
 class RegisterScreen extends StatefulWidget {
@@ -16,49 +17,35 @@ class RegisterScreen extends StatefulWidget {
 }
 
 class _RegisterScreenState extends State<RegisterScreen> {
-  final _nameCtrl  = TextEditingController();
+  final _nameCtrl = TextEditingController();
   final _emailCtrl = TextEditingController();
-  final _pwCtrl    = TextEditingController();
-  final _formKey   = GlobalKey<FormState>();
+  final _pwCtrl = TextEditingController();
+  final _formKey = GlobalKey<FormState>();
   // Гар дээрх "Дараах" товч талбараас талбар руу шилжүүлнэ
   final _emailFocus = FocusNode();
-  final _pwFocus    = FocusNode();
-  bool _agreedTos  = false;
-  bool _showPw     = false;
-  bool _loading    = false;
-  bool _gLoading   = false;
-  bool _sent       = false; // и-мэйл баталгаажуулалт илгээгдсэн эсэх
+  final _pwFocus = FocusNode();
+  bool _agreedTos = false;
+  bool _showPw = false;
+  bool _loading = false;
+  bool _gLoading = false;
+  bool _aLoading = false;
+  bool get _authBusy => _loading || _gLoading || _aLoading;
+  bool _sent = false; // и-мэйл баталгаажуулалт илгээгдсэн эсэх
   String? _error;
-
-  // Зөвшөөрлийн текст доторх холбоосуудын товшилт таниулагч
-  late final TapGestureRecognizer _tosTap;
-  late final TapGestureRecognizer _privacyTap;
-
-  @override
-  void initState() {
-    super.initState();
-    _tosTap = TapGestureRecognizer()
-      ..onTap = () => _showLegal(context, 'Үйлчилгээний нөхцөл',
-          'Night Owl UB-г ашигласнаар та манай үйлчилгээний нөхцөлийг хүлээн '
-          'зөвшөөрч байна. Хууль бус контент, дарамт, спам хориотой. '
-          'Бид дансыг түр болон бүрмөсөн хаах эрхтэй.');
-    _privacyTap = TapGestureRecognizer()
-      ..onTap = () => _showLegal(context, 'Нууцлалын бодлого',
-          'Бид таны мэдээллийг зөвхөн үйлчилгээгээ сайжруулах зорилгоор '
-          'ашиглана. Таны өгөгдлийг гуравдагч этгээдэд зарахгүй. '
-          'Та хүссэн үедээ дансаа устгаж болно.');
-  }
 
   @override
   void dispose() {
-    _nameCtrl.dispose(); _emailCtrl.dispose(); _pwCtrl.dispose();
-    _emailFocus.dispose(); _pwFocus.dispose();
-    _tosTap.dispose(); _privacyTap.dispose();
+    _nameCtrl.dispose();
+    _emailCtrl.dispose();
+    _pwCtrl.dispose();
+    _emailFocus.dispose();
+    _pwFocus.dispose();
     super.dispose();
   }
 
   // Back — шууд URL-ээр орж ирсэн үед pop хийх юмгүй тул landing руу
   void _back() {
+    if (_authBusy) return;
     if (context.canPop()) {
       context.pop();
     } else {
@@ -68,6 +55,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   // Нэвтрэх рүү — pop боломжгүй бол login руу шууд очно
   void _toLogin() {
+    if (_authBusy) return;
     if (context.canPop()) {
       context.pop();
     } else {
@@ -75,39 +63,28 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
   }
 
-  void _showLegal(BuildContext context, String title, String body) {
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        backgroundColor: AppColors.bgElevated,
-        title: Text(title, style: AppTextStyles.h3),
-        content: Text(body, style: AppTextStyles.bodySm.copyWith(
-          color: AppColors.textSecondary, height: 1.5)),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: Text('Хаах', style: AppTextStyles.bodyMd.copyWith(
-              color: AppColors.neonCyan))),
-        ],
-      ),
-    );
-  }
-
   Future<void> _register() async {
     // Enter дарж давхар илгээхээс сэргийлнэ
-    if (_loading) return;
+    if (_authBusy) return;
     if (!_formKey.currentState!.validate()) return;
     if (!_agreedTos) {
-      setState(() => _error = 'Үйлчилгээний нөхцөлийг зөвшөөрнө үү');
+      setState(() =>
+          _error = '18+ нас болон үйлчилгээний нөхцөлийг баталгаажуулна уу');
       return;
     }
-    setState(() { _loading = true; _error = null; });
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
 
     try {
       final res = await Supabase.instance.client.auth.signUp(
         email: _emailCtrl.text.trim(),
         password: _pwCtrl.text,
-        data: {'name': _nameCtrl.text.trim()},
+        data: {
+          'full_name': _nameCtrl.text.trim(),
+          ...CommunityRules.acceptance(DateTime.now()),
+        },
       );
       if (!mounted) return;
       if (res.user == null) {
@@ -137,7 +114,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
     } catch (e) {
       // Сүлжээний алдаа зэрэг — чимээгүй унагаахгүй
       if (mounted) {
-        setState(() => _error = 'Бүртгэхэд алдаа гарлаа. Сүлжээгээ шалгана уу.');
+        setState(
+            () => _error = 'Бүртгэхэд алдаа гарлаа. Сүлжээгээ шалгана уу.');
       }
     } finally {
       if (mounted) setState(() => _loading = false);
@@ -146,12 +124,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   // Google OAuth — web дээр бүтэн хуудас redirect хийнэ
   Future<void> _googleSignIn() async {
-    setState(() { _gLoading = true; _error = null; });
+    if (_authBusy) return;
+    setState(() {
+      _gLoading = true;
+      _error = null;
+    });
     try {
       await signInWithGoogle();
     } catch (_) {
       if (mounted) {
-        setState(() => _error = 'Google-ээр нэвтрэхэд алдаа гарлаа. Дахин оролдоно уу.');
+        setState(() =>
+            _error = 'Google-ээр нэвтрэхэд алдаа гарлаа. Дахин оролдоно уу.');
       }
     } finally {
       if (mounted) setState(() => _gLoading = false);
@@ -175,8 +158,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   child: Row(children: [
                     GlassBack(onTap: _back),
                     const Spacer(),
-                    Text('NIGHT OWL', style: AppTextStyles.monoSm.copyWith(
-                      letterSpacing: 3, color: AppColors.textTertiary)),
+                    Text('NIGHT OWL',
+                        style: AppTextStyles.monoSm.copyWith(
+                            letterSpacing: 3, color: AppColors.textTertiary)),
                     const Spacer(),
                     const SizedBox(width: 40),
                   ]),
@@ -184,14 +168,26 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 const SizedBox(height: 14),
                 AuthEntrance(
                   child: Column(children: [
-                    const _RegisterGlyph(),
-                    const SizedBox(height: 12),
-                    Text('Night Owl-д нэгдээрэй', style: AppTextStyles.h1),
-                    const SizedBox(height: 6),
-                    Text('Үнэгүй бүртгэлээ үүсгээд,\nгазраа олж, мөчөө хуваалц.',
-                      textAlign: TextAlign.center,
-                      style: AppTextStyles.bodyMd.copyWith(
-                        color: AppColors.textSecondary)),
+                    if (MediaQuery.sizeOf(context).height -
+                            MediaQuery.viewInsetsOf(context).bottom >=
+                        600) ...[
+                      const _RegisterGlyph(),
+                      const SizedBox(height: 12),
+                    ],
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: Column(children: [
+                        Text('Night Owl-д нэгдээрэй',
+                            textAlign: TextAlign.center,
+                            style: AppTextStyles.h1),
+                        const SizedBox(height: 6),
+                        Text(
+                            'Үнэгүй бүртгэлээ үүсгээд, газраа олж, мөчөө хуваалц.',
+                            textAlign: TextAlign.center,
+                            style: AppTextStyles.bodyMd
+                                .copyWith(color: AppColors.textSecondary)),
+                      ]),
+                    ),
                   ]),
                 ),
                 const SizedBox(height: 18),
@@ -213,17 +209,18 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           // Footer — sheet-ийн доод захад бэхлэгдсэн
                           Padding(
                             padding: const EdgeInsets.fromLTRB(20, 6, 20, 16),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
+                            child: Wrap(
+                              alignment: WrapAlignment.center,
+                              crossAxisAlignment: WrapCrossAlignment.center,
                               children: [
                                 Text('Бүртгэлтэй юу? ',
-                                  style: AppTextStyles.bodyMd.copyWith(
-                                    color: AppColors.textSecondary)),
-                                TapScale(
-                                  onTap: _toLogin,
+                                    style: AppTextStyles.bodyMd.copyWith(
+                                        color: AppColors.textSecondary)),
+                                TextButton(
+                                  onPressed: _authBusy ? null : _toLogin,
                                   child: Text('Нэвтрэх',
-                                    style: AppTextStyles.labelLg.copyWith(
-                                      color: AppColors.neonCyan)),
+                                      style: AppTextStyles.labelLg
+                                          .copyWith(color: AppColors.neonCyan)),
                                 ),
                               ],
                             ),
@@ -243,222 +240,205 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   // ── И-мэйл баталгаажуулах хүсэлт илгээгдсэн үеийн дэлгэц (sheet дотор) ──
   Widget _sentView() => Center(
-    key: const ValueKey('sent'),
-    child: SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 84, height: 84,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: AppColors.success.withValues(alpha: 0.14),
-              boxShadow: [BoxShadow(
-                color: AppColors.success.withValues(alpha: 0.25),
-                blurRadius: 36, spreadRadius: -6)],
-            ),
-            child: Icon(Icons.mark_email_read_outlined,
-              color: AppColors.success, size: 40),
+        key: const ValueKey('sent'),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 84,
+                height: 84,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: AppColors.success.withValues(alpha: 0.14),
+                  boxShadow: [
+                    BoxShadow(
+                        color: AppColors.success.withValues(alpha: 0.25),
+                        blurRadius: 36,
+                        spreadRadius: -6)
+                  ],
+                ),
+                child: Icon(Icons.mark_email_read_outlined,
+                    color: AppColors.success, size: 40),
+              ),
+              const SizedBox(height: 24),
+              Text('И-мэйлээ шалгаарай',
+                  style: AppTextStyles.h1, textAlign: TextAlign.center),
+              const SizedBox(height: 12),
+              Text(
+                  '${_emailCtrl.text.trim()} хаяг руу баталгаажуулах холбоос илгээлээ. '
+                  'Холбоос дээр дараад бүртгэлээ баталгаажуулна уу.',
+                  style: AppTextStyles.bodyMd
+                      .copyWith(color: AppColors.textSecondary, height: 1.5),
+                  textAlign: TextAlign.center),
+              const SizedBox(height: 36),
+              GradientButton(
+                label: 'Нэвтрэх рүү очих',
+                borderRadius: 999,
+                onPressed: _toLogin,
+              ),
+            ],
           ),
-          const SizedBox(height: 24),
-          Text('И-мэйлээ шалгаарай', style: AppTextStyles.h1,
-            textAlign: TextAlign.center),
-          const SizedBox(height: 12),
-          Text(
-            '${_emailCtrl.text.trim()} хаяг руу баталгаажуулах холбоос илгээлээ. '
-            'Холбоос дээр дараад бүртгэлээ баталгаажуулна уу.',
-            style: AppTextStyles.bodyMd.copyWith(
-              color: AppColors.textSecondary, height: 1.5),
-            textAlign: TextAlign.center),
-          const SizedBox(height: 36),
-          GradientButton(
-            label: 'Нэвтрэх рүү очих',
-            borderRadius: 999,
-            onPressed: _toLogin,
-          ),
-        ],
-      ),
-    ),
-  );
+        ),
+      );
 
   // ── Бүртгэлийн үндсэн форм — sheet дотор гүйлгэгдэнэ ──
   Widget _formView() => SingleChildScrollView(
-    key: const ValueKey('form'),
-    padding: const EdgeInsets.fromLTRB(20, 22, 20, 8),
-    child: Form(
-      key: _formKey,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          AuthEntrance(
-            index: 3,
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const FieldLabel('Нэр'),
-                const SizedBox(height: 8),
-                TextFormField(
-                  controller: _nameCtrl,
-                  autofillHints: const [AutofillHints.name],
-                  style: authFieldStyle,
-                  textInputAction: TextInputAction.next,
-                  onFieldSubmitted: (_) => _emailFocus.requestFocus(),
-                  decoration: authInputDec(hint: 'Чиний нэр',
-                    icon: Icons.person_outline_rounded),
-                  validator: (v) => v!.trim().isNotEmpty ? null : 'Заавал бөглөнө',
-                ),
-              ]),
-          ),
-          const SizedBox(height: 18),
-
-          AuthEntrance(
-            index: 4,
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const FieldLabel('И-мэйл'),
-                const SizedBox(height: 8),
-                TextFormField(
-                  controller: _emailCtrl,
-                  focusNode: _emailFocus,
-                  keyboardType: TextInputType.emailAddress,
-                  autofillHints: const [AutofillHints.newUsername, AutofillHints.email],
-                  style: authFieldStyle,
-                  textInputAction: TextInputAction.next,
-                  onFieldSubmitted: (_) => _pwFocus.requestFocus(),
-                  decoration: authInputDec(hint: 'name@email.com',
-                    icon: Icons.mail_outline_rounded),
-                  validator: (v) => v!.contains('@') ? null : 'И-мэйл хаяг буруу байна',
-                ),
-              ]),
-          ),
-          const SizedBox(height: 18),
-
-          AuthEntrance(
-            index: 5,
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const FieldLabel('Нууц үг'),
-                const SizedBox(height: 8),
-                TextFormField(
-                  controller: _pwCtrl,
-                  focusNode: _pwFocus,
-                  obscureText: !_showPw,
-                  autofillHints: const [AutofillHints.newPassword],
-                  style: authFieldStyle,
-                  textInputAction: TextInputAction.done,
-                  onFieldSubmitted: (_) => _register(),
-                  decoration: authInputDec(
-                    hint: '••••••••',
-                    icon: Icons.lock_outline_rounded,
-                    suffix: IconButton(
-                      onPressed: () => setState(() => _showPw = !_showPw),
-                      icon: Icon(
-                        _showPw ? Icons.visibility_off_outlined : Icons.visibility_outlined,
-                        color: AppColors.textTertiary, size: 20,
+        key: const ValueKey('form'),
+        padding: const EdgeInsets.fromLTRB(20, 22, 20, 8),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              AuthEntrance(
+                index: 3,
+                child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const FieldLabel('Нэр'),
+                      const SizedBox(height: 8),
+                      TextFormField(
+                        enabled: !_authBusy,
+                        controller: _nameCtrl,
+                        autofillHints: const [AutofillHints.name],
+                        style: authFieldStyle,
+                        textInputAction: TextInputAction.next,
+                        onFieldSubmitted: (_) => _emailFocus.requestFocus(),
+                        decoration: authInputDec(
+                            hint: 'Чиний нэр',
+                            icon: Icons.person_outline_rounded),
+                        validator: (v) =>
+                            v!.trim().isNotEmpty ? null : 'Заавал бөглөнө',
                       ),
-                    ),
-                  ),
-                  validator: (v) => v!.length >= kPasswordMinLength
-                      ? null : 'Хамгийн багадаа $kPasswordMinLength тэмдэгт',
-                ),
-              ]),
-          ),
-          const SizedBox(height: 22),
-
-          // ToS checkbox — бүтэн мөр нь toggle (хаана ч дарахад асна/унтарна),
-          // мөрийн өндөр 48px-ээс багагүй, холбоос бүр өөрийн 44px талбайтай
-          AuthEntrance(
-            index: 6,
-            child: TapScale(
-              onTap: () => setState(() => _agreedTos = !_agreedTos),
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(minHeight: 48),
-                child: Row(children: [
-                  AnimatedContainer(
-                    duration: const Duration(milliseconds: 150),
-                    width: 22, height: 22,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(7),
-                      color: _agreedTos ? AppColors.neonCyan : AppColors.bgSurface,
-                      border: Border.all(
-                        color: _agreedTos ? AppColors.neonCyan : AppColors.hairline2),
-                      boxShadow: _agreedTos
-                          ? [BoxShadow(color: AppColors.neonCyan.withValues(alpha: 0.5),
-                              blurRadius: 12, spreadRadius: -2)]
-                          : [],
-                    ),
-                    child: _agreedTos
-                        ? Icon(Icons.check_rounded, size: 15, color: AppColors.bgBase)
-                        : null,
-                  ),
-                  const SizedBox(width: 11),
-                  // Хууль зүйн зөвшөөрөл — урсгал текст доторх холбоос
-                  // (стандарт бүртгэлийн загвар). Мөр бүхэлдээ чагтыг
-                  // сэлгэдэг тул холбоосуудад 44px хайрцаг шаардлагагүй;
-                  // тэгвэл 420px дээр блок хоёр дахин өндөрсөнө.
-                  Expanded(
-                    child: Text.rich(
-                      TextSpan(children: [
-                        TextSpan(text: 'Үйлчилгээний нөхцөл',
-                          style: AppTextStyles.bodySm.copyWith(
-                            color: AppColors.neonCyan,
-                            fontWeight: FontWeight.w600),
-                          recognizer: _tosTap),
-                        TextSpan(text: ' болон ', style: AppTextStyles.bodySm),
-                        TextSpan(text: 'Нууцлалын бодлогыг',
-                          style: AppTextStyles.bodySm.copyWith(
-                            color: AppColors.neonCyan,
-                            fontWeight: FontWeight.w600),
-                          recognizer: _privacyTap),
-                        TextSpan(text: ' зөвшөөрч байна',
-                          style: AppTextStyles.bodySm),
-                      ]),
-                    ),
-                  ),
-                ]),
+                    ]),
               ),
-            ),
+              const SizedBox(height: 18),
+              AuthEntrance(
+                index: 4,
+                child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const FieldLabel('И-мэйл'),
+                      const SizedBox(height: 8),
+                      TextFormField(
+                        enabled: !_authBusy,
+                        controller: _emailCtrl,
+                        focusNode: _emailFocus,
+                        keyboardType: TextInputType.emailAddress,
+                        autofillHints: const [
+                          AutofillHints.newUsername,
+                          AutofillHints.email
+                        ],
+                        style: authFieldStyle,
+                        textInputAction: TextInputAction.next,
+                        onFieldSubmitted: (_) => _pwFocus.requestFocus(),
+                        decoration: authInputDec(
+                            hint: 'name@email.com',
+                            icon: Icons.mail_outline_rounded),
+                        validator: (v) =>
+                            v!.contains('@') ? null : 'И-мэйл хаяг буруу байна',
+                      ),
+                    ]),
+              ),
+              const SizedBox(height: 18),
+              AuthEntrance(
+                index: 5,
+                child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const FieldLabel('Нууц үг'),
+                      const SizedBox(height: 8),
+                      TextFormField(
+                        enabled: !_authBusy,
+                        controller: _pwCtrl,
+                        focusNode: _pwFocus,
+                        obscureText: !_showPw,
+                        autofillHints: const [AutofillHints.newPassword],
+                        style: authFieldStyle,
+                        textInputAction: TextInputAction.done,
+                        onFieldSubmitted: (_) => _register(),
+                        decoration: authInputDec(
+                          hint: '••••••••',
+                          icon: Icons.lock_outline_rounded,
+                          suffix: IconButton(
+                            onPressed: () => setState(() => _showPw = !_showPw),
+                            icon: Icon(
+                              _showPw
+                                  ? Icons.visibility_off_outlined
+                                  : Icons.visibility_outlined,
+                              color: AppColors.textTertiary,
+                              size: 20,
+                            ),
+                          ),
+                        ),
+                        validator: (v) => v!.length >= kPasswordMinLength
+                            ? null
+                            : 'Хамгийн багадаа $kPasswordMinLength тэмдэгт',
+                      ),
+                    ]),
+              ),
+              const SizedBox(height: 22),
+              AuthEntrance(
+                index: 6,
+                child: Material(
+                    color: Colors.transparent,
+                    child: CheckboxListTile(
+                      key: const ValueKey('register-community-agreement'),
+                      contentPadding: EdgeInsets.zero,
+                      controlAffinity: ListTileControlAffinity.leading,
+                      title: Text(
+                          'Би 18 нас хүрсэн бөгөөд үйлчилгээний нөхцөл, нууцлалын бодлогыг зөвшөөрч байна.',
+                          style: AppTextStyles.bodySm),
+                      value: _agreedTos,
+                      onChanged: _authBusy
+                          ? null
+                          : (value) =>
+                              setState(() => _agreedTos = value == true),
+                    )),
+              ),
+              const PolicyLinks(),
+              if (_error != null) ...[
+                const SizedBox(height: 16),
+                AuthErrorBox(_error!),
+              ],
+              const SizedBox(height: 24),
+              AuthEntrance(
+                index: 7,
+                child: GradientButton(
+                  label: _loading ? 'Бүртгэж байна...' : 'Бүртгэл үүсгэх',
+                  onPressed: _authBusy ? null : _register,
+                  borderRadius: 999,
+                  trailing: _loading
+                      ? const BtnSpinner()
+                      : const Icon(Icons.arrow_forward_rounded,
+                          color: Colors.white, size: 19),
+                ),
+              ),
+              const SizedBox(height: 20),
+              const AuthEntrance(index: 8, child: OrDivider()),
+              const SizedBox(height: 20),
+              AuthEntrance(
+                index: 9,
+                child: _GhostBtn(
+                  label: _gLoading
+                      ? 'Түр хүлээнэ үү...'
+                      : 'Google-ээр үргэлжлүүлэх',
+                  leading: _gLoading ? const BtnSpinner() : const GoogleMark(),
+                  onTap: _authBusy ? null : _googleSignIn,
+                ),
+              ),
+              AppleSignInButton(
+                  enabled: !_authBusy,
+                  onBusyChanged: (busy) {
+                    if (mounted) setState(() => _aLoading = busy);
+                  }),
+              const SizedBox(height: 12),
+            ],
           ),
-
-          if (_error != null) ...[
-            const SizedBox(height: 16),
-            AuthErrorBox(_error!),
-          ],
-
-          const SizedBox(height: 24),
-          AuthEntrance(
-            index: 7,
-            child: GradientButton(
-              label: _loading ? 'Бүртгэж байна...' : 'Бүртгэл үүсгэх',
-              onPressed: _loading ? null : _register,
-              borderRadius: 999,
-              trailing: _loading
-                  ? const BtnSpinner()
-                  : const Icon(Icons.arrow_forward_rounded,
-                      color: Colors.white, size: 19),
-            ),
-          ),
-          const SizedBox(height: 20),
-          const AuthEntrance(index: 8, child: OrDivider()),
-          const SizedBox(height: 20),
-          AuthEntrance(
-            index: 9,
-            child: _GhostBtn(
-              label: _gLoading
-                  ? 'Түр хүлээнэ үү...'
-                  : 'Google-ээр үргэлжлүүлэх',
-              leading: _gLoading
-                  ? const BtnSpinner()
-                  : const GoogleMark(),
-              onTap: _gLoading ? null : _googleSignIn,
-            ),
-          ),
-          const AppleSignInButton(),
-          const SizedBox(height: 12),
-        ],
-      ),
-    ),
-  );
+        ),
+      );
 }
 
 // ───────────────────────── register-only UI bits ─────────────────────────
@@ -475,29 +455,30 @@ class _GlassSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-    width: double.infinity,
-    decoration: BoxDecoration(
-      color: AppColors.bgElevated.withValues(alpha: 0.85),
-      borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-      border: Border.all(color: AppColors.hairline2),
-      // Цайвар горимд хар 55% сүүдэр бохир харагдах тул зөөлөн ягаан сүүдэр
-      boxShadow: AppColors.isDarkMode ? AppColors.shadowDock : _lightShadow,
-    ),
-    child: ClipRRect(
-      borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-      child: Column(children: [
-        const SizedBox(height: 10),
-        // Grabber — bottom-sheet мэдрэмж
-        Container(
-          width: 40, height: 4,
-          decoration: BoxDecoration(
-            color: AppColors.hairline2,
-            borderRadius: BorderRadius.circular(999)),
+        width: double.infinity,
+        decoration: BoxDecoration(
+          color: AppColors.bgElevated.withValues(alpha: 0.85),
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+          border: Border.all(color: AppColors.hairline2),
+          // Цайвар горимд хар 55% сүүдэр бохир харагдах тул зөөлөн ягаан сүүдэр
+          boxShadow: AppColors.isDarkMode ? AppColors.shadowDock : _lightShadow,
         ),
-        Expanded(child: child),
-      ]),
-    ),
-  );
+        child: ClipRRect(
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+          child: Column(children: [
+            const SizedBox(height: 10),
+            // Grabber — bottom-sheet мэдрэмж
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                  color: AppColors.hairline2,
+                  borderRadius: BorderRadius.circular(999)),
+            ),
+            Expanded(child: child),
+          ]),
+        ),
+      );
 }
 
 /// Pill хэлбэрт glass outline товч (Google г.м хоёрдогч үйлдэл).
@@ -508,47 +489,55 @@ class _GhostBtn extends StatelessWidget {
   const _GhostBtn({required this.label, required this.onTap, this.leading});
 
   @override
-  Widget build(BuildContext context) => SizedBox(
-    height: 52,
-    width: double.infinity,
-    child: DecoratedBox(
-      decoration: BoxDecoration(
-        color: AppColors.bgElevated.withValues(alpha: 0.72),
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: AppColors.hairline2),
-      ),
-      child: TextButton(
-        onPressed: onTap,
-        style: TextButton.styleFrom(
-          foregroundColor: AppColors.textPrimary,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
+  Widget build(BuildContext context) => Container(
+        constraints: const BoxConstraints(minHeight: 52),
+        width: double.infinity,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: AppColors.bgElevated.withValues(alpha: 0.72),
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(color: AppColors.hairline2),
+          ),
+          child: TextButton(
+            onPressed: onTap,
+            style: TextButton.styleFrom(
+              foregroundColor: AppColors.textPrimary,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(999)),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (leading != null) ...[leading!, const SizedBox(width: 10)],
+                Flexible(
+                    child: Text(label,
+                        textAlign: TextAlign.center,
+                        style: AppTextStyles.btn
+                            .copyWith(fontWeight: FontWeight.w600))),
+              ],
+            ),
+          ),
         ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (leading != null) ...[leading!, const SizedBox(width: 10)],
-            Text(label, style: AppTextStyles.btn.copyWith(fontWeight: FontWeight.w600)),
-          ],
-        ),
-      ),
-    ),
-  );
+      );
 }
 
 class _RegisterGlyph extends StatelessWidget {
   const _RegisterGlyph();
   @override
   Widget build(BuildContext context) => Container(
-    width: 56, height: 56,
-    decoration: BoxDecoration(
-      gradient: AppColors.accentGradient,
-      borderRadius: BorderRadius.circular(18),
-      boxShadow: [
-        BoxShadow(color: AppColors.accentStart.withValues(alpha: 0.45),
-          blurRadius: 22, spreadRadius: -3),
-      ],
-    ),
-    child: const Icon(Icons.auto_awesome, color: Colors.white, size: 26),
-  );
+        width: 56,
+        height: 56,
+        decoration: BoxDecoration(
+          gradient: AppColors.accentGradient,
+          borderRadius: BorderRadius.circular(18),
+          boxShadow: [
+            BoxShadow(
+                color: AppColors.accentStart.withValues(alpha: 0.45),
+                blurRadius: 22,
+                spreadRadius: -3),
+          ],
+        ),
+        child: const Icon(Icons.auto_awesome, color: Colors.white, size: 26),
+      );
 }

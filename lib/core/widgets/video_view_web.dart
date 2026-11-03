@@ -4,12 +4,19 @@ import 'dart:html' as html;
 import 'dart:ui_web' as ui_web;
 import 'package:flutter/material.dart';
 
+const _videoViewType = 'nightowl-video';
 int _viewCounter = 0;
-
-/// viewType → амьд State холбоос. Factory closure-ууд State-ийг шууд
-/// капчурлахгүй (зөвхөн string түлхүүр) — dispose дээр эндээс устгаснаар
-/// урт scroll session-д State/DOM leak үүсэхгүй.
+bool _videoFactoryRegistered = false;
 final Map<String, _VideoViewState> _liveStates = {};
+
+void _registerVideoFactory() {
+  if (_videoFactoryRegistered) return;
+  ui_web.platformViewRegistry.registerViewFactory(
+      _videoViewType,
+      (int _, {Object? params}) =>
+          _liveStates[params]?._createElement() ?? html.DivElement());
+  _videoFactoryRegistered = true;
+}
 
 /// Веб дээр native HTML5 <video> элемент — webm/mp4/mov-г browser кодекоор
 /// найдвартай тоглуулж, эхний кадрыг автоматаар poster болгоно.
@@ -22,11 +29,9 @@ class VideoView extends StatefulWidget {
   final bool active;
   final ValueNotifier<double>? progress;
 
-  /// Browser-ийн native <video> контрол бар (play/scrub/volume/fullscreen)
-  /// харуулах эсэх. Фийд/пост дээр ҮРГЭЛЖ false — саарал HTML5 бар неон
-  /// картын дотор эвгүй харагдаад зогсохгүй, картын товшилтыг ч залгидаг.
-  /// Оронд нь медиа дээрх Flutter давхарга товшилтоор play/pause хийнэ.
+  /// Persistent Flutter play/pause control with keyboard and semantics support.
   final bool showControls;
+
   /// Хүрээг дүүргэж тайрах (IG feed шиг 4:5 хайрцагт хар зурвасгүй).
   /// false бол бүтэн видео харагдана (contain) — пост дэлгэрэнгүйд.
   final bool cover;
@@ -48,7 +53,7 @@ class VideoView extends StatefulWidget {
 }
 
 class _VideoViewState extends State<VideoView> {
-  late final String _viewType;
+  late final String _instanceKey;
   html.VideoElement? _video; // дуу/тоглуулалт удирдахад
   StreamSubscription? _gestureSub;
   StreamSubscription? _timeSub;
@@ -69,15 +74,17 @@ class _VideoViewState extends State<VideoView> {
       final reelMuted = widget.autoplay && !widget.active;
       v
         ..src = widget.url
-        ..controls = widget.showControls
+        ..controls = false
         ..autoplay = widget.autoplay
         ..loop = widget.autoplay
         ..muted = widget.posterOnly || reelMuted;
-      v.style.objectFit =
-          (widget.posterOnly || widget.autoplay || widget.cover) ? 'cover' : 'contain';
+      v.style.objectFit = (widget.posterOnly || widget.autoplay || widget.cover)
+          ? 'cover'
+          : 'contain';
       // Контролгүй үед DOM элемент товшилт залгихгүй — Flutter давхарга авна
-      v.style.pointerEvents = widget.showControls ? 'auto' : 'none';
-      _playing = false; // шинэ url — build аль хэдийн явж байгаа тул setState-гүй
+      v.style.pointerEvents = 'none';
+      _playing =
+          false; // шинэ url — build аль хэдийн явж байгаа тул setState-гүй
       if (widget.autoplay && widget.active) v.play();
     }
     // Reel идэвхжих/идэвхгүйжихэд — идэвхтэй нь дуутай тоглож, бусад нь зогсоно
@@ -96,15 +103,9 @@ class _VideoViewState extends State<VideoView> {
   @override
   void initState() {
     super.initState();
-    _viewType = 'nightowl-video-${_viewCounter++}';
-    _liveStates[_viewType] = this;
-    // Closure нь зөвхөн локал string + глобал map капчурлана (State-ийг биш)
-    final vt = _viewType;
-    ui_web.platformViewRegistry.registerViewFactory(vt, (int _) {
-      final state = _liveStates[vt];
-      if (state == null) return html.DivElement(); // State аль хэдийн үхсэн
-      return state._createElement();
-    });
+    _instanceKey = '${_viewCounter++}';
+    _liveStates[_instanceKey] = this;
+    _registerVideoFactory();
 
     // Browser нь дуутай autoplay-г заримдаа блоклодог — хэрэглэгчийн анхны
     // товшилт дээр идэвхтэй reel-ийг unmute хийж тоглуулна (дуу гаргана).
@@ -127,7 +128,7 @@ class _VideoViewState extends State<VideoView> {
     final reelMuted = widget.autoplay && !widget.active;
     final v = html.VideoElement()
       ..src = widget.url
-      ..controls = widget.showControls
+      ..controls = false
       ..autoplay = widget.autoplay
       ..loop = widget.autoplay
       ..muted = widget.posterOnly || reelMuted
@@ -137,12 +138,14 @@ class _VideoViewState extends State<VideoView> {
     v.style
       ..width = '100%'
       ..height = '100%'
-      ..objectFit = (widget.posterOnly || widget.autoplay || widget.cover) ? 'cover' : 'contain'
+      ..objectFit = (widget.posterOnly || widget.autoplay || widget.cover)
+          ? 'cover'
+          : 'contain'
       ..backgroundColor = 'black'
       ..border = 'none';
     // Native контрол хэрэглэхгүй бол товшилтыг Flutter overlay руу
     // дамжуулахын тулд видеог pointer-гүй болгоно (like/comment/устгах ажиллана).
-    if (!widget.showControls) v.style.pointerEvents = 'none';
+    v.style.pointerEvents = 'none';
     // Play/pause төлөв — товшилтын overlay-ийн badge үүнээс хамаарна
     _playSub?.cancel();
     _playSub = v.onPlay.listen((_) {
@@ -186,7 +189,7 @@ class _VideoViewState extends State<VideoView> {
     _timeSub?.cancel();
     _playSub?.cancel();
     _pauseSub?.cancel();
-    _liveStates.remove(_viewType);
+    _liveStates.remove(_instanceKey);
     // DOM элементийг идэвхгүйжүүлж сүлжээ/дуу суллана
     final v = _video;
     if (v != null) {
@@ -200,17 +203,24 @@ class _VideoViewState extends State<VideoView> {
 
   @override
   Widget build(BuildContext context) {
-    final view = HtmlElementView(viewType: _viewType);
+    final view =
+        HtmlElementView(viewType: _videoViewType, creationParams: _instanceKey);
 
     if (widget.posterOnly) {
       return Stack(fit: StackFit.expand, children: [
         Container(color: Colors.black),
         view,
         if (widget.showPosterIcon) ...[
-          const IgnorePointer(child: Center(child: Icon(
-              Icons.play_circle_fill_rounded, color: Colors.white, size: 34))),
-          const Positioned(top: 6, right: 6, child: IgnorePointer(
-              child: Icon(Icons.videocam_rounded, color: Colors.white70, size: 16))),
+          const IgnorePointer(
+              child: Center(
+                  child: Icon(Icons.play_circle_fill_rounded,
+                      color: Colors.white, size: 34))),
+          const Positioned(
+              top: 6,
+              right: 6,
+              child: IgnorePointer(
+                  child: Icon(Icons.videocam_rounded,
+                      color: Colors.white70, size: 16))),
         ],
       ]);
     }
@@ -223,38 +233,58 @@ class _VideoViewState extends State<VideoView> {
         width: double.infinity,
         color: Colors.black,
         child: widget.showControls
-          ? view
-          // Native контролгүй. Зөвхөн ТӨВИЙН play товч товшилт авна —
-          // бусад талбар нь эцэг рүү дамжина, ингэснээр картын onTap (пост
-          // нээх) ба onDoubleTap (лайк) зураг дээрхтэй яг адилхан ажиллана.
-          // Тоглож эхэлмэгц товч алга болж, товшилт бүхэлдээ эцэгт очно.
-          : Stack(fit: StackFit.expand, children: [
-              view,
-              IgnorePointer(
-                ignoring: _playing,
-                child: AnimatedOpacity(
-                  opacity: _playing ? 0 : 1,
-                  duration: const Duration(milliseconds: 180),
-                  child: Center(
-                    // 56 нүд, гэхдээ 44-ийн доод хязгаарт нийцсэн дарах талбай
-                    child: GestureDetector(
-                      behavior: HitTestBehavior.opaque,
-                      onTap: _togglePlay,
-                      child: Container(
-                        width: 56,
-                        height: 56,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: Colors.black.withValues(alpha: 0.45),
+            ? Stack(fit: StackFit.expand, children: [
+                view,
+                Align(
+                  alignment: Alignment.bottomLeft,
+                  child: Padding(
+                    padding: const EdgeInsets.all(8),
+                    child: IconButton.filled(
+                      tooltip: _playing ? 'Түр зогсоох' : 'Тоглуулах',
+                      onPressed: _togglePlay,
+                      style: IconButton.styleFrom(
+                        minimumSize: const Size(48, 48),
+                        backgroundColor: Colors.black54,
+                        foregroundColor: Colors.white,
+                      ),
+                      icon: Icon(_playing
+                          ? Icons.pause_rounded
+                          : Icons.play_arrow_rounded),
+                    ),
+                  ),
+                ),
+              ])
+            // Native контролгүй. Зөвхөн ТӨВИЙН play товч товшилт авна —
+            // бусад талбар нь эцэг рүү дамжина, ингэснээр картын onTap (пост
+            // нээх) ба onDoubleTap (лайк) зураг дээрхтэй яг адилхан ажиллана.
+            // Тоглож эхэлмэгц товч алга болж, товшилт бүхэлдээ эцэгт очно.
+            : Stack(fit: StackFit.expand, children: [
+                view,
+                IgnorePointer(
+                  ignoring: _playing,
+                  child: AnimatedOpacity(
+                    opacity: _playing ? 0 : 1,
+                    duration: const Duration(milliseconds: 180),
+                    child: Center(
+                      // 56 нүд, гэхдээ 44-ийн доод хязгаарт нийцсэн дарах талбай
+                      child: GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTap: _togglePlay,
+                        child: Container(
+                          width: 56,
+                          height: 56,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: Colors.black.withValues(alpha: 0.45),
+                          ),
+                          child: const Icon(Icons.play_arrow_rounded,
+                              color: Colors.white, size: 32),
                         ),
-                        child: const Icon(Icons.play_arrow_rounded,
-                            color: Colors.white, size: 32),
                       ),
                     ),
                   ),
                 ),
-              ),
-            ]),
+              ]),
       );
     });
   }

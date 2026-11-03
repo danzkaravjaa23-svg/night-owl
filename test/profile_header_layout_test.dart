@@ -148,6 +148,7 @@ void main() {
         await tester.tap(find.text('Хадгалсан'));
         await tester.pumpAndSettle();
         expect(selected, 1);
+        await tester.ensureVisible(find.text('Бичлэг'));
         await tester.tap(find.text('Бичлэг'));
         await tester.pumpAndSettle();
         expect(selected, 2);
@@ -167,7 +168,7 @@ void main() {
       await tester.pumpWidget(_identityFixture(identity.$1));
       await tester.pumpAndSettle();
       expect(find.text(identity.$2), findsOneWidget);
-      expect(tester.widget<Text>(find.text(identity.$2)).style?.fontSize, 22);
+      expect(tester.widget<Text>(find.text(identity.$2)).style?.fontSize, 26);
       expect(find.text('@@actual_username'), findsNothing);
       expect(tester.takeException(), isNull);
     });

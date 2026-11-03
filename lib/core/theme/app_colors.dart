@@ -190,13 +190,25 @@ abstract class AppColors {
 
   // ─── Давхарласан сүүдэр пресетүүд — glass элемент агаарт хөвөх мэдрэмж ───
   // Карт: ойрын нягт + холын зөөлөн сүүдэр
-  static const List<BoxShadow> shadowCard = [
-    BoxShadow(color: Color(0x59000000), blurRadius: 24, offset: Offset(0, 10)),
-    BoxShadow(color: Color(0x33000000), blurRadius: 6, offset: Offset(0, 2)),
-  ];
+  static List<BoxShadow> get shadowCard => [
+        BoxShadow(
+            color: Colors.black.withValues(alpha: isDarkMode ? .24 : .045),
+            blurRadius: 24,
+            offset: const Offset(0, 8)),
+        BoxShadow(
+            color: Colors.black.withValues(alpha: isDarkMode ? .12 : .025),
+            blurRadius: 6,
+            offset: const Offset(0, 2)),
+      ];
   // Хөвөгч док/шилэн бар — илүү гүн, өргөн сүүдэр
-  static const List<BoxShadow> shadowDock = [
-    BoxShadow(color: Color(0x8C000000), blurRadius: 30, offset: Offset(0, 12)),
-    BoxShadow(color: Color(0x40000000), blurRadius: 8, offset: Offset(0, 3)),
-  ];
+  static List<BoxShadow> get shadowDock => [
+        BoxShadow(
+            color: Colors.black.withValues(alpha: isDarkMode ? .32 : .07),
+            blurRadius: 30,
+            offset: const Offset(0, 10)),
+        BoxShadow(
+            color: Colors.black.withValues(alpha: isDarkMode ? .16 : .035),
+            blurRadius: 8,
+            offset: const Offset(0, 3)),
+      ];
 }

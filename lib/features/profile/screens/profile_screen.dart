@@ -1,15 +1,17 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/gestures.dart' show PointerDeviceKind;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' show AuthState;
 import '../../../core/widgets/authorized_media.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/widgets/app_avatar.dart';
-import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/gradient_button.dart';
 import '../../../core/widgets/network_video.dart';
 import '../../../core/widgets/owl_loading.dart';
@@ -30,7 +32,8 @@ import '../widgets/profile_header.dart';
 import '../utils/app_links.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
-  const ProfileScreen({super.key});
+  final Future<Uint8List?> Function()? coverPicker;
+  const ProfileScreen({super.key, this.coverPicker});
 
   @override
   ConsumerState<ProfileScreen> createState() => _ProfileScreenState();
@@ -41,10 +44,24 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   // pull-to-refresh-д grid-ийг re-key хийлгүй (spinner-гүй) чимээгүй шинэчлэх
   final _gridKey = GlobalKey<_PostsGridState>();
   bool _coverBusy = false;
+  int _coverRequest = 0;
+  String? _profileOwnerId;
+  StreamSubscription<AuthState>? _authSub;
 
   @override
   void initState() {
     super.initState();
+    _profileOwnerId = SupabaseService.currentUser?.id;
+    _authSub = SupabaseService.authStream.listen((state) {
+      final owner = state.session?.user.id;
+      if (!mounted || owner == _profileOwnerId) return;
+      setState(() {
+        _profileOwnerId = owner;
+        _coverRequest++;
+        _coverBusy = false;
+        _tab = 0;
+      });
+    });
     // Таб руу орох бүрт ПОСТ/дагагчийн тоог шинэчилнэ (өөр газар пост
     // нийтэлсэн/устгасан бол cache-лэгдсэн тоо хуучирсан байдаг).
     // Cache байгаа үед л — анхны ачааллыг хоёр дахин татахгүй.
@@ -54,6 +71,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         ref.invalidate(currentProfileProvider);
       }
     });
+  }
+
+  @override
+  void dispose() {
+    _coverRequest++;
+    _authSub?.cancel();
+    super.dispose();
   }
 
   // Профайл засах/үүсгэх — тусгай route (/auth/setup биш: router бүртгэлтэй
@@ -68,6 +92,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     ref.invalidate(currentProfileProvider);
     if (deletedId != null) {
       ref.read(feedProvider.notifier).removeLocal(deletedId);
+      ref.read(postsVersionProvider.notifier).state++;
     }
   }
 
@@ -91,28 +116,41 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
   // Cover зураг солих — сонгоод шахаж upload хийгээд profiles.cover_url шинэчилнэ
   Future<void> _changeCover(String uid) async {
-    if (_coverBusy) return;
-    final bytes = await pickImageBytes();
-    if (bytes == null || !mounted) return;
+    if (_coverBusy || SupabaseService.currentUser?.id != uid) return;
+    final request = ++_coverRequest;
+    bool isCurrent() =>
+        mounted &&
+        request == _coverRequest &&
+        SupabaseService.currentUser?.id == uid;
     setState(() => _coverBusy = true);
     try {
+      final bytes = await (widget.coverPicker ?? pickImageBytes)();
+      if (bytes == null || !isCurrent()) return;
       final out = await compressToJpeg(bytes, maxDim: 1600);
+      if (!isCurrent()) return;
       final ts = DateTime.now().millisecondsSinceEpoch;
       final url = await ImageUploader.uploadBytes(
           bytes: out, bucket: 'avatars', path: '$uid/cover_$ts.jpg');
+      if (!isCurrent()) return;
       if (url == null) throw Exception('upload failed');
-      await SupabaseService.client
+      final saved = await SupabaseService.client
           .from('profiles')
-          .update({'cover_url': url}).eq('id', uid);
-      if (mounted) ref.invalidate(currentProfileProvider);
+          .update({'cover_url': url})
+          .eq('id', uid)
+          .select('id')
+          .maybeSingle();
+      if (!isCurrent()) return;
+      if (saved == null) throw StateError('Profile was not updated');
+      ref.invalidate(currentProfileProvider);
     } catch (_) {
-      if (mounted) {
+      if (mounted && isCurrent()) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
             content: Text('Нүүр зураг хадгалж чадсангүй'),
             backgroundColor: AppColors.error));
       }
+    } finally {
+      if (isCurrent()) setState(() => _coverBusy = false);
     }
-    if (mounted) setState(() => _coverBusy = false);
   }
 
   @override
@@ -138,6 +176,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               onRetry: () => ref.invalidate(currentProfileProvider)),
         )),
         data: (profile) {
+          if (profile != null &&
+              profile.id != SupabaseService.currentUser?.id) {
+            return const Center(
+                child: OwlLoading(message: 'Профайлыг ачаалж байна'));
+          }
           if (profile == null) {
             // Нэвтрээгүй (session дууссан/шууд холбоос) бол нэвтрэх рүү,
             // нэвтэрсэн ч profiles мөр байхгүй бол профайл үүсгэх form руу
@@ -171,56 +214,71 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 orElse: () => null,
               );
 
-          return RefreshIndicator(
-            color: AppColors.accentStart,
-            backgroundColor: AppColors.bgElevated,
-            onRefresh: _onRefresh,
-            child: ScrollConfiguration(
-              behavior: ScrollConfiguration.of(context).copyWith(dragDevices: {
-                ...ScrollConfiguration.of(context).dragDevices,
-                PointerDeviceKind.mouse,
-                PointerDeviceKind.trackpad,
-              }),
-              child: CustomScrollView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                slivers: [
-                  SliverToBoxAdapter(
-                      child: ProfileHeader(
-                    profile: profile,
-                    avatar: _ProfileStoryAvatar(
-                        avatarUrl: profile.avatarUrl,
-                        initial: profile.initial,
-                        ring: myRing),
-                    coverBusy: _coverBusy,
-                    onEdit: _openEditProfile,
-                    onShare: () => _shareProfile(context, profile),
-                    onEditCover: () => _changeCover(profile.id),
-                    onSettings: () => context.push(AppRoutes.settings),
-                    onActions: () => _showActions(profile),
-                    onFollowers: () => _openFollows(profile.id, 'followers'),
-                    onFollowing: () => _openFollows(profile.id, 'following'),
-                  )),
-                  SliverToBoxAdapter(
-                      child: ProfileContentTabs(
-                          selected: _tab,
-                          onChanged: (tab) => setState(() => _tab = tab))),
-                  SliverToBoxAdapter(child:Padding(padding:const EdgeInsets.symmetric(horizontal:20),child:OutlinedButton.icon(
-                    icon:const Icon(Icons.collections_bookmark_outlined),label:const Text('Газрын цуглуулга'),onPressed:()=>context.push('/collections/${profile.id}')))),
-                  SliverPadding(
-                      padding: const EdgeInsets.fromLTRB(2, 2, 2, 0),
-                      sliver: _PostsGrid(
-                          key: _gridKey,
-                          userId: profile.id,
-                          savedOnly: _tab == 1,
-                          reelsOnly: _tab == 2,
-                          version: ref.watch(postsVersionProvider),
-                          onChanged: _onGridChanged)),
-                  const SliverToBoxAdapter(
-                      child: SizedBox(height: AppSpacing.x4)),
-                ],
-              ),
-            ),
-          );
+          return Center(
+              child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 760),
+                  child: RefreshIndicator(
+                    color: AppColors.accentStart,
+                    backgroundColor: AppColors.bgElevated,
+                    onRefresh: _onRefresh,
+                    child: ScrollConfiguration(
+                      behavior: ScrollConfiguration.of(context)
+                          .copyWith(dragDevices: {
+                        ...ScrollConfiguration.of(context).dragDevices,
+                        PointerDeviceKind.mouse,
+                        PointerDeviceKind.trackpad,
+                      }),
+                      child: CustomScrollView(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        slivers: [
+                          SliverToBoxAdapter(
+                              child: ProfileHeader(
+                            profile: profile,
+                            avatar: _ProfileStoryAvatar(
+                                avatarUrl: profile.avatarUrl,
+                                initial: profile.initial,
+                                ring: myRing),
+                            coverBusy: _coverBusy,
+                            onEdit: _openEditProfile,
+                            onShare: () => _shareProfile(context, profile),
+                            onEditCover: () => _changeCover(profile.id),
+                            onSettings: () => context.push(AppRoutes.settings),
+                            onActions: () => _showActions(profile),
+                            onFollowers: () =>
+                                _openFollows(profile.id, 'followers'),
+                            onFollowing: () =>
+                                _openFollows(profile.id, 'following'),
+                          )),
+                          SliverToBoxAdapter(
+                              child: Padding(
+                                  padding:
+                                      const EdgeInsets.fromLTRB(20, 0, 20, 20),
+                                  child: _ProfileLibraryLink(
+                                      onPressed: () => context.push(
+                                          '/collections/${profile.id}')))),
+                          SliverToBoxAdapter(
+                              child: Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 20),
+                                  child: ProfileContentTabs(
+                                      selected: _tab,
+                                      onChanged: (tab) =>
+                                          setState(() => _tab = tab)))),
+                          SliverPadding(
+                              padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
+                              sliver: _PostsGrid(
+                                  key: _gridKey,
+                                  userId: profile.id,
+                                  savedOnly: _tab == 1,
+                                  reelsOnly: _tab == 2,
+                                  version: ref.watch(postsVersionProvider),
+                                  onChanged: _onGridChanged)),
+                          const SliverToBoxAdapter(
+                              child: SizedBox(height: AppSpacing.x4)),
+                        ],
+                      ),
+                    ),
+                  )));
         },
       ),
     );
@@ -287,13 +345,16 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       Navigator.pop(sheetContext);
                       context.push(AppRoutes.business);
                     }),
-                if (profile.isAdmin)
+                if (profile.canModerate(ref.read(sessionUserIdProvider)))
                   ListTile(
                       leading: const SculptedIcon(Icons.shield_outlined),
                       title: const Text('Админ панел'),
                       onTap: () {
                         Navigator.pop(sheetContext);
-                        context.push(AppRoutes.adminPanel);
+                        if (profile
+                            .canModerate(ref.read(sessionUserIdProvider))) {
+                          context.push(AppRoutes.adminPanel);
+                        }
                       }),
               ]))),
     );
@@ -331,6 +392,9 @@ class _PostsGridState extends State<_PostsGrid> {
   bool _loading = false;
   bool _hasMore = true;
   bool _error = false; // татах алдаа — жагсаалт дуусснаас ялгаж retry үзүүлнэ
+  bool _retryRefresh = false;
+  final _deleting = <String>{};
+  final _deletedIds = <String>{};
   DateTime? _cursor;
   int _loadedCount = 0;
   int _request = 0;
@@ -355,6 +419,10 @@ class _PostsGridState extends State<_PostsGrid> {
   void didUpdateWidget(covariant _PostsGrid old) {
     super.didUpdateWidget(old);
     if (old.userId != widget.userId || old.savedOnly != widget.savedOnly) {
+      if (old.userId != widget.userId) {
+        _deleting.clear();
+        _deletedIds.clear();
+      }
       // A new account or source cannot receive results from an older request.
       _request++;
       _posts.clear();
@@ -363,6 +431,7 @@ class _PostsGridState extends State<_PostsGrid> {
       _loadedCount = 0;
       _loading = false;
       _error = false;
+      _retryRefresh = false;
       _refreshQueued = false;
       _queuedNotify = false;
       _loadMore();
@@ -380,42 +449,47 @@ class _PostsGridState extends State<_PostsGrid> {
 
   // Профайлын постыг (live/reel/зураг) шууд устгах (удаан дарах / баруун товч)
   Future<void> _confirmDeleteTile(String id) async {
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (d) => AlertDialog(
-        backgroundColor: AppColors.bgElevated,
-        title: Text('Устгах уу?', style: AppTextStyles.h3),
-        content: Text('Энэ пост/бичлэгийг бүрмөсөн устгана.',
-            style:
-                AppTextStyles.bodySm.copyWith(color: AppColors.textSecondary)),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(d, false),
-              child: Text('Болих',
-                  style: AppTextStyles.bodyMd
-                      .copyWith(color: AppColors.textSecondary))),
-          TextButton(
-              onPressed: () => Navigator.pop(d, true),
-              child: Text('Устгах',
-                  style: AppTextStyles.bodyMd.copyWith(
-                      color: AppColors.error, fontWeight: FontWeight.w600))),
-        ],
-      ),
-    );
-    if (ok != true) return;
-    final me = SupabaseService.currentUser?.id;
-    if (me == null) return;
+    final owner = SupabaseService.currentUser?.id;
+    if (owner == null || owner != widget.userId || !_deleting.add(id)) return;
+    bool isCurrent() =>
+        mounted &&
+        widget.userId == owner &&
+        SupabaseService.currentUser?.id == owner;
     try {
+      final ok = await showDialog<bool>(
+        context: context,
+        builder: (d) => AlertDialog(
+          backgroundColor: AppColors.bgElevated,
+          title: Text('Устгах уу?', style: AppTextStyles.h3),
+          content: Text('Энэ пост/бичлэгийг бүрмөсөн устгана.',
+              style: AppTextStyles.bodySm
+                  .copyWith(color: AppColors.textSecondary)),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(d, false),
+                child: Text('Болих',
+                    style: AppTextStyles.bodyMd
+                        .copyWith(color: AppColors.textSecondary))),
+            TextButton(
+                onPressed: () => Navigator.pop(d, true),
+                child: Text('Устгах',
+                    style: AppTextStyles.bodyMd.copyWith(
+                        color: AppColors.error, fontWeight: FontWeight.w600))),
+          ],
+        ),
+      );
+      if (ok != true || !isCurrent()) return;
       // .select() — 0 мөр устсан (өөр tab-д аль хэдийн устгасан) эсэхийг ялгана
       final rows = (await SupabaseService.client
               .from('posts')
               .delete()
               .eq('id', id)
-              .eq('user_id', me)
+              .eq('user_id', owner)
               .select('id, media_url, media_urls') as List)
           .cast<Map<String, dynamic>>();
-      _removeMedia(rows);
-      if (mounted) {
+      if (mounted && isCurrent()) {
+        _deletedIds.add(id);
+        unawaited(_removeMedia(rows, owner));
         setState(() => _posts.removeWhere((p) => p['id'] == id));
         widget.onChanged?.call(id);
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -423,31 +497,36 @@ class _PostsGridState extends State<_PostsGrid> {
                 rows.isEmpty ? 'Пост аль хэдийн устсан байна' : 'Устгагдлаа')));
       }
     } catch (_) {
-      if (mounted) {
+      if (mounted && isCurrent()) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
             content: Text('Устгаж чадсангүй'),
             backgroundColor: AppColors.error));
       }
+    } finally {
+      if (mounted && widget.userId == owner) _deleting.remove(id);
     }
   }
 
   // Устгасан постын файлыг Storage API-аар цэвэрлэнэ (best-effort — алдааг
   // үл тоомсорлоно; posts бакетын биш URL (live replay г.м.) алгасна)
-  Future<void> _removeMedia(List<Map<String, dynamic>> rows) async {
+  Future<void> _removeMedia(
+      List<Map<String, dynamic>> rows, String owner) async {
     const marker = '/object/public/posts/';
     final paths = <String>{};
     for (final r in rows) {
-      final urls = (r['media_urls'] as List?)?.whereType<String>().toList() ??
-          [if (r['media_url'] is String) r['media_url'] as String];
+      final urls = [
+        if (r['media_url'] is String) r['media_url'] as String,
+        ...(r['media_urls'] as List?)?.whereType<String>() ?? <String>[],
+      ];
       for (final u in urls) {
         final i = u.indexOf(marker);
         if (i < 0) continue;
         final p = Uri.decodeComponent(
             u.substring(i + marker.length).split('?').first);
-        if (p.isNotEmpty) paths.add(p);
+        if (p.startsWith('$owner/')) paths.add(p);
       }
     }
-    if (paths.isEmpty) return;
+    if (paths.isEmpty || SupabaseService.currentUser?.id != owner) return;
     try {
       await SupabaseService.client.storage.from('posts').remove(paths.toList());
     } catch (_) {/* файл үлдсэн ч пост устсан — хэрэглэгчид нөлөөгүй */}
@@ -476,10 +555,13 @@ class _PostsGridState extends State<_PostsGrid> {
       _cursor = page.cursor;
       _hasMore = page.hasMore;
       _loadedCount += page.count;
-      _posts.addAll(page.rows);
+      _posts.addAll(page.rows.where((row) => !_deletedIds.contains(row['id'])));
     } catch (_) {
       // Түр зуурын алдааг "жагсаалт дууссан" мэт бүү харагдуул — retry үзүүлнэ
-      if (_isCurrentRequest(request, userId, savedOnly)) _error = true;
+      if (_isCurrentRequest(request, userId, savedOnly)) {
+        _error = true;
+        _retryRefresh = false;
+      }
     } finally {
       if (_isCurrentRequest(request, userId, savedOnly)) {
         _loading = false;
@@ -593,14 +675,17 @@ class _PostsGridState extends State<_PostsGrid> {
       if (!_isCurrentRequest(request, userId, savedOnly)) return;
       _posts
         ..clear()
-        ..addAll(page.rows);
+        ..addAll(page.rows.where((row) => !_deletedIds.contains(row['id'])));
       _cursor = page.cursor;
       _hasMore = page.hasMore;
       _loadedCount = page.count;
       if (notify && mounted) widget.onChanged?.call();
     } catch (_) {
       // Шинэчлэл бүтэлгүйтвэл хуучин мөрүүдийг хэвээр үлдээнэ (blank хийхгүй)
-      if (_isCurrentRequest(request, userId, savedOnly)) _error = true;
+      if (_isCurrentRequest(request, userId, savedOnly)) {
+        _error = true;
+        _retryRefresh = true;
+      }
     } finally {
       if (_isCurrentRequest(request, userId, savedOnly)) {
         _loading = false;
@@ -668,7 +753,7 @@ class _PostsGridState extends State<_PostsGrid> {
     return SliverMainAxisGroup(slivers: [
       SliverGrid(
         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 3, crossAxisSpacing: 2, mainAxisSpacing: 2),
+            crossAxisCount: 3, crossAxisSpacing: 6, mainAxisSpacing: 6),
         delegate: SliverChildBuilderDelegate(
           (ctx, i) => _tile(shown[i]),
           childCount: shown.length,
@@ -703,8 +788,9 @@ class _PostsGridState extends State<_PostsGrid> {
               size: 44,
               message: 'Нийтлэлүүдийг ачаалж чадсангүй',
               onRetry: () {
-                _error = false;
-                _loadMore();
+                if (_loading) return;
+                setState(() => _error = false);
+                _retryRefresh ? _refreshInPlace(notify: false) : _loadMore();
               })));
 
   Widget _tile(Map<String, dynamic> post) {
@@ -731,7 +817,7 @@ class _PostsGridState extends State<_PostsGrid> {
         // Desktop web — баруун товчоор устгах
         onSecondaryTap: canDelete ? () => _confirmDeleteTile(id) : null,
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(2),
+          borderRadius: BorderRadius.circular(12),
           child: Stack(fit: StackFit.expand, children: [
             if (mediaUrl != null && !isVideo)
               AuthorizedImage(
@@ -804,6 +890,38 @@ class _PostsGridState extends State<_PostsGrid> {
 
 enum ProfileContentKind { posts, saved, videos }
 
+class _ProfileLibraryLink extends StatelessWidget {
+  final VoidCallback onPressed;
+  const _ProfileLibraryLink({required this.onPressed});
+
+  @override
+  Widget build(BuildContext context) => Material(
+      color: AppColors.bgElevated,
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+          onTap: onPressed,
+          borderRadius: BorderRadius.circular(16),
+          child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(children: [
+                SculptedIcon(Icons.collections_bookmark_outlined,
+                    size: 24, color: AppColors.silver),
+                const SizedBox(width: 14),
+                Expanded(
+                    child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                      Text('Газрын цуглуулга', style: AppTextStyles.labelLg),
+                      const SizedBox(height: 4),
+                      Text('Дуртай газруудаа нэг дор',
+                          style: AppTextStyles.bodySm),
+                    ])),
+                const SizedBox(width: 8),
+                Icon(Icons.chevron_right_rounded,
+                    color: AppColors.textTertiary, size: 22),
+              ]))));
+}
+
 class ProfileEmptyContent extends StatelessWidget {
   final ProfileContentKind kind;
   final VoidCallback onCreate;
@@ -815,29 +933,44 @@ class ProfileEmptyContent extends StatelessWidget {
       required this.onBrowse});
 
   @override
-  Widget build(BuildContext context) => EmptyState(
-      illustration: kind == ProfileContentKind.videos
-          ? 'assets/images/illustrations/empty_creator.svg'
-          : 'assets/images/illustrations/empty_profile.svg',
-      title: switch (kind) {
-        ProfileContentKind.posts => 'Эхний нийтлэлээ нэмээрэй',
-        ProfileContentKind.saved => 'Хадгалсан нийтлэл алга',
-        ProfileContentKind.videos => 'Бичлэг хараахан алга',
-      },
-      subtitle: switch (kind) {
-        ProfileContentKind.posts =>
-          'Таны хуваалцсан зураг, бичлэг энд харагдана.',
-        ProfileContentKind.saved =>
-          'Дуртай постын хадгалах товчийг дараарай. Хадгалсан нийтлэлүүд энд цугларна.',
-        ProfileContentKind.videos =>
-          'Постоор хуваалцсан бичлэгүүд тань энэ хэсэгт харагдана.',
-      },
-      action: GradientButton(
-          label: kind == ProfileContentKind.saved
-              ? 'Постууд үзэх'
-              : 'Нийтлэл нэмэх',
-          fullWidth: false,
-          onPressed: kind == ProfileContentKind.saved ? onBrowse : onCreate));
+  Widget build(BuildContext context) => Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 28),
+      child: Center(
+          child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 360),
+              child: Column(mainAxisSize: MainAxisSize.min, children: [
+                const OwlEmotion(size: 80),
+                const SizedBox(height: 16),
+                Text(
+                    switch (kind) {
+                      ProfileContentKind.posts => 'Эхний нийтлэлээ нэмээрэй',
+                      ProfileContentKind.saved => 'Хадгалсан нийтлэл алга',
+                      ProfileContentKind.videos => 'Бичлэг хараахан алга',
+                    },
+                    textAlign: TextAlign.center,
+                    style: AppTextStyles.h2),
+                const SizedBox(height: 10),
+                Text(
+                    switch (kind) {
+                      ProfileContentKind.posts =>
+                        'Таны хуваалцсан зураг, бичлэг энд харагдана.',
+                      ProfileContentKind.saved =>
+                        'Дуртай постын хадгалах товчийг дараарай. Хадгалсан нийтлэлүүд энд цугларна.',
+                      ProfileContentKind.videos =>
+                        'Постоор хуваалцсан бичлэгүүд тань энэ хэсэгт харагдана.',
+                    },
+                    textAlign: TextAlign.center,
+                    style: AppTextStyles.bodyMd.copyWith(
+                        color: AppColors.textSecondary, height: 1.55)),
+                const SizedBox(height: 22),
+                GradientButton(
+                    label: kind == ProfileContentKind.saved
+                        ? 'Постууд үзэх'
+                        : 'Нийтлэл нэмэх',
+                    fullWidth: false,
+                    onPressed:
+                        kind == ProfileContentKind.saved ? onBrowse : onCreate),
+              ]))));
 }
 
 /// Compact profile avatar with a thin violet ring; actual stories remain tappable.

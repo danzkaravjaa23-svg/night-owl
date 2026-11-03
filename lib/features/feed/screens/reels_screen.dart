@@ -44,6 +44,9 @@ class _ReelsScreenState extends ConsumerState<ReelsScreen>
   bool _covered = false; // дээр нь өөр дэлгэц нээгдсэн үед видео зогсоно
   bool _foreground = true;
   int _loadGeneration = 0;
+  int _accountGeneration = 0;
+  bool _metadataFailed = false;
+  final Set<String> _changedLikes = {};
   // Browser autoplay бодлого — muted эхэлж, эхний товшилтоор дуу нээгдэнэ
   final ValueNotifier<bool> _muted = ValueNotifier<bool>(true);
 
@@ -105,13 +108,17 @@ class _ReelsScreenState extends ConsumerState<ReelsScreen>
 
   Future<void> _load({bool openNewest = false}) async {
     final generation = ++_loadGeneration;
+    _liking.clear();
     if (openNewest) _forYou = true;
     final forYou = _forYou;
+    final account = _myId;
+    final session = SupabaseService.client.auth.currentSession;
     try {
       final provider = forYou ? reelsProvider : followingReelsProvider;
-      final reels = (await ref.read(provider.future))
-          .map((row) => Map<String, dynamic>.from(row))
-          .toList();
+      final reels =
+          (await ref.read(provider.future).timeout(const Duration(seconds: 15)))
+              .map((row) => Map<String, dynamic>.from(row))
+              .toList();
       if (!mounted || generation != _loadGeneration) return;
       final selectedId = openNewest || !forYou ? null : widget.initialReelId;
       if (selectedId != null && !reels.any((r) => r['id'] == selectedId)) {
@@ -129,44 +136,16 @@ class _ReelsScreenState extends ConsumerState<ReelsScreen>
         reels.insert(0, selected);
       }
       if (!mounted || generation != _loadGeneration) return;
-      // This query is for follow-button state, never for filtering the feed.
-      if (_myId.isNotEmpty) {
-        try {
-          final f = await SupabaseService.client
-              .from('follows')
-              .select('following_id')
-              .eq('follower_id', _myId);
-          if (!mounted || generation != _loadGeneration) return;
-          _followingIds
-            ..clear()
-            ..addAll((f as List).map((e) => e['following_id'].toString()));
-        } catch (_) {}
-      }
-
-      // Аль reel-уудыг лайкласныг шалгах
-      if (_myId.isNotEmpty && reels.isNotEmpty) {
-        final ids = reels.map((r) => r['id'] as String).toList();
-        try {
-          final likes = await SupabaseService.client
-              .from('likes')
-              .select('post_id')
-              .eq('user_id', _myId)
-              .inFilter('post_id', ids);
-          if (!mounted || generation != _loadGeneration) return;
-          _liked.clear();
-          for (final l in (likes as List)) {
-            _liked.add(l['post_id'] as String);
-          }
-        } catch (_) {/* A reaction request must not hide playable videos. */}
-      }
-      if (!mounted || generation != _loadGeneration) return;
       final selectedIndex = reels.indexWhere((r) => r['id'] == selectedId);
       setState(() {
         _reels = reels;
         _page = selectedIndex < 0 ? 0 : selectedIndex;
         _loading = false;
         _error = null;
+        _metadataFailed = false;
+        _changedLikes.clear();
       });
+      unawaited(_hydrateMetadata(generation, account, session));
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted && generation == _loadGeneration && _pageCtrl.hasClients) {
           _pageCtrl.jumpToPage(_page);
@@ -181,6 +160,62 @@ class _ReelsScreenState extends ConsumerState<ReelsScreen>
         });
       }
     }
+  }
+
+  Future<void> _hydrateMetadata(
+      int generation, String account, Object? session) async {
+    if (account.isEmpty) return;
+    bool current() =>
+        mounted &&
+        generation == _loadGeneration &&
+        account == _myId &&
+        ref.read(sessionUserIdProvider) == account &&
+        identical(session, SupabaseService.client.auth.currentSession);
+    Future<void> hydrate(bool likes) async {
+      try {
+        final rows = likes
+            ? await SupabaseService.client
+                .from('likes')
+                .select('post_id')
+                .eq('user_id', account)
+                .inFilter(
+                    'post_id', _reels.map((r) => r['id'] as String).toList())
+                .timeout(const Duration(seconds: 10))
+            : await SupabaseService.client
+                .from('follows')
+                .select('following_id')
+                .eq('follower_id', account)
+                .timeout(const Duration(seconds: 10));
+        if (!current()) return;
+        setState(() {
+          if (likes) {
+            final changed = {
+              for (final id in _changedLikes) id: _liked.contains(id)
+            };
+            _liked
+              ..clear()
+              ..addAll(rows.map((r) => r['post_id'] as String));
+            for (final entry in changed.entries) {
+              entry.value ? _liked.add(entry.key) : _liked.remove(entry.key);
+            }
+          } else {
+            _followingIds
+              ..clear()
+              ..addAll(rows.map((r) => r['following_id'] as String));
+          }
+        });
+      } catch (_) {
+        if (current()) setState(() => _metadataFailed = true);
+      }
+    }
+
+    await Future.wait([hydrate(false), if (_reels.isNotEmpty) hydrate(true)]);
+  }
+
+  void _retryMetadata() {
+    setState(() => _metadataFailed = false);
+    unawaited(_hydrateMetadata(
+        _loadGeneration, _myId, SupabaseService.client.auth.currentSession));
   }
 
   void _retry() {
@@ -232,7 +267,18 @@ class _ReelsScreenState extends ConsumerState<ReelsScreen>
   Future<void> _toggleLike(Map<String, dynamic> reel) async {
     final id = reel['id'] as String;
     final user = _myId;
-    if (user.isEmpty || !_liking.add(id)) return;
+    final session = SupabaseService.client.auth.currentSession;
+    final accountGeneration = _accountGeneration;
+    final generation = _loadGeneration;
+    bool current() =>
+        mounted &&
+        accountGeneration == _accountGeneration &&
+        generation == _loadGeneration &&
+        user == _myId &&
+        ref.read(sessionUserIdProvider) == user &&
+        identical(session, SupabaseService.client.auth.currentSession);
+    if (user.isEmpty || !current() || !_liking.add(id)) return;
+    _changedLikes.add(id);
     final wasLiked = _liked.contains(id);
     setState(() {
       if (wasLiked) {
@@ -255,7 +301,7 @@ class _ReelsScreenState extends ConsumerState<ReelsScreen>
             .from('likes')
             .insert({'user_id': user, 'post_id': id});
       }
-      if (mounted) {
+      if (current()) {
         for (final provider in [feedProvider, followingFeedProvider]) {
           if (ref.exists(provider)) {
             ref
@@ -266,7 +312,7 @@ class _ReelsScreenState extends ConsumerState<ReelsScreen>
       }
     } catch (_) {
       // Алдаа гарвал optimistic төлөвийг буцаана
-      if (mounted) {
+      if (current()) {
         setState(() {
           if (wasLiked) {
             _liked.add(id);
@@ -278,7 +324,7 @@ class _ReelsScreenState extends ConsumerState<ReelsScreen>
         });
       }
     } finally {
-      _liking.remove(id);
+      if (current()) _liking.remove(id);
     }
   }
 
@@ -535,7 +581,12 @@ class _ReelsScreenState extends ConsumerState<ReelsScreen>
     ref.listen(sessionUserIdProvider, (_, __) {
       setState(() {
         _reels = [];
+        _accountGeneration++;
         _liked.clear();
+        _liking.clear();
+        _saving.clear();
+        _changedLikes.clear();
+        _metadataFailed = false;
         _savedIds.clear();
         _followingIds.clear();
         _loading = true;
@@ -550,89 +601,48 @@ class _ReelsScreenState extends ConsumerState<ReelsScreen>
         !_covered &&
         TickerMode.of(context) &&
         (ModalRoute.of(context)?.isCurrent ?? true);
+    final showState = !_loading && (_error != null || visible.isEmpty);
     final page = Scaffold(
       backgroundColor: Colors.black,
-      body: Stack(children: [
-        if (_loading)
-          const _ReelsSkeleton()
-        else if (_error != null)
-          _errorView()
-        else if (visible.isEmpty)
-          _empty(context)
-        else
-          PageView.builder(
-            controller: _pageCtrl,
-            scrollDirection: Axis.vertical,
-            itemCount: visible.length,
-            onPageChanged: (i) => setState(() => _page = i),
-            itemBuilder: (_, i) {
-              final reel = visible[i];
-              final id = reel['id'] as String;
-              final uid = reel['user_id'] as String;
-              return _ReelPage(
-                key: ValueKey('reel-$id'),
-                reel: reel,
-                active: i == _page && canPlay,
-                muted: _muted,
-                liked: _liked.contains(id),
-                saved: _savedIds.contains(id),
-                following: uid == _myId || _followingIds.contains(uid),
-                isOwn: uid == _myId,
-                onLike: () => _toggleLike(reel),
-                onSave: () => _toggleSave(id),
-                onShare: () => _shareReel(reel),
-                onMore: () => _moreSheet(reel),
-                onFollow: () => _follow(uid),
-                onDelete: () => _deleteReel(reel),
-                onNavigate: _pushCovered,
-              );
-            },
-          ),
-        // Дээд overlay: сегмент (Дагадаг / Танд) + дуу + хайлт + нэмэх
-        SafeArea(
-            child: Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    // Venue эзэн create (+) — зүүн дээд
-                    if (context.canPop())
-                      _GlassIconButton(
-                        icon: Icons.arrow_back_rounded,
-                        onTap: () => context.pop(),
-                      )
-                    else if (_canCreate)
-                      _GlassIconButton(
-                        icon: Icons.add_box_outlined,
-                        onTap: () => _pushCovered('/reels/create'),
-                      )
-                    else
-                      const SizedBox(width: 40),
-                    const Spacer(),
-                    _SegmentedTabs(
-                      forYou: _forYou,
-                      onChanged: _switchTab,
-                    ),
-                    const Spacer(),
-                    // Дуу асаах/хаах
-                    ValueListenableBuilder<bool>(
-                        valueListenable: _muted,
-                        builder: (_, m, __) => _GlassIconButton(
-                              icon: m
-                                  ? Icons.volume_off_rounded
-                                  : Icons.volume_up_rounded,
-                              onTap: () => _muted.value = !m,
-                            )),
-                    const SizedBox(width: 8),
-                    // Хайлт
-                    _GlassIconButton(
-                      icon: Icons.search,
-                      onTap: () => _pushCovered('/search'),
-                    ),
-                  ],
-                ))),
-      ]),
+      body: showState
+          ? Column(children: [
+              _topControls(),
+              Expanded(child: _error != null ? _errorView() : _empty(context)),
+            ])
+          : Stack(children: [
+              if (_loading)
+                const _ReelsSkeleton()
+              else
+                PageView.builder(
+                  controller: _pageCtrl,
+                  scrollDirection: Axis.vertical,
+                  itemCount: visible.length,
+                  onPageChanged: (i) => setState(() => _page = i),
+                  itemBuilder: (_, i) {
+                    final reel = visible[i];
+                    final id = reel['id'] as String;
+                    final uid = reel['user_id'] as String;
+                    return _ReelPage(
+                      key: ValueKey('reel-$id'),
+                      reel: reel,
+                      active: i == _page && canPlay,
+                      muted: _muted,
+                      liked: _liked.contains(id),
+                      saved: _savedIds.contains(id),
+                      following: uid == _myId || _followingIds.contains(uid),
+                      isOwn: uid == _myId,
+                      onLike: () => _toggleLike(reel),
+                      onSave: () => _toggleSave(id),
+                      onShare: () => _shareReel(reel),
+                      onMore: () => _moreSheet(reel),
+                      onFollow: () => _follow(uid),
+                      onDelete: () => _deleteReel(reel),
+                      onNavigate: _pushCovered,
+                    );
+                  },
+                ),
+              _topControls(),
+            ]),
     );
     if (kIsWeb) return page;
     // Үргэлж харанхуй канвас — light горимд ч системийн дүрс цайвар
@@ -644,205 +654,246 @@ class _ReelsScreenState extends ConsumerState<ReelsScreen>
         child: page);
   }
 
-  Widget _errorView() => Center(
-          child: Column(mainAxisSize: MainAxisSize.min, children: [
+  // The controls participate in layout on state screens; on video they overlay
+  // the canvas. Their height may grow freely with accessibility text size.
+  Widget _topControls() => SafeArea(
+      bottom: false,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        child: LayoutBuilder(builder: (context, constraints) {
+          final compact =
+              constraints.maxWidth < (_metadataFailed ? 440 : 340) ||
+                  MediaQuery.textScalerOf(context).scale(15) > 18;
+          final leading = context.canPop()
+              ? _GlassIconButton(
+                  icon: Icons.arrow_back_rounded,
+                  label: 'Буцах',
+                  onTap: () => context.pop())
+              : _canCreate
+                  ? _GlassIconButton(
+                      icon: Icons.add_box_outlined,
+                      label: 'Бичлэг нэмэх',
+                      onTap: () => _pushCovered('/reels/create'))
+                  : const SizedBox(width: 44, height: 44);
+          final tabs = _SegmentedTabs(forYou: _forYou, onChanged: _switchTab);
+          final actions = [
+            if (_metadataFailed)
+              _GlassIconButton(
+                icon: Icons.sync_problem,
+                label: 'Үйлдлүүдийг дахин ачаалах',
+                onTap: _retryMetadata,
+              ),
+            ValueListenableBuilder<bool>(
+                valueListenable: _muted,
+                builder: (_, muted, __) => _GlassIconButton(
+                    icon: muted
+                        ? Icons.volume_off_rounded
+                        : Icons.volume_up_rounded,
+                    label: muted ? 'Дуу асаах' : 'Дуу хаах',
+                    onTap: () => _muted.value = !muted)),
+            const SizedBox(width: 8),
+            _GlassIconButton(
+                icon: Icons.search,
+                label: 'Хайх',
+                onTap: () => _pushCovered('/search')),
+          ];
+          if (compact) {
+            return Column(mainAxisSize: MainAxisSize.min, children: [
+              Row(children: [leading, const Spacer(), ...actions]),
+              const SizedBox(height: 4),
+              tabs,
+            ]);
+          }
+          return Row(children: [leading, Expanded(child: tabs), ...actions]);
+        }),
+      ));
+
+  Widget _stateContent(List<Widget> children) => SafeArea(
+        top: false,
+        child: LayoutBuilder(builder: (context, constraints) {
+          const padding = EdgeInsets.fromLTRB(24, 24, 24, 32);
+          return SingleChildScrollView(
+            padding: padding,
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                  minHeight: (constraints.maxHeight - padding.vertical)
+                      .clamp(0, double.infinity)),
+              child: Center(
+                  child: Column(
+                      mainAxisSize: MainAxisSize.min, children: children)),
+            ),
+          );
+        }),
+      );
+
+  Widget _errorView() => _stateContent([
         const Icon(Icons.wifi_off_rounded, color: Colors.white38, size: 64),
         const SizedBox(height: 16),
         Text('Ачаалж чадсангүй',
+            textAlign: TextAlign.center,
             style: AppTextStyles.h2.copyWith(color: Colors.white)),
         const SizedBox(height: 8),
         Text(_error ?? '',
             textAlign: TextAlign.center,
-            style: AppTextStyles.bodyMd.copyWith(color: Colors.white54)),
+            style: AppTextStyles.bodyMd.copyWith(color: Colors.white70)),
         const SizedBox(height: 20),
-        _Pressable(
-            onTap: _retry,
-            child: Container(
-                height: 48,
-                padding: const EdgeInsets.symmetric(horizontal: 30),
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                    gradient: AppColors.accentGradient,
-                    borderRadius: BorderRadius.circular(999),
-                    boxShadow: AppColors.glowShadow(AppColors.accentStart)),
-                child: Text('Дахин оролдох',
-                    style: AppTextStyles.btn.copyWith(color: Colors.white)))),
-      ]));
+        GradientButton(
+            label: 'Дахин оролдох',
+            fullWidth: false,
+            borderRadius: AppRadii.pill,
+            onPressed: _retry),
+      ]);
 
   Widget _empty(BuildContext context) {
-    // Дагадаг таб хоосон ч нийт контент байгаа эсэхийг ялгана
     final followingEmpty = !_forYou;
-    return SafeArea(
-        child: Stack(children: [
-      Center(
-          child: Column(mainAxisSize: MainAxisSize.min, children: [
-        Icon(
-            followingEmpty
-                ? Icons.person_search_outlined
-                : Icons.explore_outlined,
-            color: Colors.white38,
-            size: 72),
-        const SizedBox(height: 16),
-        Text('Контент алга байна',
-            style: AppTextStyles.h2.copyWith(color: Colors.white)),
-        const SizedBox(height: 8),
-        Text(
-            followingEmpty
-                ? 'Дагасан хүмүүс бичлэг оруулаагүй байна'
-                : _canCreate
-                    ? 'Эхний бичлэгээ хуваалцаарай!'
-                    : 'Нэвтэрч бичлэгээ хуваалцаарай',
-            textAlign: TextAlign.center,
-            style: AppTextStyles.bodyMd.copyWith(color: Colors.white54)),
-        if (_canCreate && !followingEmpty) ...[
-          const SizedBox(height: 20),
-          // Нэгдсэн primary CTA — гараар бүтээсэн градиент товчны оронд
-          GradientButton(
+    return _stateContent([
+      Icon(
+          followingEmpty
+              ? Icons.person_search_outlined
+              : Icons.explore_outlined,
+          color: Colors.white38,
+          size: 72),
+      const SizedBox(height: 16),
+      Text('Контент алга байна',
+          textAlign: TextAlign.center,
+          style: AppTextStyles.h2.copyWith(color: Colors.white)),
+      const SizedBox(height: 8),
+      Text(
+          followingEmpty
+              ? 'Дагасан хүмүүс бичлэг оруулаагүй байна'
+              : _canCreate
+                  ? 'Эхний бичлэгээ хуваалцаарай!'
+                  : 'Нэвтэрч бичлэгээ хуваалцаарай',
+          textAlign: TextAlign.center,
+          style: AppTextStyles.bodyMd.copyWith(color: Colors.white70)),
+      if (_canCreate && !followingEmpty) ...[
+        const SizedBox(height: 20),
+        GradientButton(
             label: 'Бичлэг нэмэх',
             fullWidth: false,
             borderRadius: AppRadii.pill,
-            onPressed: () => _pushCovered('/reels/create'),
-          ),
-        ],
-        const SizedBox(height: 14),
-        _Pressable(
-            onTap: _retry,
-            child: Padding(
-                padding: const EdgeInsets.all(8),
-                child: Text('Дахин ачаалах',
-                    style: AppTextStyles.bodySm
-                        .copyWith(color: AppColors.neonCyanDark)))),
-      ])),
-      Align(
-          alignment: Alignment.topLeft,
-          child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Text('Discovery',
-                  style: AppTextStyles.h2.copyWith(color: Colors.white)))),
-    ]));
+            onPressed: () => _pushCovered('/reels/create')),
+      ],
+      const SizedBox(height: 14),
+      TextButton(
+          onPressed: _retry,
+          style: TextButton.styleFrom(
+              foregroundColor: AppColors.neonCyanDark,
+              minimumSize: const Size(0, 48)),
+          child: const Text('Дахин ачаалах')),
+    ]);
   }
 }
 
 // Дарахад жижигрэх + hover курсор — веб мэдрэмж
-class _Pressable extends StatefulWidget {
+class _Pressable extends StatelessWidget {
   final Widget child;
   final VoidCallback? onTap;
-  const _Pressable({required this.child, this.onTap});
-  @override
-  State<_Pressable> createState() => _PressableState();
-}
+  final String? semanticLabel;
+  final bool? toggled;
+  const _Pressable(
+      {required this.child, this.onTap, this.semanticLabel, this.toggled});
 
-class _PressableState extends State<_Pressable> {
-  bool _down = false;
   @override
-  Widget build(BuildContext context) {
-    return MouseRegion(
-      cursor: widget.onTap == null
-          ? SystemMouseCursors.basic
-          : SystemMouseCursors.click,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTapDown:
-            widget.onTap == null ? null : (_) => setState(() => _down = true),
-        onTapCancel: () => setState(() => _down = false),
-        onTapUp: (_) => setState(() => _down = false),
-        onTap: widget.onTap,
-        child: AnimatedScale(
-            scale: _down ? 0.93 : 1.0,
-            duration: const Duration(milliseconds: 120),
-            curve: Curves.easeOut,
-            child: widget.child),
-      ),
-    );
-  }
+  Widget build(BuildContext context) => Semantics(
+      container: true,
+      label: semanticLabel,
+      toggled: toggled,
+      child: TextButton(
+        onPressed: onTap,
+        style: ButtonStyle(
+          minimumSize: const WidgetStatePropertyAll(Size(44, 44)),
+          padding: const WidgetStatePropertyAll(EdgeInsets.zero),
+          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          shape: WidgetStatePropertyAll(
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
+          overlayColor: WidgetStateProperty.resolveWith((states) =>
+              states.contains(WidgetState.focused)
+                  ? Colors.white30
+                  : Colors.white12),
+        ),
+        child: ExcludeSemantics(excluding: semanticLabel != null, child: child),
+      ));
 }
 
 /// Дугуй шилэн товч (хайлт / нэмэх) — neon hairline glass
 class _GlassIconButton extends StatelessWidget {
   final IconData icon;
+  final String label;
   final VoidCallback onTap;
-  const _GlassIconButton({required this.icon, required this.onTap});
+  const _GlassIconButton(
+      {required this.icon, required this.label, required this.onTap});
 
   @override
-  Widget build(BuildContext context) {
-    return _Pressable(
-      onTap: onTap,
-      child: Container(
-        width: 40,
-        height: 40,
-        decoration: BoxDecoration(
-          color: AppColors.bgElevatedDark.withValues(alpha: 0.42),
-          shape: BoxShape.circle,
-          border: Border.all(color: AppColors.hairline2Dark),
-          boxShadow: [
-            BoxShadow(
-                color: Colors.black.withValues(alpha: 0.5), blurRadius: 10),
-          ],
+  Widget build(BuildContext context) => IconButton(
+        tooltip: label,
+        onPressed: onTap,
+        style: IconButton.styleFrom(
+          minimumSize: const Size(44, 44),
+          backgroundColor: AppColors.bgElevatedDark.withValues(alpha: 0.72),
+          side: const BorderSide(color: AppColors.hairline2Dark),
         ),
-        alignment: Alignment.center,
-        child: Icon(icon, color: Colors.white, size: 20),
-      ),
-    );
-  }
+        icon: Icon(icon, color: Colors.white, size: 20),
+      );
 }
 
-/// Дагадаг / Танд — TikTok маягийн текст таб + неон градиент underline
+/// Text tabs retain their underline and wrap at accessibility text sizes.
 class _SegmentedTabs extends StatelessWidget {
   final bool forYou;
   final ValueChanged<bool> onChanged;
   const _SegmentedTabs({required this.forYou, required this.onChanged});
 
   @override
-  Widget build(BuildContext context) {
-    return Row(mainAxisSize: MainAxisSize.min, children: [
-      _tab('Дагадаг', !forYou, () => onChanged(false)),
-      const SizedBox(width: 24),
-      _tab('Танд', forYou, () => onChanged(true)),
-    ]);
-  }
+  Widget build(BuildContext context) => Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _tab(context, 'Дагадаг', !forYou, () => onChanged(false)),
+          const SizedBox(width: 8),
+          _tab(context, 'Танд', forYou, () => onChanged(true)),
+        ],
+      );
 
-  Widget _tab(String label, bool active, VoidCallback onTap) {
-    return MouseRegion(
-      cursor: SystemMouseCursors.click,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: onTap,
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
-          AnimatedDefaultTextStyle(
-            duration: const Duration(milliseconds: 180),
-            style: TextStyle(
-              color:
-                  active ? Colors.white : Colors.white.withValues(alpha: 0.55),
-              fontSize: 15,
-              fontWeight: active ? FontWeight.w800 : FontWeight.w600,
-              letterSpacing: -0.1,
-              shadows: const [Shadow(color: Colors.black54, blurRadius: 6)],
+  Widget _tab(BuildContext context, String label, bool active,
+          VoidCallback onTap) =>
+      Flexible(
+          child: MergeSemantics(
+              child: Semantics(
+        selected: active,
+        child: TextButton(
+          onPressed: onTap,
+          style: TextButton.styleFrom(
+              minimumSize: const Size(0, 44),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+              foregroundColor: Colors.white),
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            AnimatedDefaultTextStyle(
+              duration: AppMotion.duration(
+                  context, const Duration(milliseconds: 180)),
+              style: Theme.of(context).textTheme.titleSmall!.copyWith(
+                  color: active ? Colors.white : Colors.white70,
+                  fontSize: 15,
+                  fontWeight: active ? FontWeight.w800 : FontWeight.w600,
+                  letterSpacing: -0.1,
+                  shadows: const [
+                    Shadow(color: Colors.black54, blurRadius: 6)
+                  ]),
+              child: Text(label, textAlign: TextAlign.center),
             ),
-            child: Text(label),
-          ),
-          const SizedBox(height: 5),
-          // Идэвхтэй табын неон underline индикатор
-          AnimatedContainer(
-            duration: const Duration(milliseconds: 180),
-            curve: Curves.easeOut,
-            width: active ? 22 : 0,
-            height: 3,
-            decoration: BoxDecoration(
-              gradient: active ? AppColors.accentGradient : null,
-              borderRadius: BorderRadius.circular(2),
-              boxShadow: active
-                  ? [
-                      BoxShadow(
-                          color: AppColors.magenta.withValues(alpha: 0.7),
-                          blurRadius: 8)
-                    ]
-                  : null,
+            const SizedBox(height: 5),
+            AnimatedContainer(
+              duration: AppMotion.duration(
+                  context, const Duration(milliseconds: 180)),
+              curve: Curves.easeOut,
+              width: active ? 22 : 0,
+              height: 3,
+              decoration: BoxDecoration(
+                  gradient: active ? AppColors.accentGradient : null,
+                  borderRadius: BorderRadius.circular(2)),
             ),
-          ),
-        ]),
-      ),
-    );
-  }
+          ]),
+        ),
+      )));
 }
 
 class _ReelPage extends StatefulWidget {
@@ -1051,6 +1102,7 @@ class _ReelPageState extends State<_ReelPage>
           child: Column(children: [
             // (1) Зохиогчийн avatar 44 — градиент ring + "+" badge → /creator/:id
             _Pressable(
+              semanticLabel: '@$username профайл',
               onTap: () => widget.onNavigate('/creator/$userId'),
               child: SizedBox(
                 width: 48,
@@ -1083,8 +1135,7 @@ class _ReelPageState extends State<_ReelPage>
                       if (!widget.following)
                         Positioned(
                           bottom: 0,
-                          child: GestureDetector(
-                            onTap: widget.onFollow,
+                          child: IgnorePointer(
                             child: Container(
                               width: 20,
                               height: 20,
@@ -1117,6 +1168,8 @@ class _ReelPageState extends State<_ReelPage>
               iconColor: liked ? AppColors.like : Colors.white,
               glow: liked ? AppColors.like : null,
               label: _fmtCount(likes),
+              semanticLabel: 'Таалагдах, $likes',
+              toggled: liked,
               onTap: widget.onLike,
             ),
             const SizedBox(height: 18),
@@ -1125,6 +1178,7 @@ class _ReelPageState extends State<_ReelPage>
             _RailButton(
               icon: Icons.mode_comment_outlined,
               label: _fmtCount(comments),
+              semanticLabel: 'Сэтгэгдэл, $comments',
               onTap: () => widget.onNavigate('/post/${reel['id']}'),
             ),
             const SizedBox(height: 18),
@@ -1143,18 +1197,25 @@ class _ReelPageState extends State<_ReelPage>
               iconColor: widget.saved ? AppColors.saved : Colors.white,
               glow: widget.saved ? AppColors.saved : null,
               label: 'Хадгалах',
+              semanticLabel: widget.saved ? 'Хадгалснаас хасах' : 'Хадгалах',
+              toggled: widget.saved,
               onTap: widget.onSave,
             ),
             const SizedBox(height: 18),
 
             // (6) MORE — линк хуулах / мэдэгдэх
-            _RailButton(icon: Icons.more_horiz, size: 26, onTap: widget.onMore),
+            _RailButton(
+                icon: Icons.more_horiz,
+                semanticLabel: 'Бусад үйлдэл',
+                size: 26,
+                onTap: widget.onMore),
 
             // Өөрийн бичлэг (live/reel) бол устгах
             if (widget.isOwn) ...[
               const SizedBox(height: 18),
               _RailButton(
                 icon: Icons.delete_outline,
+                semanticLabel: 'Бичлэг устгах',
                 iconColor: AppColors.error,
                 size: 26,
                 onTap: widget.onDelete,
@@ -1344,6 +1405,8 @@ class _RailButton extends StatelessWidget {
   final Color iconColor;
   final Color? glow;
   final String? label;
+  final String? semanticLabel;
+  final bool? toggled;
   final double size;
   final VoidCallback? onTap;
   const _RailButton({
@@ -1351,6 +1414,8 @@ class _RailButton extends StatelessWidget {
     this.iconColor = Colors.white,
     this.glow,
     this.label,
+    this.semanticLabel,
+    this.toggled,
     this.size = 30,
     this.onTap,
   });
@@ -1359,6 +1424,8 @@ class _RailButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return _Pressable(
       onTap: onTap,
+      semanticLabel: semanticLabel ?? label,
+      toggled: toggled,
       child: Column(mainAxisSize: MainAxisSize.min, children: [
         Container(
           decoration: glow != null

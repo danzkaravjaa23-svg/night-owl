@@ -33,14 +33,24 @@ void main() {
   setUp(() => GoogleFonts.config.allowRuntimeFetching = false);
 
   for (final accessible in [false, true]) {
-    testWidgets('auth controls honor reduced motion $accessible', (tester) async {
+    testWidgets('auth controls honor reduced motion $accessible',
+        (tester) async {
       var taps = 0;
-      await tester.pumpWidget(fixture(AuthEntrance(index: 4, child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [TapScale(onTap: () => taps++, child: const Text('Continue')), const BtnSpinner()],
-      )), reduced: !accessible, accessible: accessible));
+      await tester.pumpWidget(fixture(
+          AuthEntrance(
+              index: 4,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TapScale(onTap: () => taps++, child: const Text('Continue')),
+                  const BtnSpinner()
+                ],
+              )),
+          reduced: !accessible,
+          accessible: accessible));
       await tester.pumpAndSettle();
-      final press = await tester.startGesture(tester.getCenter(find.text('Continue')));
+      final press =
+          await tester.startGesture(tester.getCenter(find.text('Continue')));
       await tester.pump();
       expect(tester.widget<AnimatedScale>(find.byType(AnimatedScale)).scale, 1);
       await press.up();
@@ -124,7 +134,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byType(ElevatedButton));
     expect(taps, 0);
-    expect(find.text('Хадгалах'), findsNothing);
+    expect(find.text('Хадгалах'), findsOneWidget);
     expect(find.text('Байршлыг ачаалж байна'), findsNothing);
     expect(tester.getSize(find.byType(OwlLoading).last), const Size(18, 18));
     expect(tester.takeException(), isNull);

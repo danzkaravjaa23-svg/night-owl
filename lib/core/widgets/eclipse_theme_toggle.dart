@@ -2,18 +2,10 @@ import 'dart:math' as math;
 import 'dart:ui' show lerpDouble;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'app_motion.dart';
 
-/// Харанхуй / гэрэл горимын "нар хиртэлт" toggle.
-///
-/// Гэрэл горим (isDark=false): хар хоолой дотор зүүн талд цагаан "нар".
-/// Шилжилт: бөмбөг баруун тийш гулсахдаа хэвтээ сунаж (squash), цагаан →
-/// саарал → хар болж хиртэнэ; зүүн талаас оч цацарна.
-/// Харанхуй горим (isDark=true): баруун талд хар "сар" неон титэмтэй,
-/// хоолой нь 5 өнгөний үе дамжин урсах плазмаар дүүрнэ (ногоон-шар →
-/// ягаан → нил-улаан → алтан → цахилгаан цэнхэр + цагираг долгион).
-///
-/// `onChanged` дуудагдмагц toggle өөрөө шууд хөдөлж эхэлнэ (optimistic);
-/// эцэг widget `isDark`-ийг шинэчилснээр төлөв бататгагдана.
+/// Dimensional sun/moon control using the Night Owl violet palette.
+/// Movement runs during a mode change; the settled control stays still.
 class EclipseThemeToggle extends StatefulWidget {
   final bool isDark;
   final ValueChanged<bool>? onChanged;
@@ -28,8 +20,7 @@ class EclipseThemeToggle extends StatefulWidget {
     this.height = 30,
   });
 
-  /// Харанхуй төлөвийн тасралтгүй плазм pumpAndSettle-ийг хэзээ ч дуусгахгүй
-  /// тул тест үүнийг унтраана (test/flutter_test_config.dart).
+  /// Allows the liquid accent during a transition. Tests can disable it.
   @visibleForTesting
   static bool ambientFlow = true;
 
@@ -58,7 +49,7 @@ class _EclipseThemeToggleState extends State<EclipseThemeToggle>
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _reduceMotion = MediaQuery.of(context).disableAnimations;
+    _reduceMotion = AppMotion.reduced(context);
     _syncFlow();
   }
 
@@ -66,6 +57,7 @@ class _EclipseThemeToggleState extends State<EclipseThemeToggle>
   void didUpdateWidget(EclipseThemeToggle old) {
     super.didUpdateWidget(old);
     if (widget.isDark != _target) _animateTo(widget.isDark);
+    _syncFlow();
   }
 
   void _animateTo(bool dark) {
@@ -73,19 +65,21 @@ class _EclipseThemeToggleState extends State<EclipseThemeToggle>
     if (_reduceMotion) {
       _t.value = dark ? 1 : 0;
     } else {
-      // Харанхуй руу орохдоо палитрыг эхнээс нь (ногоон-шар) эхлүүлнэ
+      // Start a new mode transition with the initial violet palette.
       if (dark && _t.value < 0.05) _flow.value = 0;
       _t.animateTo(dark ? 1 : 0);
     }
     _syncFlow();
   }
 
-  // Плазм зөвхөн харанхуй төлөвт эсвэл шилжилтийн үед урсана.
+  // A settled or hidden toggle never keeps an ambient ticker alive.
   void _syncFlow() {
     if (!mounted) return;
     final run = !_reduceMotion &&
         EclipseThemeToggle.ambientFlow &&
-        (_target || _t.value > 0);
+        widget.onChanged != null &&
+        TickerMode.of(context) &&
+        _t.isAnimating;
     if (run && !_flow.isAnimating) {
       _flow.repeat();
     } else if (!run && _flow.isAnimating) {
@@ -113,26 +107,32 @@ class _EclipseThemeToggleState extends State<EclipseThemeToggle>
   Widget build(BuildContext context) {
     final enabled = widget.onChanged != null;
     return Semantics(
-      button: true,
       toggled: _target,
+      enabled: enabled,
       label: 'Шөнийн горим',
       child: Tooltip(
         message: _target ? 'Өдрийн горимд шилжих' : 'Шөнийн горимд шилжих',
-        child: MouseRegion(
-          cursor: enabled ? SystemMouseCursors.click : MouseCursor.defer,
-          child: GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: enabled ? _tap : null,
-            // Хүрэх талбай хамгийн багадаа 44×44
-            child: SizedBox(
-              width: math.max(widget.width, 44),
-              height: math.max(widget.height, 44),
-              child: Center(
-                child: RepaintBoundary(
-                  child: CustomPaint(
-                    size: Size(widget.width, widget.height),
-                    painter: EclipseTogglePainter(t: _t, flow: _flow),
-                  ),
+        excludeFromSemantics: true,
+        child: TextButton(
+          onPressed: enabled ? _tap : null,
+          style: ButtonStyle(
+            padding: const WidgetStatePropertyAll(EdgeInsets.zero),
+            minimumSize: WidgetStatePropertyAll(
+                Size(math.max(widget.width, 44), math.max(widget.height, 44))),
+            shape: const WidgetStatePropertyAll(StadiumBorder()),
+            side: WidgetStateProperty.resolveWith((states) =>
+                states.contains(WidgetState.focused)
+                    ? const BorderSide(color: Color(0xFFB6A4FF), width: 2)
+                    : BorderSide.none),
+          ),
+          child: SizedBox(
+            width: math.max(widget.width, 44),
+            height: math.max(widget.height, 44),
+            child: Center(
+              child: RepaintBoundary(
+                child: CustomPaint(
+                  size: Size(widget.width, widget.height),
+                  painter: EclipseTogglePainter(t: _t, flow: _flow),
                 ),
               ),
             ),
@@ -187,23 +187,18 @@ class _Pal {
       );
 }
 
-// Лавлагаа видеоны 5 үе
+// Soft violet phases keep the motion within the app's visual language.
 const _pals = <_Pal>[
-  // 1. Ногоон → шар, шар титэм
-  _Pal(Color(0xFF1FFF5A), Color(0xFFC6FF1A), Color(0xFFFFE21A),
-      Color(0xFFFFE21A), Color(0xFFB8FF2E), 0.0),
-  // 2. Час улаан / ягаан
-  _Pal(Color(0xFF6A0DAD), Color(0xFFFF1E56), Color(0xFFFF2D8E),
-      Color(0xFFFF2D6E), Color(0xFFFF2D8E), 0.15),
-  // 3. Хөх нил → улаан
-  _Pal(Color(0xFF2B1B7A), Color(0xFF7C3AED), Color(0xFFFF3355),
-      Color(0xFFFF3355), Color(0xFFC026D3), 0.25),
-  // 4. Алтан шингэн, нил ирмэг
-  _Pal(Color(0xFFB04BFF), Color(0xFFFFD60A), Color(0xFFFF8A00),
-      Color(0xFFFF3B30), Color(0xFFFFB020), 0.1),
-  // 5. Цахилгаан цэнхэр → ягаан, цагираг долгион
-  _Pal(Color(0xFF1E6BFF), Color(0xFF22E7FF), Color(0xFFFF2BD6),
-      Color(0xFFFF9F1C), Color(0xFF3D5AFE), 1.0),
+  _Pal(Color(0xFF553599), Color(0xFF8964DD), Color(0xFFB6A4FF),
+      Color(0xFFD5C8FF), Color(0xFF9774EB), 0.0),
+  _Pal(Color(0xFF5C3AA6), Color(0xFF9978E5), Color(0xFFC0AEFA),
+      Color(0xFFE0D5FF), Color(0xFFAA8CEC), 0.15),
+  _Pal(Color(0xFF463281), Color(0xFF7654D6), Color(0xFFAD96F2),
+      Color(0xFFD5C8FF), Color(0xFF8964DD), 0.25),
+  _Pal(Color(0xFF6744B1), Color(0xFFAA8CEB), Color(0xFFC8B6F5),
+      Color(0xFFE0D5FF), Color(0xFFA183DE), 0.1),
+  _Pal(Color(0xFF51428B), Color(0xFF8C7CDE), Color(0xFFB6A4FF),
+      Color(0xFFD5C8FF), Color(0xFF9774EB), 0.3),
 ];
 
 double _interval(double t, double a, double b) =>
@@ -225,10 +220,20 @@ Color _lerp3(Color a, Color b, Color c, double t) =>
 
 // Очны тогтмол үр (өнцөг°, хурд, хэмжээ) — зүүн тийш цацарна
 const _sparks = <(double, double, double)>[
-  (150, 1.00, 0.9), (168, 0.70, 0.6), (182, 1.15, 0.8), (196, 0.85, 0.7),
-  (210, 1.05, 0.9), (224, 0.65, 0.6), (238, 0.95, 0.7), (132, 0.80, 0.6),
-  (118, 0.60, 0.5), (252, 0.70, 0.5), (174, 1.35, 0.5), (204, 1.30, 0.6),
-  (160, 0.45, 0.8), (230, 0.40, 0.7),
+  (150, 1.00, 0.9),
+  (168, 0.70, 0.6),
+  (182, 1.15, 0.8),
+  (196, 0.85, 0.7),
+  (210, 1.05, 0.9),
+  (224, 0.65, 0.6),
+  (238, 0.95, 0.7),
+  (132, 0.80, 0.6),
+  (118, 0.60, 0.5),
+  (252, 0.70, 0.5),
+  (174, 1.35, 0.5),
+  (204, 1.30, 0.6),
+  (160, 0.45, 0.8),
+  (230, 0.40, 0.7),
 ];
 
 // ─────────────────────────────── Painter ───────────────────────────────
@@ -247,8 +252,8 @@ class EclipseTogglePainter extends CustomPainter {
     final tv = t.value;
     final fv = flow.value;
 
-    final track = RRect.fromRectAndRadius(
-        Offset.zero & size, Radius.circular(h / 2));
+    final track =
+        RRect.fromRectAndRadius(Offset.zero & size, Radius.circular(h / 2));
     final pad = h * 0.09;
     final r = h / 2 - pad;
     final cy = h / 2;
@@ -265,7 +270,7 @@ class EclipseTogglePainter extends CustomPainter {
       canvas.drawRRect(
         track.inflate(1.5 * u),
         Paint()
-          ..color = pal.halo.withValues(alpha: 0.5 * e)
+          ..color = pal.halo.withValues(alpha: 0.2 * e)
           ..maskFilter = MaskFilter.blur(BlurStyle.normal, 9 * u),
       );
     }
@@ -283,7 +288,7 @@ class EclipseTogglePainter extends CustomPainter {
         Offset(w - r * 0.8, cy),
         h * 0.85,
         Paint()
-          ..color = const Color(0xFFFF1E8A)
+          ..color = const Color(0xFFB6A4FF)
               .withValues(alpha: 0.9 * bump * (1 - 0.6 * e))
           ..maskFilter = MaskFilter.blur(BlurStyle.normal, 5 * u),
       );
@@ -313,7 +318,9 @@ class EclipseTogglePainter extends CustomPainter {
         for (var k = 0; k <= 14; k++) {
           final yy = h * k / 14;
           final xx = baseX +
-              math.sin(yy / h * math.pi * 2.4 + phase * 0.8 + i * 2.1) * 2.4 * u;
+              math.sin(yy / h * math.pi * 2.4 + phase * 0.8 + i * 2.1) *
+                  2.4 *
+                  u;
           k == 0 ? path.moveTo(xx, yy) : path.lineTo(xx, yy);
         }
         canvas.drawPath(
@@ -372,13 +379,14 @@ class EclipseTogglePainter extends CustomPainter {
     if (bump > 0.02) {
       final ox = pad + r * 0.35, oy = cy;
       final spark = Paint()
-        ..color = const Color(0xFFFFE7A8).withValues(alpha: 0.9 * bump * (1 - e))
+        ..color =
+            const Color(0xFFE5DCFF).withValues(alpha: 0.9 * bump * (1 - e))
         ..maskFilter = MaskFilter.blur(BlurStyle.normal, 0.35 * u);
       for (final s in _sparks) {
         final a = s.$1 * math.pi / 180;
         final d = s.$2 * u * (3 + 15 * tv);
-        canvas.drawCircle(
-            Offset(ox + math.cos(a) * d, oy + math.sin(a) * d), s.$3 * u, spark);
+        canvas.drawCircle(Offset(ox + math.cos(a) * d, oy + math.sin(a) * d),
+            s.$3 * u, spark);
       }
       canvas.drawArc(
         Rect.fromCircle(center: Offset(pad + r, cy), radius: r * 1.18),
@@ -388,7 +396,7 @@ class EclipseTogglePainter extends CustomPainter {
         Paint()
           ..style = PaintingStyle.stroke
           ..strokeWidth = 1.0 * u
-          ..color = const Color(0xFFFFC53D).withValues(alpha: 0.75 * bump)
+          ..color = const Color(0xFFB6A4FF).withValues(alpha: 0.75 * bump)
           ..maskFilter = MaskFilter.blur(BlurStyle.normal, 0.8 * u),
       );
     }

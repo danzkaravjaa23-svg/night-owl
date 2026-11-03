@@ -8,56 +8,55 @@ class GroupService {
       caseSensitive: false);
 
   /// Миний гишүүнээр орсон группүүд (сүүлийн мессежтэй хамт)
-  static Future<List<Map<String, dynamic>>> myGroups() async {
-    final me = SupabaseService.currentUser?.id;
-    if (me == null) return [];
-    try {
-      final rows = await SupabaseService.client
-          .from('group_members')
-          .select(
-              'group_id, group_chats!inner(id, name, created_by, created_at)')
-          .eq('user_id', me);
-      final groups = <Map<String, dynamic>>[];
-      for (final r in (rows as List).cast<Map<String, dynamic>>()) {
-        final g = r['group_chats'] as Map<String, dynamic>?;
-        if (g != null) groups.add(g);
-      }
-      // Сүүлийн мессежийг ГРУПП тус бүрээр (limit 1) авна.
-      // Өмнө нь бүх группд нийт 60 мөр авдаг байсан тул нэг идэвхтэй групп
-      // бусад группуудын сүүлийн мессежийг "залгидаг" байсан алдааг зассан.
-      if (groups.isNotEmpty) {
-        await Future.wait(groups.map((g) async {
-          try {
-            final last = await SupabaseService.client
-                .from('group_messages')
-                .select('body, created_at')
-                .eq('group_id', g['id'] as String)
-                .order('created_at', ascending: false)
-                .limit(1)
-                .maybeSingle();
-            g['last_msg'] = last?['body'];
-            g['last_at'] = last?['created_at'] ?? g['created_at'];
-          } catch (_) {
-            g['last_at'] = g['created_at'];
-          }
-        }));
-        groups.sort((a, b) => (b['last_at'] as String? ?? '')
-            .compareTo(a['last_at'] as String? ?? ''));
-      }
-      return groups;
-    } catch (_) {
-      return [];
+  static Future<List<Map<String, dynamic>>> myGroups(
+      {required String ownerId}) async {
+    if (SupabaseService.currentUser?.id != ownerId) return [];
+    final me = ownerId;
+    final rows = await SupabaseService.client
+        .from('group_members')
+        .select('group_id, group_chats!inner(id, name, created_by, created_at)')
+        .eq('user_id', me);
+    final groups = <Map<String, dynamic>>[];
+    for (final r in (rows as List).cast<Map<String, dynamic>>()) {
+      final g = r['group_chats'] as Map<String, dynamic>?;
+      if (g != null) groups.add(g);
     }
+    // Сүүлийн мессежийг ГРУПП тус бүрээр (limit 1) авна.
+    // Өмнө нь бүх группд нийт 60 мөр авдаг байсан тул нэг идэвхтэй групп
+    // бусад группуудын сүүлийн мессежийг "залгидаг" байсан алдааг зассан.
+    if (groups.isNotEmpty) {
+      await Future.wait(groups.map((g) async {
+        try {
+          final last = await SupabaseService.client
+              .from('group_messages')
+              .select('body, created_at')
+              .eq('group_id', g['id'] as String)
+              .order('created_at', ascending: false)
+              .limit(1)
+              .maybeSingle();
+          g['last_msg'] = last?['body'];
+          g['last_at'] = last?['created_at'] ?? g['created_at'];
+        } catch (_) {
+          g['last_at'] = g['created_at'];
+        }
+      }));
+      groups.sort((a, b) => (b['last_at'] as String? ?? '')
+          .compareTo(a['last_at'] as String? ?? ''));
+    }
+    return groups;
   }
 
   /// Групп үүсгээд гишүүдийг нэмнэ. Амжилттай бол group id буцаана.
   /// create_group RPC транзакцаар (атомик) үүсгэнэ. Зөвхөн хуучин managed
   /// сервер RPC байхгүйг тодорхой мэдэгдсэн үед хоёр insert хийж, гишүүд
   /// орохгүй бол group_chats-ийг буцааж устгана. Серверийн татгалзлыг тойрохгүй.
-  static Future<String?> createGroup(
-      String name, List<String> memberIds) async {
+  static Future<String?> createGroup(String name, List<String> memberIds,
+      {bool Function()? isCurrent}) async {
     final me = SupabaseService.currentUser?.id;
     if (me == null) return null;
+    bool canContinue() =>
+        SupabaseService.currentUser?.id == me && (isCurrent?.call() ?? true);
+    if (!canContinue()) return null;
     final members = {...memberIds, me}.toList(); // өөрийгөө заавал оруулна
 
     // 1) RPC — атомик
@@ -66,6 +65,7 @@ class GroupService {
         'p_name': name,
         'p_member_ids': members,
       });
+      if (!canContinue()) return null;
       // A UUID scalar is the RPC contract. Empty/malformed success must not
       // repeat a possibly completed transaction through direct inserts.
       return res is String && _groupIdPattern.hasMatch(res) ? res : null;
@@ -73,6 +73,8 @@ class GroupService {
       if (!canUseLegacyRpcFallback(error, rpcName: 'create_group')) return null;
     }
 
+    // Never continue a legacy multi-request write in a different auth session.
+    if (!canContinue()) return null;
     // 2) Fallback — compensating delete-тэй
     String? gid;
     try {
@@ -82,13 +84,14 @@ class GroupService {
           .select('id')
           .single();
       gid = g['id'] as String;
+      if (!canContinue()) return null;
       await SupabaseService.client.from('group_members').insert([
         for (final uid in members) {'group_id': gid, 'user_id': uid},
       ]);
-      return gid;
+      return canContinue() ? gid : null;
     } catch (_) {
       // Гишүүд орж чадаагүй бол orphan группыг цэвэрлэнэ
-      if (gid != null) {
+      if (gid != null && canContinue()) {
         try {
           await SupabaseService.client
               .from('group_chats')

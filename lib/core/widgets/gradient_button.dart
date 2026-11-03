@@ -16,12 +16,12 @@ Widget _dimensionalButtonIcon(Widget child, {bool primary = false}) {
   return child;
 }
 
-/// Gradient товчны хэмжээ: lg = 52px (үндсэн CTA), md = 40px (мөрөнд суух товч).
+/// Gradient товчны хэмжээ: lg = 52px, md = 44px хүрэх талбартай.
 enum GradientButtonSize { lg, md }
 
 /// Primary gradient button — CSS .ns-btn-primary
 /// Дарахад зөөлөн агшиж (spring press) премиум мэдрэмж өгнө.
-/// busy=true үед label-ийн оронд спиннер гарч, товч түр идэвхгүй болно.
+/// busy=true үед үйлдлийн нэрийг хадгалж, owl төлөвийг хамт харуулна.
 class GradientButton extends StatelessWidget {
   final String label;
   final VoidCallback? onPressed;
@@ -53,13 +53,13 @@ class GradientButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final md = size == GradientButtonSize.md;
-    final h = height ?? (md ? 40.0 : 52.0);
+    final h = (height ?? (md ? 44.0 : 52.0)).clamp(44.0, double.infinity);
     // Magenta gradient дээрх label — горимоос үл хамааран цагаан (харанхуй
     // горимын textPrimary-тай яг ижил утга тул dark горимд өөрчлөлтгүй).
     final labelStyle = (md ? AppTextStyles.btnSm : AppTextStyles.btn)
         .copyWith(color: AppColors.textPrimaryDark);
     // busy үед gradient хэвээр (ажиллаж буй мэдрэмж), зөвхөн disabled үед бүдгэрнэ
-    final disabled = onPressed == null;
+    final disabled = onPressed == null && !busy;
     final effective = (busy || disabled) ? null : onPressed;
     return PressFeedback(
       enabled: effective != null,
@@ -145,12 +145,29 @@ class GradientButton extends StatelessWidget {
                         child: child),
                   ),
                   child: busy
-                      ? OwlLoading(
+                      ? Semantics(
                           key: const ValueKey('busy'),
-                          size: md ? 18 : 24,
-                          compact: true,
-                          onDark: true,
-                          message: '$label: түр хүлээнэ үү')
+                          liveRegion: true,
+                          label: '$label: түр хүлээнэ үү',
+                          child: ExcludeSemantics(
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                OwlLoading(
+                                    size: md ? 18 : 24,
+                                    compact: true,
+                                    onDark: true),
+                                const SizedBox(width: 10),
+                                Flexible(
+                                    child: Text(label,
+                                        maxLines: 2,
+                                        textAlign: TextAlign.center,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: labelStyle)),
+                              ],
+                            ),
+                          ))
                       : Row(
                           key: const ValueKey('label'),
                           mainAxisAlignment: MainAxisAlignment.center,

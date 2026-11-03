@@ -18,6 +18,7 @@ class _PrivacyScreenState extends ConsumerState<PrivacyScreen> {
     setState(() => _busy = true);
     try {
       await action();
+      if (!mounted) return;
       ref.invalidate(privacyProvider);
       ref.read(socialVersionProvider.notifier).state++;
     } catch (e) {
@@ -55,36 +56,44 @@ class _PrivacyScreenState extends ConsumerState<PrivacyScreen> {
                                 messages: settings['dm_policy'] as String))),
                 Padding(
                     padding: const EdgeInsets.all(16),
-                    child: DropdownButtonFormField<String>(
-                        initialValue: settings['dm_policy'] as String,
-                        isExpanded: true,
-                        itemHeight: null,
+                    child: InputDecorator(
                         decoration: const InputDecoration(
                             labelText: 'Хэн мессеж бичих вэ?'),
-                        items: const [
-                          DropdownMenuItem(
-                              value: 'requests',
-                              child: Text('Танихгүй хүнээс хүсэлт авах')),
-                          DropdownMenuItem(
-                              value: 'following',
-                              child: Text('Зөвхөн миний дагадаг хүмүүс')),
-                          DropdownMenuItem(
-                              value: 'nobody', child: Text('Хэн ч бичихгүй')),
-                          DropdownMenuItem(
-                              value: 'everyone', child: Text('Бүх хүн'))
-                        ],
-                        onChanged: _busy
-                            ? null
-                            : (v) {
-                                if (v != null) {
-                                  _change(() => ref
-                                      .read(discoveryServiceProvider)
-                                      .setPrivacy(
-                                          private:
-                                              settings['is_private'] == true,
-                                          messages: v));
-                                }
-                              })),
+                        child: DropdownButtonHideUnderline(
+                            child: DropdownButton<String>(
+                                // A rejected write keeps the persisted policy visible,
+                                // even when it completes before the next frame.
+                                value: settings['dm_policy'] as String,
+                                isExpanded: true,
+                                itemHeight: null,
+                                items: const [
+                                  DropdownMenuItem(
+                                      value: 'requests',
+                                      child:
+                                          Text('Танихгүй хүнээс хүсэлт авах')),
+                                  DropdownMenuItem(
+                                      value: 'following',
+                                      child:
+                                          Text('Зөвхөн миний дагадаг хүмүүс')),
+                                  DropdownMenuItem(
+                                      value: 'nobody',
+                                      child: Text('Хэн ч бичихгүй')),
+                                  DropdownMenuItem(
+                                      value: 'everyone', child: Text('Бүх хүн'))
+                                ],
+                                onChanged: _busy
+                                    ? null
+                                    : (v) {
+                                        if (v != null) {
+                                          _change(() => ref
+                                              .read(discoveryServiceProvider)
+                                              .setPrivacy(
+                                                  private:
+                                                      settings['is_private'] ==
+                                                          true,
+                                                  messages: v));
+                                        }
+                                      })))),
                 const Divider(),
                 const ListTile(title: Text('Дагах хүсэлтүүд')),
                 ref.watch(followRequestsProvider).when(

@@ -16,6 +16,7 @@ import 'package:night_owl_ub/features/map/providers/venue_provider.dart';
 import 'package:night_owl_ub/features/map/screens/explore_screen.dart';
 import 'package:night_owl_ub/features/map/widgets/venue_map_view.dart';
 import 'package:night_owl_ub/models/user_profile.dart';
+import 'package:night_owl_ub/models/venue.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -71,6 +72,60 @@ void main() {
       await tester.pumpWidget(const SizedBox());
     });
   }
+
+  testWidgets('large text keeps a usable venue list and discovery reachable',
+      (tester) async {
+    tester.view.physicalSize = const Size(320, 640);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(ProviderScope(
+        overrides: [
+          sessionUserIdProvider.overrideWithValue(null),
+          currentProfileProvider.overrideWith((_) async => null),
+          venuesProvider.overrideWith((_) async => [
+                for (var i = 1; i <= 3; i++)
+                  Venue(
+                      id: 'venue-$i',
+                      name: 'Venue $i',
+                      type: 'cafe',
+                      lat: 47.9185,
+                      lng: 106.917,
+                      communityEnabled: false,
+                      createdAt: DateTime(2026))
+              ]),
+          featuredEventsProvider.overrideWith((_) async => []),
+          reelsProvider.overrideWith((_) async => []),
+        ],
+        child: MaterialApp(
+            theme: AppTheme.dark,
+            builder: (context, child) => MediaQuery(
+                data: MediaQuery.of(context).copyWith(
+                    disableAnimations: true,
+                    textScaler: const TextScaler.linear(1.5)),
+                child: child!),
+            home: const ExploreScreen())));
+    await tester.pumpAndSettle();
+    final mapState = tester.state(find.byType(GoogleMapView));
+    await tester.tap(find.byTooltip('Бүх газрыг жагсаалтаар харах'));
+    await tester.pumpAndSettle();
+    final list = find.ancestor(
+        of: find.text('Venue 1'), matching: find.byType(ListView));
+    expect(tester.getSize(list).height, greaterThanOrEqualTo(240),
+        reason: 'Wrapped controls must leave room to browse venue cards.');
+    expect(find.text('Venue 1').hitTestable(), findsOneWidget);
+    await tester.drag(list, const Offset(0, -240));
+    await tester.pumpAndSettle();
+    expect(find.text('Venue 3').hitTestable(), findsOneWidget);
+    await tester.ensureVisible(find.text('Эвент, богино видео үзэх'));
+    await tester.tap(find.text('Эвент, богино видео үзэх'));
+    await tester.pumpAndSettle();
+    expect(find.text('Онцгой эвентүүд').hitTestable(), findsOneWidget);
+    expect(tester.state(find.byType(GoogleMapView, skipOffstage: false)),
+        same(mapState));
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox());
+  });
 
   testWidgets(
       'featured rail only renders curated events and admin control follows role',

@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- Required-reason APIs used by this app. This is not an App Privacy
+	     questionnaire or a claim that the social app collects no user data.
+	     SDK manifests and collected-data declarations still need archive review.
+	     Reasons: developer.apple.com/documentation/bundleresources/
+	     app-privacy-configuration/nsprivacyaccessedapitypes/nsprivacyaccessedapitypereasons
+	-->
+	<key>NSPrivacyAccessedAPITypes</key>
+	<array>
+		<dict>
+			<!-- story_video_io.dart removes stale files from our temporary
+			     directory by lastModifiedSync; map/media caches inspect files
+			     within the app container. No file metadata is used to identify
+			     or track people across apps. -->
+			<key>NSPrivacyAccessedAPIType</key>
+			<string>NSPrivacyAccessedAPICategoryFileTimestamp</string>
+			<key>NSPrivacyAccessedAPITypeReasons</key>
+			<array><string>C617.1</string></array>
+		</dict>
+		<dict>
+			<!-- SharedPreferences stores app-only theme, onboarding, bookmarks,
+			     auth return/session and account settings. No App Group is used. -->
+			<key>NSPrivacyAccessedAPIType</key>
+			<string>NSPrivacyAccessedAPICategoryUserDefaults</string>
+			<key>NSPrivacyAccessedAPITypeReasons</key>
+			<array><string>CA92.1</string></array>
+		</dict>
+	</array>
+</dict>
+</plist>

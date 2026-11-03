@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:night_owl_ub/features/auth/providers/auth_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -8,6 +10,7 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:night_owl_ub/core/theme/app_colors.dart';
 import 'package:night_owl_ub/features/feed/providers/reels_provider.dart';
 import 'package:night_owl_ub/features/feed/providers/saved_provider.dart';
 import 'package:night_owl_ub/features/feed/screens/reels_screen.dart';
@@ -67,35 +70,50 @@ void main() {
       Future<List<Map<String, dynamic>>> Function()? following,
       Future<List<Map<String, dynamic>>> Function()? all,
       Set<String> saved = const {},
+      Size size = const Size(390, 900),
+      double textScale = 1,
+      Brightness brightness = Brightness.dark,
       Widget? coveredPage}) async {
-    tester.view.physicalSize = const Size(390, 900);
+    AppColors.isDarkMode = brightness == Brightness.dark;
+    tester.view.physicalSize = size;
     tester.view.devicePixelRatio = 1;
     addTearDown(() {
       tester.view.resetPhysicalSize();
       tester.view.resetDevicePixelRatio();
+      AppColors.isDarkMode = true;
     });
-    final router = GoRouter(initialLocation: '/reels?id=$selected', routes: [
-      GoRoute(
-          path: '/reels',
-          builder: (_, state) =>
-              ReelsScreen(initialReelId: state.uri.queryParameters['id'])),
-      GoRoute(
-          path: '/search',
-          builder: (_, __) =>
-              coveredPage ?? const Scaffold(body: Text('Covered screen'))),
-      GoRoute(
-          path: '/reels/create',
-          builder: (_, __) => const Scaffold(body: Text('Create screen'))),
-    ]);
+    final router = GoRouter(
+        initialLocation: selected.isEmpty ? '/reels' : '/reels?id=$selected',
+        routes: [
+          GoRoute(
+              path: '/reels',
+              builder: (_, state) =>
+                  ReelsScreen(initialReelId: state.uri.queryParameters['id'])),
+          GoRoute(
+              path: '/search',
+              builder: (_, __) =>
+                  coveredPage ?? const Scaffold(body: Text('Covered screen'))),
+          GoRoute(
+              path: '/reels/create',
+              builder: (_, __) => const Scaffold(body: Text('Create screen'))),
+        ]);
     addTearDown(router.dispose);
-    await tester.pumpWidget(ProviderScope(overrides: [
-      reelsProvider.overrideWith((_) =>
-          all?.call() ??
-          Future.value(List.generate(3, (i) => _reel('clip-$i')))),
-      followingReelsProvider.overrideWith(
-          (_) => following?.call() ?? Future.value([_reel('followed-old')])),
-      savedPostIdsProvider.overrideWith((_) async => saved),
-    ], child: MaterialApp.router(routerConfig: router)));
+    await tester.pumpWidget(ProviderScope(
+        overrides: [
+          reelsProvider.overrideWith((_) =>
+              all?.call() ??
+              Future.value(List.generate(3, (i) => _reel('clip-$i')))),
+          followingReelsProvider.overrideWith((_) =>
+              following?.call() ?? Future.value([_reel('followed-old')])),
+          savedPostIdsProvider.overrideWith((_) async => saved),
+        ],
+        child: MaterialApp.router(
+            routerConfig: router,
+            theme: ThemeData(brightness: brightness),
+            builder: (context, child) => MediaQuery(
+                data: MediaQuery.of(context)
+                    .copyWith(textScaler: TextScaler.linear(textScale)),
+                child: child!))));
     // The selected page jumps after the async data frame; don't settle an
     // intentionally animated video screen's music-disc ticker.
     for (var frame = 0; frame < 5; frame++) {
@@ -108,6 +126,183 @@ void main() {
       .widgetList<StoryVideoView>(
           find.byType(StoryVideoView, skipOffstage: false))
       .toList();
+
+  testWidgets('pending optional metadata does not block content and can retry',
+      (tester) async {
+    final pending = Completer<http.Response>();
+    var hold = true;
+    reply = (request) async {
+      if (request.url.path == '/auth/v1/token') {
+        return http.Response(jsonEncode(_authSession('viewer')), 200,
+            headers: {'content-type': 'application/json'}, request: request);
+      }
+      if (hold &&
+          (request.url.path == '/rest/v1/follows' ||
+              request.url.path == '/rest/v1/likes')) {
+        return pending.future;
+      }
+      return http.Response('[]', 200,
+          headers: {'content-type': 'application/json'}, request: request);
+    };
+    await Supabase.instance.client.auth
+        .signInWithPassword(email: 'fixture@example.test', password: 'fixture');
+    await render(tester);
+    expect(find.text('Caption for clip-2').hitTestable(), findsOneWidget);
+    expect(players(tester).where((video) => video.active), hasLength(1));
+    await tester.pump(const Duration(seconds: 11));
+    expect(find.byTooltip('Үйлдлүүдийг дахин ачаалах'), findsOneWidget);
+    hold = false;
+    await tester.tap(find.byTooltip('Үйлдлүүдийг дахин ачаалах'));
+    for (var i = 0; i < 5; i++) {
+      await tester.pump();
+    }
+    expect(find.byTooltip('Үйлдлүүдийг дахин ачаалах'), findsNothing);
+    pending.complete(http.Response('[]', 200,
+        headers: {'content-type': 'application/json'}));
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump();
+  });
+
+  for (final activation in [
+    LogicalKeyboardKey.enter,
+    LogicalKeyboardKey.space
+  ]) {
+    testWidgets('rail actions expose names and support ${activation.keyLabel}',
+        (tester) async {
+      final semantics = tester.ensureSemantics();
+
+      await render(tester);
+      final action = find.bySemanticsLabel('Бусад үйлдэл').hitTestable();
+      expect(action, findsOneWidget);
+      // Traverse actual keyboard focus until the More action owns it.
+      for (var i = 0;
+          i < 30 &&
+              !Focus.of(tester
+                      .element(find.byIcon(Icons.more_horiz).hitTestable()))
+                  .hasFocus;
+          i++) {
+        await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+        await tester.pump();
+      }
+      expect(
+          Focus.of(tester.element(find.byIcon(Icons.more_horiz).hitTestable()))
+              .hasFocus,
+          isTrue);
+      await tester.sendKeyEvent(activation);
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(find.text('Мэдэгдэх'), findsOneWidget);
+      semantics.dispose();
+      await tester.pumpWidget(const SizedBox());
+      await tester.pump();
+    });
+  }
+
+  for (final denied in [false, true]) {
+    testWidgets(
+        'old like completion denied=$denied cannot change the next account',
+        (tester) async {
+      final pending = Completer<http.Response>();
+      var account = 'account-a';
+      var writes = 0;
+      reply = (request) async {
+        if (request.url.path == '/auth/v1/token') {
+          return http.Response(jsonEncode(_authSession(account)), 200,
+              headers: {'content-type': 'application/json'}, request: request);
+        }
+        if (request.url.path == '/rest/v1/likes' && request.method != 'GET') {
+          writes++;
+          if (writes == 1) return pending.future;
+        }
+        return http.Response('[]', 200,
+            headers: {'content-type': 'application/json'}, request: request);
+      };
+      await Supabase.instance.client.auth.signInWithPassword(
+          email: 'fixture@example.test', password: 'fixture');
+      await render(tester);
+      final container =
+          ProviderScope.containerOf(tester.element(find.byType(ReelsScreen)));
+      await tester.tap(find.byIcon(Icons.favorite_border).hitTestable());
+      await tester.pump();
+      expect(writes, 1);
+      account = 'account-b';
+      await Supabase.instance.client.auth
+          .signInWithPassword(email: 'other@example.test', password: 'fixture');
+      for (var i = 0; i < 8; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+      expect(container.read(sessionUserIdProvider), 'account-b');
+      await tester.tap(find.byIcon(Icons.favorite_border).hitTestable());
+      for (var i = 0; i < 4; i++) {
+        await tester.pump();
+      }
+      expect(writes, 2,
+          reason: 'The old account must not lock the next account action.');
+      pending.complete(http.Response(
+          denied ? '{"code":"42501","message":"Denied"}' : '[]',
+          denied ? 403 : 200,
+          headers: {'content-type': 'application/json'}));
+      for (var i = 0; i < 4; i++) {
+        await tester.pump();
+      }
+      expect(find.byIcon(Icons.favorite).hitTestable(), findsOneWidget);
+      expect(find.text('4').hitTestable(), findsOneWidget);
+      await tester.pumpWidget(const SizedBox());
+      await tester.pump();
+    });
+  }
+
+  for (final brightness in [Brightness.dark, Brightness.light]) {
+    testWidgets(
+        'Reels empty and error states scroll at 320px and 2x text in $brightness',
+        (tester) async {
+      var fail = true;
+      await render(tester,
+          selected: '',
+          size: const Size(320, 480),
+          textScale: 2,
+          brightness: brightness, all: () async {
+        if (fail) throw StateError('fixture unavailable');
+        return [];
+      });
+      expect(tester.takeException(), isNull);
+      expect(find.text('Ачаалж чадсангүй'), findsOneWidget);
+      final retry = find.text('Дахин оролдох');
+      await tester.ensureVisible(retry);
+      fail = false;
+      await tester.tap(retry);
+      for (var frame = 0; frame < 5; frame++) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+      expect(find.text('Контент алга байна'), findsOneWidget);
+      expect(find.text('Discovery'), findsNothing);
+      await tester.ensureVisible(find.text('Дахин ачаалах'));
+      expect(find.text('Дахин ачаалах').hitTestable(), findsOneWidget);
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox());
+      await tester.pump();
+    });
+
+    testWidgets('Reels controls fit 320px with 1.5x text in $brightness',
+        (tester) async {
+      await render(tester,
+          size: const Size(320, 720), textScale: 1.5, brightness: brightness);
+      expect(tester.takeException(), isNull);
+      expect(find.text('Танд').hitTestable(), findsOneWidget);
+      expect(find.text('Дагадаг').hitTestable(), findsOneWidget);
+      expect(tester.getSize(find.byTooltip('Хайх')).height,
+          greaterThanOrEqualTo(44));
+      await tester.tap(find.byIcon(Icons.volume_off_rounded));
+      await tester.pump();
+      expect(find.byIcon(Icons.volume_up_rounded), findsOneWidget);
+      await tester.tap(find.byIcon(Icons.search));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(find.text('Covered screen'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox());
+      await tester.pump();
+    });
+  }
 
   testWidgets(
       'Following shows its server results without injecting a shared ID',
@@ -444,8 +639,7 @@ void main() {
     await tester.pump();
   });
 
-  testWidgets(
-      'confirmed delete wins over a pending create-return refresh and resumes remaining video',
+  testWidgets('delete remains removed after pending optional metadata finishes',
       (tester) async {
     const me = 'author-clip-2';
     final pendingFollows = Completer<http.Response>();
@@ -491,10 +685,14 @@ void main() {
     }
     expect(heldRequest, isNotNull,
         reason: 'Create return reload is waiting with a stale snapshot.');
-    expect(players(tester).every((video) => !video.active), isTrue);
+    expect(players(tester).where((video) => video.active), hasLength(1));
     await tester.pump(const Duration(seconds: 1));
     expect(find.text('Create screen'), findsNothing);
-    await tester.tap(find.byIcon(Icons.delete_outline));
+    // Returning from creation opens the newest clip; return to our owned clip.
+    final pageView = tester.widget<PageView>(find.byType(PageView));
+    pageView.controller!.jumpToPage(2);
+    await tester.pump();
+    await tester.tap(find.byIcon(Icons.delete_outline).hitTestable());
     await tester.pump(const Duration(milliseconds: 300));
     await tester.tap(find.text('Устгах'));
     for (var frame = 0; frame < 3; frame++) {

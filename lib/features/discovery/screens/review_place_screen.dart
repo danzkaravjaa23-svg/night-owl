@@ -1,18 +1,21 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../admin/providers/admin_console_provider.dart';
+import '../../admin/services/admin_venue_media.dart';
 import '../../../core/utils/image_uploader.dart';
 import '../../../core/widgets/authorized_media.dart';
 import '../services/discovery_service.dart';
 import '../widgets/discovery_back_button.dart';
 import 'discovery_screen.dart';
 
-class ReviewPlaceScreen extends StatefulWidget {
+class ReviewPlaceScreen extends ConsumerStatefulWidget {
   final String venueRef;
   const ReviewPlaceScreen({super.key, required this.venueRef});
   @override
-  State<ReviewPlaceScreen> createState() => _ReviewPlaceScreenState();
+  ConsumerState<ReviewPlaceScreen> createState() => _ReviewPlaceScreenState();
 }
 
-class _ReviewPlaceScreenState extends State<ReviewPlaceScreen> {
+class _ReviewPlaceScreenState extends ConsumerState<ReviewPlaceScreen> {
   final _service = DiscoveryService();
   final _address = TextEditingController(),
       _hours = TextEditingController(),
@@ -23,21 +26,29 @@ class _ReviewPlaceScreenState extends State<ReviewPlaceScreen> {
   String? _cover;
   final _vibes = <String>{};
   bool _busy = false;
+  AdminConsoleAccess? _access;
+  late final String? _owner;
+  bool get _current =>
+      mounted &&
+      (_access?.session.isCurrent ?? (_owner != null && _owner == _service.me));
   @override
   void initState() {
     super.initState();
+    _access = ref.read(adminConsoleAccessProvider);
+    _owner = _service.me;
     _data = _load();
   }
 
   Future<JsonRow?> _load() async {
     final row = await _service.venue(widget.venueRef);
-    if (row != null) {
+    if (row != null && _current) {
       _address.text = row['address'] as String? ?? '';
       _hours.text = row['hours'] as String? ?? '';
       _min.text = '${row['price_min'] ?? ''}';
       _max.text = '${row['price_max'] ?? ''}';
       _menu.text = row['menu_url'] as String? ?? '';
       _cover = row['cover_url'] as String?;
+      _vibes.clear();
       _vibes.addAll((row['vibes'] as List? ?? []).cast<String>());
     }
     return row;
@@ -52,31 +63,34 @@ class _ReviewPlaceScreenState extends State<ReviewPlaceScreen> {
   }
 
   Future<void> _photo() async {
-    if (_busy) return;
+    if (_busy || !_current) return;
     setState(() => _busy = true);
     try {
       final bytes = await ImageUploader.pickBytesFromGallery();
-      if (bytes == null) return;
+      if (bytes == null || !_current) return;
       final user = _service.me;
       if (user == null) throw StateError('auth');
-      final url = await ImageUploader.uploadBytes(
-          bytes: bytes,
-          bucket: 'venues',
-          path: '$user/review_${DateTime.now().microsecondsSinceEpoch}.jpg');
+      final access = _access;
+      final url = access == null
+          ? await ImageUploader.uploadBytes(
+              bytes: bytes,
+              bucket: 'venues',
+              path: '$user/review_${DateTime.now().microsecondsSinceEpoch}.jpg')
+          : await AdminVenueMedia().upload(access, bytes);
       if (url == null) throw StateError('upload');
-      if (mounted) setState(() => _cover = url);
+      if (_current) setState(() => _cover = url);
     } catch (e) {
-      if (mounted) {
+      if (mounted && _current) {
         ScaffoldMessenger.of(context)
             .showSnackBar(SnackBar(content: Text(discoveryError(e))));
       }
     } finally {
-      if (mounted) setState(() => _busy = false);
+      if (_current) setState(() => _busy = false);
     }
   }
 
   Future<void> _save() async {
-    if (_busy) return;
+    if (_busy || !_current) return;
     final low = int.tryParse(_min.text), high = int.tryParse(_max.text);
     if (_address.text.trim().isEmpty ||
         _hours.text.trim().isEmpty ||
@@ -90,7 +104,7 @@ class _ReviewPlaceScreenState extends State<ReviewPlaceScreen> {
     }
     setState(() => _busy = true);
     try {
-      await _service.reviewVenue(widget.venueRef, {
+      final payload = <String, dynamic>{
         'address': _address.text.trim(),
         'hours': _hours.text.trim(),
         'cover_url': _cover,
@@ -98,15 +112,22 @@ class _ReviewPlaceScreenState extends State<ReviewPlaceScreen> {
         'price_max': high ?? low,
         'menu_url': _menu.text.trim(),
         'vibes': _vibes.toList()
-      });
-      if (mounted) Navigator.pop(context);
+      };
+      final access = _access;
+      if (access == null) {
+        await _service.reviewVenue(widget.venueRef, payload);
+      } else {
+        await access.service.callRpc(access.session, 'review_venue',
+            {'p_ref': widget.venueRef, 'p_details': payload});
+      }
+      if (mounted && _current) Navigator.pop(context);
     } catch (e) {
-      if (mounted) {
+      if (mounted && _current) {
         ScaffoldMessenger.of(context)
             .showSnackBar(SnackBar(content: Text(discoveryError(e))));
       }
     } finally {
-      if (mounted) setState(() => _busy = false);
+      if (_current) setState(() => _busy = false);
     }
   }
 

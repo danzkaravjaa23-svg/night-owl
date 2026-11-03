@@ -1,269 +1,173 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_text_styles.dart';
-import '../../../core/widgets/gradient_button.dart';
-import '../../../core/router/app_router.dart';
-import '../../../core/services/supabase_service.dart' show passwordJustReset;
-import '../widgets/auth_ui.dart';
 
-/// Нууц үг сэргээх холбоосоор ирсэн хэрэглэгчид шинэ нууц үг тавих дэлгэц.
-/// Router (AuthGate.recovery) нь token_hash холбоос/passwordRecovery event үед
-/// энэ дэлгэц рүү автоматаар аваачна.
+import '../../../core/router/app_router.dart';
+import '../widgets/auth_ui.dart';
+import '../../../core/services/supabase_service.dart' show passwordJustReset;
+import '../services/account_credentials_service.dart';
+import '../widgets/password_form.dart';
+
+/// Recovery changes only the captured account, then clears that local session.
 class ResetPasswordScreen extends StatefulWidget {
-  const ResetPasswordScreen({super.key});
+  final AccountCredentialsService? service;
+  const ResetPasswordScreen({super.key, this.service});
 
   @override
   State<ResetPasswordScreen> createState() => _ResetPasswordScreenState();
 }
 
 class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
-  final _pwCtrl      = TextEditingController();
-  final _confirmCtrl = TextEditingController();
-  final _formKey     = GlobalKey<FormState>();
-  // Гар дээрх "Дараах" товч талбараас талбар руу шилжүүлнэ
-  final _confirmFocus = FocusNode();
-  bool _showPw   = false;
-  bool _loading  = false;
+  bool _loading = false;
   String? _error;
+  String? _owner;
+  StreamSubscription<AuthState>? _authSubscription;
+  bool _sessionChanged = false;
+  int _operation = 0;
+  int _formVersion = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    final auth = Supabase.instance.client.auth;
+    final captured = auth.currentSession;
+    _owner = captured?.user.id;
+    var first = true;
+    _authSubscription = auth.onAuthStateChange.listen((state) {
+      if (first && identical(state.session, captured)) {
+        first = false;
+        return;
+      }
+      first = false;
+      if (state.event == AuthChangeEvent.passwordRecovery &&
+          state.session != null) {
+        ++_operation;
+        if (mounted) {
+          setState(() {
+            _owner = state.session!.user.id;
+            _sessionChanged = false;
+            _loading = false;
+            _formVersion++;
+            _error =
+                'Шинэ сэргээх холбоос нээгдлээ. Шинэ нууц үгээ оруулна уу.';
+          });
+        }
+        return;
+      }
+      if (state.session?.user.id != _owner ||
+          const {
+            AuthChangeEvent.signedIn,
+            AuthChangeEvent.signedOut,
+            AuthChangeEvent.passwordRecovery
+          }.contains(state.event)) {
+        _invalidateSession();
+      }
+    }, onError: (Object _) => _invalidateSession());
+  }
+
+  void _invalidateSession() {
+    ++_operation;
+    if (mounted) {
+      setState(() {
+        _sessionChanged = true;
+        _loading = false;
+      });
+    }
+  }
 
   @override
   void dispose() {
-    _pwCtrl.dispose();
-    _confirmCtrl.dispose();
-    _confirmFocus.dispose();
+    _authSubscription?.cancel();
     super.dispose();
   }
 
-  // Back — сэргээх session-ыг хааж login руу буцна. signOut хийхгүй бол
-  // router (AuthGate.recovery) хэрэглэгчийг энэ дэлгэц рүү буцаана.
-  Future<void> _back() async {
+  Future<void> _leave({bool completed = false}) async {
+    final auth = Supabase.instance.client.auth;
+    if (auth.currentUser != null && auth.currentUser?.id != _owner) return;
+    // This SDK removes the captured local session synchronously before its
+    // remote logout await. Bound that wait and never navigate over a new login.
     try {
-      await Supabase.instance.client.auth.signOut();
+      await auth
+          .signOut(scope: SignOutScope.local)
+          .timeout(const Duration(seconds: 5));
     } catch (_) {}
+    if (!mounted || auth.currentUser != null) return;
+    if (completed) passwordJustReset = true;
     authGate.finishRecovery();
-    if (!mounted) return;
-    context.go(AppRoutes.login);
+    if (mounted) context.go(AppRoutes.login);
   }
 
-  Future<void> _save() async {
-    // Enter дарж давхар илгээхээс сэргийлнэ
+  Future<void> _back() async {
     if (_loading) return;
-    if (!_formKey.currentState!.validate()) return;
-    // Recovery session байхгүй бол (холбоос хугацаа дууссан) — landing руу
-    if (Supabase.instance.client.auth.currentSession == null) {
-      setState(() => _error =
-          'Холбоосын хугацаа дууссан байна. Нууц үг сэргээхийг дахин хүсээрэй.');
+    if (_sessionChanged) {
+      authGate.finishRecovery();
+      context.go(AppRoutes.login);
       return;
     }
-    setState(() { _loading = true; _error = null; });
+    setState(() => _loading = true);
+    await _leave();
+    if (mounted) setState(() => _loading = false);
+  }
+
+  Future<void> _save(String password) async {
+    if (_loading || _sessionChanged) return;
+    if (_owner == null ||
+        Supabase.instance.client.auth.currentUser?.id != _owner) {
+      setState(() => _error =
+          'Холбоосын хугацаа дууссан эсвэл бүртгэл солигдсон байна. Нууц үг сэргээхийг дахин хүсээрэй.');
+      return;
+    }
+    final operation = ++_operation;
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
     try {
-      await Supabase.instance.client.auth.updateUser(
-        UserAttributes(password: _pwCtrl.text));
-      // Аюулгүй байдал: сэргээх session-ыг хаагаад шинэ нууц үгээрээ
-      // дахин нэвтрүүлнэ (бусад апп шиг). signOut → AuthGate.recovery унтарна.
-      try {
-        await Supabase.instance.client.auth.signOut();
-      } catch (_) {}
-      passwordJustReset = true;
-      authGate.finishRecovery();
-      if (!mounted) return;
-      context.go(AppRoutes.login);
-    } on AuthException catch (e) {
-      if (!mounted) return;
-      final m = e.message.toLowerCase();
-      setState(() => _error = m.contains('should be different')
-          ? 'Шинэ нууц үг хуучин нууц үгээс өөр байх ёстой.'
-          : 'Нууц үг шинэчилж чадсангүй. Дахин оролдоно уу.');
-    } catch (e) {
-      if (mounted) {
-        setState(() => _error = 'Алдаа гарлаа. Сүлжээгээ шалгана уу.');
+      final applied = await (widget.service ?? AccountCredentialsService())
+          .updatePassword(password, ownerId: _owner!);
+      if (!mounted || operation != _operation || _sessionChanged) return;
+      if (!applied || Supabase.instance.client.auth.currentUser?.id != _owner) {
+        setState(() => _error = 'Бүртгэл солигдсон байна. Дахин нэвтэрнэ үү.');
+        return;
+      }
+      TextInput.finishAutofillContext(shouldSave: true);
+      await _leave(completed: true);
+    } on AccountCredentialsFailure catch (error) {
+      if (mounted && operation == _operation) {
+        setState(() => _error = error.message);
+      }
+    } catch (_) {
+      if (mounted && operation == _operation) {
+        setState(() => _error =
+            'Нууц үг шинэчилснийг баталж чадсангүй. Дахин оролдоно уу.');
       }
     } finally {
-      if (mounted) setState(() => _loading = false);
+      if (mounted && operation == _operation) setState(() => _loading = false);
     }
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.bgBase,
-      body: Stack(
-        children: [
-          // ── Futurist Nightscape aura — бусад auth дэлгэцтэй ижил ──
-          const AuthAura(),
-          SafeArea(
-            child: Column(
-              children: [
-                // ── Дээд hero (~30%) — back chip + glyph + гарчиг ──
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 10, 20, 0),
-                  child: Row(children: [
-                    GlassBack(onTap: _back),
-                    const Spacer(),
-                    Text('NIGHT OWL', style: AppTextStyles.monoSm.copyWith(
-                      letterSpacing: 3, color: AppColors.textTertiary)),
-                    const Spacer(),
-                    const SizedBox(width: 40),
-                  ]),
-                ),
-                const SizedBox(height: 16),
-                AuthEntrance(
-                  child: Column(children: [
-                    const AuthGlyph(icon: Icons.password_rounded),
-                    const SizedBox(height: 12),
-                    Text('Шинэ нууц үг', style: AppTextStyles.h1),
-                    const SizedBox(height: 6),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 36),
-                      child: Text(
-                        'Дансандаа шинэ нууц үг тохируулна уу.',
-                        textAlign: TextAlign.center,
-                        style: AppTextStyles.bodyMd.copyWith(
-                          color: AppColors.textSecondary, height: 1.5)),
-                    ),
-                  ]),
-                ),
-                const SizedBox(height: 22),
-
-                // ── Доод (~70%) — шилэн bottom-sheet: форм ──
-                Expanded(
-                  child: AuthEntrance(
-                    index: 1,
-                    child: _GlassSheet(child: _formView()),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ── Шинэ нууц үгийн форм — sheet дотор ──
-  Widget _formView() => SingleChildScrollView(
-    key: const ValueKey('form'),
-    padding: const EdgeInsets.fromLTRB(20, 26, 20, 24),
-    child: Form(
-      key: _formKey,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          AuthEntrance(
-            index: 2,
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const FieldLabel('Шинэ нууц үг'),
-                const SizedBox(height: 8),
-                TextFormField(
-                  controller: _pwCtrl,
-                  obscureText: !_showPw,
-                  autofillHints: const [AutofillHints.newPassword],
-                  style: authFieldStyle,
-                  textInputAction: TextInputAction.next,
-                  onFieldSubmitted: (_) => _confirmFocus.requestFocus(),
-                  decoration: authInputDec(
-                    hint: '••••••••',
-                    icon: Icons.lock_outline_rounded,
-                    suffix: IconButton(
-                      onPressed: () => setState(() => _showPw = !_showPw),
-                      icon: Icon(
-                        _showPw ? Icons.visibility_off_outlined : Icons.visibility_outlined,
-                        color: AppColors.textTertiary, size: 20,
-                      ),
-                    ),
-                  ),
-                  validator: (v) => v!.length >= kPasswordMinLength
-                      ? null : 'Хамгийн багадаа $kPasswordMinLength тэмдэгт',
-                ),
-              ]),
-          ),
-          const SizedBox(height: 18),
-
-          AuthEntrance(
-            index: 3,
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const FieldLabel('Нууц үг давтах'),
-                const SizedBox(height: 8),
-                TextFormField(
-                  controller: _confirmCtrl,
-                  focusNode: _confirmFocus,
-                  obscureText: !_showPw,
-                  autofillHints: const [AutofillHints.newPassword],
-                  style: authFieldStyle,
-                  textInputAction: TextInputAction.done,
-                  onFieldSubmitted: (_) => _save(),
-                  decoration: authInputDec(
-                    hint: '••••••••',
-                    icon: Icons.lock_outline_rounded),
-                  validator: (v) => v == _pwCtrl.text
-                      ? null : 'Нууц үг таарахгүй байна',
-                ),
-              ]),
-          ),
-
-          if (_error != null) ...[
-            const SizedBox(height: 16),
-            AuthErrorBox(_error!),
-          ],
-
-          const SizedBox(height: 28),
-          AuthEntrance(
-            index: 4,
-            child: GradientButton(
-              label: _loading ? 'Хадгалж байна...' : 'Нууц үг шинэчлэх',
-              onPressed: _loading ? null : _save,
-              borderRadius: 999,
-              trailing: _loading
-                  ? const BtnSpinner()
-                  : const Icon(Icons.check_rounded,
-                      color: Colors.white, size: 19),
-            ),
-          ),
-        ],
-      ),
-    ),
-  );
-}
-
-// ───────────────────────── reset-only UI bits ─────────────────────────
-
-/// Шилэн bottom-sheet бүрхүүл — дээд radius 28, bgElevated @0.85, grabber.
-class _GlassSheet extends StatelessWidget {
-  final Widget child;
-  const _GlassSheet({required this.child});
-
-  static const List<BoxShadow> _lightShadow = [
-    BoxShadow(color: Color(0x1F1A0B2E), blurRadius: 30, offset: Offset(0, 12)),
-    BoxShadow(color: Color(0x0F1A0B2E), blurRadius: 8, offset: Offset(0, 3)),
-  ];
-
-  @override
-  Widget build(BuildContext context) => Container(
-    width: double.infinity,
-    decoration: BoxDecoration(
-      color: AppColors.bgElevated.withValues(alpha: 0.85),
-      borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-      border: Border.all(color: AppColors.hairline2),
-      // Цайвар горимд хар 55% сүүдэр бохир харагдах тул зөөлөн ягаан сүүдэр
-      boxShadow: AppColors.isDarkMode ? AppColors.shadowDock : _lightShadow,
-    ),
-    child: ClipRRect(
-      borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-      child: Column(children: [
-        const SizedBox(height: 10),
-        // Grabber — bottom-sheet мэдрэмж
-        Container(
-          width: 40, height: 4,
-          decoration: BoxDecoration(
-            color: AppColors.hairline2,
-            borderRadius: BorderRadius.circular(999)),
+  Widget build(BuildContext context) => PopScope(
+        canPop: false,
+        onPopInvokedWithResult: (didPop, _) {
+          if (!didPop && !_loading) _back();
+        },
+        child: AuthFormScaffold(
+          title: 'Шинэ нууц үг',
+          description: 'Нууц үгээ шинэчилсний дараа дахин нэвтэрнэ.',
+          icon: Icons.password_rounded,
+          onBack: _loading ? null : _back,
+          child: _sessionChanged
+              ? const AuthErrorBox(
+                  'Нэвтрэх төлөв өөрчлөгдсөн эсвэл баталгаажуулж чадсангүй. Нэвтрэх хэсэг рүү буцаж, зөв бүртгэлээрээ сэргээх холбоосоо дахин нээнэ үү.')
+              : PasswordForm(
+                  key: ValueKey(_formVersion),
+                  busy: _loading,
+                  error: _error,
+                  onSubmit: _save),
         ),
-        Expanded(child: child),
-      ]),
-    ),
-  );
+      );
 }

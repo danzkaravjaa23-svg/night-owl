@@ -25,14 +25,27 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - run: node --experimental-vm-modules --test tools/deployment/tests/delete_account_handler.test.mjs tools/deployment/tests/test_web_admin.mjs
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: '2.9.8'
+      - run: deno check --no-lock supabase/functions/delete-account/index.ts
+      - run: deno test --no-lock --allow-env=SUPABASE_URL,SUPABASE_ANON_KEY,SUPABASE_SERVICE_ROLE_KEY,ACCOUNT_DELETION_ENABLED --allow-net=127.0.0.1 supabase/functions/delete-account/tests/handler_test.ts
       - name: Check social privacy and pilot SQL on an isolated database
         run: |
           mkdir -p "$RUNNER_TEMP/nightowl-social-sql"
           npm install --prefix "$RUNNER_TEMP/nightowl-social-sql" @electric-sql/pglite@0.5.8 --ignore-scripts --no-audit --no-fund
           node tools/deployment/tests/run_social_discovery_fixture.mjs "$RUNNER_TEMP/nightowl-social-sql/node_modules/@electric-sql/pglite/dist/index.js"
           node tools/deployment/tests/run_hosted_client_rpcs_fixture.mjs "$RUNNER_TEMP/nightowl-social-sql/node_modules/@electric-sql/pglite/dist/index.js"
+          node tools/deployment/tests/run_featured_events_fixture.mjs "$RUNNER_TEMP/nightowl-social-sql/node_modules/@electric-sql/pglite/dist/index.js"
+          node tools/deployment/tests/run_storage_account_guards_fixture.mjs "$RUNNER_TEMP/nightowl-social-sql/node_modules/@electric-sql/pglite/dist/index.js"
+          node tools/deployment/tests/run_account_deletion_boundaries_fixture.mjs "$RUNNER_TEMP/nightowl-social-sql/node_modules/@electric-sql/pglite/dist/index.js"
+          node tools/deployment/tests/run_discovery_analytics_consent_fixture.mjs "$RUNNER_TEMP/nightowl-social-sql/node_modules/@electric-sql/pglite/dist/index.js"
+          node tools/deployment/tests/run_admin_console_fixture.mjs "$RUNNER_TEMP/nightowl-social-sql/node_modules/@electric-sql/pglite/dist/index.js"
+          node tools/deployment/tests/run_interaction_boundaries_fixture.mjs "$RUNNER_TEMP/nightowl-social-sql/node_modules/@electric-sql/pglite/dist/index.js"
           node backend/tests/run_readiness_fixture.mjs "$RUNNER_TEMP/nightowl-social-sql/node_modules/@electric-sql/pglite/dist/index.js"
       - run: python3 -m unittest discover -s tools/deployment/tests -v
+      - run: python3 tools/deployment/ios_preflight.py --source-only
       - run: python3 -m unittest discover -s tools/migration/tests -v
       - run: python3 -m unittest discover -s backend/tests -v
       - run: sh tools/deployment/build_web.sh
@@ -40,6 +53,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: unsigned-android-and-web
+          if-no-files-found: error
           path: |
             build/web
             build/app/outputs/bundle/release/*.aab
@@ -53,9 +67,9 @@ jobs:
           channel: stable
           cache: true
       - run: flutter pub get
-      - run: python3 tools/deployment/build_admin_clients.py --output build/client-bundle --defines-output build/backend-defines.json --execute
-      - run: flutter build ios --release --no-codesign --dart-define=DEVICE_PREVIEW=false --dart-define-from-file=build/backend-defines.json
+      - run: sh tools/deployment/build_ios.sh --no-pub
       - uses: actions/upload-artifact@v4
         with:
           name: unsigned-ios
+          if-no-files-found: error
           path: build/ios/iphoneos/Runner.app

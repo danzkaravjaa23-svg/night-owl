@@ -34,65 +34,93 @@ class EmptyState extends StatelessWidget {
             'EmptyState-д illustration эсвэл icon-ын аль нэгийг өгнө үү');
 
   @override
-  Widget build(BuildContext context) => Center(
-        child: Padding(
-          padding: const EdgeInsets.all(36),
-          // Зөөлөн fade + дээшлэх орох хөдөлгөөн — спиннерийн дараа
-          // "гэнэт гарч ирэх" биш, амьсгалтай мэдрэмж өгнө
-          child: TweenAnimationBuilder<double>(
-            tween: Tween(begin: 0, end: 1),
-            duration: AppMotion.duration(context, AppMotion.enter),
-            curve: Curves.easeOutCubic,
-            builder: (_, t, child) => Opacity(
-              opacity: t,
-              child: Transform.translate(
-                  offset: Offset(0, 12 * (1 - t)), child: child),
-            ),
-            child: Column(mainAxisSize: MainAxisSize.min, children: [
-              // ── Glass medallion — bgElevated 0.72 + hairline + неон glow ──
-              Container(
-                width: size,
-                height: size,
-                padding: EdgeInsets.all(size * 0.13),
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: AppColors.dynBgElevated.withValues(alpha: 0.72),
-                  border: Border.all(color: AppColors.dynHairline2),
-                  // Зөөлөн неон гэрэлтэлт — glow өнгө + magenta давхарга
-                  boxShadow: [
-                    BoxShadow(
-                        color: (glow ?? AppColors.neonCyan)
-                            .withValues(alpha: 0.22),
-                        blurRadius: 34,
-                        spreadRadius: -4),
-                    BoxShadow(
-                        color: AppColors.accentStart.withValues(alpha: 0.10),
-                        blurRadius: 40,
-                        spreadRadius: -12),
-                  ],
+  Widget build(BuildContext context) => LayoutBuilder(
+        builder: (context, constraints) {
+          final compact =
+              constraints.hasBoundedHeight && constraints.maxHeight < 360;
+          final markSize = compact ? size.clamp(40.0, 64.0) : size;
+          final content = Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 400),
+              child: Padding(
+                padding: EdgeInsets.symmetric(
+                    horizontal: 24, vertical: compact ? 20 : 32),
+                child: TweenAnimationBuilder<double>(
+                  tween: Tween(begin: 0, end: 1),
+                  duration: AppMotion.duration(context, AppMotion.enter),
+                  curve: Curves.easeOutCubic,
+                  builder: (_, t, child) => Opacity(
+                    opacity: t,
+                    child: Transform.translate(
+                        offset: Offset(0, 8 * (1 - t)), child: child),
+                  ),
+                  child: Column(mainAxisSize: MainAxisSize.min, children: [
+                    ExcludeSemantics(
+                      child: Container(
+                        width: markSize,
+                        height: markSize,
+                        padding: EdgeInsets.all(markSize * .15),
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              AppColors.dynBgElevated,
+                              AppColors.dynBgSurface
+                            ],
+                          ),
+                          border: Border.all(color: AppColors.dynHairline2),
+                          boxShadow: [
+                            BoxShadow(
+                                color: (glow ?? AppColors.neonCyan)
+                                    .withValues(alpha: .12),
+                                blurRadius: 28,
+                                spreadRadius: -6),
+                          ],
+                        ),
+                        child: illustration != null
+                            ? SvgPicture.asset(illustration!)
+                            : Center(
+                                child: Icon(icon,
+                                    size: 30,
+                                    color: glow ?? AppColors.neonCyan)),
+                      ),
+                    ),
+                    SizedBox(height: compact ? 16 : 24),
+                    Semantics(
+                      header: true,
+                      child: Text(title,
+                          style: AppTextStyles.h3
+                              .copyWith(fontSize: 17, height: 1.35),
+                          textAlign: TextAlign.center),
+                    ),
+                    if (subtitle != null) ...[
+                      const SizedBox(height: 8),
+                      Text(subtitle!,
+                          style: AppTextStyles.bodyMd.copyWith(
+                              color: AppColors.dynTextSecondary, height: 1.5),
+                          textAlign: TextAlign.center),
+                    ],
+                    if (action != null) ...[
+                      const SizedBox(height: 24),
+                      action!
+                    ],
+                  ]),
                 ),
-                child: illustration != null
-                    ? SvgPicture.asset(illustration!)
-                    : Center(
-                        child: Icon(icon,
-                            size: 32, color: AppColors.dynTextSecondary)),
               ),
-              const SizedBox(height: 24),
-              Text(title, style: AppTextStyles.h3, textAlign: TextAlign.center),
-              if (subtitle != null) ...[
-                const SizedBox(height: 8),
-                // Урт текст хэт сунахгүй — уншихад эвтэйхэн өргөнд барина
-                ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 300),
-                  child: Text(subtitle!,
-                      style: AppTextStyles.bodyMd.copyWith(
-                          color: AppColors.dynTextSecondary, height: 1.5),
-                      textAlign: TextAlign.center),
-                ),
-              ],
-              if (action != null) ...[const SizedBox(height: 24), action!],
-            ]),
-          ),
-        ),
+            ),
+          );
+          // Keyboard and large text can leave very little vertical room. Keep
+          // recovery actions reachable instead of clipping the empty state.
+          if (!constraints.hasBoundedHeight) return content;
+          return SingleChildScrollView(
+            primary: false,
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minHeight: constraints.maxHeight),
+              child: content,
+            ),
+          );
+        },
       );
 }

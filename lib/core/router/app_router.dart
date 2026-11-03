@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import '../constants/community_rules.dart';
 import '../utils/auth_return.dart';
 import '../../features/discovery/screens/discovery_screen.dart';
 import '../../features/discovery/screens/place_screen.dart';
@@ -38,6 +41,7 @@ import '../../features/dm/screens/group_thread_screen.dart';
 import '../../features/profile/screens/profile_screen.dart';
 import '../../features/profile/screens/follow_list_screen.dart';
 import '../../features/profile/screens/settings_screen.dart';
+import '../../features/profile/screens/delete_account_screen.dart';
 import '../../features/profile/screens/change_password_screen.dart';
 import '../../features/profile/screens/business_screen.dart';
 import '../../features/profile/screens/venue_edit_screen.dart';
@@ -48,6 +52,9 @@ import '../../features/admin/screens/admin_reports_screen.dart';
 import '../../features/admin/screens/admin_panel_screen.dart';
 import '../../features/admin/screens/admin_featured_events_screen.dart';
 import '../../features/admin/screens/admin_users_screen.dart';
+import '../../features/admin/screens/admin_audit_screen.dart';
+import '../../features/admin/screens/admin_content_screen.dart';
+import '../../features/admin/widgets/admin_gate.dart';
 import '../../features/profile/screens/invite_screen.dart';
 import '../../features/live/screens/go_live_entry.dart';
 import '../widgets/dark_system_ui.dart';
@@ -89,6 +96,7 @@ abstract class AppRoutes {
   static const follows = '/follows/:id';
   static const settings = '/settings';
   static const changePassword = '/settings/password';
+  static const deleteAccount = '/settings/delete-account';
   static const business = '/business';
   static const affiliateUnlock = '/affiliate/unlock';
   static const affiliate = '/affiliate';
@@ -107,6 +115,8 @@ abstract class AppRoutes {
   static const adminFeaturedEvents = '/admin/featured-events';
   static const adminReports = '/admin/reports';
   static const adminUsers = '/admin/users';
+  static const adminAudit = '/admin/audit';
+  static const adminContent = '/admin/content';
 
   /// Old payment/referral links continue to work in the free release.
   /// Discard payment query parameters; never create a purchase/entitlement.
@@ -134,10 +144,20 @@ abstract class AppRoutes {
     setup,
     forgotPassword,
     resetPassword,
+    // Venue discovery uses public catalog rows; actions requiring an account
+    // still route through the normal authenticated destinations.
+    explore,
+    // The completion page remains visible after local sign-out; the service
+    // still requires the authenticated owner before any deletion request.
+    deleteAccount,
   };
 
-  static bool isPublic(String location) => _publicRoutes.contains(location)||location=='/discovery'||
-    (RegExp(r'^/(creator|post|place|collections)/[^/]+$').hasMatch(location)&&location!='/post/create');
+  static bool isPublic(String location) =>
+      _publicRoutes.contains(location) ||
+      location == '/discovery' ||
+      (RegExp(r'^/(creator|post|place|collections)/[^/]+$')
+              .hasMatch(location) &&
+          location != '/post/create');
 }
 
 final _rootKey = GlobalKey<NavigatorState>(debugLabel: 'root');
@@ -183,6 +203,7 @@ CustomTransitionPage<void> _sheetPage(
 
 final appRouterProvider = Provider<GoRouter>((ref) {
   return GoRouter(
+    observers: [adminRouteObserver],
     navigatorKey: _rootKey,
     initialLocation: AppRoutes.splash,
     debugLogDiagnostics: false,
@@ -194,7 +215,9 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     redirect: (context, state) {
       final loggedIn = Supabase.instance.client.auth.currentUser != null;
       final loc = state.uri.path; // ?code=... гэх мэт query-г үл тоомсорло
-      if(loc.startsWith('/auth'))AuthReturn.remember(state.uri.queryParameters['next']);
+      if (loc.startsWith('/auth')) {
+        AuthReturn.remember(state.uri.queryParameters['next']);
+      }
       const authPages = {
         AppRoutes.splash,
         AppRoutes.authLanding,
@@ -204,8 +227,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       };
 
       if (!loggedIn) {
-        if(AppRoutes.isPublic(loc))return null;
-        return Uri(path:AppRoutes.authLanding,queryParameters:{'next':state.uri.toString()}).toString();
+        if (AppRoutes.isPublic(loc)) return null;
+        return Uri(
+            path: AppRoutes.authLanding,
+            queryParameters: {'next': state.uri.toString()}).toString();
       }
       // Нэвтэрсэн + нууц үг сэргээх горимд — шинэ нууц үгийн дэлгэц
       if (authGate.recovery) {
@@ -213,25 +238,58 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       }
       // Нэвтэрсэн — профайлаа дуусгаагүй бол заавал setup
       if (authGate.needsSetup) {
-        return loc == AppRoutes.setup ? null : AppRoutes.setup;
+        return loc == AppRoutes.setup || loc == AppRoutes.deleteAccount
+            ? null
+            : AppRoutes.setup;
       }
       // Бүрэн — нэвтрэлт/splash/setup дээр байвал апп руу
       if (authPages.contains(loc) || loc == AppRoutes.setup) {
         return AuthReturn.destination;
       }
-      if(AuthReturn.hasDestination&&state.uri.toString()==AuthReturn.destination)AuthReturn.clear();
+      if (AuthReturn.hasDestination &&
+          state.uri.toString() == AuthReturn.destination) {
+        AuthReturn.clear();
+      }
       return null;
     },
 
     refreshListenable: authGate,
 
     routes: [
-      GoRoute(path:'/discovery',pageBuilder:(ctx,s)=>_fadePage(ctx,s,const DiscoveryScreen())),
-      GoRoute(path:'/place/:ref',pageBuilder:(ctx,s)=>_slidePage(ctx,s,PlaceScreen(venueRef:s.pathParameters['ref']!))),
-      GoRoute(path:'/collections/:id',pageBuilder:(ctx,s)=>_slidePage(ctx,s,CollectionsScreen(userId:s.pathParameters['id']!,collectionId:s.uri.queryParameters['list']))),
-      GoRoute(path:'/privacy',pageBuilder:(ctx,s)=>_slidePage(ctx,s,const PrivacyScreen())),
-      GoRoute(path:'/admin/pilot',pageBuilder:(ctx,s)=>_slidePage(ctx,s,const PilotScreen())),
-      GoRoute(path:'/place-review/:ref',pageBuilder:(ctx,s)=>_slidePage(ctx,s,ReviewPlaceScreen(venueRef:s.pathParameters['ref']!))),
+      GoRoute(
+          path: '/discovery',
+          pageBuilder: (ctx, s) => _fadePage(ctx, s, const DiscoveryScreen())),
+      GoRoute(
+          path: '/place/:ref',
+          pageBuilder: (ctx, s) => _slidePage(
+              ctx, s, PlaceScreen(venueRef: s.pathParameters['ref']!))),
+      GoRoute(
+          path: '/collections/:id',
+          pageBuilder: (ctx, s) => _slidePage(
+              ctx,
+              s,
+              CollectionsScreen(
+                  userId: s.pathParameters['id']!,
+                  collectionId: s.uri.queryParameters['list']))),
+      GoRoute(
+          path: '/privacy',
+          pageBuilder: (ctx, s) => _slidePage(ctx, s, const PrivacyScreen())),
+      GoRoute(
+          path: '/admin/pilot',
+          pageBuilder: (ctx, s) =>
+              _slidePage(ctx, s, const AdminGate(child: PilotScreen()))),
+      GoRoute(
+          path: '/admin/place-review/:ref',
+          pageBuilder: (ctx, s) => _slidePage(
+              ctx,
+              s,
+              AdminGate(
+                  child:
+                      ReviewPlaceScreen(venueRef: s.pathParameters['ref']!)))),
+      GoRoute(
+          path: '/place-review/:ref',
+          pageBuilder: (ctx, s) => _slidePage(
+              ctx, s, ReviewPlaceScreen(venueRef: s.pathParameters['ref']!))),
       // ── Onboarding ──
       GoRoute(
           path: AppRoutes.splash,
@@ -368,6 +426,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           pageBuilder: (ctx, s) =>
               _slidePage(ctx, s, const ChangePasswordScreen())),
       GoRoute(
+          path: AppRoutes.deleteAccount,
+          pageBuilder: (ctx, s) =>
+              _slidePage(ctx, s, const DeleteAccountScreen())),
+      GoRoute(
           path: AppRoutes.business,
           pageBuilder: (ctx, s) => _slidePage(ctx, s, const BusinessScreen())),
       GoRoute(
@@ -417,20 +479,28 @@ final appRouterProvider = Provider<GoRouter>((ref) {
               _slidePage(ctx, s, const SavedPostsScreen())),
       GoRoute(
           path: AppRoutes.adminFeaturedEvents,
-          pageBuilder: (ctx, s) =>
-              _slidePage(ctx, s, const AdminFeaturedEventsScreen())),
+          pageBuilder: (ctx, s) => _slidePage(
+              ctx, s, const AdminGate(child: AdminFeaturedEventsScreen()))),
       GoRoute(
           path: AppRoutes.adminPanel,
           pageBuilder: (ctx, s) =>
-              _slidePage(ctx, s, const AdminPanelScreen())),
+              _slidePage(ctx, s, const AdminGate(child: AdminPanelScreen()))),
       GoRoute(
           path: AppRoutes.adminReports,
           pageBuilder: (ctx, s) =>
-              _slidePage(ctx, s, const AdminReportsScreen())),
+              _slidePage(ctx, s, const AdminGate(child: AdminReportsScreen()))),
       GoRoute(
           path: AppRoutes.adminUsers,
           pageBuilder: (ctx, s) =>
-              _slidePage(ctx, s, const AdminUsersScreen())),
+              _slidePage(ctx, s, const AdminGate(child: AdminUsersScreen()))),
+      GoRoute(
+          path: AppRoutes.adminAudit,
+          pageBuilder: (ctx, s) =>
+              _slidePage(ctx, s, const AdminGate(child: AdminAuditScreen()))),
+      GoRoute(
+          path: AppRoutes.adminContent,
+          pageBuilder: (ctx, s) =>
+              _slidePage(ctx, s, const AdminGate(child: AdminContentScreen()))),
     ],
 
     // ── 404 — аппын өнгө/хэлбэрт нийцсэн хоосон төлөв ──
@@ -463,19 +533,37 @@ class AuthGate extends ChangeNotifier {
   /// Нууц үг сэргээх горим — token_hash холбоос (pendingPasswordRecovery)
   /// эсвэл passwordRecovery event-ээр асна; нууц үг солимогц унтарна.
   bool recovery = pendingPasswordRecovery;
+  late final StreamSubscription<AuthState> _authSubscription;
 
-  AuthGate() {
+  AuthGate({Stream<AuthState>? authStream}) {
     // Аливаа auth өөрчлөлтөд redirect-ийг дахин ажиллуулна
-    SupabaseService.authStream.listen((s) {
+    _authSubscription = (authStream ?? SupabaseService.authStream).listen((s) {
       if (s.event == AuthChangeEvent.passwordRecovery) recovery = true;
-      if (s.event == AuthChangeEvent.signedOut) recovery = false;
+      if (s.event == AuthChangeEvent.signedIn ||
+          s.event == AuthChangeEvent.signedOut) {
+        _clearRecovery();
+      }
       notifyListeners();
+    }, onError: (Object _, StackTrace __) {
+      // A transient auth transport error is not a new login or logout.
+      // The default guarded stream reports it; preserve routing state here.
     });
+  }
+
+  void _clearRecovery() {
+    recovery = false;
+    pendingPasswordRecovery = false;
+  }
+
+  @override
+  void dispose() {
+    unawaited(_authSubscription.cancel());
+    super.dispose();
   }
 
   /// Нууц үг амжилттай солигдлоо — recovery горимоос гарна
   void finishRecovery() {
-    recovery = false;
+    _clearRecovery();
     notifyListeners();
   }
 
@@ -486,7 +574,8 @@ class AuthGate extends ChangeNotifier {
   bool get needsSetup {
     final user = Supabase.instance.client.auth.currentUser;
     if (user == null) return false;
-    return user.userMetadata?['setup_complete'] != true;
+    return user.userMetadata?['setup_complete'] != true ||
+        !CommunityRules.isAccepted(user.userMetadata);
   }
 
   /// setup._save дараа шууд redirect-ийг сэргээхэд (metadata аль хэдийн шинэчлэгдсэн)

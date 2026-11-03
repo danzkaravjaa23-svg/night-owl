@@ -1,4 +1,9 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import '../services/note_service.dart';
+import '../../post/services/content_publication.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/sculpted_icon.dart';
@@ -39,25 +44,44 @@ class NotesRowState extends State<NotesRow> {
       []; // {user_id, username, avatar_url, text, venue_name}
   Map<String, dynamic>? _me; // өөрийн profile
   bool _loaded = false;
+  int _loadGeneration = 0;
+  String? _observedOwner;
+  StreamSubscription<AuthState>? _auth;
 
   String get _myId => SupabaseService.currentUser?.id ?? '';
 
   @override
   void initState() {
     super.initState();
+    _observedOwner = SupabaseService.currentUser?.id;
+    _auth = SupabaseService.authStream.listen((state) {
+      final owner = state.session?.user.id;
+      if (!mounted || owner == _observedOwner) return;
+      _observedOwner = owner;
+      setState(() {
+        _me = null;
+        _notes = [];
+        _loaded = false;
+      });
+      _load();
+    });
     _load();
   }
 
   Future<void> _load() async {
+    final generation = ++_loadGeneration;
+    final me = _myId;
+    bool current() => mounted && generation == _loadGeneration && me == _myId;
     try {
-      final me = _myId;
+      Map<String, dynamic>? profile;
       // Өөрийн профайл
       if (me.isNotEmpty) {
-        _me = await SupabaseService.client
+        profile = await SupabaseService.client
             .from('profiles')
             .select('id, username, avatar_url')
             .eq('id', me)
             .maybeSingle();
+        if (!current()) return;
       }
       // Зөвхөн сүүлийн 24 цагийн note (хугацаа дууссаныг харуулахгүй).
       // created_at нь timestamptz (UTC) тул харьцуулалтыг UTC-ээр хийнэ.
@@ -71,6 +95,7 @@ class NotesRowState extends State<NotesRow> {
           .gt('created_at', cutoff)
           .order('created_at', ascending: false)
           .limit(50);
+      if (!current()) return;
       final rows = (data as List).cast<Map<String, dynamic>>();
 
       final userIds = rows.map((r) => r['user_id'] as String).toSet().toList();
@@ -84,6 +109,7 @@ class NotesRowState extends State<NotesRow> {
             .from('profiles')
             .select('id, username, avatar_url')
             .inFilter('id', userIds);
+        if (!current()) return;
         pmap = {
           for (final p in (profs as List).cast<Map<String, dynamic>>())
             p['id'] as String: p
@@ -94,6 +120,7 @@ class NotesRowState extends State<NotesRow> {
             .from('venues')
             .select('id, name')
             .inFilter('id', venueIds);
+        if (!current()) return;
         vmap = {
           for (final v in (vs as List).cast<Map<String, dynamic>>())
             v['id'] as String: v['name'] as String
@@ -116,15 +143,23 @@ class NotesRowState extends State<NotesRow> {
       list.sort((a, b) =>
           (a['user_id'] == me ? 0 : 1) - (b['user_id'] == me ? 0 : 1));
 
-      if (mounted) {
+      if (current()) {
         setState(() {
+          _me = profile;
           _notes = list;
           _loaded = true;
         });
       }
     } catch (_) {
-      if (mounted) setState(() => _loaded = true);
+      if (current()) setState(() => _loaded = true);
     }
+  }
+
+  @override
+  void dispose() {
+    _loadGeneration++;
+    _auth?.cancel();
+    super.dispose();
   }
 
   /// Гадаад (DM list refresh) дуудлагаас notes мөрийг дахин ачаална
@@ -146,7 +181,7 @@ class NotesRowState extends State<NotesRow> {
           borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
       builder: (_) => _NoteComposer(existing: _myNote),
     );
-    if (saved == true) _load();
+    if (saved == true && mounted) _load();
   }
 
   // Бусдын note-г бүрэн харуулах (текст + venue + Мессеж)
@@ -423,18 +458,23 @@ class _NoteBubble extends StatelessWidget {
 }
 
 /// Note бичих/засах — текст + (зөвхөн) venue тэмдэглэх
-class _NoteComposer extends StatefulWidget {
+class _NoteComposer extends ConsumerStatefulWidget {
   final Map<String, dynamic>? existing;
   const _NoteComposer({this.existing});
   @override
-  State<_NoteComposer> createState() => _NoteComposerState();
+  ConsumerState<_NoteComposer> createState() => _NoteComposerState();
 }
 
-class _NoteComposerState extends State<_NoteComposer> {
+class _NoteComposerState extends ConsumerState<_NoteComposer> {
   late final TextEditingController _ctrl;
   String? _venueId;
   String? _venueName;
   bool _busy = false;
+  bool _stale = false;
+  late final NoteService _service;
+  late final PublicationSession _session;
+  StreamSubscription<void>? _auth;
+  ModalRoute<dynamic>? _pickerRoute;
 
   @override
   void initState() {
@@ -443,18 +483,41 @@ class _NoteComposerState extends State<_NoteComposer> {
         TextEditingController(text: widget.existing?['text'] as String? ?? '');
     _venueName = widget.existing?['venue_name'] as String?;
     _venueId = widget.existing?['venue_id'] as String?;
+    _service = ref.read(noteServiceProvider);
+    _session = _service.captureSession();
+    _auth = _service.sessionChanges
+        .listen((_) => _checkSession(), onError: (Object _) => _checkSession());
+  }
+
+  void _checkSession() {
+    scheduleMicrotask(() {
+      if (!mounted || _session.isCurrent) return;
+      _ctrl.clear();
+      final picker = _pickerRoute;
+      if (picker?.isActive == true) picker!.navigator?.removeRoute(picker);
+      setState(() {
+        _stale = true;
+        _venueId = null;
+        _venueName = null;
+      });
+    });
   }
 
   Future<void> _pickVenue() async {
+    if (_busy || !_session.isCurrent) return;
     final v = await showModalBottomSheet<Map<String, dynamic>>(
       context: context,
       backgroundColor: AppColors.bgElevated,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
-      builder: (_) => const _VenueSearchSheet(),
+      builder: (ctx) {
+        _pickerRoute = ModalRoute.of(ctx);
+        return const _VenueSearchSheet();
+      },
     );
-    if (v != null && mounted) {
+    _pickerRoute = null;
+    if (v != null && mounted && _session.isCurrent) {
       setState(() {
         _venueId = v['id'] as String;
         _venueName = v['name'] as String;
@@ -462,62 +525,51 @@ class _NoteComposerState extends State<_NoteComposer> {
     }
   }
 
-  Future<void> _save() async {
-    final text = _ctrl.text.trim();
-    final me = SupabaseService.currentUser?.id;
-    if (text.isEmpty || me == null || _busy) return;
-    setState(() => _busy = true);
-    try {
-      // Хугацааг UTC-ээр бичнэ (timestamptz). Local ISO нь offset-гүй тул
-      // Postgres UTC гэж уншиж 8 цагаар ирээдүйд хадгалдаг байсныг зассан.
-      // venue_id-г үргэлж илгээнэ — null бол хуучин газрыг цэвэрлэнэ.
-      await SupabaseService.client.from('notes').upsert({
-        'user_id': me,
-        'text': text,
-        'venue_id': _venueId,
-        'expires_at': DateTime.now()
-            .toUtc()
-            .add(const Duration(hours: 24))
-            .toIso8601String(),
-        'created_at': DateTime.now().toUtc().toIso8601String(),
-      }, onConflict: 'user_id');
-      if (mounted) Navigator.pop(context, true);
-    } catch (_) {
-      if (mounted) {
-        setState(() => _busy = false);
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text('Хадгалж чадсангүй. Дахин оролдоно уу.'),
-            backgroundColor: AppColors.error));
-      }
-    }
-  }
+  Future<void> _save() => _submit(deleting: false);
+  Future<void> _delete() => _submit(deleting: true);
 
-  Future<void> _delete() async {
-    final me = SupabaseService.currentUser?.id;
-    if (me == null || _busy) return;
+  Future<void> _submit({required bool deleting}) async {
+    if (_busy || !_session.isCurrent || _stale) return;
+    final text = _ctrl.text.trim();
+    if (!deleting && text.isEmpty) return;
+    final venue = _venueId;
     setState(() => _busy = true);
     try {
-      await SupabaseService.client.from('notes').delete().eq('user_id', me);
-      if (mounted) Navigator.pop(context, true);
+      if (deleting) {
+        await _service.delete(_session);
+      } else {
+        await _service.save(_session, text, venue);
+      }
+      if (mounted && _session.isCurrent) Navigator.pop(context, true);
     } catch (_) {
-      // Устгаж чадаагүй бол sheet хаагдахгүй, алдааг мэдэгдэнэ
-      if (mounted) {
-        setState(() => _busy = false);
+      if (mounted && _session.isCurrent) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text('Устгаж чадсангүй. Дахин оролдоно уу.'),
+            content:
+                Text('Өөрчлөлтийг баталгаажуулж чадсангүй. Дахин оролдоно уу.'),
             backgroundColor: AppColors.error));
       }
+    } finally {
+      if (mounted) setState(() => _busy = false);
     }
   }
 
   @override
   void dispose() {
+    _auth?.cancel();
+    _session.close();
     _ctrl.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    if (_stale || !_session.isCurrent) {
+      return const SafeArea(
+          child: Padding(
+              padding: EdgeInsets.all(24),
+              child: Text(
+                  'Нэвтрэх хаяг өөрчлөгдсөн байна. Note-оо дахин нээнэ үү.')));
+    }
     final editing = widget.existing != null;
     return Padding(
       padding: EdgeInsets.only(
@@ -543,6 +595,7 @@ class _NoteComposerState extends State<_NoteComposer> {
             const SizedBox(height: 14),
             TextField(
               controller: _ctrl,
+              readOnly: _busy,
               autofocus: true,
               maxLength: 100,
               maxLines: 3,
@@ -561,7 +614,7 @@ class _NoteComposerState extends State<_NoteComposer> {
             const SizedBox(height: 8),
             // Зөвхөн venue тэмдэглэх
             _Pressable(
-              onTap: _pickVenue,
+              onTap: _busy ? null : _pickVenue,
               child: Container(
                 width: double.infinity,
                 padding:
@@ -588,10 +641,12 @@ class _NoteComposerState extends State<_NoteComposer> {
                                   : AppColors.textSecondary))),
                   if (_venueName != null)
                     _Pressable(
-                        onTap: () => setState(() {
-                              _venueId = null;
-                              _venueName = null;
-                            }),
+                        onTap: _busy
+                            ? null
+                            : () => setState(() {
+                                  _venueId = null;
+                                  _venueName = null;
+                                }),
                         child: SculptedIcon(Icons.close,
                             size: 16, color: AppColors.textTertiary)),
                 ]),
@@ -651,6 +706,7 @@ class _VenueSearchSheet extends StatefulWidget {
 class _VenueSearchSheetState extends State<_VenueSearchSheet> {
   List<Map<String, dynamic>> _results = [];
   bool _loading = false;
+  int _searchGeneration = 0;
 
   @override
   void initState() {
@@ -659,17 +715,23 @@ class _VenueSearchSheetState extends State<_VenueSearchSheet> {
   }
 
   Future<void> _search(String q) async {
+    final generation = ++_searchGeneration;
     setState(() => _loading = true);
+    List<Map<String, dynamic>> results;
     try {
       var query =
           SupabaseService.client.from('venues').select('id, name, district');
       if (q.isNotEmpty) query = query.ilike('name', '%$q%');
       final data = await query.limit(30);
-      _results = (data as List).cast<Map<String, dynamic>>();
+      results = (data as List).cast<Map<String, dynamic>>();
     } catch (_) {
-      _results = [];
+      results = [];
     }
-    if (mounted) setState(() => _loading = false);
+    if (!mounted || generation != _searchGeneration) return;
+    setState(() {
+      _results = results;
+      _loading = false;
+    });
   }
 
   @override

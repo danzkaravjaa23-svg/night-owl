@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
@@ -92,8 +91,9 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool('onboarded', true);
       if (!mounted) return;
-      // Native дээр permission дэлгэц OS prompt дууддаггүй (web-only) — алгасна
-      context.go(kIsWeb ? AppRoutes.permLocation : AppRoutes.authLanding);
+      // Ask for location in context from the map. Browser notification
+      // permission cannot enable the app's unimplemented push delivery.
+      context.go(AppRoutes.authLanding);
     }
   }
 

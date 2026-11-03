@@ -31,6 +31,8 @@ try {
   await db.exec(preflight);
   await db.exec(await read('supabase/migrations/202610160002_osm_catalog.sql'));
   await db.exec(await read('supabase/migrations/202610160002_osm_catalog.sql'));
+  await db.exec(await read('supabase/migrations/202610220001_storage_account_guards.sql'));
+  await db.exec(await read('supabase/migrations/202610220001_storage_account_guards.sql'));
   assert.equal(await scalar('select count(*)::int from venue_catalog'),271);
   assert.equal(await scalar('select count(*)::int from pilot_creators'),0);
   await db.exec("update checkins set audience='public'");

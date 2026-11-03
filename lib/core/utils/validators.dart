@@ -3,7 +3,7 @@
 abstract class Validators {
   static String? email(String? v) {
     if (v == null || v.isEmpty) return 'Имэйл шаардлагатай';
-    if (!RegExp(r'^[\w.-]+@[\w.-]+\.\w{2,}$').hasMatch(v)) {
+    if (v.length > 254 || !RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$').hasMatch(v)) {
       return 'Зөв имэйл хаяг оруулна уу';
     }
     return null;
@@ -30,8 +30,10 @@ abstract class Validators {
     final text = value?.trim() ?? '';
     if (text.isEmpty) return null;
     final amount = int.tryParse(text);
-    if (!RegExp(r'^[0-9]+$').hasMatch(text) || amount == null ||
-        amount < 0 || amount > 2147483647) {
+    if (!RegExp(r'^[0-9]+$').hasMatch(text) ||
+        amount == null ||
+        amount < 0 ||
+        amount > 2147483647) {
       return 'Орох үнийг 0 буюу эерэг бүхэл тоогоор оруулна уу';
     }
     return null;

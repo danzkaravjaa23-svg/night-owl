@@ -1,0 +1,433 @@
+// OFFLINE VISUAL REVIEW ONLY. Fictional profiles/venues/events; bundled images.
+// The widget-test HTTP override blocks all real network. Maps are captured in
+// list mode; map/discovery scroll behavior is covered by explore_discovery_test.
+import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
+import 'dart:typed_data';
+import 'dart:ui' as ui;
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:file/local.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_cache_manager/flutter_cache_manager.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:night_owl_ub/core/widgets/authorized_media.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:night_owl_ub/core/constants/avatar_presets.dart';
+import 'package:night_owl_ub/core/theme/app_colors.dart';
+import 'package:night_owl_ub/core/theme/app_fonts.dart';
+import 'package:night_owl_ub/core/theme/app_theme.dart';
+import 'package:night_owl_ub/core/theme/theme_provider.dart';
+import 'package:night_owl_ub/features/auth/providers/auth_provider.dart';
+import 'package:night_owl_ub/features/events/providers/event_provider.dart';
+import 'package:night_owl_ub/features/events/providers/featured_events_provider.dart';
+import 'package:night_owl_ub/features/feed/providers/feed_provider.dart';
+import 'package:night_owl_ub/features/feed/providers/stories_provider.dart';
+import 'package:night_owl_ub/features/feed/providers/saved_provider.dart';
+import 'package:night_owl_ub/features/feed/providers/reels_provider.dart';
+import 'package:night_owl_ub/features/feed/screens/feed_screen.dart';
+import 'package:night_owl_ub/features/map/providers/venue_provider.dart';
+import 'package:night_owl_ub/features/map/screens/explore_screen.dart';
+import 'package:night_owl_ub/features/notifications/providers/notification_provider.dart';
+import 'package:night_owl_ub/features/shell/main_shell.dart';
+import 'package:night_owl_ub/models/post.dart';
+import 'package:night_owl_ub/models/story.dart';
+import 'package:night_owl_ub/models/user_profile.dart';
+import 'package:night_owl_ub/models/venue.dart';
+
+const photoUrl = 'https://fixture.images.test/city.png';
+const previewOwner = '00000000-0000-4000-8000-000000000001';
+
+// CachedNetworkImage uses this local file only: no cache database or downloads.
+class _LocalImages extends BaseCacheManager {
+  @override
+  Stream<FileResponse> getFileStream(String url,
+      {String? key,
+      Map<String, String>? headers,
+      bool withProgress = false}) async* {
+    if (url != photoUrl) throw StateError('Unexpected image fixture: $url');
+    yield FileInfo(
+        const LocalFileSystem().file('assets/images/tonight_city.png'),
+        FileSource.Cache,
+        DateTime(2099),
+        url);
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => null;
+}
+
+// The map venue's Image.network receives only the same bundled city image.
+class _LocalHttp implements HttpClient {
+  final Uint8List bytes;
+  _LocalHttp(this.bytes);
+  @override
+  Future<HttpClientRequest> getUrl(Uri url) async {
+    if (url.toString() != photoUrl) throw StateError('Unexpected image URL');
+    return _LocalRequest(bytes);
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => null;
+}
+
+class _LocalRequest implements HttpClientRequest {
+  final Uint8List bytes;
+  _LocalRequest(this.bytes);
+  @override
+  HttpHeaders get headers => _LocalHeaders();
+  @override
+  Future<HttpClientResponse> close() async => _LocalResponse(bytes);
+  @override
+  dynamic noSuchMethod(Invocation invocation) => null;
+}
+
+class _LocalHeaders implements HttpHeaders {
+  @override
+  void add(String name, Object value, {bool preserveHeaderCase = false}) {}
+  @override
+  dynamic noSuchMethod(Invocation invocation) => null;
+}
+
+class _LocalResponse extends Stream<List<int>> implements HttpClientResponse {
+  final Uint8List bytes;
+  _LocalResponse(this.bytes);
+  @override
+  int get statusCode => 200;
+  @override
+  int get contentLength => bytes.length;
+  @override
+  HttpClientResponseCompressionState get compressionState =>
+      HttpClientResponseCompressionState.notCompressed;
+  @override
+  StreamSubscription<List<int>> listen(void Function(List<int>)? onData,
+          {Function? onError, void Function()? onDone, bool? cancelOnError}) =>
+      Stream<List<int>>.value(bytes).listen(onData,
+          onError: onError, onDone: onDone, cancelOnError: cancelOnError);
+  @override
+  dynamic noSuchMethod(Invocation invocation) => null;
+}
+
+class _FeedFixture extends FeedNotifier {
+  _FeedFixture();
+  @override
+  Future<void> loadFeed({bool refresh = false}) async {
+    hasMore.value = false;
+    state = AsyncValue.data([
+      for (var i = 0; i < 2; i++)
+        Post.fromJson({
+          'id': 'preview-post-$i',
+          'user_id': 'preview-author-$i',
+          'caption': i == 0
+              ? 'Хотын гэрэл, дотнын хүмүүс. Ийм л үдэш гоё.'
+              : 'Өнөө оройн жижигхэн дурсамж.',
+          'media_url': photoUrl,
+          'created_at': DateTime.now()
+              .subtract(Duration(hours: i + 1))
+              .toUtc()
+              .toIso8601String(),
+          'likes_count': 128,
+          'comments_count': 12,
+          'profiles': {
+            'id': 'preview-author-$i',
+            'username': ['anuka', 'temuulen'][i],
+            'avatar_url': NightOwlAvatars.all[i].value,
+            'is_verified': i == 0
+          },
+          'venue_ref': 'preview-rooftop',
+          'venue_catalog': {'name': 'Blue Hour Rooftop'},
+        }),
+    ]);
+  }
+}
+
+class _CaptureApp extends ConsumerWidget {
+  final GoRouter router;
+  final GlobalKey capture;
+  final double scale;
+  const _CaptureApp(this.router, this.capture, this.scale);
+  @override
+  Widget build(BuildContext context, WidgetRef ref) => MaterialApp.router(
+        debugShowCheckedModeBanner: false,
+        theme: AppTheme.light,
+        darkTheme: AppTheme.dark,
+        themeMode: ref.watch(themeModeProvider),
+        routerConfig: router,
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(context).copyWith(
+              disableAnimations: true, textScaler: TextScaler.linear(scale)),
+          child: RepaintBoundary(
+              key: capture,
+              child: ColoredBox(
+                  color: AppColors.bgBase,
+                  child: Column(children: [
+                    Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 5),
+                        child: Text('ЖИШЭЭ ӨГӨГДӨЛ · ОФФЛАЙН ДИЗАЙН',
+                            style: AppTextStylesForFixture.style(context))),
+                    Expanded(child: child!),
+                  ]))),
+        ),
+      );
+}
+
+abstract class AppTextStylesForFixture {
+  static TextStyle style(BuildContext context) => GoogleFonts.inter(
+      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: .6),
+      fontSize: 9,
+      fontWeight: FontWeight.w600,
+      letterSpacing: 1,
+      decoration: TextDecoration.none);
+}
+
+void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+  late BuiltInMapCachingProvider mapCache;
+  setUpAll(() async {
+    mapCache = BuiltInMapCachingProvider.getOrCreateInstance(
+        cacheDirectory: 'build/audit/2026-11-03/visual-refresh/fixture-cache',
+        maxCacheSize: null,
+        readOnly: true);
+    final icons = FontLoader('MaterialIcons')
+      ..addFont(rootBundle.load('fonts/MaterialIcons-Regular.otf'));
+    await icons.load();
+  });
+  tearDownAll(() async => mapCache.destroy(deleteCache: true));
+  setUp(() async {
+    SharedPreferences.setMockInitialValues({});
+    final fixtureCache =
+        Directory('build/audit/2026-11-03/visual-refresh/fixture-cache');
+    await fixtureCache.create(recursive: true);
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(
+            const MethodChannel('plugins.flutter.io/path_provider'),
+            (call) async {
+      if (const {
+        'getTemporaryDirectory',
+        'getApplicationSupportDirectory',
+        'getApplicationCacheDirectory'
+      }.contains(call.method)) {
+        return fixtureCache.absolute.path;
+      }
+      throw MissingPluginException(
+          'Unexpected fixture path lookup: ${call.method}');
+    });
+    AppFonts.configure();
+    CachedNetworkImageProvider.defaultCacheManager = _LocalImages();
+    final bytes = await File('assets/images/tonight_city.png').readAsBytes();
+    debugNetworkImageHttpClientProvider = () => _LocalHttp(bytes);
+    await Supabase.initialize(
+        url: 'https://fixture.example.test',
+        anonKey: 'fixture-key',
+        debug: false,
+        authOptions: const FlutterAuthClientOptions(
+            autoRefreshToken: false,
+            detectSessionInUri: false,
+            localStorage: EmptyLocalStorage()),
+        httpClient: MockClient((request) async => http.Response(
+            jsonEncode([]), 200,
+            headers: {'content-type': 'application/json'}, request: request)));
+  });
+  tearDown(() async {
+    debugNetworkImageHttpClientProvider = null;
+    await Supabase.instance.dispose();
+    AppColors.isDarkMode = true;
+  });
+  for (final mode in [ThemeMode.dark, ThemeMode.light]) {
+    for (final screen in ['feed', 'explore-list', 'explore-discovery']) {
+      for (final narrow in [false, true]) {
+        testWidgets('$screen ${mode.name} ${narrow ? '320-large-text' : '390'}',
+            (tester) async {
+          SharedPreferences.setMockInitialValues({'theme_mode': mode.name});
+          tester.view.devicePixelRatio = 1;
+          tester.view.physicalSize =
+              Size(narrow ? 320 : 390, narrow ? 780 : 844);
+          addTearDown(tester.view.resetPhysicalSize);
+          addTearDown(tester.view.resetDevicePixelRatio);
+          final capture = GlobalKey();
+          final router = GoRouter(
+              initialLocation: screen == 'feed' ? '/feed' : '/explore',
+              routes: [
+                ShellRoute(
+                    builder: (_, __, child) => MainShell(child: child),
+                    routes: [
+                      GoRoute(
+                          path: '/feed',
+                          builder: (_, __) => const FeedScreen()),
+                      GoRoute(
+                          path: '/explore',
+                          builder: (_, __) => const ExploreScreen()),
+                    ]),
+              ]);
+          addTearDown(router.dispose);
+          // Decode bundled pixels and seed the exact keys used by the real
+          // feed/event cards before mounting them. No image HTTP request occurs.
+          await tester.runAsync(() async {
+            final asset = await rootBundle.load('assets/images/tonight_city.png');
+            for (final provider in <ImageProvider>[
+              const NetworkImage(photoUrl),
+              const CachedNetworkImageProvider(photoUrl),
+              ResizeImage.resizeIfNeeded(
+                  900, null, const CachedNetworkImageProvider(photoUrl)),
+              ResizeImage.resizeIfNeeded(
+                  1000, null, const CachedNetworkImageProvider(photoUrl)),
+            ]) {
+              final codec = await ui.instantiateImageCodec(
+                  asset.buffer.asUint8List(), targetWidth: 1000);
+              final frame = await codec.getNextFrame();
+              codec.dispose();
+              final key = await provider.obtainKey(ImageConfiguration.empty);
+              PaintingBinding.instance.imageCache.putIfAbsent(
+                  key,
+                  () => OneFrameImageStreamCompleter(
+                      Future.value(ImageInfo(image: frame.image))));
+            }
+          });
+          await tester.pumpWidget(ProviderScope(overrides: [
+            sessionUserIdProvider.overrideWithValue(previewOwner),
+            currentProfileProvider.overrideWith((_) async => UserProfile(
+                id: previewOwner,
+                username: 'oyu',
+                avatarUrl: NightOwlAvatars.all[1].value)),
+            feedProvider.overrideWith((_) => _FeedFixture()),
+            followingFeedProvider.overrideWith((_) => _FeedFixture()),
+            feedFollowingIdsProvider.overrideWith((_) async => {}),
+            storiesProvider.overrideWith((_) async => [
+                  for (var i = 0; i < 4; i++)
+                    StoryRing(
+                        userId: 'preview-author-$i',
+                        author: UserProfile(
+                            id: 'preview-author-$i',
+                            username: [
+                              'anuka',
+                              'temuulen',
+                              'saruul',
+                              'nomio'
+                            ][i],
+                            avatarUrl: NightOwlAvatars.all[i].value),
+                        stories: [
+                          Story(
+                              id: 'preview-story-$i',
+                              userId: 'preview-author-$i',
+                              mediaUrl: photoUrl,
+                              expiresAt:
+                                  DateTime.now().add(const Duration(hours: 12)),
+                              createdAt: DateTime.now())
+                        ]),
+                ]),
+            savedPostIdsProvider.overrideWith((_) async => {}),
+            unreadNotifCountProvider.overrideWithValue(2),
+            upcomingEventsProvider.overrideWith((_) async => []),
+            featuredEventsProvider.overrideWith((_) async => [
+                  EventItem(
+                      id: 'preview-event',
+                      title: 'Намрын акустик үдэш',
+                      venueName: 'Blue Hour Rooftop',
+                      startsAt: DateTime.now().add(const Duration(days: 3)),
+                      coverUrl: photoUrl,
+                      attendeeCount: 24)
+                ]),
+            reelsProvider.overrideWith((_) async => []),
+            venuesProvider.overrideWith((_) async => [
+                  for (var i = 0; i < 3; i++)
+                    Venue(
+                        id: 'preview-venue-$i',
+                        name: [
+                          'Blue Hour Rooftop',
+                          'Nomad Jazz Room',
+                          'After Hours'
+                        ][i],
+                        type: ['lounge', 'jazz', 'cafe'][i],
+                        coverUrl: photoUrl,
+                        district: 'Сүхбаатар',
+                        address: 'Сүхбаатар дүүрэг · Жишээ газар',
+                        lat: 47.9185 + i * .002,
+                        lng: 106.917 + i * .002,
+                        communityEnabled: false,
+                        createdAt: DateTime(2026)),
+                ]),
+            venueCatalogStatusProvider
+                .overrideWith((_) => const VenueCatalogStatus()),
+          ], child: _CaptureApp(router, capture, narrow ? 1.5 : 1)));
+          await tester.runAsync(() async {
+            await GoogleFonts.pendingFonts();
+            final context = capture.currentContext!;
+            for (final path in [
+              'assets/icons/night_owl_mark.png',
+              'assets/images/tonight_city.png',
+              ...NightOwlAvatars.all.map((preset) => preset.assetPath)
+            ]) {
+              await precacheImage(AssetImage(path), context)
+                  .timeout(const Duration(seconds: 5));
+            }
+            await Future<void>.delayed(const Duration(milliseconds: 120));
+          });
+          await tester.pumpAndSettle();
+          if (screen.startsWith('explore')) {
+            await tester.tap(find.byTooltip('Бүх газрыг жагсаалтаар харах'));
+            await tester.pumpAndSettle();
+            if (screen == 'explore-discovery') {
+              await tester.ensureVisible(find.text('Эвент, богино видео үзэх'));
+              await tester.tap(find.text('Эвент, богино видео үзэх'));
+              await tester.pumpAndSettle();
+            }
+          }
+          // Warm the exact providers mounted by production Image widgets,
+          // including ResizeImage(CachedNetworkImageProvider, width: 900).
+          // Generic photo precaching alone does not warm those distinct keys.
+          for (var pass = 0; pass < 2; pass++) {
+            final images = tester
+                .widgetList<Image>(find.byType(Image))
+                .map((image) => image.image)
+                .toList();
+            await tester.runAsync(() async {
+              for (final image in images) {
+                Object? failure;
+                await precacheImage(image, capture.currentContext!,
+                    onError: (error, stack) => failure = error)
+                    .timeout(const Duration(seconds: 5));
+                if (failure != null) throw failure!;
+              }
+            });
+            await tester.pumpAndSettle();
+          }
+          if (screen == 'feed' || screen == 'explore-discovery') {
+            final media = find.byType(AuthorizedImage).first;
+            expect(
+                find.descendant(
+                    of: media,
+                    matching: find.byWidgetPredicate((widget) =>
+                        widget is RawImage && widget.image != null)),
+                findsOneWidget,
+                reason:
+                    'The actual resized photo must be decoded before capture.');
+          }
+          expect(tester.takeException(), isNull);
+          await tester.runAsync(() async {
+            final boundary = capture.currentContext!.findRenderObject()!
+                as RenderRepaintBoundary;
+            final image = await boundary.toImage(pixelRatio: 2);
+            final bytes =
+                await image.toByteData(format: ui.ImageByteFormat.png);
+            await File(
+                    'build/audit/2026-11-03/visual-refresh/$screen-${mode.name}${narrow ? '-320-large-text' : ''}.png')
+                .writeAsBytes(bytes!.buffer.asUint8List());
+            image.dispose();
+          });
+          await tester.pumpWidget(const SizedBox());
+          await tester.pumpAndSettle();
+          debugNetworkImageHttpClientProvider = null;
+        });
+      }
+    }
+  }
+}

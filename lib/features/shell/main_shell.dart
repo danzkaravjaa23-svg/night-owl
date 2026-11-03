@@ -23,25 +23,53 @@ class MainShell extends ConsumerStatefulWidget {
   ConsumerState<MainShell> createState() => _MainShellState();
 }
 
-class _MainShellState extends ConsumerState<MainShell> {
+class _MainShellState extends ConsumerState<MainShell>
+    with WidgetsBindingObserver {
   Timer? _presenceTimer;
+  bool _foreground = true;
+  bool _beating = false;
 
   @override
   void initState() {
     super.initState();
-    // Online статус — минут тутам last_seen_at шинэчилнэ (heartbeat)
-    _beat();
+    WidgetsBinding.instance.addObserver(this);
+    final lifecycle = WidgetsBinding.instance.lifecycleState;
+    _foreground = lifecycle == null || lifecycle == AppLifecycleState.resumed;
+    _startPresence();
+  }
+
+  void _startPresence() {
+    _presenceTimer?.cancel();
+    if (!_foreground) return;
+    unawaited(_beat());
     _presenceTimer =
-        Timer.periodic(const Duration(seconds: 60), (_) => _beat());
+        Timer.periodic(const Duration(seconds: 60), (_) => unawaited(_beat()));
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    _foreground = state == AppLifecycleState.resumed;
+    if (_foreground) {
+      _startPresence();
+    } else {
+      _presenceTimer?.cancel();
+      _presenceTimer = null;
+    }
   }
 
   Future<void> _beat() async {
+    if (!mounted || !_foreground || _beating) return;
     final me = SupabaseService.currentUser?.id;
     if (me == null) return;
+    _beating = true;
     try {
       final notifier = ref.read(userSettingsProvider.notifier);
       await notifier.ready;
-      if (!mounted || !ref.read(userSettingsProvider).activity) return;
+      if (!mounted ||
+          !_foreground ||
+          !ref.read(userSettingsProvider).activity) {
+        return;
+      }
       if (SupabaseService.currentUser?.id != me) return;
       await SupabaseService.client.from('profiles').update({
         'last_seen_at': DateTime.now().toUtc().toIso8601String()
@@ -54,12 +82,17 @@ class _MainShellState extends ConsumerState<MainShell> {
             .from('profiles')
             .update({'last_seen_at': null}).eq('id', me);
       }
-    } catch (_) {}
+    } catch (_) {
+      // Presence is optional and must never interrupt navigation.
+    } finally {
+      _beating = false;
+    }
   }
 
   @override
   void dispose() {
     _presenceTimer?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
 
@@ -142,7 +175,10 @@ class _BottomNav extends ConsumerWidget {
             child: ClipRRect(
                 borderRadius: BorderRadius.circular(36),
                 child: SizedBox(
-                  height: 72,
+                  height: 72 +
+                      (MediaQuery.textScalerOf(context).scale(12) - 12)
+                              .clamp(0, 24) *
+                          3,
                   child: Stack(children: [
                     Positioned.fill(
                       child: NavigationSpotlight(selectedIndex: index),
@@ -338,81 +374,62 @@ class _NavItem extends StatelessWidget {
                               ),
                             ))),
                         const SizedBox(height: 2),
-                        FittedBox(
-                            fit: BoxFit.scaleDown,
-                            child: Text(label,
-                                style: const TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w600))),
+                        Text(label,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                                fontSize: 12,
+                                height: 1.2,
+                                fontWeight: FontWeight.w600)),
                       ]),
                     )))),
       );
 }
 
-class _CreateFab extends StatefulWidget {
+class _CreateFab extends StatelessWidget {
   final VoidCallback onTap;
   const _CreateFab({required this.onTap});
 
   @override
-  State<_CreateFab> createState() => _CreateFabState();
-}
-
-class _CreateFabState extends State<_CreateFab> {
-  @override
-  Widget build(BuildContext context) {
-    return Semantics(
-        button: true,
-        label: 'Шинээр үүсгэх',
-        child: Tooltip(
-            message: 'Шинээр үүсгэх',
-            child: MouseRegion(
-              cursor: SystemMouseCursors.click,
-              child: GestureDetector(
-                onTap: widget.onTap,
-                child: PressFeedback(
-                  pressedScale: .94,
-                  child: ActionSheen(
-                    radius: 48,
-                    child: Container(
-                      width: 48,
-                      height: 48,
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                            colors: [
-                              Color(0xFF9879EC),
-                              Color(0xFF7654D6),
-                              Color(0xFF503294)
-                            ]),
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                            color:
-                                const Color(0xFFBCA6F8).withValues(alpha: .5)),
-                        boxShadow: [
-                          const BoxShadow(
-                              color: Color(0xFF493079),
-                              offset: Offset(0, 3),
-                              blurRadius: 0),
-                          BoxShadow(
-                              color: AppColors.accentStart.withValues(
-                                  alpha: AppColors.isDarkMode ? .32 : .14),
-                              offset: const Offset(0, 5),
-                              blurRadius: 22),
-                        ],
-                      ),
-                      child: const Center(
-                          child: SculptedIcon(Icons.add_rounded,
-                              color: Colors.white,
-                              size: 28,
-                              onDark: true,
-                              dimensional: true)),
-                    ),
-                  ),
-                ),
+  Widget build(BuildContext context) => PressFeedback(
+        pressedScale: .94,
+        child: ActionSheen(
+          radius: 48,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Color(0xFF9879EC),
+                  Color(0xFF7654D6),
+                  Color(0xFF503294)
+                ],
               ),
-            )));
-  }
+              shape: BoxShape.circle,
+              border: Border.all(
+                  color: const Color(0xFFBCA6F8).withValues(alpha: .5)),
+              boxShadow: [
+                const BoxShadow(color: Color(0xFF493079), offset: Offset(0, 3)),
+                BoxShadow(
+                    color: AppColors.accentStart
+                        .withValues(alpha: AppColors.isDarkMode ? .24 : .12),
+                    offset: const Offset(0, 5),
+                    blurRadius: 18),
+              ],
+            ),
+            child: IconButton(
+              onPressed: onTap,
+              tooltip: 'Шинээр үүсгэх',
+              iconSize: 28,
+              style: IconButton.styleFrom(
+                  fixedSize: const Size(48, 48), foregroundColor: Colors.white),
+              icon: const Icon(Icons.add_rounded, color: Colors.white),
+            ),
+          ),
+        ),
+      );
 }
 
 class _CreateOption extends StatelessWidget {
@@ -431,45 +448,49 @@ class _CreateOption extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) => MouseRegion(
-        cursor: SystemMouseCursors.click,
-        child: GestureDetector(
-          onTap: onTap,
-          child: PressFeedback(
-              pressedScale: .985,
-              child: Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: AppColors.bgSurface,
-                  borderRadius: BorderRadius.circular(24),
-                  border: Border.all(color: AppColors.hairline),
-                ),
-                child: Row(children: [
-                  Container(
-                    width: 52,
-                    height: 52,
-                    decoration: BoxDecoration(
-                        gradient: gradient,
-                        borderRadius: BorderRadius.circular(16)),
-                    child: Center(
-                        child: SculptedIcon(icon,
-                            color: Colors.white, size: 26, onDark: true)),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                      child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                        Text(label, style: AppTextStyles.labelLg),
-                        const SizedBox(height: 3),
-                        Text(subtitle,
-                            style: AppTextStyles.bodyXs
-                                .copyWith(color: AppColors.textSecondary)),
-                      ])),
-                  Icon(Icons.chevron_right, color: AppColors.textTertiary),
-                ]),
-              )),
+  Widget build(BuildContext context) => TextButton(
+        onPressed: onTap,
+        style: TextButton.styleFrom(
+          padding: EdgeInsets.zero,
+          backgroundColor: AppColors.bgSurface,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        ).copyWith(
+          side: WidgetStateProperty.resolveWith((states) => BorderSide(
+              color: states.contains(WidgetState.focused)
+                  ? AppColors.neonCyan
+                  : AppColors.hairline,
+              width: states.contains(WidgetState.focused) ? 2 : 1)),
         ),
+        child: PressFeedback(
+            pressedScale: .985,
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(children: [
+                Container(
+                  width: 52,
+                  height: 52,
+                  decoration: BoxDecoration(
+                      gradient: gradient,
+                      borderRadius: BorderRadius.circular(16)),
+                  child: Center(
+                      child: SculptedIcon(icon,
+                          color: Colors.white, size: 26, onDark: true)),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                    child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                      Text(label, style: AppTextStyles.labelLg),
+                      const SizedBox(height: 3),
+                      Text(subtitle,
+                          style: AppTextStyles.bodyXs
+                              .copyWith(color: AppColors.textSecondary)),
+                    ])),
+                Icon(Icons.chevron_right, color: AppColors.textTertiary),
+              ]),
+            )),
       );
 }
 
@@ -487,41 +508,63 @@ class _DesktopNavigation extends StatelessWidget {
       (AppRoutes.saved, Icons.bookmark_border_rounded, 'Хадгалсан'),
     ];
     return SafeArea(
-        child: Padding(
-            padding: const EdgeInsets.all(18),
-            child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const SizedBox(height: 16),
-                  const NightOwlBrand(size: 26),
-                  const SizedBox(height: 32),
-                  for (final destination in destinations)
-                    Padding(
-                        padding: const EdgeInsets.only(bottom: 8),
-                        child: ListTile(
-                            selected: location == destination.$1,
-                            selectedColor: AppColors.silver,
-                            selectedTileColor:
-                                AppColors.silver.withValues(alpha: 0.12),
-                            shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(14)),
-                            leading: SculptedIcon(destination.$2,
-                                size: 22, active: location == destination.$1),
-                            title: Text(destination.$3,
-                                style: const TextStyle(fontSize: 13)),
-                            contentPadding:
-                                const EdgeInsets.symmetric(horizontal: 12),
-                            onTap: () => context.go(destination.$1))),
-                  const SizedBox(height: 16),
-                  FilledButton.icon(
-                      onPressed: () => _BottomNav()._showCreateSheet(context),
-                      icon: const SculptedIcon(Icons.add_rounded,
-                          size: 18, color: Colors.white, onDark: true),
-                      label: const Text('Нийтлэх')),
-                  const Spacer(),
-                  Text('УЛААНБААТАР\nAFTER HOURS',
-                      style: AppTextStyles.labelSm),
-                  const SizedBox(height: 24),
-                ])));
+        child: LayoutBuilder(
+            builder: (context, constraints) => SingleChildScrollView(
+                child: ConstrainedBox(
+                    constraints:
+                        BoxConstraints(minHeight: constraints.maxHeight),
+                    child: IntrinsicHeight(
+                        child: Padding(
+                            padding: const EdgeInsets.all(18),
+                            child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  const SizedBox(height: 16),
+                                  const FittedBox(
+                                      fit: BoxFit.scaleDown,
+                                      alignment: Alignment.centerLeft,
+                                      child: NightOwlBrand(size: 26)),
+                                  const SizedBox(height: 32),
+                                  for (final destination in destinations)
+                                    Padding(
+                                        padding:
+                                            const EdgeInsets.only(bottom: 8),
+                                        child: ListTile(
+                                            selected:
+                                                location == destination.$1,
+                                            selectedColor: AppColors.silver,
+                                            selectedTileColor: AppColors.silver
+                                                .withValues(alpha: 0.12),
+                                            shape: RoundedRectangleBorder(
+                                                borderRadius:
+                                                    BorderRadius.circular(14)),
+                                            leading: SculptedIcon(
+                                                destination.$2,
+                                                size: 22,
+                                                active:
+                                                    location == destination.$1),
+                                            title: Text(destination.$3,
+                                                style: const TextStyle(
+                                                    fontSize: 13)),
+                                            contentPadding:
+                                                const EdgeInsets.symmetric(
+                                                    horizontal: 12),
+                                            onTap: () =>
+                                                context.go(destination.$1))),
+                                  const SizedBox(height: 16),
+                                  FilledButton.icon(
+                                      onPressed: () => _BottomNav()
+                                          ._showCreateSheet(context),
+                                      icon: const SculptedIcon(
+                                          Icons.add_rounded,
+                                          size: 18,
+                                          color: Colors.white,
+                                          onDark: true),
+                                      label: const Text('Нийтлэх')),
+                                  const Spacer(),
+                                  Text('УЛААНБААТАР\nAFTER HOURS',
+                                      style: AppTextStyles.labelSm),
+                                  const SizedBox(height: 24),
+                                ])))))));
   }
 }

@@ -67,6 +67,28 @@ void main() {
     });
   }
 
+  testWidgets('guest can open public places without creating an account',
+      (tester) async {
+    expect(AppRoutes.isPublic(AppRoutes.explore), isTrue);
+    expect(AppRoutes.isPublic(AppRoutes.profile), isFalse);
+    expect(AppRoutes.isPublic(AppRoutes.dmList), isFalse);
+    final router = GoRouter(initialLocation: AppRoutes.authLanding, routes: [
+      GoRoute(
+          path: AppRoutes.authLanding,
+          builder: (_, __) => const AuthLandingScreen()),
+      GoRoute(
+          path: AppRoutes.explore,
+          builder: (_, __) => const Scaffold(body: Text('Public places'))),
+    ]);
+    await pumpIntro(tester, router, Brightness.light);
+    final action = find.text('Бүртгэлгүйгээр газрууд үзэх');
+    await tester.ensureVisible(action);
+    await tester.tap(action);
+    await tester.pumpAndSettle();
+    expect(find.text('Public places'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   GoRouter onboardingRouter(int slide) => GoRouter(
           initialLocation: '${AppRoutes.onboarding}?slide=$slide',
           routes: [

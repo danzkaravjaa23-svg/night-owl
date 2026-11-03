@@ -1,7 +1,9 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
+import 'story_video_status.dart';
 
 const _kTmpPrefix = 'nightowl_story_';
 int _tmpCounter = 0;
@@ -16,7 +18,8 @@ String _tmpDirPath() {
   return p.endsWith(Platform.pathSeparator) ? p.substring(0, p.length - 1) : p;
 }
 
-String _extFor(String mime) => switch (mime.split(';').first.trim().toLowerCase()) {
+String _extFor(String mime) =>
+    switch (mime.split(';').first.trim().toLowerCase()) {
       'video/quicktime' => '.mov',
       'video/webm' => '.webm',
       'video/x-matroska' => '.mkv',
@@ -104,6 +107,7 @@ class StoryVideoView extends StatefulWidget {
   final ValueNotifier<double>? progress;
   final ValueChanged<double>? onDuration;
   final VoidCallback? onEnded;
+  final VoidCallback? onRetry;
   const StoryVideoView({
     super.key,
     required this.url,
@@ -115,6 +119,7 @@ class StoryVideoView extends StatefulWidget {
     this.progress,
     this.onDuration,
     this.onEnded,
+    this.onRetry,
   });
 
   @override
@@ -124,6 +129,8 @@ class StoryVideoView extends StatefulWidget {
 class _StoryVideoViewState extends State<StoryVideoView> {
   VideoPlayerController? _ctrl;
   bool _ready = false;
+  bool _failed = false;
+  Timer? _loadTimer;
   bool _durationSent = false;
   bool _endedSent = false;
 
@@ -155,11 +162,17 @@ class _StoryVideoViewState extends State<StoryVideoView> {
 
   void _open() {
     _ready = false;
+    _failed = false;
+    _loadTimer?.cancel();
     _durationSent = false;
     _endedSent = false;
     final c = _controllerFor(widget.url);
-    if (c == null) return;
+    if (c == null) {
+      _failed = true;
+      return;
+    }
     _ctrl = c;
+    _loadTimer = Timer(const Duration(seconds: 15), () => _fail(c));
     // Initialize-ээс өмнөх тохиргоог controller хадгалж, бэлэн болмогц хэрэглэнэ
     _quiet(c.setLooping(widget.loop));
     _quiet(c.setVolume(!widget.active || _isMuted ? 0 : 1));
@@ -167,10 +180,29 @@ class _StoryVideoViewState extends State<StoryVideoView> {
     c.addListener(_onTick);
     c.initialize().then<void>((_) {
       if (mounted && _ctrl == c) _onTick();
-    }, onError: (Object _) {});
+    }, onError: (Object _) => _fail(c));
+  }
+
+  void _fail(VideoPlayerController c) {
+    if (!mounted || _ctrl != c || _failed) return;
+    _loadTimer?.cancel();
+    setState(() => _failed = true);
+    // An errored controller is no longer initialized, so pause() alone may
+    // never reach the platform. Release the decoder before offering retry.
+    _close();
+  }
+
+  void _retry() {
+    if (widget.onRetry != null) {
+      widget.onRetry!();
+    } else {
+      _close();
+      setState(_open);
+    }
   }
 
   void _close() {
+    _loadTimer?.cancel();
     final c = _ctrl;
     _ctrl = null;
     if (c == null) return;
@@ -183,6 +215,15 @@ class _StoryVideoViewState extends State<StoryVideoView> {
     final c = _ctrl;
     if (c == null || !mounted) return;
     final v = c.value;
+    if (v.hasError) {
+      _fail(c);
+      return;
+    }
+    if (_failed) {
+      if (v.isPlaying) _quiet(c.pause());
+      return;
+    }
+    if (v.isInitialized) _loadTimer?.cancel();
     // Хойшлогдсон play() (seek await) дараа ирсэн pause-ийг дарахаас сэргийлнэ
     if (v.isPlaying && (!widget.active || _isPausedByUser)) _quiet(c.pause());
     if (v.isInitialized != _ready) setState(() => _ready = v.isInitialized);
@@ -215,7 +256,7 @@ class _StoryVideoViewState extends State<StoryVideoView> {
 
   void _onPausedChanged() {
     final c = _ctrl;
-    if (c == null) return;
+    if (c == null || _failed) return;
     if (_isPausedByUser) {
       _quiet(c.pause());
     } else if (widget.active) {
@@ -225,7 +266,7 @@ class _StoryVideoViewState extends State<StoryVideoView> {
 
   void _onMutedChanged() {
     final c = _ctrl;
-    if (c == null || !widget.active) return;
+    if (c == null || !widget.active || _failed) return;
     _quiet(c.setVolume(_isMuted ? 0 : 1));
     if (!_isMuted && !c.value.isPlaying && !_isPausedByUser) _quiet(c.play());
   }
@@ -287,7 +328,10 @@ class _StoryVideoViewState extends State<StoryVideoView> {
       height: widget.height,
       width: double.infinity,
       color: Colors.black,
-      child: SizedBox.expand(child: video),
+      child: SizedBox.expand(
+          child: _failed || !_ready
+              ? StoryVideoStatus(failed: _failed, onRetry: _retry)
+              : video),
     );
   }
 }

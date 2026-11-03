@@ -1,35 +1,22 @@
--- ═══════════════════════════════════════════════════════════════════
--- NightOwl UB — Пост устгахад storage файл цэвэрлэх
--- Пост устахад media файлууд storage-д үлдэж orphan болж зардал нэмдэг.
--- Энэ trigger нь posts устахад posts bucket-аас холбогдох объектуудыг
--- устгана. media_url public URL дотор '/posts/' дараах хэсэг = объектын нэр.
--- SECURITY DEFINER — storage.objects дээр RLS алгасч устгана.
--- ═══════════════════════════════════════════════════════════════════
+-- Retired unsafe metadata cleanup. Never DELETE storage.objects from a trigger:
+-- it does not remove the backing blob, and a post's user-controlled media_url
+-- must never authorize removal of another account's object.
+-- https://supabase.com/docs/guides/storage/schema/design
+-- Real erasure must use the Storage API and an independently verified owner.
+begin;
 
+-- Keep a harmless compatibility function for any legacy trigger aliases.
 create or replace function public.cleanup_post_media()
-returns trigger language plpgsql security definer as $$
-declare
-  u text;
-  objname text;
+returns trigger language plpgsql security invoker set search_path = '' as $$
 begin
-  for u in
-    select unnest(coalesce(old.media_urls, array[old.media_url]))
-  loop
-    if u is null or u = '' then
-      continue;
-    end if;
-    objname := split_part(u, '/posts/', 2);
-    if objname <> '' then
-      delete from storage.objects
-        where bucket_id = 'posts' and name = objname;
-    end if;
-  end loop;
   return old;
-end $$;
-
+end;
+$$;
+revoke all on function public.cleanup_post_media() from public, anon, authenticated;
 drop trigger if exists trg_cleanup_post_media on public.posts;
-create trigger trg_cleanup_post_media
-  after delete on public.posts
-  for each row execute function public.cleanup_post_media();
 
+-- Ordinary post deletion no longer pretends to clean up physical files. A
+-- verified Storage API cleanup worker remains required for individual posts.
+-- The account-deletion handler independently lists the caller's own prefixes.
 notify pgrst, 'reload schema';
+commit;

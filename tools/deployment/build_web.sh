@@ -19,3 +19,22 @@ flutter build web --release --dart-define=DEVICE_PREVIEW=false \
 mkdir -p build/web/admin
 cp build/client-bundle/web-admin/index.html build/web/admin/index.html
 cp build/client-bundle/web-admin/README.md build/web/admin/README.md
+# Finder metadata is not a public web asset.
+find build/web -type f -name '.DS_Store' -delete
+# Public release identity lets deployment checks distinguish a fresh build from
+# an older cached app shell without exposing build credentials or local paths.
+python3 - <<'PY'
+import datetime
+import hashlib
+import json
+from pathlib import Path
+import subprocess
+
+root = Path('build/web')
+commit = subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip()
+(root / 'release.json').write_text(json.dumps({
+    'commit': commit,
+    'built_at': datetime.datetime.now(datetime.timezone.utc).isoformat(),
+    'main_dart_sha256': hashlib.sha256((root / 'main.dart.js').read_bytes()).hexdigest(),
+}, indent=2) + '\n')
+PY

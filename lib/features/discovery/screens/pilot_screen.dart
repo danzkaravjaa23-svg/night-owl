@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../admin/providers/admin_console_provider.dart';
 import '../services/discovery_service.dart';
 import '../widgets/discovery_back_button.dart';
 import 'discovery_screen.dart';
@@ -9,22 +11,47 @@ String cohortPercent(num count, num eligible) => eligible == 0
     ? 'Хугацаа болоогүй'
     : '${(count * 100 / eligible).toStringAsFixed(1)}% ($count/$eligible)';
 
-class PilotScreen extends StatefulWidget {
+class PilotScreen extends ConsumerStatefulWidget {
   const PilotScreen({super.key});
   @override
-  State<PilotScreen> createState() => _PilotScreenState();
+  ConsumerState<PilotScreen> createState() => _PilotScreenState();
 }
 
-class _PilotScreenState extends State<PilotScreen> {
+class _PilotScreenState extends ConsumerState<PilotScreen> {
   final _service = DiscoveryService();
   late Future<JsonRow> _data;
   late Future<List<JsonRow>> _candidates;
   String _kind = 'creator', _query = '';
   bool _busy = false;
   Timer? _debounce;
+  AdminConsoleAccess? _access;
+  String? _owner;
+  bool get _current =>
+      mounted &&
+      (_access?.session.isCurrent ?? (_owner != null && _owner == _service.me));
+
+  Future<JsonRow> _overview() async {
+    final access = _access;
+    if (access == null) return _service.pilot();
+    return Map<String, dynamic>.from(await access.service
+        .callRpc(access.session, 'get_pilot_overview', {}) as Map);
+  }
+
+  Future<List<JsonRow>> _searchCandidates() async {
+    final access = _access;
+    if (access == null) return _service.pilotCandidates(_kind, _query);
+    final rows = await access.service.callRpc(access.session,
+        'search_pilot_candidates', {'p_kind': _kind, 'p_query': _query});
+    return (rows as List)
+        .map((r) => Map<String, dynamic>.from(r as Map))
+        .toList();
+  }
+
   @override
   void initState() {
     super.initState();
+    _access = ref.read(adminConsoleAccessProvider);
+    _owner = _service.me;
     _reload();
   }
 
@@ -35,23 +62,29 @@ class _PilotScreenState extends State<PilotScreen> {
   }
 
   void _reload() {
-    _data = _service.pilot();
-    _candidates = _service.pilotCandidates(_kind, _query);
+    _data = _overview();
+    _candidates = _searchCandidates();
   }
 
   Future<void> _set(String id, bool value) async {
-    if (_busy) return;
+    if (_busy || !_current) return;
     setState(() => _busy = true);
     try {
-      await _service.pilotEntry(_kind, id, value);
-      if (mounted) setState(_reload);
+      final access = _access;
+      if (access == null) {
+        await _service.pilotEntry(_kind, id, value);
+      } else {
+        await access.service.callRpc(access.session, 'set_pilot_entry',
+            {'p_kind': _kind, 'p_id': id, 'p_enabled': value});
+      }
+      if (_current) setState(_reload);
     } catch (e) {
-      if (mounted) {
+      if (mounted && _current) {
         ScaffoldMessenger.of(context)
             .showSnackBar(SnackBar(content: Text(discoveryError(e))));
       }
     } finally {
-      if (mounted) setState(() => _busy = false);
+      if (_current) setState(() => _busy = false);
     }
   }
 
@@ -154,7 +187,7 @@ class _PilotScreenState extends State<PilotScreen> {
                             icon: const Icon(Icons.edit_outlined),
                             onPressed: () async {
                               await context.push(
-                                  '/place-review/${Uri.encodeComponent(row['id'] as String)}');
+                                  '/admin/place-review/${Uri.encodeComponent(row['id'] as String)}');
                               if (mounted) setState(_reload);
                             }),
                       IconButton(
@@ -172,9 +205,8 @@ class _PilotScreenState extends State<PilotScreen> {
                     _query = v;
                     _debounce?.cancel();
                     _debounce = Timer(const Duration(milliseconds: 300), () {
-                      if (mounted) {
-                        setState(() => _candidates =
-                            _service.pilotCandidates(_kind, _query));
+                      if (_current) {
+                        setState(() => _candidates = _searchCandidates());
                       }
                     });
                   }),
@@ -204,7 +236,7 @@ class _PilotScreenState extends State<PilotScreen> {
                                     icon: const Icon(Icons.edit_outlined),
                                     onPressed: () async {
                                       await context.push(
-                                          '/place-review/${Uri.encodeComponent(row['id'] as String)}');
+                                          '/admin/place-review/${Uri.encodeComponent(row['id'] as String)}');
                                       if (mounted) setState(_reload);
                                     }),
                               IconButton(

@@ -11,23 +11,29 @@ import 'package:image/image.dart' as image;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:night_owl_ub/core/constants/avatar_presets.dart';
+import 'package:night_owl_ub/core/constants/community_rules.dart';
 import 'package:night_owl_ub/core/theme/app_colors.dart';
 import 'package:night_owl_ub/core/widgets/app_avatar.dart';
 import 'package:night_owl_ub/core/widgets/gradient_button.dart';
 import 'package:night_owl_ub/features/auth/screens/setup_screen.dart';
+import 'package:night_owl_ub/features/auth/services/account_metadata_service.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   const me = 'fixture-user';
   var signInId = me;
   var setupComplete = true;
+  var communityAccepted = true;
   Map<String, dynamic>? profile;
   late List<Map<String, dynamic>> writes;
   late List<http.Request> uploads;
   var metadataWrites = 0;
+  late List<http.Request> metadataRequests;
+  late http.Client transport;
   var rejectLoad = false;
   Future<http.Response> Function(http.Request)? saveReply;
   Future<http.Response> Function(http.Request)? uploadReply;
+  Future<http.Response> Function(http.Request)? metadataReply;
   http.Response response(http.Request request, Object? body,
           [int status = 200]) =>
       http.Response(jsonEncode(body), status,
@@ -36,8 +42,28 @@ void main() {
         'id': id,
         'aud': 'authenticated',
         'created_at': '2026-10-07T00:00:00Z',
-        'user_metadata': {'setup_complete': setupComplete},
+        'user_metadata': {
+          'setup_complete': setupComplete,
+          if (communityAccepted)
+            ...CommunityRules.acceptance(DateTime.utc(2026, 11, 3)),
+        },
       };
+  http.Response metadataResponse(http.Request request) {
+    final authorization = request.headers.entries
+        .firstWhere((entry) => entry.key.toLowerCase() == 'authorization')
+        .value;
+    final payload = jsonDecode(utf8.decode(base64Url.decode(
+        base64Url.normalize(authorization.substring(7).split('.')[1])))) as Map;
+    final owner = user(payload['sub'] as String);
+    return response(request, {
+      ...owner,
+      'user_metadata': {
+        ...owner['user_metadata'] as Map<String, dynamic>,
+        ...(jsonDecode(request.body) as Map)['data'] as Map<String, dynamic>,
+      },
+    });
+  }
+
   Future<void> signIn([String id = me]) async {
     signInId = id;
     await Supabase.instance.client.auth.signInWithPassword(
@@ -58,9 +84,51 @@ void main() {
     writes = [];
     uploads = [];
     metadataWrites = 0;
+    metadataRequests = [];
     rejectLoad = false;
     saveReply = null;
     uploadReply = null;
+    metadataReply = null;
+    transport = MockClient((request) async {
+      final path = request.url.path;
+      if (path == '/auth/v1/token') {
+        final payload = base64Url
+            .encode(utf8.encode(jsonEncode({
+              'sub': signInId,
+              'exp': DateTime.now().millisecondsSinceEpoch ~/ 1000 + 3600,
+            })))
+            .replaceAll('=', '');
+        return response(request, {
+          'access_token': 'fixture.$payload.fixture',
+          'refresh_token': 'fixture-refresh',
+          'token_type': 'bearer',
+          'expires_in': 3600,
+          'user': user(signInId)
+        });
+      }
+      if (path == '/rest/v1/profiles' && request.method == 'GET') {
+        return rejectLoad
+            ? response(request, {'message': 'offline', 'code': 'XX000'}, 400)
+            : response(request, profile == null ? [] : [profile]);
+      }
+      if (path == '/rest/v1/profiles' && request.method == 'POST') {
+        writes.add(Map<String, dynamic>.from(jsonDecode(request.body) as Map));
+        if (saveReply != null) return await saveReply!(request);
+        return response(request, {});
+      }
+      if (path.startsWith('/storage/v1/object/avatars/')) {
+        uploads.add(request);
+        if (uploadReply != null) return await uploadReply!(request);
+        return response(request, {'Key': path});
+      }
+      if (path == '/auth/v1/user' && request.method == 'PUT') {
+        metadataWrites++;
+        metadataRequests.add(request);
+        if (metadataReply != null) return await metadataReply!(request);
+        return metadataResponse(request);
+      }
+      return response(request, []);
+    });
     await Supabase.initialize(
         url: 'https://example.test',
         anonKey: 'fixture-public-key',
@@ -69,51 +137,12 @@ void main() {
             autoRefreshToken: false,
             detectSessionInUri: false,
             localStorage: EmptyLocalStorage()),
-        httpClient: MockClient((request) async {
-          final path = request.url.path;
-          if (path == '/auth/v1/token') {
-            final payload = base64Url
-                .encode(utf8.encode(jsonEncode({
-                  'sub': signInId,
-                  'exp': DateTime.now().millisecondsSinceEpoch ~/ 1000 + 3600,
-                })))
-                .replaceAll('=', '');
-            return response(request, {
-              'access_token': 'fixture.$payload.fixture',
-              'refresh_token': 'fixture-refresh',
-              'token_type': 'bearer',
-              'expires_in': 3600,
-              'user': user(signInId)
-            });
-          }
-          if (path == '/rest/v1/profiles' && request.method == 'GET') {
-            return rejectLoad
-                ? response(
-                    request, {'message': 'offline', 'code': 'XX000'}, 400)
-                : response(request, profile == null ? [] : [profile]);
-          }
-          if (path == '/rest/v1/profiles' && request.method == 'POST') {
-            writes.add(
-                Map<String, dynamic>.from(jsonDecode(request.body) as Map));
-            if (saveReply != null) return await saveReply!(request);
-            return response(request, {});
-          }
-          if (path.startsWith('/storage/v1/object/avatars/')) {
-            uploads.add(request);
-            if (uploadReply != null) return await uploadReply!(request);
-            return response(request, {'Key': path});
-          }
-          if (path == '/auth/v1/user' && request.method == 'PUT') {
-            metadataWrites++;
-            setupComplete = true;
-            return response(request, user(signInId));
-          }
-          return response(request, []);
-        }));
+        httpClient: transport);
   });
   setUp(() async {
     signInId = me;
     setupComplete = true;
+    communityAccepted = true;
     profile = {
       'id': me,
       'username': 'fixture_user',
@@ -125,9 +154,11 @@ void main() {
     writes = [];
     uploads = [];
     metadataWrites = 0;
+    metadataRequests = [];
     rejectLoad = false;
     saveReply = null;
     uploadReply = null;
+    metadataReply = null;
     await signIn();
   });
   tearDown(() => AppColors.isDarkMode = true);
@@ -137,9 +168,10 @@ void main() {
       {bool edit = true,
       Future<Uint8List?> Function()? picker,
       double width = 390,
+      double height = 1000,
       double textScale = 1,
       bool dark = true}) async {
-    tester.view.physicalSize = Size(width, 1000);
+    tester.view.physicalSize = Size(width, height);
     tester.view.devicePixelRatio = 1;
     AppColors.isDarkMode = dark;
     addTearDown(() {
@@ -149,8 +181,11 @@ void main() {
     final router = GoRouter(initialLocation: '/setup', routes: [
       GoRoute(
           path: '/setup',
-          builder: (_, __) =>
-              SetupScreen(forceEdit: edit, avatarPicker: picker)),
+          builder: (_, __) => SetupScreen(
+              forceEdit: edit,
+              avatarPicker: picker,
+              metadataService: AccountMetadataService(
+                  client: Supabase.instance.client, httpClient: transport))),
       GoRoute(
           path: '/profile',
           builder: (_, __) =>
@@ -195,10 +230,28 @@ void main() {
   }
 
   Future<void> save(WidgetTester tester) async {
+    FocusManager.instance.primaryFocus?.unfocus();
+    await tester.pump();
     final target = find.byKey(const ValueKey('setup-save'));
     await tester.ensureVisible(target);
     await tester.pumpAndSettle();
     await tester.tap(target);
+    await tester.pump();
+  }
+
+  Future<void> settleSave(WidgetTester tester) async {
+    await tester.pumpAndSettle();
+    // The shared auth client was initialized outside the widget's FakeAsync
+    // zone. Finish its stream cancellation before asserting route completion.
+    await tester.runAsync(() => Future<void>.delayed(Duration.zero));
+    await tester.pumpAndSettle();
+  }
+
+  Future<void> agree(WidgetTester tester) async {
+    final checkbox = find.byKey(const ValueKey('setup-community-agreement'));
+    await tester.ensureVisible(checkbox);
+    await tester.pumpAndSettle();
+    await tester.tap(checkbox);
     await tester.pump();
   }
 
@@ -214,6 +267,23 @@ void main() {
 
   Uint8List photo() =>
       Uint8List.fromList(image.encodePng(image.Image(width: 2, height: 2)));
+
+  for (final dark in [true, false]) {
+    testWidgets(
+        'invalid username is brought into view after save in ${dark ? 'night' : 'day'}',
+        (tester) async {
+      await render(tester, width: 320, height: 680, textScale: 1.5, dark: dark);
+      final username = find.byType(TextFormField).at(1);
+      await tester.ensureVisible(username);
+      await tester.enterText(username, 'x');
+      await save(tester);
+      await tester.pumpAndSettle();
+      expect(writes, isEmpty);
+      expect(
+          find.text('Хамгийн багадаа 3 тэмдэгт').hitTestable(), findsOneWidget);
+      expect(username.hitTestable(), findsOneWidget);
+    });
+  }
 
   for (final preset in NightOwlAvatars.all) {
     testWidgets(
@@ -246,16 +316,21 @@ void main() {
     await tester.ensureVisible(username);
     await tester.enterText(username, 'new_user');
     await save(tester);
-    await tester.pumpAndSettle();
+    await settleSave(tester);
     expect(writes.single['avatar_url'], NightOwlAvatars.defaultPreset.value);
     expect(writes.single.keys, isNot(contains('gender')));
     expect(writes.single.keys, isNot(contains('age')));
-    expect(find.text('Feed destination'), findsOneWidget);
     expect(metadataWrites, 1);
     expect(
         Supabase
             .instance.client.auth.currentUser?.userMetadata?['setup_complete'],
         isTrue);
+    expect(find.text('Хадгалахад алдаа гарлаа. Сүлжээгээ шалгана уу.'),
+        findsNothing);
+    expect(
+        find.text('Нэвтэрсэн бүртгэл өөрчлөгдлөө. Профайлаа дахин нээгээрэй.'),
+        findsNothing);
+    expect(find.text('Feed destination'), findsOneWidget);
   });
   testWidgets('existing photo and cancelled photo picker remain unchanged',
       (tester) async {
@@ -396,6 +471,125 @@ void main() {
             .onPressed,
         isNotNull);
   });
+
+  for (final completedBefore in [true, false]) {
+    for (final dark in [true, false]) {
+      testWidgets(
+          '${completedBefore ? 'legacy completed profile' : 'fresh OAuth profile'} requires explicit consent at 320px in ${dark ? 'night' : 'day'}',
+          (tester) async {
+        setupComplete = completedBefore;
+        communityAccepted = false;
+        if (!completedBefore) profile = null;
+        await signIn();
+        final pending = Completer<http.Response>();
+        http.Request? held;
+        metadataReply = (request) {
+          held = request;
+          return pending.future;
+        };
+        await render(tester,
+            edit: false, width: 320, textScale: 1.5, dark: dark);
+        if (!completedBefore) {
+          final username = find.byType(TextFormField).at(1);
+          await tester.ensureVisible(username);
+          await tester.enterText(username, 'new_owl');
+        }
+        final checkbox =
+            find.byKey(const ValueKey('setup-community-agreement'));
+        expect(tester.widget<CheckboxListTile>(checkbox).value, isFalse);
+        expect(
+            CommunityRules.isAccepted(
+                Supabase.instance.client.auth.currentUser?.userMetadata),
+            isFalse);
+        await save(tester);
+        await tester.pumpAndSettle();
+        expect(writes, isEmpty);
+        expect(uploads, isEmpty);
+        expect(metadataWrites, 0);
+        expect(
+            find.text(
+                '18 нас хүрсэн бөгөөд хамтын орчны дүрмийг зөвшөөрч байгаагаа баталгаажуулна уу.'),
+            findsOneWidget);
+        expect(find.text('Feed destination'), findsNothing);
+        expect(tester.takeException(), isNull);
+
+        await agree(tester);
+        expect(tester.widget<CheckboxListTile>(checkbox).value, isTrue);
+        final before = DateTime.now().toUtc();
+        await save(tester);
+        expect(writes.single['id'], me);
+        expect(metadataWrites, 1);
+        expect(metadataRequests, hasLength(1));
+        expect(held, isNotNull);
+        expect(find.text('Feed destination'), findsNothing,
+            reason: 'Consent must finish persisting before navigation.');
+        final data = (jsonDecode(held!.body) as Map)['data'] as Map;
+        expect(data['setup_complete'], isTrue);
+        expect(data['adult_confirmed'], isTrue);
+        expect(data['community_rules_version'], CommunityRules.version);
+        final acceptedAt =
+            DateTime.parse(data['community_rules_accepted_at'] as String);
+        expect(acceptedAt.isUtc, isTrue);
+        expect(acceptedAt.isBefore(before), isFalse);
+        expect(acceptedAt.isAfter(DateTime.now().toUtc()), isFalse);
+        expect(held!.method, 'PUT');
+        expect(held!.url.toString(), 'https://example.test/auth/v1/user');
+        expect(held!.headers['content-type'], 'application/json');
+        expect(held!.headers['authorization'], startsWith('Bearer fixture.'));
+        pending.complete(metadataResponse(held!));
+        await settleSave(tester);
+        expect(
+            CommunityRules.isAccepted(
+                Supabase.instance.client.auth.currentUser?.userMetadata),
+            isTrue);
+        expect(
+            Supabase.instance.client.auth.currentUser
+                ?.userMetadata?['setup_complete'],
+            isTrue);
+        expect(find.text('Хадгалахад алдаа гарлаа. Сүлжээгээ шалгана уу.'),
+            findsNothing);
+        expect(
+            find.text(
+                'Нэвтэрсэн бүртгэл өөрчлөгдлөө. Профайлаа дахин нээгээрэй.'),
+            findsNothing);
+        expect(find.text('Feed destination'), findsOneWidget);
+        expect(tester.takeException(), isNull);
+      });
+    }
+  }
+
+  testWidgets(
+      'late consent response cannot replace the next account or navigate',
+      (tester) async {
+    setupComplete = false;
+    communityAccepted = false;
+    await signIn();
+    final pending = Completer<http.Response>();
+    http.Request? held;
+    metadataReply = (request) {
+      held = request;
+      return pending.future;
+    };
+    await render(tester, edit: false);
+    await agree(tester);
+    await save(tester);
+    expect(metadataWrites, 1);
+    expect(writes.single['id'], me);
+    await signIn('another-user');
+    await tester.pump();
+    pending.complete(metadataResponse(held!));
+    await tester.pumpAndSettle();
+    final current = Supabase.instance.client.auth.currentUser!;
+    expect(current.id, 'another-user');
+    expect(current.userMetadata?['setup_complete'], isFalse);
+    expect(CommunityRules.isAccepted(current.userMetadata), isFalse);
+    expect(find.text('Feed destination'), findsNothing);
+    expect(
+        find.text('Нэвтэрсэн бүртгэл өөрчлөгдлөө. Профайлаа дахин нээгээрэй.'),
+        findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   for (final dark in [true, false]) {
     testWidgets(
         'avatar choices fit 320px with large text in ${dark ? 'night' : 'day'} theme',

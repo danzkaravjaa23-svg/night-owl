@@ -1,0 +1,140 @@
+{
+  "google_fonts_version": "6.3.3",
+  "fonts": [
+    {
+      "family": "Inter",
+      "weight": 400,
+      "style": "normal",
+      "file": "Inter-Regular.ttf",
+      "sha256": "ecdb53099b1a68cd24c6900ea5beeafec81bd3c8cb9d0f3c51b9986583ba3982",
+      "bytes": 303384,
+      "source": "https://fonts.gstatic.com/s/a/ecdb53099b1a68cd24c6900ea5beeafec81bd3c8cb9d0f3c51b9986583ba3982.ttf"
+    },
+    {
+      "family": "Inter",
+      "weight": 500,
+      "style": "normal",
+      "file": "Inter-Medium.ttf",
+      "sha256": "492dec3bc33255f9d81bd5fb18704ad72f96f9b9318e4171bc9f9be9dd4bf44b",
+      "bytes": 308288,
+      "source": "https://fonts.gstatic.com/s/a/492dec3bc33255f9d81bd5fb18704ad72f96f9b9318e4171bc9f9be9dd4bf44b.ttf"
+    },
+    {
+      "family": "Inter",
+      "weight": 600,
+      "style": "normal",
+      "file": "Inter-SemiBold.ttf",
+      "sha256": "d7ba633bab7f40576e539a7e934a1301d7618dceea59c743de477c2c493462fc",
+      "bytes": 309376,
+      "source": "https://fonts.gstatic.com/s/a/d7ba633bab7f40576e539a7e934a1301d7618dceea59c743de477c2c493462fc.ttf"
+    },
+    {
+      "family": "Inter",
+      "weight": 700,
+      "style": "normal",
+      "file": "Inter-Bold.ttf",
+      "sha256": "b7e339223d56e8c4210c86f1ba87b3d43d6c47e03956ea56f0a7a938ae61b2a3",
+      "bytes": 309732,
+      "source": "https://fonts.gstatic.com/s/a/b7e339223d56e8c4210c86f1ba87b3d43d6c47e03956ea56f0a7a938ae61b2a3.ttf"
+    },
+    {
+      "family": "Inter",
+      "weight": 800,
+      "style": "normal",
+      "file": "Inter-ExtraBold.ttf",
+      "sha256": "06fb8b97ad04af6b7fa9f2fb17d3763d28f6694f777f33dcf147e84c55a4e81a",
+      "bytes": 310348,
+      "source": "https://fonts.gstatic.com/s/a/06fb8b97ad04af6b7fa9f2fb17d3763d28f6694f777f33dcf147e84c55a4e81a.ttf"
+    },
+    {
+      "family": "JetBrainsMono",
+      "weight": 400,
+      "style": "normal",
+      "file": "JetBrainsMono-Regular.ttf",
+      "sha256": "fc34426314d00825ccc768a0c4b1178fe704f04bd947882ef10c2b71b7e355e7",
+      "bytes": 112148,
+      "source": "https://fonts.gstatic.com/s/a/fc34426314d00825ccc768a0c4b1178fe704f04bd947882ef10c2b71b7e355e7.ttf"
+    },
+    {
+      "family": "Manrope",
+      "weight": 800,
+      "style": "normal",
+      "file": "Manrope-ExtraBold.ttf",
+      "sha256": "6b753fbbbefcdfd17909197147c199d6ebc1cd79742e853bc1e732bc9f49831b",
+      "bytes": 95664,
+      "source": "https://fonts.gstatic.com/s/a/6b753fbbbefcdfd17909197147c199d6ebc1cd79742e853bc1e732bc9f49831b.ttf"
+    },
+    {
+      "family": "PlayfairDisplay",
+      "weight": 700,
+      "style": "normal",
+      "file": "PlayfairDisplay-Bold.ttf",
+      "sha256": "cda46920368489ef04d199ddbe261071afb0b9f53f820aba21a6c205bf76835a",
+      "bytes": 123512,
+      "source": "https://fonts.gstatic.com/s/a/cda46920368489ef04d199ddbe261071afb0b9f53f820aba21a6c205bf76835a.ttf"
+    },
+    {
+      "family": "Pacifico",
+      "weight": 400,
+      "style": "normal",
+      "file": "Pacifico-Regular.ttf",
+      "sha256": "d00add3a7d91f903eb33bcb08d397693c60d68bb5673410ba279a83490f8b054",
+      "bytes": 170408,
+      "source": "https://fonts.gstatic.com/s/a/d00add3a7d91f903eb33bcb08d397693c60d68bb5673410ba279a83490f8b054.ttf"
+    },
+    {
+      "family": "BebasNeue",
+      "weight": 400,
+      "style": "normal",
+      "file": "BebasNeue-Regular.ttf",
+      "sha256": "a1b67d8679c6f4d301f4a05c13d1a4032cefed98bd9b61b11b2fac9689c99116",
+      "bytes": 38232,
+      "source": "https://fonts.gstatic.com/s/a/a1b67d8679c6f4d301f4a05c13d1a4032cefed98bd9b61b11b2fac9689c99116.ttf"
+    }
+  ],
+  "license_repository_commit": "2fe1e8c6b137fb13041a7cfca6fdcd8a910ea4dc",
+  "licenses": [
+    {
+      "family": "Inter",
+      "file": "Inter-OFL.txt",
+      "source": "https://raw.githubusercontent.com/google/fonts/2fe1e8c6b137fb13041a7cfca6fdcd8a910ea4dc/ofl/inter/OFL.txt",
+      "sha256": "5b9321a4298cfeb6b34354164a1c3afc3db114569984c502b9b35d988fd58c57",
+      "bytes": 4377
+    },
+    {
+      "family": "JetBrainsMono",
+      "file": "JetBrainsMono-OFL.txt",
+      "source": "https://raw.githubusercontent.com/google/fonts/2fe1e8c6b137fb13041a7cfca6fdcd8a910ea4dc/ofl/jetbrainsmono/OFL.txt",
+      "sha256": "b2fe5e8987594e9ffd1d2ca52a2f5d73eb8335243893c5d6254b5ad69269591d",
+      "bytes": 4399
+    },
+    {
+      "family": "Manrope",
+      "file": "Manrope-OFL.txt",
+      "source": "https://raw.githubusercontent.com/google/fonts/2fe1e8c6b137fb13041a7cfca6fdcd8a910ea4dc/ofl/manrope/OFL.txt",
+      "sha256": "58172e0c0fac2cda8a37b348164bb55e44b0e69051e557e92b1d3f6910141f7b",
+      "bytes": 4387
+    },
+    {
+      "family": "PlayfairDisplay",
+      "file": "PlayfairDisplay-OFL.txt",
+      "source": "https://raw.githubusercontent.com/google/fonts/2fe1e8c6b137fb13041a7cfca6fdcd8a910ea4dc/ofl/playfairdisplay/OFL.txt",
+      "sha256": "566be814f8e96e93dfa16101331557eb6b5467e9e03f627c0910fe93ca12300e",
+      "bytes": 4449
+    },
+    {
+      "family": "Pacifico",
+      "file": "Pacifico-OFL.txt",
+      "source": "https://raw.githubusercontent.com/google/fonts/2fe1e8c6b137fb13041a7cfca6fdcd8a910ea4dc/ofl/pacifico/OFL.txt",
+      "sha256": "a47e5daeda73568969395c656823102678f2eefb0d7d7ecb47aac4cc17e42204",
+      "bytes": 4389
+    },
+    {
+      "family": "BebasNeue",
+      "file": "BebasNeue-OFL.txt",
+      "source": "https://raw.githubusercontent.com/google/fonts/2fe1e8c6b137fb13041a7cfca6fdcd8a910ea4dc/ofl/bebasneue/OFL.txt",
+      "sha256": "72082f6cb4d04be2ecf7cc7d9e1e7d73787f0af8a5a278a47cade70c16b78341",
+      "bytes": 4337
+    }
+  ]
+}

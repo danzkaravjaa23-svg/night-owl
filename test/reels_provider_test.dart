@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -13,6 +14,24 @@ Map<String, dynamic> reel(String id, String? url, {String type = 'video'}) => {
     };
 
 void main() {
+  test('list, following, and selected reads time out instead of hanging',
+      () async {
+    final pending = Completer<http.Response>();
+    final client = SupabaseClient('https://example.test', 'test-key',
+        authOptions: const AuthClientOptions(autoRefreshToken: false),
+        httpClient: MockClient((_) => pending.future));
+    addTearDown(client.dispose);
+    final repository = ReelsRepository(client,
+        requestTimeout: const Duration(milliseconds: 10));
+    await expectLater(repository.load(), throwsA(isA<TimeoutException>()));
+    await expectLater(
+        repository.loadFollowing(), throwsA(isA<TimeoutException>()));
+    await expectLater(
+        repository.find('selected'), throwsA(isA<TimeoutException>()));
+    pending.complete(http.Response('[]', 200,
+        headers: {'content-type': 'application/json'}));
+  });
+
   test('video filter reaches the server before its 50-video limit', () async {
     late Uri requested;
     final client = SupabaseClient('https://example.test', 'test-key',

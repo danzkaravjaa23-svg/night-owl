@@ -74,16 +74,6 @@ class BlockReportService {
     }
   }
 
-  /// [Админ] Хэрэглэгчийг хориглох / сэргээх (profiles RLS — is_admin())
-  static Future<String?> setBanned(String userId, bool banned) async {
-    try {
-      await _c.from('profiles').update({'is_banned': banned}).eq('id', userId);
-      return null;
-    } catch (e) {
-      return e.toString();
-    }
-  }
-
   /// Контент/хэрэглэгчийг мэдээлэх
   /// targetType: 'post' | 'user' | 'comment' | 'venue'
   static Future<String?> report({
@@ -94,16 +84,30 @@ class BlockReportService {
   }) async {
     final me = SupabaseService.currentUser?.id;
     if (me == null) return 'Нэвтэрнэ үү';
+    if (!const {'post', 'user', 'comment', 'venue'}.contains(targetType) ||
+        !const {'spam', 'harassment', 'nudity', 'violence', 'hate', 'other'}
+            .contains(reason) ||
+        targetId.trim().isEmpty ||
+        (details?.trim().length ?? 0) > 2000) {
+      return 'Мэдээллээ шалгана уу. Тайлбар 2000 тэмдэгтээс хэтрэхгүй байна.';
+    }
     try {
       await _c.from('reports').insert({
         'reporter_id': me,
         'target_type': targetType,
         'target_id': targetId,
         'reason': reason,
-        if (details != null && details.isNotEmpty) 'details': details,
+        if (details != null && details.trim().isNotEmpty)
+          'details': details.trim(),
       });
       return null;
     } catch (e) {
+      if (e is PostgrestException && e.code == '40001') {
+        return 'Энэ агуулгын тухай таны өмнөх мэдээлэл шалгагдаж байна.';
+      }
+      if (e is PostgrestException && e.code == 'P0002') {
+        return 'Мэдээлэх агуулга олдсонгүй. Хуудсыг шинэчилнэ үү.';
+      }
       return discoveryError(e);
     }
   }

@@ -50,6 +50,7 @@ class GlassIconButton extends StatefulWidget {
 
 class _GlassIconButtonState extends State<GlassIconButton> {
   bool get _enabled => widget.onTap != null;
+  bool _focused = false;
 
   @override
   Widget build(BuildContext context) {
@@ -64,7 +65,8 @@ class _GlassIconButtonState extends State<GlassIconButton> {
         child: PressFeedback(
           enabled: _enabled,
           pressedScale: .94,
-          child: Container(
+          child: AnimatedContainer(
+            duration: AppMotion.duration(context, AppMotion.exit),
             width: widget.size,
             height: widget.size,
             decoration: BoxDecoration(
@@ -88,20 +90,28 @@ class _GlassIconButtonState extends State<GlassIconButton> {
               ],
               border: Border.all(
                 // Медиа дээр горимоос үл хамааран цагаан шилэн ирмэг
-                color: widget.onMedia
-                    ? AppColors.hairline2Dark
-                    : AppColors.isDarkMode
-                        ? const Color(0xFF4B435F)
-                        : const Color(0xFFD4CCE6),
-                width: 1,
+                color: _focused && _enabled
+                    ? (widget.onMedia ? Colors.white : AppColors.neonCyan)
+                    : widget.onMedia
+                        ? AppColors.hairline2Dark
+                        : AppColors.isDarkMode
+                            ? const Color(0xFF4B435F)
+                            : const Color(0xFFD4CCE6),
+                width: _focused && _enabled ? 2 : 1,
               ),
             ),
             child: Center(
                 child: SculptedIcon(
               widget.icon,
               size: widget.iconSize,
-              color: widget.iconColor ??
-                  (widget.onMedia ? Colors.white : AppColors.dynTextPrimary),
+              color: !_enabled
+                  ? (widget.onMedia
+                      ? Colors.white54
+                      : AppColors.dynTextTertiary)
+                  : widget.iconColor ??
+                      (widget.onMedia
+                          ? Colors.white
+                          : AppColors.dynTextPrimary),
               onDark: widget.onMedia,
             )),
           ),
@@ -109,13 +119,21 @@ class _GlassIconButtonState extends State<GlassIconButton> {
       ),
     );
 
-    button = MouseRegion(
-      cursor: _enabled ? SystemMouseCursors.click : MouseCursor.defer,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: widget.onTap,
-        child: button,
+    button = IconButton(
+      onPressed: widget.onTap,
+      padding: EdgeInsets.zero,
+      constraints: BoxConstraints.tightFor(width: hit, height: hit),
+      style: IconButton.styleFrom(
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        shape: const CircleBorder(),
+        foregroundColor: widget.onMedia ? Colors.white : AppColors.neonCyan,
       ),
+      icon: button,
+    );
+    button = Focus(
+      canRequestFocus: false,
+      onFocusChange: (focused) => setState(() => _focused = focused),
+      child: button,
     );
 
     button = Semantics(

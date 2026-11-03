@@ -1,182 +1,172 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
-import '../../../core/services/supabase_service.dart';
-import '../../../core/router/app_router.dart';
-import '../../auth/providers/auth_provider.dart';
+import '../providers/admin_console_provider.dart';
+import '../services/admin_console_service.dart';
+import '../widgets/admin_gate.dart';
+import '../widgets/admin_widgets.dart';
 
-/// Админ панел — зөвхөн is_admin хэрэглэгч. Статистик + удирдлагын хэсгүүд.
-class AdminPanelScreen extends ConsumerStatefulWidget {
+class AdminPanelScreen extends StatelessWidget {
   const AdminPanelScreen({super.key});
   @override
-  ConsumerState<AdminPanelScreen> createState() => _AdminPanelScreenState();
+  Widget build(BuildContext context) => const AdminGate(child: _Dashboard());
 }
 
-class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
-  int? _users, _posts, _pending, _banned;
-  bool _loading = true;
+class _Dashboard extends ConsumerStatefulWidget {
+  const _Dashboard();
+  @override
+  ConsumerState<_Dashboard> createState() => _DashboardState();
+}
 
+class _DashboardState extends ConsumerState<_Dashboard> {
+  late AdminConsoleSummary _summary;
+  bool _loading = false;
+  AdminConsoleFailure? _error;
   @override
   void initState() {
     super.initState();
-    _loadStats();
+    _summary = ref.read(adminConsoleAccessProvider)!.summary;
   }
 
-  Future<int?> _count(String table, {String? col, dynamic val}) async {
+  Future<void> _refresh() async {
+    if (_loading) return;
+    final access = ref.read(adminConsoleAccessProvider)!;
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
     try {
-      final base = SupabaseService.client.from(table);
-      if (col != null) {
-        return await base.select('id').eq(col, val).count(CountOption.exact)
-            .then((r) => r.count);
+      final summary = await access.service.summary(access.session);
+      if (mounted && access.session.isCurrent) {
+        setState(() => _summary = summary);
       }
-      return await base.count(CountOption.exact);
-    } catch (_) {
-      return null;
-    }
-  }
-
-  Future<void> _loadStats() async {
-    final r = await Future.wait([
-      _count('profiles'),
-      _count('posts'),
-      _count('reports', col: 'status', val: 'pending'),
-      _count('profiles', col: 'is_banned', val: true),
-    ]);
-    if (mounted) {
-      setState(() {
-        _users = r[0]; _posts = r[1]; _pending = r[2]; _banned = r[3];
-        _loading = false;
-      });
+    } catch (error) {
+      if (mounted && access.session.isCurrent) {
+        setState(() => _error = error is AdminConsoleFailure
+            ? error
+            : const AdminConsoleFailure('network'));
+      }
+    } finally {
+      if (mounted) setState(() => _loading = false);
     }
   }
 
   @override
-  Widget build(BuildContext context) {
-    final profAsync = ref.watch(currentProfileProvider);
-    // Cold load (web reload/deep link) — профайл ачаалж дуустал 'Хандах эрхгүй'
-    // гэж анивчуулахгүй, spinner харуулна
-    if (profAsync.isLoading && !profAsync.hasValue) {
-      return Scaffold(
-        backgroundColor: AppColors.bgBase,
-        // Ачаалал гацсан ч гарах зам үлдэнэ
-        appBar: AppBar(
-          backgroundColor: AppColors.bgBase,
-          leading: IconButton(
-            onPressed: () => context.canPop()
-                ? context.pop()
-                : context.go(AppRoutes.profile),
-            icon: const Icon(Icons.arrow_back_ios_new, size: 20)),
-        ),
-        body: const Center(child: CircularProgressIndicator(
-            color: AppColors.accentStart, strokeWidth: 2)),
-      );
-    }
-    final isAdmin = profAsync.valueOrNull?.isAdmin ?? false;
+  Widget build(BuildContext context) => AdminScaffold(
+      title: 'Админ панел',
+      onRefresh: _loading ? null : _refresh,
+      child: RefreshIndicator(
+          onRefresh: _refresh,
+          child: ListView(
+              padding: const EdgeInsets.all(20),
+              physics: const AlwaysScrollableScrollPhysics(),
+              children: [
+                const AdminIntro(
+                    title: 'Хамт олноо хамгаалъя',
+                    subtitle:
+                        'Мэдээллийг шалгаж, хэрэглэгчид болон контентыг нэг дор удирдаарай.'),
+                if (_loading) const LinearProgressIndicator(),
+                if (_error != null)
+                  AdminMessage(
+                      icon: Icons.cloud_off,
+                      title: 'Шинэчилж чадсангүй',
+                      message: _error!.message,
+                      onRetry: _refresh),
+                _navigation(
+                    Icons.flag_outlined,
+                    'Шалгах мэдээлэл',
+                    '${_summary.counts['pending_reports']} мэдээлэл шийдвэр хүлээж байна',
+                    '/admin/reports',
+                    prominent: true),
+                const SizedBox(height: 20),
+                Text('Удирдлага', style: AppTextStyles.h3),
+                const SizedBox(height: 12),
+                _navigation(Icons.people_outline, 'Хэрэглэгчид',
+                    'Хайх, баталгаажуулах, хориг удирдах', '/admin/users'),
+                _navigation(Icons.article_outlined, 'Контент',
+                    'Нийтлэл болон сэтгэгдлийг шалгах', '/admin/content'),
+                _navigation(
+                    Icons.history_rounded,
+                    'Үйлдлийн түүх',
+                    'Хэн, хэзээ, ямар үндэслэлээр өөрчилснийг харах',
+                    '/admin/audit'),
+                const SizedBox(height: 24),
+                Text('Аппын тойм', style: AppTextStyles.h3),
+                const SizedBox(height: 12),
+                LayoutBuilder(builder: (context, constraints) {
+                  final columns = constraints.maxWidth > 650
+                      ? 3
+                      : MediaQuery.textScalerOf(context).scale(14) > 20
+                          ? 1
+                          : 2;
+                  final width =
+                      (constraints.maxWidth - (columns - 1) * 12) / columns;
+                  return Wrap(spacing: 12, runSpacing: 12, children: [
+                    for (final item in const [
+                      ('users', 'Хэрэглэгч', Icons.people_outline),
+                      ('posts', 'Нийтлэл', Icons.grid_view_rounded),
+                      ('comments', 'Сэтгэгдэл', Icons.chat_bubble_outline),
+                      ('venues', 'Газар', Icons.place_outlined),
+                      ('events', 'Эвент', Icons.event_outlined),
+                      ('banned_users', 'Хориглосон', Icons.block_rounded),
+                    ])
+                      SizedBox(
+                          width: width,
+                          child: AdminCard(
+                              child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                Icon(item.$3,
+                                    size: 22, color: AppColors.silver),
+                                const SizedBox(height: 14),
+                                Text('${_summary.counts[item.$1]}',
+                                    style: AppTextStyles.h1),
+                                const SizedBox(height: 4),
+                                Text(item.$2, style: AppTextStyles.bodyMd)
+                              ])))
+                  ]);
+                }),
+                const SizedBox(height: 28),
+                Text('Хөтөлбөрүүд', style: AppTextStyles.h3),
+                const SizedBox(height: 12),
+                _navigation(Icons.auto_awesome_outlined, 'Онцгой эвентүүд',
+                    'Онцлох эвентүүдийг сонгох', '/admin/featured-events'),
+                _navigation(Icons.insights_outlined, 'Эхний туршилт',
+                    'Creator, газар, контент ба үр дүн', '/admin/pilot'),
+                const SizedBox(height: 16),
+              ])));
 
-    return Scaffold(
-      backgroundColor: AppColors.bgBase,
-      appBar: AppBar(
-        backgroundColor: AppColors.bgBase,
-        // Reload/deep link үед stack хоосон байж болно — profile руу fallback
-        leading: IconButton(
-          onPressed: () => context.canPop()
-              ? context.pop()
-              : context.go(AppRoutes.profile),
-          icon: const Icon(Icons.arrow_back_ios_new, size: 20)),
-        title: Text('Админ панел', style: AppTextStyles.h2),
-        actions: [
-          if (isAdmin)
-            IconButton(onPressed: () { setState(() => _loading = true); _loadStats(); },
-              icon: Icon(Icons.refresh, color: AppColors.textPrimary)),
-        ],
-      ),
-      body: !isAdmin
-          ? Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-              Icon(Icons.lock_outline, size: 56, color: AppColors.textTertiary),
-              const SizedBox(height: 12),
-              Text('Хандах эрхгүй', style: AppTextStyles.h2),
-              const SizedBox(height: 6),
-              Text('Энэ хэсэг зөвхөн админд зориулагдсан.',
-                  style: AppTextStyles.bodyMd.copyWith(color: AppColors.textSecondary)),
-            ]))
-          : ListView(padding: const EdgeInsets.all(16), children: [
-              // ── Статистик ──
-              Row(children: [
-                _stat('Хэрэглэгч', _users, Icons.people_outline, AppColors.accentStart),
-                const SizedBox(width: 12),
-                _stat('Пост', _posts, Icons.grid_on, const Color(0xFF7B2FF7)),
-              ]),
-              const SizedBox(height: 12),
-              Row(children: [
-                _stat('Хүлээгдэж буй\nмэдээлэл', _pending, Icons.flag_outlined, AppColors.error),
-                const SizedBox(width: 12),
-                _stat('Хориглосон', _banned, Icons.block, const Color(0xFFFF7B5C)),
-              ]),
-              const SizedBox(height: 24),
-
-              Text('УДИРДЛАГА', style: AppTextStyles.labelSm.copyWith(
-                  color: AppColors.textSecondary, letterSpacing: 0.8)),
-              const SizedBox(height: 8),
-              _tile(Icons.insights_outlined,'Эхний туршилт','Creator, газар, контент ба үр дүн',()=>context.push('/admin/pilot')),
-              _tile(Icons.auto_awesome_rounded, 'Онцгой эвентүүд',
-                  'Газрууд хэсэгт харагдах эвентүүдийг сонгох',
-                  () => context.push(AppRoutes.adminFeaturedEvents)),
-              _tile(Icons.flag_outlined, 'Мэдээллүүд',
-                  'Хэрэглэгчдийн мэдээлсэн контент',
-                  () => context.push(AppRoutes.adminReports)),
-              _tile(Icons.people_outline, 'Хэрэглэгчид',
-                  'Хайх, хориглох / сэргээх',
-                  () => context.push(AppRoutes.adminUsers)),
-            ]),
-    );
-  }
-
-  Widget _stat(String label, int? value, IconData icon, Color color) => Expanded(
-    child: Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.bgElevated,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.hairline),
-      ),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Icon(icon, color: color, size: 22),
-        const SizedBox(height: 10),
-        Text(_loading ? '…' : (value?.toString() ?? '—'),
-            style: AppTextStyles.displaySm.copyWith(color: AppColors.textPrimary)),
-        const SizedBox(height: 2),
-        Text(label, style: AppTextStyles.bodyXs.copyWith(color: AppColors.textSecondary)),
-      ]),
-    ),
-  );
-
-  // Web дээр pointer cursor — аппын бусад товчтой адил MouseRegion-оор ороосон
-  Widget _tile(IconData icon, String title, String sub, VoidCallback onTap) => MouseRegion(
-    cursor: SystemMouseCursors.click,
-    child: GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: onTap,
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 10),
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: AppColors.bgElevated,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: AppColors.hairline),
-        ),
-        child: Row(children: [
-          Icon(icon, color: AppColors.accentStart, size: 22),
-          const SizedBox(width: 12),
-          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(title, style: AppTextStyles.labelMd.copyWith(color: AppColors.textPrimary)),
-            Text(sub, style: AppTextStyles.bodyXs.copyWith(color: AppColors.textSecondary)),
-          ])),
-          Icon(Icons.chevron_right, color: AppColors.textTertiary),
-        ]),
-      ),
-    ),
-  );
+  Widget _navigation(IconData icon, String title, String subtitle, String route,
+          {bool prominent = false}) =>
+      Padding(
+          padding: const EdgeInsets.only(bottom: 10),
+          child: Material(
+              color: prominent
+                  ? AppColors.silver.withValues(alpha: .1)
+                  : AppColors.bgElevated,
+              borderRadius: BorderRadius.circular(18),
+              clipBehavior: Clip.antiAlias,
+              child: InkWell(
+                  onTap: () => context.push(route),
+                  child: Padding(
+                      padding: const EdgeInsets.all(18),
+                      child: Row(children: [
+                        Icon(icon, color: AppColors.silver, size: 24),
+                        const SizedBox(width: 14),
+                        Expanded(
+                            child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                              Text(title, style: AppTextStyles.labelLg),
+                              const SizedBox(height: 5),
+                              Text(subtitle,
+                                  style: AppTextStyles.bodySm
+                                      .copyWith(height: 1.4))
+                            ])),
+                        const SizedBox(width: 8),
+                        Icon(Icons.chevron_right_rounded,
+                            color: AppColors.textTertiary)
+                      ])))));
 }

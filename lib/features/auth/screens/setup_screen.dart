@@ -13,11 +13,14 @@ import '../../../core/widgets/gradient_button.dart';
 import '../../../core/widgets/app_avatar.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/constants/avatar_presets.dart';
+import '../../../core/constants/community_rules.dart';
+import '../../../core/widgets/policy_links.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/services/supabase_service.dart';
 import '../../../core/utils/image_compress.dart';
 import '../../../core/utils/validators.dart';
 import '../providers/auth_provider.dart';
+import '../services/account_metadata_service.dart';
 import '../../feed/providers/feed_provider.dart';
 import '../../feed/providers/reels_provider.dart';
 import '../../feed/providers/stories_provider.dart';
@@ -46,7 +49,12 @@ class SetupScreen extends StatefulWidget {
 
   /// Allows a platform picker adapter; cancellation is represented by null.
   final Future<Uint8List?> Function()? avatarPicker;
-  const SetupScreen({super.key, this.forceEdit = false, this.avatarPicker});
+  final AccountMetadataService? metadataService;
+  const SetupScreen(
+      {super.key,
+      this.forceEdit = false,
+      this.avatarPicker,
+      this.metadataService});
 
   @override
   State<SetupScreen> createState() => _SetupScreenState();
@@ -57,6 +65,8 @@ class _SetupScreenState extends State<SetupScreen> {
   final _nameCtrl = TextEditingController();
   final _bioCtrl = TextEditingController();
   final _formKey = GlobalKey<FormState>();
+  final _usernameKey = GlobalKey<FormFieldState<String>>();
+  final _usernameFocus = FocusNode();
   // Гар дээрх "Дараах" товч хэрэглэгчийн нэрээс танилцуулга руу шилжүүлнэ
   final _bioFocus = FocusNode();
   Uint8List? _avatarBytes;
@@ -75,6 +85,9 @@ class _SetupScreenState extends State<SetupScreen> {
   bool _profileLoaded = false;
   bool _hasSavedName = false;
   bool _nameEdited = false;
+  bool _agreedCommunity = false;
+  bool get _needsAgreement =>
+      !CommunityRules.isAccepted(SupabaseService.currentUser?.userMetadata);
 
   @override
   void initState() {
@@ -197,6 +210,7 @@ class _SetupScreenState extends State<SetupScreen> {
     _nameCtrl.dispose();
     _bioCtrl.dispose();
     _bioFocus.dispose();
+    _usernameFocus.dispose();
     super.dispose();
   }
 
@@ -271,11 +285,19 @@ class _SetupScreenState extends State<SetupScreen> {
   }
 
   Future<void> _save() async {
-    final destination=AuthReturn.destination;
+    final destination = AuthReturn.destination;
     // Enter дарж давхар илгээхээс сэргийлнэ
     if (!_canEdit) return;
     // Хэрэглэгчийн нэрийн алдаа талбарын доор inline харагдана
-    if (_formKey.currentState?.validate() != true) return;
+    if (_formKey.currentState?.validate() != true) {
+      _usernameFocus.requestFocus();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted || !_isSetupUser(SupabaseService.currentUser)) return;
+        final field = _usernameKey.currentContext;
+        if (field != null) Scrollable.ensureVisible(field, alignment: .25);
+      });
+      return;
+    }
     final username = _usernameCtrl.text.trim().toLowerCase();
 
     final user = Supabase.instance.client.auth.currentUser;
@@ -284,6 +306,12 @@ class _SetupScreenState extends State<SetupScreen> {
       return;
     }
     final savedUser = user!;
+    if (_needsAgreement && !_agreedCommunity) {
+      setState(() => _error =
+          '18 нас хүрсэн бөгөөд хамтын орчны дүрмийг зөвшөөрч байгаагаа баталгаажуулна уу.');
+      return;
+    }
+    final agreementRequired = _needsAgreement;
     final pendingAvatar = _avatarBytes;
     final selectedAvatar = _avatarUrl ?? NightOwlAvatars.defaultPreset.value;
     final updates = <String, dynamic>{
@@ -325,9 +353,17 @@ class _SetupScreenState extends State<SetupScreen> {
 
       // "Профайл дуусгасан" тэмдгийг auth metadata-д тавина — router AuthGate
       // үүгээр л шинэ/бүртгэлтэйг ялгадаг (presence/follow update нөлөөлөхгүй)
-      if (savedUser.userMetadata?['setup_complete'] != true) {
-        await Supabase.instance.client.auth
-            .updateUser(UserAttributes(data: {'setup_complete': true}));
+      if (savedUser.userMetadata?['setup_complete'] != true ||
+          agreementRequired) {
+        final applied =
+            await (widget.metadataService ?? AccountMetadataService()).update({
+          'setup_complete': true,
+          if (agreementRequired) ...CommunityRules.acceptance(DateTime.now()),
+        }, ownerId: savedUser.id);
+        if (!applied) {
+          if (mounted) setState(() => _accountChanged = true);
+          return;
+        }
       }
       if (!mounted || !_isSetupUser(savedUser)) return;
       final container = ProviderScope.containerOf(context, listen: false);
@@ -658,8 +694,10 @@ class _SetupScreenState extends State<SetupScreen> {
               const FieldLabel('Хэрэглэгчийн нэр'),
               const SizedBox(height: 8),
               TextFormField(
+                key: _usernameKey,
                 enabled: _canEdit,
                 controller: _usernameCtrl,
+                focusNode: _usernameFocus,
                 style: authFieldStyle,
                 textInputAction: TextInputAction.next,
                 onFieldSubmitted: (_) => _bioFocus.requestFocus(),
@@ -733,6 +771,44 @@ class _SetupScreenState extends State<SetupScreen> {
                 }).toList(),
               ),
 
+              if (_needsAgreement) ...[
+                const SizedBox(height: 24),
+                Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                        color: AppColors.bgElevated,
+                        borderRadius: BorderRadius.circular(18),
+                        border: Border.all(color: AppColors.hairline)),
+                    child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('18+ · Хүндэтгэлтэй хамтын орчин',
+                              style: AppTextStyles.h3),
+                          const SizedBox(height: 8),
+                          Text(
+                              'Night Owl нь насанд хүрсэн хэрэглэгчдэд зориулагдсан. '
+                              'Дарамт, үзэн ядалт, бэлгийн ил тод болон хууль бус контент хориотой. '
+                              'Асуудалтай контентыг мэдээлж, хэрэглэгчийг блоклож болно.',
+                              style: AppTextStyles.bodySm),
+                          Material(
+                              color: Colors.transparent,
+                              child: CheckboxListTile(
+                                  key: const ValueKey(
+                                      'setup-community-agreement'),
+                                  contentPadding: EdgeInsets.zero,
+                                  controlAffinity:
+                                      ListTileControlAffinity.leading,
+                                  title: const Text(
+                                      'Би 18 нас хүрсэн бөгөөд нөхцөл, нууцлалын бодлого болон эдгээр дүрмийг зөвшөөрч байна.'),
+                                  value: _agreedCommunity,
+                                  onChanged: _canEdit
+                                      ? (value) => setState(() =>
+                                          _agreedCommunity = value == true)
+                                      : null)),
+                          const PolicyLinks(),
+                        ])),
+              ],
+
               if (_error != null) ...[
                 const SizedBox(height: 20),
                 AuthErrorBox(_error!),
@@ -749,6 +825,14 @@ class _SetupScreenState extends State<SetupScreen> {
                 trailing: _loading ? const BtnSpinner() : null,
               ),
               const SizedBox(height: 8),
+              if (!widget.forceEdit)
+                TextButton.icon(
+                  onPressed: _loading || _accountChanged
+                      ? null
+                      : () => context.push(AppRoutes.deleteAccount),
+                  icon: const Icon(Icons.person_remove_outlined),
+                  label: const Text('Бүртгэл устгах'),
+                ),
             ],
           ),
         ),

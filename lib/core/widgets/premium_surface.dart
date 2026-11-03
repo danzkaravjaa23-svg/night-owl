@@ -15,7 +15,7 @@ class NightOwlAtmosphere extends StatelessWidget {
             radius: 1.5,
             colors: [
               AppColors.accentStart
-                  .withValues(alpha: AppColors.isDarkMode ? .19 : .08),
+                  .withValues(alpha: AppColors.isDarkMode ? .13 : .055),
               AppColors.bgBase.withValues(alpha: 0),
             ],
           ),
@@ -31,13 +31,13 @@ abstract class PremiumSurface {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: AppColors.isDarkMode
-              ? const [Color(0xFF201E35), Color(0xFF111522)]
-              : const [Color(0xFFFFFFFF), Color(0xFFF1EDF9)],
+              ? const [Color(0xFF1B1C2E), Color(0xFF121625)]
+              : const [Color(0xFFFFFFFF), Color(0xFFFAF9FD)],
         ),
         borderRadius: BorderRadius.circular(radius),
         border: Border.all(
             color: AppColors.silver
-                .withValues(alpha: AppColors.isDarkMode ? .18 : .14)),
+                .withValues(alpha: AppColors.isDarkMode ? .14 : .12)),
         boxShadow: [
           BoxShadow(
             color: Colors.black

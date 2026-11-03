@@ -20,11 +20,27 @@ import 'package:night_owl_ub/features/feed/providers/feed_provider.dart';
 import 'package:night_owl_ub/models/post.dart';
 
 class _FollowingFixture extends FeedNotifier {
-  _FollowingFixture():super(followingOnly:true);
+  _FollowingFixture() : super(followingOnly: true);
   @override
-  Future<void> loadFeed({bool refresh=false})async{
-    state=AsyncValue.data([Post.fromJson({'id':'post-beta','user_id':'beta','caption':'fixture caption beta',
-      'created_at':DateTime.now().toUtc().toIso8601String(),'profiles':{'id':'beta','username':'fixture_beta'}})]);
+  Future<void> loadFeed({bool refresh = false}) async {
+    state = AsyncValue.data([
+      Post.fromJson({
+        'id': 'post-beta',
+        'user_id': 'beta',
+        'caption': 'fixture caption beta',
+        'created_at': DateTime.now().toUtc().toIso8601String(),
+        'profiles': {'id': 'beta', 'username': 'fixture_beta'}
+      })
+    ]);
+  }
+}
+
+class _EmptyFollowingFixture extends FeedNotifier {
+  _EmptyFollowingFixture() : super(followingOnly: true);
+  @override
+  Future<void> loadFeed({bool refresh = false}) async {
+    hasMore.value = false;
+    state = const AsyncValue.data([]);
   }
 }
 
@@ -62,7 +78,8 @@ void main() {
   tearDown(() async => Supabase.instance.dispose());
 
   Future<GoRouter> render(WidgetTester tester, double width,
-      {Brightness brightness = Brightness.dark}) async {
+      {Brightness brightness = Brightness.dark,
+      bool emptyFollowing = false}) async {
     AppColors.isDarkMode = brightness == Brightness.dark;
     addTearDown(() => AppColors.isDarkMode = true);
     tester.view.physicalSize = Size(width, 900);
@@ -84,7 +101,8 @@ void main() {
           storiesProvider.overrideWith((_) async => []),
           savedPostIdsProvider.overrideWith((_) async => {}),
           feedFollowingIdsProvider.overrideWith((_) async => {'beta'}),
-          followingFeedProvider.overrideWith((_)=>_FollowingFixture()),
+          followingFeedProvider.overrideWith((_) =>
+              emptyFollowing ? _EmptyFollowingFixture() : _FollowingFixture()),
           upcomingEventsProvider.overrideWith((_) async => []),
           unreadNotifCountProvider.overrideWithValue(0),
         ],
@@ -137,6 +155,22 @@ void main() {
       });
     }
   }
+
+  testWidgets('empty following view offers a direct return to all posts',
+      (tester) async {
+    await render(tester, 320, emptyFollowing: true);
+    await tester.tap(find.byTooltip('Нийтлэлийн шүүлтүүр'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Дагаж буй'));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Бүх нийтлэл үзэх'));
+    await tester.tap(find.text('Бүх нийтлэл үзэх'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('fixture caption alpha', findRichText: true),
+        findsWidgets);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox());
+  });
 
   testWidgets('Story add, Reels and notifications retain working navigation',
       (tester) async {
