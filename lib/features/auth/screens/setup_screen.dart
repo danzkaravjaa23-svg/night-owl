@@ -79,6 +79,11 @@ class _SetupScreenState extends State<SetupScreen> {
   bool _isEditMode = false;
   bool _profileLoading = true; // профайл ачаалж байх үеийн skeleton
   bool _loadFailed = false; // ачаалж чадаагүй — retry харуулна
+  bool _draftLoadFailed = false;
+  bool _draftCandidateLoaded = false;
+  bool _publicProfileReady = true;
+  String _reviewStatus = 'approved';
+  Map<String, dynamic>? _publicProfile;
   String? _error;
   late final String? _setupUserId;
   StreamSubscription<AuthState>? _authSub;
@@ -120,6 +125,7 @@ class _SetupScreenState extends State<SetupScreen> {
       !_pickingAvatar &&
       !_profileLoading &&
       !_loadFailed &&
+      !_draftLoadFailed &&
       _profileLoaded &&
       !_accountChanged;
 
@@ -150,6 +156,8 @@ class _SetupScreenState extends State<SetupScreen> {
     setState(() {
       _profileLoading = true;
       _loadFailed = false;
+      _draftLoadFailed = false;
+      _draftCandidateLoaded = false;
     });
     try {
       final data = await Supabase.instance.client
@@ -158,10 +166,54 @@ class _SetupScreenState extends State<SetupScreen> {
           .eq('id', user!.id)
           .maybeSingle();
       if (!mounted || !_isSetupUser(user)) return;
-      final savedName = resolveSetupName(profile: data);
+      var editable = data;
+      _reviewStatus = data?['moderation_status'] as String? ?? 'approved';
+      _publicProfileReady = data?['moderation_public_ready'] != false;
+      _publicProfile = _publicProfileReady ? data : null;
+      if (data != null &&
+          _publicProfileReady &&
+          const {'pending', 'rejected'}.contains(_reviewStatus)) {
+        try {
+          final raw = await Supabase.instance.client
+              .rpc('get_own_profile_draft')
+              .timeout(const Duration(seconds: 15));
+          if (!mounted || !_isSetupUser(user)) return;
+          if (raw is! Map ||
+              raw['moderation_status'] != _reviewStatus ||
+              raw['moderation_public_ready'] != true ||
+              (data['moderation_version'] != null &&
+                  raw['moderation_version'] != data['moderation_version'])) {
+            throw const FormatException('Profile review state changed');
+          }
+          final candidate = raw['candidate'];
+          if (_reviewStatus == 'pending') {
+            if (candidate is! Map ||
+                candidate['username'] is! String ||
+                (candidate['interests'] != null &&
+                    (candidate['interests'] is! List ||
+                        !(candidate['interests'] as List)
+                            .every((value) => value is String))) ||
+                !const [
+                  'full_name',
+                  'bio',
+                  'avatar_url',
+                  'cover_url'
+                ].every((field) =>
+                    candidate[field] == null || candidate[field] is String)) {
+              throw const FormatException('Missing owner profile candidate');
+            }
+            editable = {...data, ...Map<String, dynamic>.from(candidate)};
+            _draftCandidateLoaded = true;
+          }
+        } catch (_) {
+          if (!mounted || !_isSetupUser(user)) return;
+          _draftLoadFailed = true;
+        }
+      }
+      final savedName = resolveSetupName(profile: editable);
       _hasSavedName = savedName.isNotEmpty;
       if (data != null) {
-        final username = data['username'] as String? ?? '';
+        final username = editable!['username'] as String? ?? '';
         setState(() {
           // setup_complete metadata = профайлаа дуусгасан → засах горим.
           // Байхгүй бол ШИНЭ хэрэглэгч → "үүсгэх" горим (буцах товчгүй).
@@ -171,13 +223,13 @@ class _SetupScreenState extends State<SetupScreen> {
                   true;
           _usernameCtrl.text = username;
           if (!_nameEdited && _hasSavedName) _nameCtrl.text = savedName;
-          _bioCtrl.text = data['bio'] as String? ?? '';
-          final savedAvatar = data['avatar_url'] as String?;
+          _bioCtrl.text = editable!['bio'] as String? ?? '';
+          final savedAvatar = editable['avatar_url'] as String?;
           _avatarChanged = savedAvatar == null || savedAvatar.trim().isEmpty;
           _avatarUrl = _avatarChanged
               ? NightOwlAvatars.defaultPreset.value
               : savedAvatar;
-          _interests = List<String>.from(data['interests'] ?? []);
+          _interests = List<String>.from(editable['interests'] ?? []);
           _profileLoading = false;
         });
       } else {
@@ -337,11 +389,11 @@ class _SetupScreenState extends State<SetupScreen> {
         await Supabase.instance.client.storage.from('avatars').uploadBinary(
             path, compressed,
             fileOptions:
-                const FileOptions(contentType: 'image/jpeg', upsert: true));
-        // Cache-buster — ижил URL дээр хуучин зураг cache-с гарахаас сэргийлнэ
-        final publicUrl =
+                const FileOptions(contentType: 'image/jpeg', upsert: false));
+        // Each immutable upload already has a unique path. Persist its exact
+        // canonical Storage reference; query strings are not media identity.
+        avatarUrl =
             Supabase.instance.client.storage.from('avatars').getPublicUrl(path);
-        avatarUrl = '$publicUrl?v=${DateTime.now().millisecondsSinceEpoch}';
       } else if (_avatarChanged) {
         avatarUrl = selectedAvatar;
       }
@@ -583,6 +635,53 @@ class _SetupScreenState extends State<SetupScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              if (_draftLoadFailed || _reviewStatus != 'approved') ...[
+                Semantics(
+                  liveRegion: true,
+                  child: Container(
+                    key: const ValueKey('profile-review-state'),
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: AppColors.bgSurface,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: AppColors.hairline),
+                    ),
+                    child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                              _draftLoadFailed
+                                  ? 'Илгээсэн өөрчлөлтийг ачаалж чадсангүй'
+                                  : _reviewStatus == 'rejected'
+                                      ? 'Профайлын өөрчлөлтийг зөвшөөрөөгүй'
+                                      : 'Профайлыг шалгаж байна',
+                              style: AppTextStyles.labelLg),
+                          const SizedBox(height: 6),
+                          Text(
+                              _draftLoadFailed
+                                  ? 'Доорх нь өмнө баталсан мэдээлэл. Илгээсэн өөрчлөлтөө алдахгүй байхын тулд дахин ачаалаад засварлана уу.'
+                                  : _draftCandidateLoaded
+                                      ? 'Доорх нь таны шалгалтад илгээсэн өөрчлөлт. Баталсны дараа нийтэд харагдана.'
+                                      : _publicProfileReady
+                                          ? 'Доорх нь өмнө баталсан профайл. Шинэ өөрчлөлт оруулж дахин шалгуулж болно.'
+                                          : 'Доорх нь таны анхны профайл. Баталсны дараа бусдад харагдана.',
+                              style: AppTextStyles.bodySm),
+                          if (_publicProfile != null) ...[
+                            const SizedBox(height: 8),
+                            Text(
+                                'Одоо нийтэд харагдах: @${_publicProfile!['username'] ?? ''} · ${resolveSetupName(profile: _publicProfile)}',
+                                style: AppTextStyles.bodyXs),
+                          ],
+                          if (_draftLoadFailed)
+                            TextButton(
+                                onPressed: _loadExistingProfile,
+                                child: const Text(
+                                    'Илгээсэн өөрчлөлтөө дахин ачаалах')),
+                        ]),
+                  ),
+                ),
+                const SizedBox(height: 20),
+              ],
               // Профайл ачаалж чадаагүй анхааруулга + retry
               if (_loadFailed) ...[
                 Container(

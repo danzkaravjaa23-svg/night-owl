@@ -34,6 +34,7 @@ void main() {
   Future<http.Response> Function(http.Request)? saveReply;
   Future<http.Response> Function(http.Request)? uploadReply;
   Future<http.Response> Function(http.Request)? metadataReply;
+  Future<http.Response> Function(http.Request)? draftReply;
   http.Response response(http.Request request, Object? body,
           [int status = 200]) =>
       http.Response(jsonEncode(body), status,
@@ -106,6 +107,12 @@ void main() {
           'user': user(signInId)
         });
       }
+      if (path == '/rest/v1/rpc/get_own_profile_draft') {
+        return draftReply != null
+            ? await draftReply!(request)
+            : response(request,
+                {'code': 'PGRST202', 'message': 'fixture missing'}, 404);
+      }
       if (path == '/rest/v1/profiles' && request.method == 'GET') {
         return rejectLoad
             ? response(request, {'message': 'offline', 'code': 'XX000'}, 400)
@@ -159,6 +166,7 @@ void main() {
     saveReply = null;
     uploadReply = null;
     metadataReply = null;
+    draftReply = null;
     await signIn();
   });
   tearDown(() => AppColors.isDarkMode = true);
@@ -267,6 +275,177 @@ void main() {
 
   Uint8List photo() =>
       Uint8List.fromList(image.encodePng(image.Image(width: 2, height: 2)));
+
+  void pendingProfile() {
+    profile!.addAll({
+      'moderation_status': 'pending',
+      'moderation_public_ready': true,
+      'moderation_version': '20000000-0000-4000-8000-000000000001',
+    });
+  }
+
+  Map<String, dynamic> draft() => {
+        'candidate': {
+          'username': 'candidate_owl',
+          'full_name': 'Pending Owl',
+          'bio': 'Waiting for review',
+          'avatar_url': NightOwlAvatars.all.last.value,
+          'cover_url': null,
+          'interests': <String>[],
+        },
+        'moderation_status': 'pending',
+        'moderation_public_ready': true,
+        'moderation_version': profile!['moderation_version'],
+        'moderation_submitted_at': '2026-11-03T00:00:00Z',
+      };
+
+  testWidgets(
+      'owner editor loads pending candidate and labels approved identity',
+      (tester) async {
+    pendingProfile();
+    draftReply = (request) async {
+      expect(request.url.queryParameters, isEmpty);
+      expect(request.body, isNot(contains(me)));
+      return response(request, draft());
+    };
+    await render(tester);
+    final fields =
+        tester.widgetList<TextFormField>(find.byType(TextFormField)).toList();
+    expect(fields[0].controller!.text, 'Pending Owl');
+    expect(fields[1].controller!.text, 'candidate_owl');
+    expect(fields[2].controller!.text, 'Waiting for review');
+    expect(preview(tester).imageUrl, NightOwlAvatars.all.last.value);
+    expect(find.textContaining('Одоо нийтэд харагдах: @fixture_user'),
+        findsOneWidget);
+    expect(find.textContaining('таны шалгалтад илгээсэн өөрчлөлт'),
+        findsOneWidget);
+    await save(tester);
+    await settleSave(tester);
+    expect(writes.single['username'], 'candidate_owl');
+    expect(writes.single['bio'], 'Waiting for review');
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets(
+      'unavailable pending draft shows baseline read-only then retry restores it',
+      (tester) async {
+    pendingProfile();
+    await render(tester);
+    expect(find.text('Илгээсэн өөрчлөлтийг ачаалж чадсангүй'), findsOneWidget);
+    expect(
+        tester.widget<TextFormField>(find.byType(TextFormField).first).enabled,
+        isFalse);
+    expect(writes, isEmpty);
+    draftReply = (request) async => response(request, draft());
+    await tester.tap(find.text('Илгээсэн өөрчлөлтөө дахин ачаалах'));
+    await tester.pumpAndSettle();
+    expect(
+        tester
+            .widget<TextFormField>(find.byType(TextFormField).first)
+            .controller!
+            .text,
+        'Pending Owl');
+    expect(
+        tester.widget<TextFormField>(find.byType(TextFormField).first).enabled,
+        isTrue);
+    expect(writes, isEmpty);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('legacy nullable interests do not hide a valid pending candidate',
+      (tester) async {
+    pendingProfile();
+    draftReply = (request) async {
+      final value = draft();
+      (value['candidate'] as Map)['interests'] = null;
+      return response(request, value);
+    };
+    await render(tester);
+    final name = tester.widget<TextFormField>(find.byType(TextFormField).first);
+    expect(name.controller!.text, 'Pending Owl');
+    expect(name.enabled, isTrue);
+    expect(find.text('Илгээсэн өөрчлөлтийг ачаалж чадсангүй'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('mismatched review version cannot overwrite an unknown candidate',
+      (tester) async {
+    pendingProfile();
+    draftReply = (request) async => response(request, {
+          ...draft(),
+          'moderation_version': '20000000-0000-4000-8000-000000000002',
+        });
+    await render(tester);
+    expect(find.text('Илгээсэн өөрчлөлтийг ачаалж чадсангүй'), findsOneWidget);
+    expect(
+        tester.widget<TextFormField>(find.byType(TextFormField).first).enabled,
+        isFalse);
+    expect(writes, isEmpty);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets(
+      'rejected replacement clearly edits the retained approved baseline',
+      (tester) async {
+    pendingProfile();
+    profile!['moderation_status'] = 'rejected';
+    draftReply = (request) async => response(request, {
+          ...draft(),
+          'candidate': null,
+          'moderation_status': 'rejected',
+        });
+    await render(tester);
+    expect(find.text('Профайлын өөрчлөлтийг зөвшөөрөөгүй'), findsOneWidget);
+    expect(
+        find.textContaining('Доорх нь өмнө баталсан профайл'), findsOneWidget);
+    expect(
+        tester
+            .widget<TextFormField>(find.byType(TextFormField).first)
+            .controller!
+            .text,
+        'Fixture');
+    expect(
+        tester.widget<TextFormField>(find.byType(TextFormField).first).enabled,
+        isTrue);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets(
+      'first pending profile uses owner row and does not pretend to have public baseline',
+      (tester) async {
+    pendingProfile();
+    profile!['moderation_public_ready'] = false;
+    var fetched = false;
+    draftReply = (request) async {
+      fetched = true;
+      return response(request, draft());
+    };
+    await render(tester);
+    expect(fetched, isFalse);
+    expect(find.textContaining('Доорх нь таны анхны профайл'), findsOneWidget);
+    expect(find.textContaining('Одоо нийтэд харагдах:'), findsNothing);
+    expect(
+        tester.widget<TextFormField>(find.byType(TextFormField).first).enabled,
+        isTrue);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('late owner draft cannot enter the next account editor',
+      (tester) async {
+    pendingProfile();
+    draftReply = (request) async {
+      await signIn('another-user');
+      return response(request, draft());
+    };
+    await render(tester);
+    expect(find.text('Pending Owl'), findsNothing);
+    expect(writes, isEmpty);
+    expect(Supabase.instance.client.auth.currentUser!.id, 'another-user');
+    expect(
+        find.text('Нэвтэрсэн бүртгэл өөрчлөгдлөө. Профайлаа дахин нээгээрэй.'),
+        findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
 
   for (final dark in [true, false]) {
     testWidgets(
@@ -377,6 +556,8 @@ void main() {
         writes.single['avatar_url'],
         startsWith(
             'https://example.test/storage/v1/object/public/avatars/$me/avatar_'));
+    expect(Uri.parse(writes.single['avatar_url'] as String).hasQuery, isFalse);
+    expect(uploads.single.headers['x-upsert'], 'false');
     expect(find.text('Profile destination'), findsOneWidget);
   });
   testWidgets(

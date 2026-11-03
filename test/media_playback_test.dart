@@ -6,11 +6,15 @@ import 'package:flutter_test/flutter_test.dart';
 // ignore: depend_on_referenced_packages
 import 'package:video_player_platform_interface/video_player_platform_interface.dart';
 import 'package:night_owl_ub/core/widgets/network_video.dart';
+import 'package:night_owl_ub/core/widgets/video_view_io.dart' as native;
+import 'package:night_owl_ub/core/constants/app_constants.dart';
 import 'package:night_owl_ub/features/feed/widgets/story_video.dart';
 
 class _Player extends VideoPlayerPlatform {
   final streams = <int, StreamController<VideoEvent>>{};
   final playing = <int, bool>{};
+  final positions = <int, Duration>{};
+  final seeks = <int, Duration>{};
   int created = 0;
   bool initialize = true;
   @override
@@ -54,9 +58,14 @@ class _Player extends VideoPlayerPlatform {
   @override
   Future<void> setMixWithOthers(bool mixWithOthers) async {}
   @override
-  Future<void> seekTo(int playerId, Duration position) async {}
+  Future<void> seekTo(int playerId, Duration position) async {
+    seeks[playerId] = position;
+    positions[playerId] = position;
+  }
+
   @override
-  Future<Duration> getPosition(int playerId) async => Duration.zero;
+  Future<Duration> getPosition(int playerId) async =>
+      positions[playerId] ?? Duration.zero;
   @override
   Widget buildViewWithOptions(VideoViewOptions options) =>
       const SizedBox.expand();
@@ -92,6 +101,43 @@ void main() {
     await tester.pumpWidget(const SizedBox());
     await tester.pump();
   });
+  for (final paused in [false, true]) {
+    testWidgets(
+        'signed media renewal preserves position and ${paused ? 'paused' : 'playing'} state',
+        (tester) async {
+      const source =
+          '${AppConstants.backendUrl}/storage/v1/object/sign/posts/owner/clip.mp4';
+      final progress = ValueNotifier<double>(0);
+      addTearDown(progress.dispose);
+      await show(
+          tester,
+          native.VideoView(
+              url: '$source?token=first',
+              showControls: true,
+              progress: progress));
+      await tester.tap(find.byTooltip('Тоглуулах'));
+      await tester.pump();
+      player.positions[1] = const Duration(seconds: 12);
+      await tester.pump(const Duration(milliseconds: 500));
+      await tester.pump();
+      if (paused) {
+        await tester.tap(find.byTooltip('Түр зогсоох'));
+        await tester.pump();
+      }
+      await show(
+          tester,
+          native.VideoView(
+              url: '$source?token=renewed',
+              showControls: true,
+              progress: progress));
+      expect(player.created, 2);
+      expect(player.seeks[2], const Duration(seconds: 12));
+      expect(player.playing[2], paused ? isFalse : isTrue);
+      expect(progress.value, closeTo(0.4, 0.001));
+      await tester.pumpWidget(const SizedBox());
+      await tester.pump();
+    });
+  }
   testWidgets(
       'StoryVideo reports initialization timeout and retries a fresh player',
       (tester) async {

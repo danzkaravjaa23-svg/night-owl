@@ -67,7 +67,7 @@ class ImageUploader {
           .uploadBinary(
             path,
             bytes,
-            fileOptions: FileOptions(contentType: contentType, upsert: true),
+            fileOptions: FileOptions(contentType: contentType, upsert: false),
           );
 
       return SupabaseService.client.storage

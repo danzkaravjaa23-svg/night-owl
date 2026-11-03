@@ -13,7 +13,9 @@ import '../../../core/widgets/gradient_button.dart';
 import '../../../core/widgets/network_video.dart';
 import '../../../core/services/supabase_service.dart';
 import '../../../core/router/app_router.dart' show AppRoutes;
-import '../../auth/providers/auth_provider.dart' show currentProfileProvider;
+import '../../auth/providers/auth_provider.dart'
+    show currentProfileProvider, sessionUserIdProvider;
+import '../../post/services/content_publication.dart';
 import '../../profile/services/block_report_service.dart';
 import '../../profile/widgets/block_report_sheet.dart';
 import '../providers/feed_provider.dart';
@@ -22,7 +24,8 @@ import '../../discovery/services/discovery_service.dart';
 class CreatorScreen extends ConsumerStatefulWidget {
   final String creatorId;
   const CreatorScreen({super.key, required this.creatorId});
-  @override ConsumerState<CreatorScreen> createState() => _CreatorScreenState();
+  @override
+  ConsumerState<CreatorScreen> createState() => _CreatorScreenState();
 }
 
 class _CreatorScreenState extends ConsumerState<CreatorScreen> {
@@ -36,14 +39,16 @@ class _CreatorScreenState extends ConsumerState<CreatorScreen> {
 
   Map<String, dynamic>? _profile;
   bool _loading = true;
-  bool _error = false;     // профайл татаж чадсангүй — retry харуулна
-  int _loadGen = 0;        // давхар _load-ийн хуучин хариуг хаяна
+  bool _error = false; // профайл татаж чадсангүй — retry харуулна
+  int _loadGen = 0; // давхар _load-ийн хуучин хариуг хаяна
   bool _isFollowing = false;
-  bool _followRequested=false;
-  bool _canView=false;
+  bool _followRequested = false;
+  bool _canView = false;
   bool _followLoading = false;
   bool _isBlocked = false;
   bool _unblocking = false;
+  late (String?, int, String) _scope;
+  int _scopeEpoch = 0;
   int _tab = 0; // 0 = Posts, 1 = Reels (профайлтай ижил icon таб)
 
   // Таб тус бүр өөрийн cursor хуудаслалттай (Reels нь анх нээхэд л татагдана)
@@ -52,13 +57,61 @@ class _CreatorScreenState extends ConsumerState<CreatorScreen> {
 
   bool get _isMe => SupabaseService.currentUser?.id == widget.creatorId;
 
-  bool _isVid(Map<String, dynamic> p) => p['media_type'] == 'video' ||
+  bool _isVid(Map<String, dynamic> p) =>
+      p['media_type'] == 'video' ||
       isVideoUrl((p['media_url'] as String?)?.split('?').first);
 
   @override
   void initState() {
     super.initState();
+    _scope = _readScope();
     _load();
+  }
+
+  (String?, int, String) _readScope() => (
+        ref.read(sessionUserIdProvider),
+        ref.read(socialVersionProvider),
+        widget.creatorId,
+      );
+
+  bool _current(int epoch) =>
+      mounted &&
+      epoch == _scopeEpoch &&
+      _scope == _readScope() &&
+      _scope.$1 == SupabaseService.currentUser?.id;
+
+  void _scopeChanged() {
+    final next = _readScope();
+    if (next == _scope) return;
+    setState(() {
+      _scope = next;
+      _scopeEpoch++;
+      _loadGen++;
+      _profile = null;
+      _loading = true;
+      _error = false;
+      _canView = false;
+      _isFollowing = false;
+      _followRequested = false;
+      _isBlocked = false;
+      _followLoading = false;
+      _unblocking = false;
+      for (final pager in [_postsPager, _reelsPager]) {
+        pager.gen++;
+        pager.items.clear();
+        pager.cursor = null;
+        pager.hasMore = true;
+        pager.loading = false;
+        pager.error = false;
+      }
+    });
+    _load();
+  }
+
+  @override
+  void didUpdateWidget(CreatorScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.creatorId != widget.creatorId) _scopeChanged();
   }
 
   // Буцах — shared линк / refresh-ээр орсон бол pop хийх юм байхгүй
@@ -74,13 +127,13 @@ class _CreatorScreenState extends ConsumerState<CreatorScreen> {
   void _toast(String msg, {bool error = false}) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(msg),
-        backgroundColor: error ? AppColors.error : null));
+        content: Text(msg), backgroundColor: error ? AppColors.error : null));
   }
 
   /// Профайл + дагалт + блок + постын эхний хуудас.
   /// [silent] — дахин ачааллахад алдааны toast гаргахгүй (буцаж ирэх үед).
   Future<void> _load({bool silent = false}) async {
+    final epoch = _scopeEpoch;
     final gen = ++_loadGen;
     final me = SupabaseService.currentUser?.id;
     // Постын эхний хуудас профайлтай зэрэг татагдана — өөрийн retry-тэй
@@ -90,12 +143,18 @@ class _CreatorScreenState extends ConsumerState<CreatorScreen> {
     ]);
     try {
       final results = await Future.wait(<Future<dynamic>>[
-        SupabaseService.client.from('profiles').select()
-            .eq('id', widget.creatorId).maybeSingle(),
+        SupabaseService.client
+            .from('profiles')
+            .select()
+            .eq('id', widget.creatorId)
+            .maybeSingle(),
         if (me != null && me != widget.creatorId)
-          SupabaseService.client.from('follows')
-              .select('follower_id').eq('follower_id', me)
-              .eq('following_id', widget.creatorId).maybeSingle()
+          SupabaseService.client
+              .from('follows')
+              .select('follower_id')
+              .eq('follower_id', me)
+              .eq('following_id', widget.creatorId)
+              .maybeSingle()
         else
           Future<dynamic>.value(null),
         if (me != null && me != widget.creatorId)
@@ -105,64 +164,73 @@ class _CreatorScreenState extends ConsumerState<CreatorScreen> {
         DiscoveryService().relationship(widget.creatorId),
       ]);
       await pages;
-      if (!mounted || gen != _loadGen) return;
-      DiscoveryService().activity('profile_view',target:widget.creatorId);
+      if (!_current(epoch) || gen != _loadGen) return;
+      DiscoveryService().activity('profile_view', target: widget.creatorId);
       setState(() {
-        _profile     = results[0] as Map<String, dynamic>?;
+        _profile = results[0] as Map<String, dynamic>?;
         _isFollowing = results[1] != null;
-        _isBlocked   = results[2] == true;
-        final relation=results[3] as SocialRelationship;
-        _isFollowing=relation.following;
-        _followRequested=relation.requested;
-        _canView=relation.canView;
-        _loading     = false;
-        _error       = false;
+        _isBlocked = results[2] == true;
+        final relation = results[3] as SocialRelationship;
+        _isBlocked = _isBlocked || relation.blocked;
+        _isFollowing = relation.following;
+        _followRequested = relation.requested;
+        _canView = relation.canView;
+        _loading = false;
+        _error = false;
       });
     } catch (_) {
       await pages; // _reloadPager өөрөө алдаагаа барьдаг
-      if (!mounted || gen != _loadGen) return;
+      if (!_current(epoch) || gen != _loadGen) return;
       if (_profile != null) {
         // Шинэчлэл бүтэлгүйтвэл байгаа өгөгдлөө хэвээр үлдээнэ
         setState(() => _loading = false);
         if (!silent) _toast('Шинэчилж чадсангүй');
       } else {
         // Хуурамч "User 0/0/0" биш — алдаа + "Дахин оролдох"
-        setState(() { _loading = false; _error = true; });
+        setState(() {
+          _loading = false;
+          _error = true;
+        });
       }
     }
   }
 
   /// Зөвхөн тоонуудыг серверээс дахин унших (дагах/жагсаалтаас буцах үед)
   Future<void> _refreshCounts() async {
+    final epoch = _scopeEpoch;
     try {
-      final row = await SupabaseService.client.from('profiles')
+      final row = await SupabaseService.client
+          .from('profiles')
           .select('followers_count, following_count, posts_count')
-          .eq('id', widget.creatorId).maybeSingle();
-      if (!mounted || row == null) return;
+          .eq('id', widget.creatorId)
+          .maybeSingle();
+      if (!_current(epoch) || row == null) return;
       setState(() => _profile = {...?_profile, ...row});
     } catch (_) {}
   }
 
   Future<List<Map<String, dynamic>>> _fetchPage(
       _Pager pg, String? before) async {
-    var q = SupabaseService.client.from('posts').select(_cols)
+    var q = SupabaseService.client
+        .from('posts')
+        .select(_cols)
         .eq('user_id', widget.creatorId);
     if (pg.reelsOnly) q = q.or(_videoFilter);
     if (before != null) q = q.lt('created_at', before);
-    final data = await q.order('created_at', ascending: false)
-        .limit(_pageSize);
+    final data = await q.order('created_at', ascending: false).limit(_pageSize);
     return (data as List).cast<Map<String, dynamic>>();
   }
 
   /// Эхний хуудсыг дахин татна — хуучин мөрүүд шинэ нь ирэх хүртэл харагдана
   Future<void> _reloadPager(_Pager pg) async {
+    final epoch = _scopeEpoch;
     final gen = ++pg.gen;
     pg.touched = true;
     pg.loading = true;
     pg.error = false;
     try {
       final rows = await _fetchPage(pg, null);
-      if (gen != pg.gen) return;
+      if (!_current(epoch) || gen != pg.gen) return;
       pg.items
         ..clear()
         ..addAll(rows);
@@ -170,9 +238,9 @@ class _CreatorScreenState extends ConsumerState<CreatorScreen> {
       pg.hasMore = rows.length == _pageSize;
     } catch (_) {
       // Мөр байхгүй үед л алдаа (retry) — байвал хуучнаа хэвээр үлдээнэ
-      if (gen == pg.gen && pg.items.isEmpty) pg.error = true;
+      if (_current(epoch) && gen == pg.gen && pg.items.isEmpty) pg.error = true;
     } finally {
-      if (gen == pg.gen) {
+      if (_current(epoch) && gen == pg.gen) {
         pg.loading = false;
         if (mounted) setState(() {});
       }
@@ -182,20 +250,21 @@ class _CreatorScreenState extends ConsumerState<CreatorScreen> {
   /// Дараагийн хуудас (cursor = сүүлийн мөрийн created_at)
   Future<void> _loadMore(_Pager pg) async {
     if (pg.loading || !pg.hasMore || pg.error) return;
+    final epoch = _scopeEpoch;
     final gen = pg.gen;
     pg.touched = true;
     pg.loading = true;
     try {
       final rows = await _fetchPage(pg, pg.cursor);
-      if (gen != pg.gen) return;
+      if (!_current(epoch) || gen != pg.gen) return;
       if (rows.isNotEmpty) pg.cursor = rows.last['created_at'] as String?;
       pg.hasMore = rows.length == _pageSize;
       pg.items.addAll(rows);
     } catch (_) {
       // Түр алдааг "дууссан" мэт харуулахгүй — footer-т retry
-      if (gen == pg.gen) pg.error = true;
+      if (_current(epoch) && gen == pg.gen) pg.error = true;
     } finally {
-      if (gen == pg.gen) {
+      if (_current(epoch) && gen == pg.gen) {
         pg.loading = false;
         if (mounted) setState(() {});
       }
@@ -205,10 +274,14 @@ class _CreatorScreenState extends ConsumerState<CreatorScreen> {
   /// Post detail-аас буцахад — тухайн tile-г л шинэчилнэ (устгасан бол
   /// хасна, like тоо). Grid-ийг page1 болгож богиносгохгүй тул гулгалт хадгалагдана.
   Future<void> _syncTile(String id) async {
+    final epoch = _scopeEpoch;
     try {
-      final row = await SupabaseService.client.from('posts')
-          .select('id, likes_count').eq('id', id).maybeSingle();
-      if (!mounted) return;
+      final row = await SupabaseService.client
+          .from('posts')
+          .select('id, likes_count')
+          .eq('id', id)
+          .maybeSingle();
+      if (!_current(epoch)) return;
       setState(() {
         for (final pg in [_postsPager, _reelsPager]) {
           if (row == null) {
@@ -217,7 +290,9 @@ class _CreatorScreenState extends ConsumerState<CreatorScreen> {
             for (var i = 0; i < pg.items.length; i++) {
               if ('${pg.items[i]['id']}' == id) {
                 pg.items[i] = {
-                  ...pg.items[i], 'likes_count': row['likes_count']};
+                  ...pg.items[i],
+                  'likes_count': row['likes_count']
+                };
               }
             }
           }
@@ -231,35 +306,41 @@ class _CreatorScreenState extends ConsumerState<CreatorScreen> {
   }
 
   Future<void> _toggleFollow() async {
+    final epoch = _scopeEpoch;
     final me = SupabaseService.currentUser?.id;
     if (me == null) {
       // Shared линкээр нэвтрээгүй орсон — чимээгүй биш, нэвтрэхийг санал болгоно
       _toast('Дагахын тулд нэвтэрнэ үү');
-      context.push('/auth?next=${Uri.encodeComponent('/creator/${widget.creatorId}')}');
+      context.push(
+          '/auth?next=${Uri.encodeComponent('/creator/${widget.creatorId}')}');
       return;
     }
     if (_followLoading) return;
     final was = _isFollowing;
     setState(() => _followLoading = true);
     try {
-      final result=await DiscoveryService().follow(widget.creatorId,!(was||_followRequested));
-      if (!mounted) return;
+      final result = await DiscoveryService()
+          .follow(widget.creatorId, !(was || _followRequested));
+      if (!_current(epoch)) return;
       // Шууд ±1 харуулаад, серверийн яг тоогоор солино (trigger аль хэдийн ажилласан)
       final c = (_profile?['followers_count'] as num?)?.toInt() ?? 0;
       setState(() {
-        _isFollowing = result=='following';
-        _followRequested=result=='requested';
+        _isFollowing = result == 'following';
+        _followRequested = result == 'requested';
         _profile = {
           ...?_profile,
-          'followers_count': was ? math.max(0, c - 1) : result=='following'?c+1:c,
+          'followers_count': was
+              ? math.max(0, c - 1)
+              : result == 'following'
+                  ? c + 1
+                  : c,
         };
       });
       ref.invalidate(currentProfileProvider); // миний "ДАГАЖ БУЙ" тоо
+      if (_followRequested) _toast('Дагах хүсэлт илгээлээ');
       ref.read(socialVersionProvider.notifier).state++;
-      if(_followRequested)_toast('Дагах хүсэлт илгээлээ');
-      await _refreshCounts();
     } on PostgrestException catch (e) {
-      if (!mounted) return;
+      if (!_current(epoch)) return;
       if (e.code == '23505') {
         // Аль хэдийн дагасан (эхний шалгалт алдаа өгсөн байж болно) — төлөвөө засна
         setState(() => _isFollowing = true);
@@ -269,28 +350,37 @@ class _CreatorScreenState extends ConsumerState<CreatorScreen> {
             error: true);
       }
     } catch (_) {
+      if (!_current(epoch)) return;
       _toast(was ? 'Дагахаа болиулж чадсангүй' : 'Дагаж чадсангүй',
           error: true);
     } finally {
-      if (mounted) setState(() => _followLoading = false);
+      if (_current(epoch)) setState(() => _followLoading = false);
     }
   }
 
   Future<void> _unblock() async {
     if (_unblocking) return;
+    final epoch = _scopeEpoch;
+    final service = ref.read(blockMutationServiceProvider);
+    final session = service.captureSession();
     setState(() => _unblocking = true);
-    final err = await BlockReportService.unblock(widget.creatorId);
-    if (!mounted) return;
-    setState(() {
-      _unblocking = false;
-      if (err == null) _isBlocked = false;
-    });
-    if (err == null) {
+    try {
+      await service.setBlocked(session, widget.creatorId, blocked: false);
+      if (!_current(epoch) || !session.isCurrent) return;
       ref.invalidate(blockedIdsProvider);
-      ref.read(socialVersionProvider.notifier).state++;
       _toast('Блок цуцлагдлаа');
-    } else {
-      _toast('Блок цуцалж чадсангүй', error: true);
+      ref.read(socialVersionProvider.notifier).state++;
+    } catch (error) {
+      if (_current(epoch)) {
+        _toast(
+            error is PublicationFailure
+                ? error.message
+                : 'Блок цуцалж чадсангүй',
+            error: true);
+      }
+    } finally {
+      session.close();
+      if (_current(epoch)) setState(() => _unblocking = false);
     }
   }
 
@@ -309,7 +399,8 @@ class _CreatorScreenState extends ConsumerState<CreatorScreen> {
         body: Stack(children: [
           Positioned.fill(child: body),
           Positioned(
-            top: 0, left: 0,
+            top: 0,
+            left: 0,
             child: SafeArea(
               bottom: false,
               child: Padding(
@@ -324,9 +415,11 @@ class _CreatorScreenState extends ConsumerState<CreatorScreen> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen(sessionUserIdProvider, (_, __) => _scopeChanged());
+    ref.listen(socialVersionProvider, (_, __) => _scopeChanged());
     if (_loading) {
-      return _shell(const Center(
-          child: OwlLoading(message: 'Профайл ачаалж байна')));
+      return _shell(
+          const Center(child: OwlLoading(message: 'Профайл ачаалж байна')));
     }
     if (_error || _profile == null) {
       // Сүлжээний алдаа эсвэл устсан/байхгүй хэрэглэгч (хуучин shared линк)
@@ -345,7 +438,10 @@ class _CreatorScreenState extends ConsumerState<CreatorScreen> {
                     fullWidth: false,
                     borderRadius: 999,
                     onPressed: () {
-                      setState(() { _loading = true; _error = false; });
+                      setState(() {
+                        _loading = true;
+                        _error = false;
+                      });
                       _load();
                     })
                 : null,
@@ -354,12 +450,12 @@ class _CreatorScreenState extends ConsumerState<CreatorScreen> {
       ));
     }
 
-    final username  = _profile?['username'] as String? ?? 'User';
-    final handle    = username.replaceAll('@', '');
-    final bio       = _profile?['bio'] as String?;
+    final username = _profile?['username'] as String? ?? 'User';
+    final handle = username.replaceAll('@', '');
+    final bio = _profile?['bio'] as String?;
     final avatarUrl = _profile?['avatar_url'] as String?;
-    final coverUrl  = _profile?['cover_url'] as String?;
-    final initial   = handle.isNotEmpty ? handle[0].toUpperCase() : '?';
+    final coverUrl = _profile?['cover_url'] as String?;
+    final initial = handle.isNotEmpty ? handle[0].toUpperCase() : '?';
     final followers = (_profile?['followers_count'] as num?)?.toInt() ?? 0;
     final following = (_profile?['following_count'] as num?)?.toInt() ?? 0;
     // posts_count (trigger-ээр шинэчлэгддэг) — ачаалсан хуудсаас бага байж болохгүй
@@ -371,9 +467,9 @@ class _CreatorScreenState extends ConsumerState<CreatorScreen> {
     return Scaffold(
       backgroundColor: AppColors.bgBase,
       body: RefreshIndicator(
-          onRefresh: () => _load(),
-          color: AppColors.accentStart,
-          child: CustomScrollView(
+        onRefresh: () => _load(),
+        color: AppColors.accentStart,
+        child: CustomScrollView(
             // Агуулга богино үед ч pull-to-refresh ажиллана
             physics: const AlwaysScrollableScrollPhysics(),
             slivers: [
@@ -387,7 +483,9 @@ class _CreatorScreenState extends ConsumerState<CreatorScreen> {
                       _CreatorCover(url: coverUrl),
                       // Дээд бар — буцах + options, cover дээгүүр glass товч
                       Positioned(
-                        top: 0, left: 0, right: 0,
+                        top: 0,
+                        left: 0,
+                        right: 0,
                         child: SafeArea(
                           bottom: false,
                           child: Padding(
@@ -401,8 +499,7 @@ class _CreatorScreenState extends ConsumerState<CreatorScreen> {
                               if (isMe)
                                 _GlassRoundBtn(
                                   icon: Icons.settings_outlined,
-                                  onTap: () =>
-                                      context.push(AppRoutes.settings),
+                                  onTap: () => context.push(AppRoutes.settings),
                                 )
                               else
                                 _GlassRoundBtn(
@@ -422,20 +519,23 @@ class _CreatorScreenState extends ConsumerState<CreatorScreen> {
                       Positioned(
                         bottom: -48,
                         child: Container(
-                          width: 96, height: 96,
+                          width: 96,
+                          height: 96,
                           padding: const EdgeInsets.all(4),
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
                             color: AppColors.bgBase,
                             boxShadow: [
                               BoxShadow(
-                                color: AppColors.neonCyan
-                                    .withValues(alpha: 0.30),
-                                blurRadius: 24, spreadRadius: -2),
+                                  color: AppColors.neonCyan
+                                      .withValues(alpha: 0.30),
+                                  blurRadius: 24,
+                                  spreadRadius: -2),
                               BoxShadow(
-                                color: AppColors.magenta
-                                    .withValues(alpha: 0.22),
-                                blurRadius: 28, spreadRadius: -4),
+                                  color:
+                                      AppColors.magenta.withValues(alpha: 0.22),
+                                  blurRadius: 28,
+                                  spreadRadius: -4),
                             ],
                           ),
                           child: AppAvatar(
@@ -448,155 +548,174 @@ class _CreatorScreenState extends ConsumerState<CreatorScreen> {
                     ],
                   ),
                   const SizedBox(height: 60),
-
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 20),
                     child: Column(
                         crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
-                      // ── Нэр (голд, h2) + @handle eyebrow ──
-                      Text(handle,
-                          textAlign: TextAlign.center,
-                          style: AppTextStyles.h2),
-                      const SizedBox(height: 4),
-                      Text('@$handle',
-                          textAlign: TextAlign.center,
-                          style: AppTextStyles.labelSm.copyWith(
-                              color: AppColors.neonCyan,
-                              letterSpacing: 1.2)),
-
-                      // ── Bio (голд, 2 мөр) ──
-                      if (bio != null && bio.isNotEmpty) ...[
-                        const SizedBox(height: 10),
-                        ConstrainedBox(
-                          constraints: const BoxConstraints(maxWidth: 300),
-                          child: Text(bio,
+                          // ── Нэр (голд, h2) + @handle eyebrow ──
+                          Text(handle,
                               textAlign: TextAlign.center,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: AppTextStyles.bodySm.copyWith(
-                                  color: AppColors.textSecondary,
-                                  height: 1.45)),
-                        ),
-                      ],
-                      const SizedBox(height: 20),
+                              style: AppTextStyles.h2),
+                          const SizedBox(height: 4),
+                          Text('@$handle',
+                              textAlign: TextAlign.center,
+                              style: AppTextStyles.labelSm.copyWith(
+                                  color: AppColors.neonCyan,
+                                  letterSpacing: 1.2)),
 
-                      // ── Stats — нэг glass card, hairline хуваагчтай (профайлтай ижил) ──
-                      Container(
-                        decoration: BoxDecoration(
-                          color: AppColors.bgElevated.withValues(alpha: 0.72),
-                          borderRadius: BorderRadius.circular(24),
-                          border: Border.all(color: AppColors.hairline),
-                          boxShadow: AppColors.shadowCard,
-                        ),
-                        padding: const EdgeInsets.symmetric(vertical: 18),
-                        child: Row(children: [
-                          Expanded(
-                              child:
-                                  _Stat(label: 'ПОСТ', value: postsCount)),
-                          Container(
-                              width: 1, height: 36, color: AppColors.hairline),
-                          Expanded(
-                              child: MouseRegion(
-                            cursor: SystemMouseCursors.click,
-                            child: GestureDetector(
-                              behavior: HitTestBehavior.opaque,
-                              // Жагсаалтаас буцахад тоог серверээс дахин уншина
-                              onTap: () async {
-                                await context.push(
-                                    '/follows/${widget.creatorId}?tab=followers');
-                                if (mounted) _refreshCounts();
-                              },
-                              child: _Stat(
-                                  label: 'ДАГАГЧ',
-                                  value: followers,
-                                  gradient: true)),
-                          )),
-                          Container(
-                              width: 1, height: 36, color: AppColors.hairline),
-                          Expanded(
-                              child: MouseRegion(
-                            cursor: SystemMouseCursors.click,
-                            child: GestureDetector(
-                              behavior: HitTestBehavior.opaque,
-                              onTap: () async {
-                                await context.push(
-                                    '/follows/${widget.creatorId}?tab=following');
-                                if (mounted) _refreshCounts();
-                              },
-                              child:
-                                  _Stat(label: 'ДАГАЖ БУЙ', value: following)),
-                          )),
-                        ]),
-                      ),
-                      const SizedBox(height: 16),
-
-                      // ── Action мөр — бүтэн өргөн pill товчнууд ──
-                      if (isMe)
-                        GradientButton(
-                          label: 'Профайл засах',
-                          height: 48,
-                          borderRadius: 999,
-                          icon: const Icon(Icons.edit_outlined,
-                              color: Colors.white, size: 16),
-                          // /auth/setup биш — router бүртгэлтэйг feed рүү
-                          // шиддэг. Буцахад шинэ bio/avatar-ыг чимээгүй ачаална.
-                          onPressed: () async {
-                            await context.push(AppRoutes.editProfile);
-                            if (mounted) _load(silent: true);
-                          },
-                        )
-                      else if (_isBlocked)
-                        _BlockedNotice(busy: _unblocking, onUnblock: _unblock)
-                      else
-                        Row(children: [
-                          // Дагах / Дагасан — gradient ↔ glass pill
-                          Expanded(
-                            child: _FollowBtn(
-                                isFollowing: _isFollowing,
-                                requested:_followRequested,
-                                loading: _followLoading,
-                                onTap: _toggleFollow),
-                          ),
-                          const SizedBox(width: 12),
-                          // Мессеж — glass pill
-                          Expanded(
-                            child: _GlassPillBtn(
-                              label: 'Мессеж',
-                              icon: Icons.send_outlined,
-                              onTap: () =>
-                                  context.push('/dm/${widget.creatorId}'),
+                          // ── Bio (голд, 2 мөр) ──
+                          if (bio != null && bio.isNotEmpty) ...[
+                            const SizedBox(height: 10),
+                            ConstrainedBox(
+                              constraints: const BoxConstraints(maxWidth: 300),
+                              child: Text(bio,
+                                  textAlign: TextAlign.center,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: AppTextStyles.bodySm.copyWith(
+                                      color: AppColors.textSecondary,
+                                      height: 1.45)),
                             ),
-                          ),
-                        ]),
-                      const SizedBox(height: 28),
+                          ],
+                          const SizedBox(height: 20),
 
-                      // ── Icon-only таб (grid / reels) — профайлтай ижил underline ──
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          _IconTab(
-                              icon: Icons.grid_on,
-                              selected: _tab == 0,
-                              onTap: () => setState(() => _tab = 0)),
-                          const SizedBox(width: 40),
-                          _IconTab(
-                              icon: Icons.play_arrow_rounded,
-                              selected: _tab == 1,
-                              onTap: () => setState(() => _tab = 1)),
-                        ],
-                      ),
-                      const SizedBox(height: 10),
-                    ]),
+                          // ── Stats — нэг glass card, hairline хуваагчтай (профайлтай ижил) ──
+                          Container(
+                            decoration: BoxDecoration(
+                              color:
+                                  AppColors.bgElevated.withValues(alpha: 0.72),
+                              borderRadius: BorderRadius.circular(24),
+                              border: Border.all(color: AppColors.hairline),
+                              boxShadow: AppColors.shadowCard,
+                            ),
+                            padding: const EdgeInsets.symmetric(vertical: 18),
+                            child: Row(children: [
+                              Expanded(
+                                  child:
+                                      _Stat(label: 'ПОСТ', value: postsCount)),
+                              Container(
+                                  width: 1,
+                                  height: 36,
+                                  color: AppColors.hairline),
+                              Expanded(
+                                  child: MouseRegion(
+                                cursor: SystemMouseCursors.click,
+                                child: GestureDetector(
+                                    behavior: HitTestBehavior.opaque,
+                                    // Жагсаалтаас буцахад тоог серверээс дахин уншина
+                                    onTap: () async {
+                                      await context.push(
+                                          '/follows/${widget.creatorId}?tab=followers');
+                                      if (mounted) _refreshCounts();
+                                    },
+                                    child: _Stat(
+                                        label: 'ДАГАГЧ',
+                                        value: followers,
+                                        gradient: true)),
+                              )),
+                              Container(
+                                  width: 1,
+                                  height: 36,
+                                  color: AppColors.hairline),
+                              Expanded(
+                                  child: MouseRegion(
+                                cursor: SystemMouseCursors.click,
+                                child: GestureDetector(
+                                    behavior: HitTestBehavior.opaque,
+                                    onTap: () async {
+                                      await context.push(
+                                          '/follows/${widget.creatorId}?tab=following');
+                                      if (mounted) _refreshCounts();
+                                    },
+                                    child: _Stat(
+                                        label: 'ДАГАЖ БУЙ', value: following)),
+                              )),
+                            ]),
+                          ),
+                          const SizedBox(height: 16),
+
+                          // ── Action мөр — бүтэн өргөн pill товчнууд ──
+                          if (isMe)
+                            GradientButton(
+                              label: 'Профайл засах',
+                              height: 48,
+                              borderRadius: 999,
+                              icon: const Icon(Icons.edit_outlined,
+                                  color: Colors.white, size: 16),
+                              // /auth/setup биш — router бүртгэлтэйг feed рүү
+                              // шиддэг. Буцахад шинэ bio/avatar-ыг чимээгүй ачаална.
+                              onPressed: () async {
+                                await context.push(AppRoutes.editProfile);
+                                if (mounted) _load(silent: true);
+                              },
+                            )
+                          else if (_isBlocked)
+                            _BlockedNotice(
+                                busy: _unblocking, onUnblock: _unblock)
+                          else
+                            Row(children: [
+                              // Дагах / Дагасан — gradient ↔ glass pill
+                              Expanded(
+                                child: _FollowBtn(
+                                    isFollowing: _isFollowing,
+                                    requested: _followRequested,
+                                    loading: _followLoading,
+                                    onTap: _toggleFollow),
+                              ),
+                              const SizedBox(width: 12),
+                              // Мессеж — glass pill
+                              Expanded(
+                                child: _GlassPillBtn(
+                                  label: 'Мессеж',
+                                  icon: Icons.send_outlined,
+                                  onTap: () =>
+                                      context.push('/dm/${widget.creatorId}'),
+                                ),
+                              ),
+                            ]),
+                          const SizedBox(height: 28),
+
+                          // ── Icon-only таб (grid / reels) — профайлтай ижил underline ──
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              _IconTab(
+                                  icon: Icons.grid_on,
+                                  selected: _tab == 0,
+                                  onTap: () => setState(() => _tab = 0)),
+                              const SizedBox(width: 40),
+                              _IconTab(
+                                  icon: Icons.play_arrow_rounded,
+                                  selected: _tab == 1,
+                                  onTap: () => setState(() => _tab = 1)),
+                            ],
+                          ),
+                          const SizedBox(height: 10),
+                        ]),
                   ),
                 ]),
               ),
 
               // ── Posts grid — нягт 2px завсартай, cursor хуудаслалттай ──
-              SliverToBoxAdapter(child:Padding(padding:const EdgeInsets.symmetric(horizontal:20),child:OutlinedButton.icon(
-                icon:const Icon(Icons.collections_bookmark_outlined),label:const Text('Газрын цуглуулга'),onPressed:()=>context.push('/collections/${widget.creatorId}')))),
-              if(!_canView&&!isMe)const SliverToBoxAdapter(child:Padding(padding:EdgeInsets.all(32),child:Column(children:[Icon(Icons.lock_outline,size:40),SizedBox(height:12),Text('Хувийн профайл · Дагах хүсэлт илгээгээрэй')]))),
-              if(_canView||isMe)..._gridSlivers(isMe),
+              SliverToBoxAdapter(
+                  child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: OutlinedButton.icon(
+                          icon: const Icon(Icons.collections_bookmark_outlined),
+                          label: const Text('Газрын цуглуулга'),
+                          onPressed: () => context
+                              .push('/collections/${widget.creatorId}')))),
+              if (!_canView && !isMe)
+                const SliverToBoxAdapter(
+                    child: Padding(
+                        padding: EdgeInsets.all(32),
+                        child: Column(children: [
+                          Icon(Icons.lock_outline, size: 40),
+                          SizedBox(height: 12),
+                          Text('Хувийн профайл · Дагах хүсэлт илгээгээрэй')
+                        ]))),
+              if (_canView || isMe) ..._gridSlivers(isMe),
             ]),
       ),
     );
@@ -615,48 +734,44 @@ class _CreatorScreenState extends ConsumerState<CreatorScreen> {
     if (shown.isEmpty && !pg.hasMore && !pg.loading) {
       return [
         SliverFillRemaining(
-          hasScrollBody: false,
-          child: EmptyState(
-            illustration: _tab == 1
-                ? 'assets/images/illustrations/empty_creator.svg'
-                : 'assets/images/illustrations/empty_profile.svg',
-            title: _tab == 1
-                ? 'Бичлэг алга байна'
-                : 'Пост алга байна',
-            action: isMe
-                ? GradientButton(
-                    label: _tab == 1 ? 'Бичлэг хуваалцах' : 'Пост хуваалцах',
-                    size: GradientButtonSize.md,
-                    fullWidth: false,
-                    borderRadius: 999,
-                    onPressed: () async {
-                      await context.push(_tab == 1
-                          ? AppRoutes.createReel
-                          : AppRoutes.createPost);
-                      if (mounted) _load(silent: true);
-                    })
-                : null,
-          )),
+            hasScrollBody: false,
+            child: EmptyState(
+              illustration: _tab == 1
+                  ? 'assets/images/illustrations/empty_creator.svg'
+                  : 'assets/images/illustrations/empty_profile.svg',
+              title: _tab == 1 ? 'Бичлэг алга байна' : 'Пост алга байна',
+              action: isMe
+                  ? GradientButton(
+                      label: _tab == 1 ? 'Бичлэг хуваалцах' : 'Пост хуваалцах',
+                      size: GradientButtonSize.md,
+                      fullWidth: false,
+                      borderRadius: 999,
+                      onPressed: () async {
+                        await context.push(_tab == 1
+                            ? AppRoutes.createReel
+                            : AppRoutes.createPost);
+                        if (mounted) _load(silent: true);
+                      })
+                  : null,
+            )),
       ];
     }
 
     return [
       SliverPadding(
-        padding: const EdgeInsets.symmetric(horizontal: 2),
-        sliver: SliverGrid(
-          delegate: SliverChildBuilderDelegate(
-            (_, i) => _tile(shown[i]),
-            // Builder нь shown[i]-г уншдаг тул тоо нь ч shown-оос
-            childCount: shown.length),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 3, mainAxisSpacing: 2, crossAxisSpacing: 2),
-        )),
+          padding: const EdgeInsets.symmetric(horizontal: 2),
+          sliver: SliverGrid(
+            delegate: SliverChildBuilderDelegate((_, i) => _tile(shown[i]),
+                // Builder нь shown[i]-г уншдаг тул тоо нь ч shown-оос
+                childCount: shown.length),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 3, mainAxisSpacing: 2, crossAxisSpacing: 2),
+          )),
       // Footer — SliverList дотор тул дэлгэцэнд ойртоход л build хийгдэнэ,
       // дараагийн хуудас гүйлгэж хүрэхэд татагдана (бүгдийг нэг дор биш)
       SliverList(
-        delegate: SliverChildBuilderDelegate(
-          (_, __) => _footer(pg),
-          childCount: 1)),
+          delegate: SliverChildBuilderDelegate((_, __) => _footer(pg),
+              childCount: 1)),
     ];
   }
 
@@ -668,36 +783,37 @@ class _CreatorScreenState extends ConsumerState<CreatorScreen> {
     });
     return const Padding(
       padding: EdgeInsets.all(24),
-      child: Center(child: CircularProgressIndicator(
-          color: AppColors.accentStart, strokeWidth: 2)),
+      child: Center(
+          child: CircularProgressIndicator(
+              color: AppColors.accentStart, strokeWidth: 2)),
     );
   }
 
   // Татах алдааны retry — footer болон эхний хуудсанд
   Widget _retryBlock(_Pager pg) => Padding(
-    padding: const EdgeInsets.all(24),
-    child: Center(
-      child: Column(mainAxisSize: MainAxisSize.min, children: [
-        Icon(Icons.cloud_off_outlined,
-            color: AppColors.textTertiary, size: 36),
-        const SizedBox(height: 10),
-        Text('Ачаалж чадсангүй',
-            style: AppTextStyles.bodySm.copyWith(
-                color: AppColors.textSecondary)),
-        const SizedBox(height: 12),
-        GradientButton(
-          label: 'Дахин оролдох',
-          size: GradientButtonSize.md,
-          fullWidth: false,
-          borderRadius: 999,
-          onPressed: () {
-            setState(() => pg.error = false);
-            pg.items.isEmpty ? _reloadPager(pg) : _loadMore(pg);
-          },
+        padding: const EdgeInsets.all(24),
+        child: Center(
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            Icon(Icons.cloud_off_outlined,
+                color: AppColors.textTertiary, size: 36),
+            const SizedBox(height: 10),
+            Text('Ачаалж чадсангүй',
+                style: AppTextStyles.bodySm
+                    .copyWith(color: AppColors.textSecondary)),
+            const SizedBox(height: 12),
+            GradientButton(
+              label: 'Дахин оролдох',
+              size: GradientButtonSize.md,
+              fullWidth: false,
+              borderRadius: 999,
+              onPressed: () {
+                setState(() => pg.error = false);
+                pg.items.isEmpty ? _reloadPager(pg) : _loadMore(pg);
+              },
+            ),
+          ]),
         ),
-      ]),
-    ),
-  );
+      );
 
   Widget _tile(Map<String, dynamic> p) {
     final id = '${p['id']}';
@@ -705,75 +821,76 @@ class _CreatorScreenState extends ConsumerState<CreatorScreen> {
     final likes = (p['likes_count'] as num?)?.toInt() ?? 0;
     final isVid = url != null && _isVid(p);
     return MouseRegion(
+      key: ValueKey('creator-post-$id'),
       cursor: SystemMouseCursors.click,
       child: GestureDetector(
-      onTap: () async {
-        await context.push('/post/$id');
-        // Буцахад устгасан/like өөрчлөгдсөн эсэхийг тусгана
-        if (mounted) _syncTile(id);
-      },
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(4),
-        child: Stack(fit: StackFit.expand, children: [
-          if (isVid)
-            // Видеоны эхний кадрыг cover болгож харуулна
-            // (профайлын grid-тэй ижил — posterOnly дарагдана)
-            NetworkVideo(url: url,
-                posterOnly: true, showPosterIcon: false)
-          else if (url != null)
-            AuthorizedImage(
-              imageUrl: url, fit: BoxFit.cover,
-              memCacheWidth: 400,
-              fadeInDuration:
-                  const Duration(milliseconds: 150),
-              placeholder: (_, __) =>
-                  Container(color: AppColors.bgSurface),
-              errorWidget: (_, __, ___) =>
-                  Container(color: AppColors.bgSurface))
-          else
-            Container(color: AppColors.bgSurface),
-          // Видео badge — баруун дээд (профайлтай ижил)
-          // Медиа дээр тул горимоос үл хамааран харанхуй
-          if (isVid)
-            Positioned(
-              top: 6, right: 6,
-              child: Container(
-                width: 24,
-                height: 24,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(8),
-                  color: AppColors.bgBaseDark
-                      .withValues(alpha: 0.5),
-                  border: Border.all(
-                      color: AppColors.hairline2Dark),
+        onTap: () async {
+          await context.push('/post/$id');
+          // Буцахад устгасан/like өөрчлөгдсөн эсэхийг тусгана
+          if (mounted) _syncTile(id);
+        },
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(4),
+          child: Stack(fit: StackFit.expand, children: [
+            if (isVid)
+              // Видеоны эхний кадрыг cover болгож харуулна
+              // (профайлын grid-тэй ижил — posterOnly дарагдана)
+              NetworkVideo(url: url, posterOnly: true, showPosterIcon: false)
+            else if (url != null)
+              AuthorizedImage(
+                  imageUrl: url,
+                  fit: BoxFit.cover,
+                  memCacheWidth: 400,
+                  fadeInDuration: const Duration(milliseconds: 150),
+                  placeholder: (_, __) => Container(color: AppColors.bgSurface),
+                  errorWidget: (_, __, ___) =>
+                      Container(color: AppColors.bgSurface))
+            else
+              Container(color: AppColors.bgSurface),
+            // Видео badge — баруун дээд (профайлтай ижил)
+            // Медиа дээр тул горимоос үл хамааран харанхуй
+            if (isVid)
+              Positioned(
+                top: 6,
+                right: 6,
+                child: Container(
+                  width: 24,
+                  height: 24,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(8),
+                    color: AppColors.bgBaseDark.withValues(alpha: 0.5),
+                    border: Border.all(color: AppColors.hairline2Dark),
+                  ),
+                  child: const Icon(Icons.videocam_rounded,
+                      color: AppColors.neonCyanDark, size: 14),
                 ),
-                child: const Icon(Icons.videocam_rounded,
-                    color: AppColors.neonCyanDark, size: 14),
               ),
-            ),
-          // Like тоо — 0 бол харуулахгүй (профайлтай ижил)
-          if (likes > 0)
-            Positioned(bottom: 6, left: 6,
-              child: Row(mainAxisSize: MainAxisSize.min, children: [
-                const Icon(Icons.favorite,
-                  color: Colors.white, size: 13),
-                const SizedBox(width: 3),
-                Text(_fmt(likes),
-                  style: const TextStyle(
-                    color: Colors.white, fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    shadows: [Shadow(blurRadius: 4,
-                      color: Colors.black)])),
-              ])),
-        ]),
-      ),
+            // Like тоо — 0 бол харуулахгүй (профайлтай ижил)
+            if (likes > 0)
+              Positioned(
+                  bottom: 6,
+                  left: 6,
+                  child: Row(mainAxisSize: MainAxisSize.min, children: [
+                    const Icon(Icons.favorite, color: Colors.white, size: 13),
+                    const SizedBox(width: 3),
+                    Text(_fmt(likes),
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            shadows: [
+                              Shadow(blurRadius: 4, color: Colors.black)
+                            ])),
+                  ])),
+          ]),
+        ),
       ),
     );
   }
 
   String _fmt(int n) {
-    if (n >= 1000000) return '${(n/1000000).toStringAsFixed(1)}M';
-    if (n >= 1000)    return '${(n/1000).toStringAsFixed(1)}K';
+    if (n >= 1000000) return '${(n / 1000000).toStringAsFixed(1)}M';
+    if (n >= 1000) return '${(n / 1000).toStringAsFixed(1)}K';
     return '$n';
   }
 }
@@ -784,12 +901,12 @@ class _Pager {
   _Pager({this.reelsOnly = false});
 
   final List<Map<String, dynamic>> items = [];
-  String? cursor;        // сүүлийн мөрийн created_at
+  String? cursor; // сүүлийн мөрийн created_at
   bool hasMore = true;
   bool loading = false;
   bool error = false;
-  bool touched = false;  // нэг ч удаа татаж эхэлсэн эсэх (Reels lazy)
-  int gen = 0;           // reload хийхэд хуучин хүсэлтийн хариуг хаяна
+  bool touched = false; // нэг ч удаа татаж эхэлсэн эсэх (Reels lazy)
+  int gen = 0; // reload хийхэд хуучин хүсэлтийн хариуг хаяна
 }
 
 /// Блоклосон хэрэглэгчийн профайл дээр — Дагах/Мессежийн оронд
@@ -845,25 +962,31 @@ class _CreatorCover extends StatelessWidget {
       child: Stack(fit: StackFit.expand, children: [
         if (url != null && url!.isNotEmpty)
           AuthorizedImage(
-            imageUrl: url!,
-            fit: BoxFit.cover,
-            memCacheWidth: 900,
-            fadeInDuration: const Duration(milliseconds: 180),
-            placeholder: (_, __) => Container(color: AppColors.bgSurface),
-            errorWidget: (_, __, ___) => _fallback())
+              imageUrl: url!,
+              fit: BoxFit.cover,
+              memCacheWidth: 900,
+              fadeInDuration: const Duration(milliseconds: 180),
+              placeholder: (_, __) => Container(color: AppColors.bgSurface),
+              errorWidget: (_, __, ___) => _fallback())
         else
           _fallback(),
         // Доод fade — void bg руу бүрэн уусаж avatar ялгарна
         // (дунд цэг = bgBase 40% — харанхуйд хуучин 0x66050505-тай ижил)
-        DecoratedBox(decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter, end: Alignment.bottomCenter,
-            colors: [
+        DecoratedBox(
+            decoration: BoxDecoration(
+                gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
               Colors.transparent,
               AppColors.bgBase.withValues(alpha: 0.4),
               AppColors.bgBase,
             ],
-            stops: const [0.4, 0.75, 1.0]))),
+                    stops: const [
+              0.4,
+              0.75,
+              1.0
+            ]))),
       ]),
     );
   }
@@ -871,14 +994,19 @@ class _CreatorCover extends StatelessWidget {
   // Неон wash — magenta дээрээс void bg руу уусна (хуучин header-ийн өнгө)
   Widget _fallback() => Container(
         decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft, end: Alignment.bottomCenter,
-            colors: [
+            gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomCenter,
+                colors: [
               AppColors.magenta.withValues(alpha: 0.22),
               AppColors.accentPurple.withValues(alpha: 0.10),
               AppColors.bgBase,
             ],
-            stops: const [0.0, 0.45, 1.0])),
+                stops: const [
+              0.0,
+              0.45,
+              1.0
+            ])),
       );
 }
 
@@ -937,8 +1065,7 @@ class _IconTab extends StatelessWidget {
                 height: 3,
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(2),
-                  color:
-                      selected ? AppColors.neonCyan : Colors.transparent,
+                  color: selected ? AppColors.neonCyan : Colors.transparent,
                   boxShadow: selected
                       ? AppColors.glowShadow(AppColors.neonCyan)
                       : null,
@@ -954,7 +1081,8 @@ class _Stat extends StatelessWidget {
   final String label;
   final int value;
   final bool gradient;
-  const _Stat({required this.label, required this.value, this.gradient = false});
+  const _Stat(
+      {required this.label, required this.value, this.gradient = false});
   @override
   Widget build(BuildContext context) {
     final numStyle = AppTextStyles.displaySm.copyWith(fontSize: 22, height: 1);
@@ -970,15 +1098,13 @@ class _Stat extends StatelessWidget {
       const SizedBox(height: 6),
       Text(label,
           style: AppTextStyles.labelSm.copyWith(
-              color: AppColors.textTertiary,
-              fontSize: 10,
-              letterSpacing: 1.2)),
+              color: AppColors.textTertiary, fontSize: 10, letterSpacing: 1.2)),
     ]);
   }
 
   String _fmt(int n) {
-    if (n >= 1000000) return '${(n/1000000).toStringAsFixed(1)}M';
-    if (n >= 1000) return '${(n/1000).toStringAsFixed(1)}K';
+    if (n >= 1000000) return '${(n / 1000000).toStringAsFixed(1)}M';
+    if (n >= 1000) return '${(n / 1000).toStringAsFixed(1)}K';
     return '$n';
   }
 }
@@ -1008,8 +1134,8 @@ class _GlassPillBtn extends StatelessWidget {
               Icon(icon, size: 16, color: AppColors.textPrimary),
               const SizedBox(width: 7),
               Text(label,
-                  style: AppTextStyles.btn
-                      .copyWith(color: AppColors.textPrimary)),
+                  style:
+                      AppTextStyles.btn.copyWith(color: AppColors.textPrimary)),
             ]),
           ),
         ),
@@ -1024,7 +1150,7 @@ class _FollowBtn extends StatelessWidget {
   final VoidCallback onTap;
   const _FollowBtn({
     required this.isFollowing,
-    this.requested=false,
+    this.requested = false,
     required this.loading,
     required this.onTap,
   });
@@ -1033,40 +1159,50 @@ class _FollowBtn extends StatelessWidget {
   Widget build(BuildContext context) {
     final filled = !isFollowing; // Дагах = gradient, Дагасан = glass
     return MouseRegion(
-      cursor: loading ? MouseCursor.defer : SystemMouseCursors.click,
-      child: GestureDetector(
-      onTap: loading ? null : onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        curve: Curves.easeOut,
-        height: 48,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          gradient: filled ? AppColors.accentGradient : null,
-          color: filled ? null : AppColors.bgElevated.withValues(alpha: 0.72),
-          borderRadius: BorderRadius.circular(999),
-          border: filled ? null : Border.all(color: AppColors.hairline2),
-          // Primary үед неон glow
-          boxShadow: filled
-              ? AppColors.glowShadow(AppColors.accentStart)
-              : null,
-        ),
-        child: Row(mainAxisSize: MainAxisSize.min, children: [
-          if (loading)
-            // Glass (Дагасан) төлөвт цагаан spinner цайвар дэвсгэр дээр алга болно
-            SizedBox(
-              width: 16, height: 16,
-              child: CircularProgressIndicator(strokeWidth: 2,
-                  color: filled ? Colors.white : AppColors.textPrimary))
-          else ...[
-            Icon(isFollowing ? Icons.check : Icons.person_add_alt_1,
-              size: 16, color: filled ? Colors.white : AppColors.textPrimary),
-            const SizedBox(width: 7),
-            Text(requested?'Хүсэлттэй':isFollowing ? 'Дагасан' : 'Дагах',
-                style: AppTextStyles.btn.copyWith(
-                    color: filled ? Colors.white : AppColors.textPrimary)),
-          ],
-        ]),
-      )));
+        cursor: loading ? MouseCursor.defer : SystemMouseCursors.click,
+        child: GestureDetector(
+            onTap: loading ? null : onTap,
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              curve: Curves.easeOut,
+              height: 48,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                gradient: filled ? AppColors.accentGradient : null,
+                color: filled
+                    ? null
+                    : AppColors.bgElevated.withValues(alpha: 0.72),
+                borderRadius: BorderRadius.circular(999),
+                border: filled ? null : Border.all(color: AppColors.hairline2),
+                // Primary үед неон glow
+                boxShadow:
+                    filled ? AppColors.glowShadow(AppColors.accentStart) : null,
+              ),
+              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                if (loading)
+                  // Glass (Дагасан) төлөвт цагаан spinner цайвар дэвсгэр дээр алга болно
+                  SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: filled ? Colors.white : AppColors.textPrimary))
+                else ...[
+                  Icon(isFollowing ? Icons.check : Icons.person_add_alt_1,
+                      size: 16,
+                      color: filled ? Colors.white : AppColors.textPrimary),
+                  const SizedBox(width: 7),
+                  Text(
+                      requested
+                          ? 'Хүсэлттэй'
+                          : isFollowing
+                              ? 'Дагасан'
+                              : 'Дагах',
+                      style: AppTextStyles.btn.copyWith(
+                          color:
+                              filled ? Colors.white : AppColors.textPrimary)),
+                ],
+              ]),
+            )));
   }
 }

@@ -28,6 +28,33 @@ void _blockChanged(BuildContext context) {
   container.invalidate(blockedIdsProvider);
 }
 
+Future<void> _blockWithConfirmation(BuildContext context,
+    {required BlockMutationService service,
+    required PublicationSession session,
+    required String userId,
+    required String username,
+    VoidCallback? onBlocked}) async {
+  try {
+    session.check();
+    final confirmed = await _confirmBlock(context, username);
+    if (confirmed != true || !context.mounted) return;
+    session.check();
+    await service.setBlocked(session, userId, blocked: true);
+    if (!context.mounted || !session.isCurrent) return;
+    _blockChanged(context);
+    _toast(context, '@$username блоклогдлоо');
+    onBlocked?.call();
+  } catch (error) {
+    if (context.mounted) {
+      _toast(
+          context,
+          error is PublicationFailure
+              ? error.message
+              : 'Блоклож чадсангүй. Дахин оролдоно уу.');
+    }
+  }
+}
+
 /// The selected target is reviewed under the account that opened this form.
 Future<void> showReportSheet(
   BuildContext context, {
@@ -199,54 +226,62 @@ Future<void> showUserOptionsSheet(
   required String username,
   VoidCallback? onBlocked,
 }) async {
-  await showModalBottomSheet(
-    context: context,
-    // Өндөр агуулга халихаас сэргийлж — scroll + safe area
-    // (өнгө, булан, drag handle-ийг theme өгнө)
-    isScrollControlled: true,
-    useSafeArea: true,
-    builder: (sheetCtx) => SafeArea(
-      top: false,
-      child: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const SizedBox(height: 4),
-            ListTile(
-              leading: const Icon(Icons.block, color: AppColors.error),
-              title: Text('@$username-г блоклох',
-                  style: AppTextStyles.bodyMd.copyWith(color: AppColors.error)),
-              onTap: () async {
-                Navigator.of(sheetCtx).pop();
-                final ok = await _confirmBlock(context, username);
-                if (ok != true) return;
-                final err = await BlockReportService.block(userId);
-                if (context.mounted) {
-                  if (err == null) _blockChanged(context);
-                  _toast(context,
-                      err == null ? '@$username блоклогдлоо' : 'Алдаа: $err');
-                }
-                if (err == null) onBlocked?.call();
-              },
-            ),
-            ListTile(
-              leading:
-                  Icon(Icons.flag_outlined, color: AppColors.textSecondary),
-              title: Text('Мэдээлэх', style: AppTextStyles.bodyMd),
-              onTap: () {
-                Navigator.of(sheetCtx).pop();
-                showReportSheet(context,
-                    targetType: 'user',
-                    targetId: userId,
-                    title: '@$username-г юунд мэдээлэх вэ?');
-              },
-            ),
-            const SizedBox(height: 12),
-          ],
+  final service = ProviderScope.containerOf(context, listen: false)
+      .read(blockMutationServiceProvider);
+  final session = service.captureSession();
+  Future<void>? blockAction;
+  try {
+    await showModalBottomSheet(
+      context: context,
+      // Өндөр агуулга халихаас сэргийлж — scroll + safe area
+      // (өнгө, булан, drag handle-ийг theme өгнө)
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (sheetCtx) => SafeArea(
+        top: false,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: 4),
+              ListTile(
+                leading: const Icon(Icons.block, color: AppColors.error),
+                title: Text('@$username-г блоклох',
+                    style:
+                        AppTextStyles.bodyMd.copyWith(color: AppColors.error)),
+                onTap: () {
+                  if (blockAction != null) return;
+                  Navigator.of(sheetCtx).pop();
+                  blockAction = _blockWithConfirmation(context,
+                      service: service,
+                      session: session,
+                      userId: userId,
+                      username: username,
+                      onBlocked: onBlocked);
+                },
+              ),
+              ListTile(
+                leading:
+                    Icon(Icons.flag_outlined, color: AppColors.textSecondary),
+                title: Text('Мэдээлэх', style: AppTextStyles.bodyMd),
+                onTap: () {
+                  Navigator.of(sheetCtx).pop();
+                  showReportSheet(context,
+                      targetType: 'user',
+                      targetId: userId,
+                      title: '@$username-г юунд мэдээлэх вэ?');
+                },
+              ),
+              const SizedBox(height: 12),
+            ],
+          ),
         ),
       ),
-    ),
-  );
+    );
+    await blockAction;
+  } finally {
+    session.close();
+  }
 }
 
 /// Постын "..." options sheet.
@@ -262,105 +297,109 @@ Future<void> showPostOptionsSheet(
   Future<bool> Function()? onDelete,
   Future<void> Function(String)? onEditCaption,
 }) async {
-  await showModalBottomSheet(
-    context: context,
-    // Өндөр агуулга халихаас сэргийлж — scroll + safe area
-    // (өнгө, булан, drag handle-ийг theme өгнө)
-    isScrollControlled: true,
-    useSafeArea: true,
-    builder: (sheetCtx) => SafeArea(
-      top: false,
-      child: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const SizedBox(height: 4),
+  final service = ProviderScope.containerOf(context, listen: false)
+      .read(blockMutationServiceProvider);
+  final session = service.captureSession();
+  Future<void>? blockAction;
+  try {
+    await showModalBottomSheet(
+      context: context,
+      // Өндөр агуулга халихаас сэргийлж — scroll + safe area
+      // (өнгө, булан, drag handle-ийг theme өгнө)
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (sheetCtx) => SafeArea(
+        top: false,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: 4),
 
-            // ── Өөрийн пост: Тайлбар засах + Delete ──
-            if (isOwn) ...[
-              if (onEditCaption != null)
-                ListTile(
-                  leading:
-                      Icon(Icons.edit_outlined, color: AppColors.textSecondary),
-                  title: Text('Тайлбар засах', style: AppTextStyles.bodyMd),
-                  onTap: () async {
-                    Navigator.of(sheetCtx).pop();
-                    final text =
-                        await _editCaptionDialog(context, currentCaption ?? '');
-                    if (text != null) {
-                      try {
-                        await onEditCaption(text);
-                      } catch (_) {
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                  content: Text(
-                                      'Хадгалж чадсангүй. Дахин оролдоно уу.')));
+              // ── Өөрийн пост: Тайлбар засах + Delete ──
+              if (isOwn) ...[
+                if (onEditCaption != null)
+                  ListTile(
+                    leading: Icon(Icons.edit_outlined,
+                        color: AppColors.textSecondary),
+                    title: Text('Тайлбар засах', style: AppTextStyles.bodyMd),
+                    onTap: () async {
+                      Navigator.of(sheetCtx).pop();
+                      final text = await _editCaptionDialog(
+                          context, currentCaption ?? '');
+                      if (text != null) {
+                        try {
+                          await onEditCaption(text);
+                        } catch (_) {
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                    content: Text(
+                                        'Хадгалж чадсангүй. Дахин оролдоно уу.')));
+                          }
                         }
                       }
+                    },
+                  ),
+                ListTile(
+                  leading:
+                      const Icon(Icons.delete_outline, color: AppColors.error),
+                  title: Text('Постыг устгах',
+                      style: AppTextStyles.bodyMd
+                          .copyWith(color: AppColors.error)),
+                  onTap: () async {
+                    Navigator.of(sheetCtx).pop();
+                    final ok = await _confirmDeletePost(context);
+                    if (ok != true) return;
+                    final deleted = await onDelete?.call() ?? false;
+                    if (context.mounted) {
+                      _toast(
+                          context,
+                          deleted
+                              ? 'Пост устгагдлаа'
+                              : 'Устгаж чадсангүй. Дахин оролдоно уу.');
                     }
                   },
                 ),
-              ListTile(
-                leading:
-                    const Icon(Icons.delete_outline, color: AppColors.error),
-                title: Text('Постыг устгах',
-                    style:
-                        AppTextStyles.bodyMd.copyWith(color: AppColors.error)),
-                onTap: () async {
-                  Navigator.of(sheetCtx).pop();
-                  final ok = await _confirmDeletePost(context);
-                  if (ok != true) return;
-                  final deleted = await onDelete?.call() ?? false;
-                  if (context.mounted) {
-                    _toast(
-                        context,
-                        deleted
-                            ? 'Пост устгагдлаа'
-                            : 'Устгаж чадсангүй. Дахин оролдоно уу.');
-                  }
-                },
-              ),
-              const SizedBox(height: 12),
-            ] else ...[
-              ListTile(
-                leading:
-                    Icon(Icons.flag_outlined, color: AppColors.textSecondary),
-                title: Text('Постыг мэдээлэх', style: AppTextStyles.bodyMd),
-                onTap: () {
-                  Navigator.of(sheetCtx).pop();
-                  showReportSheet(context,
-                      targetType: 'post', targetId: postId);
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.block, color: AppColors.error),
-                title: Text('@$authorUsername-г блоклох',
-                    style:
-                        AppTextStyles.bodyMd.copyWith(color: AppColors.error)),
-                onTap: () async {
-                  Navigator.of(sheetCtx).pop();
-                  final ok = await _confirmBlock(context, authorUsername);
-                  if (ok != true) return;
-                  final err = await BlockReportService.block(authorId);
-                  if (context.mounted) {
-                    if (err == null) _blockChanged(context);
-                    _toast(
-                        context,
-                        err == null
-                            ? '@$authorUsername блоклогдлоо'
-                            : 'Алдаа: $err');
-                  }
-                  if (err == null) onBlocked?.call();
-                },
-              ),
-              const SizedBox(height: 12),
+                const SizedBox(height: 12),
+              ] else ...[
+                ListTile(
+                  leading:
+                      Icon(Icons.flag_outlined, color: AppColors.textSecondary),
+                  title: Text('Постыг мэдээлэх', style: AppTextStyles.bodyMd),
+                  onTap: () {
+                    Navigator.of(sheetCtx).pop();
+                    showReportSheet(context,
+                        targetType: 'post', targetId: postId);
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.block, color: AppColors.error),
+                  title: Text('@$authorUsername-г блоклох',
+                      style: AppTextStyles.bodyMd
+                          .copyWith(color: AppColors.error)),
+                  onTap: () {
+                    if (blockAction != null) return;
+                    Navigator.of(sheetCtx).pop();
+                    blockAction = _blockWithConfirmation(context,
+                        service: service,
+                        session: session,
+                        userId: authorId,
+                        username: authorUsername,
+                        onBlocked: onBlocked);
+                  },
+                ),
+                const SizedBox(height: 12),
+              ],
             ],
-          ],
+          ),
         ),
       ),
-    ),
-  );
+    );
+    await blockAction;
+  } finally {
+    session.close();
+  }
 }
 
 Future<String?> _editCaptionDialog(BuildContext context, String initial) {

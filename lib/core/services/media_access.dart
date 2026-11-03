@@ -1,3 +1,4 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../constants/app_constants.dart';
 import 'supabase_service.dart';
 
@@ -17,7 +18,8 @@ import 'supabase_service.dart';
   }
   final parts = uri.pathSegments;
   if (parts.length < 6 ||
-      parts.take(4).join('/') != 'storage/v1/object/public' ||
+      parts.take(3).join('/') != 'storage/v1/object' ||
+      !{'public', 'sign', 'authenticated'}.contains(parts[3]) ||
       !{'posts', 'stories', 'avatars', 'venues'}.contains(parts[4]) ||
       parts.skip(5).any((part) =>
           part.isEmpty ||
@@ -28,6 +30,16 @@ import 'supabase_service.dart';
     return null;
   }
   return (bucket: parts[4], path: parts.skip(5).join('/'));
+}
+
+final authorizedMediaSignerProvider =
+    Provider<Future<String> Function(String)>((_) => authorizedMediaUrl);
+final authorizedMediaClockProvider =
+    Provider<DateTime Function()>((_) => DateTime.now);
+
+bool sameProtectedMediaObject(String previous, String next) {
+  final before = protectedStorageObject(previous);
+  return before != null && before == protectedStorageObject(next);
 }
 
 Future<String> authorizedMediaUrl(String url) async {

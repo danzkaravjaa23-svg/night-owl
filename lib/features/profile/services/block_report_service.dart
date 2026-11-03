@@ -1,4 +1,6 @@
 import 'report_submission_service.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 import '../../post/services/content_publication.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -6,40 +8,94 @@ import '../../auth/providers/auth_provider.dart';
 import '../../discovery/services/discovery_service.dart';
 import '../../../core/services/supabase_service.dart';
 
+final blockMutationServiceProvider = Provider((ref) => BlockMutationService());
+
+/// Account-bound mutations never refresh or replace the ambient SDK login.
+class BlockMutationService extends ContentPublicationService {
+  final http.Client? _transport;
+  BlockMutationService({super.client, super.httpClient, super.requestTimeout})
+      : _transport = httpClient;
+
+  Future<void> setBlocked(PublicationSession session, String target,
+      {required bool blocked}) async {
+    session.check();
+    if (target.isEmpty || target == session.ownerId) {
+      throw const PublicationFailure('Өөрийгөө блоклож болохгүй.');
+    }
+    final connection = _transport ?? http.Client();
+    try {
+      final headers = Map<String, String>.from(client.auth.headers)
+        ..removeWhere((key, _) => const {
+              'authorization',
+              'content-type',
+              'prefer'
+            }.contains(key.toLowerCase()));
+      headers.addAll({
+        'Authorization': 'Bearer ${session.token}',
+        'Content-Type': 'application/json',
+        'Prefer': blocked
+            ? 'resolution=ignore-duplicates,return=minimal'
+            : 'return=minimal',
+      });
+      final uri = Uri.parse('${client.rest.url}/blocks').replace(
+          queryParameters: blocked
+              ? {'on_conflict': 'blocker_id,blocked_id'}
+              : {
+                  'blocker_id': 'eq.${session.ownerId}',
+                  'blocked_id': 'eq.$target'
+                });
+      final response = await (blocked
+              ? connection.post(uri,
+                  headers: headers,
+                  body: jsonEncode(
+                      {'blocker_id': session.ownerId, 'blocked_id': target}))
+              : connection.delete(uri, headers: headers))
+          .timeout(requestTimeout);
+      session.check();
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        throw const PublicationFailure(
+            'Блокийн тохиргоог хадгалж чадсангүй. Нэвтрэлтээ шалгаад дахин оролдоно уу.');
+      }
+    } on PublicationFailure {
+      rethrow;
+    } catch (_) {
+      session.check();
+      throw const PublicationFailure(
+          'Блокийн тохиргоо хадгалагдсан эсэхийг баталж чадсангүй. Дахин шалгаарай.');
+    } finally {
+      if (_transport == null) connection.close();
+    }
+  }
+}
+
 /// Block / Report үйлчилгээ
 class BlockReportService {
   static SupabaseClient get _c => SupabaseService.client;
 
   /// Хэрэглэгчийг блоклох
   static Future<String?> block(String userId) async {
-    final me = SupabaseService.currentUser?.id;
-    if (me == null) return 'Нэвтэрнэ үү';
-    if (me == userId) return 'Өөрийгөө блоклож болохгүй';
-    try {
-      // ignoreDuplicates — давхар блоклоход ON CONFLICT DO NOTHING болно
-      // (UPDATE policy байхгүй тул DO UPDATE нь RLS 42501 алдаа өгдөг)
-      await _c.from('blocks').upsert({
-        'blocker_id': me,
-        'blocked_id': userId,
-      }, onConflict: 'blocker_id,blocked_id', ignoreDuplicates: true);
-      return null;
-    } catch (e) {
-      return e.toString();
-    }
+    return _change(userId, true);
   }
 
   /// Блокыг цуцлах
   static Future<String?> unblock(String userId) async {
-    final me = SupabaseService.currentUser?.id;
-    if (me == null) return 'Нэвтэрнэ үү';
+    return _change(userId, false);
+  }
+
+  static Future<String?> _change(String userId, bool blocked) async {
+    PublicationSession? session;
     try {
-      await _c.from('blocks').delete().match({
-        'blocker_id': me,
-        'blocked_id': userId,
-      });
+      final service = BlockMutationService();
+      session = service.captureSession();
+      if (session.ownerId == null) return 'Нэвтэрнэ үү';
+      await service.setBlocked(session, userId, blocked: blocked);
       return null;
-    } catch (e) {
-      return e.toString();
+    } catch (error) {
+      return error is PublicationFailure
+          ? error.message
+          : discoveryError(error);
+    } finally {
+      session?.close();
     }
   }
 

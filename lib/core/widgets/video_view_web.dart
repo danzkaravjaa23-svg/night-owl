@@ -3,6 +3,7 @@ import 'dart:async';
 import 'dart:html' as html;
 import 'dart:ui_web' as ui_web;
 import 'package:flutter/material.dart';
+import '../services/media_access.dart';
 
 const _videoViewType = 'nightowl-video';
 int _viewCounter = 0;
@@ -59,6 +60,9 @@ class _VideoViewState extends State<VideoView> {
   StreamSubscription? _timeSub;
   StreamSubscription? _playSub;
   StreamSubscription? _pauseSub;
+  StreamSubscription? _renewalSub;
+  int _sourceGeneration = 0;
+  bool _restoringPosition = false;
   bool _playing = false; // товшилтын overlay (play badge) харуулах эсэх
 
   @override
@@ -69,13 +73,39 @@ class _VideoViewState extends State<VideoView> {
     // Жагсаалт recycle хийгдэж өөр пост энэ слотод орж ирвэл —
     // хуучин видео биш ШИНЭ url-ийг ачаална (wrong-media баг)
     if (widget.url != old.url) {
+      final renewal = sameProtectedMediaObject(old.url, widget.url);
+      final position = renewal && v.currentTime.isFinite ? v.currentTime : 0.0;
+      final wasPlaying = !v.paused;
+      final generation = ++_sourceGeneration;
+      _renewalSub?.cancel();
       v.pause();
-      widget.progress?.value = 0;
+      if (!renewal) widget.progress?.value = 0;
+      _restoringPosition = renewal;
+      if (renewal) {
+        _renewalSub = v.onLoadedMetadata.listen((_) {
+          if (!mounted ||
+              generation != _sourceGeneration ||
+              !identical(v, _video)) {
+            return;
+          }
+          v.currentTime =
+              v.duration.isFinite ? position.clamp(0, v.duration) : position;
+          _restoringPosition = false;
+          if (wasPlaying &&
+              widget.active &&
+              (ModalRoute.of(context)?.isCurrent ?? true)) {
+            v.play();
+          } else {
+            v.pause();
+          }
+          _renewalSub?.cancel();
+        });
+      }
       final reelMuted = widget.autoplay && !widget.active;
       v
         ..src = widget.url
         ..controls = false
-        ..autoplay = widget.autoplay
+        ..autoplay = renewal ? wasPlaying : widget.autoplay
         ..loop = widget.autoplay
         ..muted = widget.posterOnly || reelMuted;
       v.style.objectFit = (widget.posterOnly || widget.autoplay || widget.cover)
@@ -85,7 +115,7 @@ class _VideoViewState extends State<VideoView> {
       v.style.pointerEvents = 'none';
       _playing =
           false; // шинэ url — build аль хэдийн явж байгаа тул setState-гүй
-      if (widget.autoplay && widget.active) v.play();
+      if (!renewal && widget.autoplay && widget.active) v.play();
     }
     // Reel идэвхжих/идэвхгүйжихэд — идэвхтэй нь дуутай тоглож, бусад нь зогсоно
     if (!widget.autoplay) return;
@@ -160,7 +190,7 @@ class _VideoViewState extends State<VideoView> {
     // mounted шалгалт нь dispose хийгдсэн notifier руу бичихээс хамгаална.
     _timeSub?.cancel();
     _timeSub = v.onTimeUpdate.listen((_) {
-      if (!mounted) return;
+      if (!mounted || _restoringPosition) return;
       final prog = widget.progress;
       if (prog == null) return;
       final d = v.duration;
@@ -189,6 +219,8 @@ class _VideoViewState extends State<VideoView> {
     _timeSub?.cancel();
     _playSub?.cancel();
     _pauseSub?.cancel();
+    _renewalSub?.cancel();
+    _sourceGeneration++;
     _liveStates.remove(_instanceKey);
     // DOM элементийг идэвхгүйжүүлж сүлжээ/дуу суллана
     final v = _video;

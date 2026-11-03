@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 
 import '../theme/app_colors.dart';
+import '../services/media_access.dart';
 
 /// Android/iOS дээр video_player (ExoPlayer/AVPlayer) — API нь веб хувилбартай ижил.
 class VideoView extends StatefulWidget {
@@ -65,6 +66,7 @@ class _VideoViewState extends State<VideoView> {
   bool _failed = false;
   bool _playing = false; // товшилтын overlay (play badge) харуулах эсэх
   bool _onstage = true;
+  bool _restoringPosition = false;
 
   // Reel: зөвхөн идэвхтэй нь дуутай. Poster (grid) controller-гүй.
   bool get _startMuted => widget.autoplay && !widget.active;
@@ -96,9 +98,15 @@ class _VideoViewState extends State<VideoView> {
     super.didUpdateWidget(old);
     // Жагсаалт recycle хийгдэж өөр пост энэ слотод орж ирвэл — ШИНЭ url ачаална
     if (widget.url != old.url || widget.posterOnly != old.posterOnly) {
+      final renewal = widget.posterOnly == old.posterOnly &&
+          sameProtectedMediaObject(old.url, widget.url);
+      final position = renewal ? _ctrl?.value.position : null;
+      final playing = renewal ? _ctrl?.value.isPlaying : null;
       _release();
-      if (widget.url != old.url) widget.progress?.value = 0;
-      if (!widget.posterOnly) _create();
+      if (!renewal && widget.url != old.url) widget.progress?.value = 0;
+      if (!widget.posterOnly) {
+        _create(resumePosition: position, resumePlaying: playing);
+      }
       return;
     }
     final c = _ctrl;
@@ -122,11 +130,12 @@ class _VideoViewState extends State<VideoView> {
     }
   }
 
-  void _create() {
+  void _create({Duration? resumePosition, bool? resumePlaying}) {
     final gen = ++_gen;
     _ready = false;
     _failed = false;
     _playing = false;
+    _restoringPosition = resumePosition != null;
     VideoPlayerController? c;
     try {
       c = _controllerFor(
@@ -138,10 +147,11 @@ class _VideoViewState extends State<VideoView> {
     }
     _ctrl = c;
     c.addListener(_onTick);
-    _init(c, gen);
+    _init(c, gen, resumePosition, resumePlaying);
   }
 
-  Future<void> _init(VideoPlayerController c, int gen) async {
+  Future<void> _init(VideoPlayerController c, int gen, Duration? resumePosition,
+      bool? resumePlaying) async {
     try {
       // initialize-аас өмнө тавибал initialized эвент дээр хэрэгжинэ
       await c.setLooping(widget.autoplay);
@@ -149,16 +159,23 @@ class _VideoViewState extends State<VideoView> {
       // Энэ зайд dispose болсон бол native тоглуулагч үүсгэхгүй (leak)
       if (gen != _gen) return;
       await c.initialize();
+      if (!mounted || gen != _gen) return;
+      if (resumePosition != null) {
+        await c.seekTo(resumePosition > c.value.duration
+            ? c.value.duration
+            : resumePosition);
+      }
     } catch (_) {
       if (mounted && gen == _gen) setState(() => _failed = true);
       return;
     }
     if (!mounted || gen != _gen) return;
+    _restoringPosition = false;
     setState(() => _ready = true);
-    if (widget.autoplay && widget.active && _onstage) {
+    if ((resumePlaying ?? widget.autoplay) && widget.active && _onstage) {
       _run(() async {
         await c.setVolume(1);
-        await c.play();
+        if (mounted && gen == _gen && _onstage && widget.active) await c.play();
       });
     }
   }
@@ -170,7 +187,7 @@ class _VideoViewState extends State<VideoView> {
     // widget.progress-ийг динамикаар уншина (recycle дээр notifier солигдож болно)
     final prog = widget.progress;
     final d = v.duration.inMilliseconds;
-    if (prog != null && v.isInitialized && d > 0) {
+    if (!_restoringPosition && prog != null && v.isInitialized && d > 0) {
       prog.value = (v.position.inMilliseconds / d).clamp(0.0, 1.0).toDouble();
     }
     if (v.hasError && !_failed) {

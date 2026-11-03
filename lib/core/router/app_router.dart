@@ -289,7 +289,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
           path: '/place-review/:ref',
           pageBuilder: (ctx, s) => _slidePage(
-              ctx, s, ReviewPlaceScreen(venueRef: s.pathParameters['ref']!))),
+              ctx,
+              s,
+              AdminGate(
+                  child:
+                      ReviewPlaceScreen(venueRef: s.pathParameters['ref']!)))),
       // ── Onboarding ──
       GoRoute(
           path: AppRoutes.splash,
