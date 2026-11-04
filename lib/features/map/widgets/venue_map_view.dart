@@ -12,6 +12,7 @@ import '../../../core/widgets/sculpted_icon.dart';
 import '../../../core/widgets/app_motion.dart';
 import '../../../models/venue_story_activity.dart';
 import 'map_controller.dart';
+import 'venue_map_label_layout.dart';
 import 'venue_story_badge.dart';
 
 class VenueMapMarker {
@@ -137,20 +138,22 @@ abstract class VenuePinLayout {
   static const double verticalSpacing = 104;
 
   static Map<String, LatLng> positions(List<VenueMapMarker> venues,
-      {required double zoom}) {
+      {required double zoom,
+      double horizontalGap = horizontalSpacing,
+      double verticalGap = verticalSpacing}) {
     final scale = 256 * math.pow(2, VenueMarkerGrouping.zoomBucket(zoom));
     final cells = <(int, int), List<Offset>>{};
     final result = <String, LatLng>{};
     final sorted = [...venues]..sort((a, b) => a.id.compareTo(b.id));
     (int, int) cell(Offset p) =>
-        ((p.dx / horizontalSpacing).floor(), (p.dy / verticalSpacing).floor());
+        ((p.dx / horizontalGap).floor(), (p.dy / verticalGap).floor());
     bool available(Offset p) {
       final key = cell(p);
       for (var x = -1; x <= 1; x++) {
         for (var y = -1; y <= 1; y++) {
           for (final other in cells[(key.$1 + x, key.$2 + y)] ?? <Offset>[]) {
-            if ((other.dx - p.dx).abs() < horizontalSpacing - .001 &&
-                (other.dy - p.dy).abs() < verticalSpacing - .001) {
+            if ((other.dx - p.dx).abs() < horizontalGap - .001 &&
+                (other.dy - p.dy).abs() < verticalGap - .001) {
               return false;
             }
           }
@@ -174,7 +177,7 @@ abstract class VenuePinLayout {
           for (var x = -ring; x <= ring; x++)
             for (var y = -ring; y <= ring; y++)
               if (x.abs() == ring || y.abs() == ring)
-                Offset(x * horizontalSpacing, y * verticalSpacing)
+                Offset(x * horizontalGap, y * verticalGap)
         ]..sort((a, b) {
             final distance = a.distanceSquared.compareTo(b.distanceSquared);
             if (distance != 0) return distance;
@@ -652,8 +655,15 @@ class _VenueMarkerLayerState extends State<_VenueMarkerLayer>
   double? _cachedZoom;
   String? _cachedSelected;
   List<VenueMapMarker>? _cachedVenues;
+  bool? _cachedHasActivity;
+  double? _cachedLabelHeight;
   List<VenueMarkerGroup> _groups = [];
   Map<String, LatLng> _pinPositions = {};
+  Set<String> _visibleLabelIds = {};
+  static const _labelWidth = 148.0;
+  static const _labelGap = 4.0;
+  static const _labelFontSize = 12.5;
+  double _labelHeight = 30;
 
   @override
   void initState() {
@@ -705,17 +715,51 @@ class _VenueMarkerLayerState extends State<_VenueMarkerLayer>
   @override
   Widget build(BuildContext context) {
     final zoom = VenueMarkerGrouping.zoomBucket(MapCamera.of(context).zoom);
+    final hasActivity = widget.activityCounts != null;
+    // Reserve actual scaled text space instead of shrinking accessibility text.
+    _labelHeight = math.max(
+        30,
+        (MediaQuery.textScalerOf(context).scale(_labelFontSize) * 1.2)
+                .ceilToDouble() +
+            12);
+    final pinHeight = hasActivity ? 96.0 : 64.0;
     if (_cachedZoom != zoom ||
         _cachedSelected != widget.selectedId ||
-        _cachedVenues != widget.venues) {
+        _cachedVenues != widget.venues ||
+        _cachedHasActivity != hasActivity ||
+        _cachedLabelHeight != _labelHeight) {
       _groups = VenueMarkerGrouping.group(widget.venues,
           zoom: zoom, selectedId: widget.selectedId);
       _pinPositions = zoom >= VenueMarkerGrouping.individualZoom
-          ? VenuePinLayout.positions(widget.venues, zoom: zoom)
+          ? VenuePinLayout.positions(widget.venues,
+              zoom: zoom,
+              horizontalGap: _labelWidth + 12,
+              // Keep placement stable when activity finishes loading.
+              verticalGap: 96 + _labelGap + _labelHeight + 12)
           : {};
+      _visibleLabelIds = zoom >= VenueMarkerGrouping.individualZoom
+          ? widget.venues.map((venue) => venue.id).toSet()
+          : VenueMapLabelLayout.visibleIds([
+              for (final group in _groups)
+                VenueLabelAnchor(
+                    id: group.members.first.id,
+                    point: group.point,
+                    width: group.isCluster ? 64 : 60,
+                    above:
+                        group.isCluster ? (hasActivity ? 40 : 24) : pinHeight,
+                    below: group.isCluster ? (hasActivity ? 40 : 24) : 0,
+                    hasLabel: !group.isCluster),
+            ],
+              zoom: zoom,
+              labelWidth: _labelWidth,
+              labelHeight: _labelHeight,
+              gap: _labelGap,
+              selectedId: widget.selectedId);
       _cachedZoom = zoom;
       _cachedSelected = widget.selectedId;
       _cachedVenues = widget.venues;
+      _cachedHasActivity = hasActivity;
+      _cachedLabelHeight = _labelHeight;
     }
     return Stack(children: [
       if (_pinPositions.isNotEmpty)
@@ -781,24 +825,42 @@ class _VenueMarkerLayerState extends State<_VenueMarkerLayer>
   Marker _venuePin(VenueMapMarker venue) {
     final activity = _mapActivity(
         [venue.id], widget.activityCounts, widget.activityPostCounts);
+    final name = venue.name.trim().isEmpty ? 'Нэргүй газар' : venue.name.trim();
+    final selected = venue.id == widget.selectedId;
+    final showLabel = _visibleLabelIds.contains(venue.id);
+    final pinHeight = activity == null ? 64.0 : 96.0;
+    final height = pinHeight + (showLabel ? _labelGap + _labelHeight : 0);
+    final width = showLabel ? _labelWidth : 60.0;
     final description = activity == null
-        ? venue.name
-        : '${venue.name} · ${activity.breakdownLabel} · ${activity.level.label}';
+        ? name
+        : '$name · ${activity.breakdownLabel} · ${activity.level.label}';
     return Marker(
         key: ValueKey(venue.id),
         point: _pinPositions[venue.id] ?? venue.point,
-        width: 60,
-        height: activity == null ? 64 : 96,
-        alignment: Alignment.topCenter,
-        child: Tooltip(
-            message: description,
-            child: Semantics(
-                label: description,
-                button: true,
-                selected: venue.id == widget.selectedId,
-                child: GestureDetector(
-                    behavior: HitTestBehavior.opaque,
-                    onTap: () => widget.onVenueTap?.call(venue.id),
+        width: width,
+        height: height,
+        // The pin tip stays on its coordinate; the name lives below that tip.
+        alignment: Marker.computePixelAlignment(
+            width: width, height: height, left: width / 2, top: pinHeight),
+        child: Semantics(
+            label: description,
+            excludeSemantics: true,
+            button: true,
+            selected: selected,
+            onTap: widget.onVenueTap == null
+                ? null
+                : () => widget.onVenueTap!(venue.id),
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              // Keep the tooltip and its hit area inside the pin body.
+              // A wide caption must not block a neighboring pin's taps.
+              GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () => widget.onVenueTap?.call(venue.id),
+                child: Tooltip(
+                  message: description,
+                  child: SizedBox(
+                    width: 60,
+                    height: pinHeight,
                     child: Column(mainAxisSize: MainAxisSize.min, children: [
                       if (activity != null)
                         VenueStoryBadge(
@@ -808,12 +870,104 @@ class _VenueMarkerLayerState extends State<_VenueMarkerLayer>
                           height: 64,
                           child: CustomPaint(
                               painter: _OwlPinPainter(
-                                  dark: widget.dark,
-                                  selected: venue.id == widget.selectedId),
+                                  dark: widget.dark, selected: selected),
                               child: const Padding(
                                   padding: EdgeInsets.fromLTRB(10, 8, 10, 24),
                                   child: NightOwlMark(size: 30)))),
-                    ])))));
+                    ]),
+                  ),
+                ),
+              ),
+              if (showLabel) ...[
+                const SizedBox(height: _labelGap),
+                GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () => widget.onVenueTap?.call(venue.id),
+                    child: _VenueNameLabel(
+                        key: ValueKey('venue-name-${venue.id}'),
+                        name: name,
+                        dark: widget.dark,
+                        selected: selected,
+                        height: _labelHeight)),
+              ],
+            ])));
+  }
+}
+
+/// A quiet, legible caption. No blur or ticker per label: the emotion above the
+/// pin owns motion, while this surface only eases its selection highlight.
+class _VenueNameLabel extends StatelessWidget {
+  final String name;
+  final bool dark;
+  final bool selected;
+  final double height;
+  const _VenueNameLabel(
+      {super.key,
+      required this.name,
+      required this.dark,
+      required this.selected,
+      required this.height});
+
+  @override
+  Widget build(BuildContext context) {
+    final ink = selected
+        ? Colors.white
+        : dark
+            ? const Color(0xFFF0EBFF)
+            : const Color(0xFF34274B);
+    return SizedBox(
+      // Text scaling updates the marker's geometry immediately. Animate only
+      // the surface, so shrinking text cannot temporarily overflow the marker.
+      height: height,
+      child: AnimatedContainer(
+          duration:
+              AppMotion.duration(context, const Duration(milliseconds: 180)),
+          curve: Curves.easeOutCubic,
+          constraints: const BoxConstraints(
+              maxWidth: _VenueMarkerLayerState._labelWidth),
+          padding: const EdgeInsets.symmetric(horizontal: 11),
+          decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: selected
+                      ? const [Color(0xFF8966DC), Color(0xFF6040AF)]
+                      : dark
+                          ? const [Color(0xF52A2540), Color(0xF5191C2C)]
+                          : const [Color(0xFFFEFCFF), Color(0xFFF2EDF9)]),
+              border: Border.all(
+                  color: selected
+                      ? const Color(0xFFD2BEFF)
+                      : dark
+                          ? const Color(0x997D6B9F)
+                          : const Color(0xFFD1C3E9)),
+              boxShadow: [
+                BoxShadow(
+                    color: Colors.black.withValues(alpha: dark ? .28 : .12),
+                    offset: const Offset(0, 3),
+                    blurRadius: 7),
+                if (selected)
+                  const BoxShadow(color: Color(0x387654D6), blurRadius: 12),
+              ]),
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
+            Flexible(
+                child: Text(name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                        color: ink,
+                        fontSize: _VenueMarkerLayerState._labelFontSize,
+                        height: 1.2,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: -.1))),
+            if (selected) ...[
+              const SizedBox(width: 4),
+              Icon(Icons.chevron_right_rounded, size: 14, color: ink),
+            ],
+          ])),
+    );
   }
 }
 
