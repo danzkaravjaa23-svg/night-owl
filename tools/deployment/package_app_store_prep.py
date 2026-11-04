@@ -44,10 +44,12 @@ EXACT_PATHS = frozenset({
     "tools/deployment/tests/account_erasure_schedule_status.sql",
     "supabase/migrations/202611030008_account_erasure.sql",
     "supabase/migrations/202611030009_ugc_review.sql",
+    "supabase/migrations/202611040001_business_conflict_http.sql",
     "supabase/config.toml",
     "tools/deployment/tests/account_erasure_preflight.sql",
     "tools/deployment/tests/account_erasure_postflight.sql",
     "tools/deployment/tests/ugc_review_postflight.sql",
+    "tools/deployment/tests/business_conflict_postflight.sql",
     ".github/workflows/ios-preparation.yml",
     ".github/workflows/backend-preparation.yml",
 })
@@ -132,7 +134,8 @@ at that exact commit for dependency resolution, builds and referenced tests.
 
 The pack contains only the explicit tracked allowlist: submission/privacy/legal
 drafts, iOS project sources, unsigned-build helpers, iOS/backend CI definitions,
-008/009 migration and erasure/reporting preparation. MANIFEST.json records the
+008/009 migrations plus the 202611040001 business-conflict forward fix and
+erasure/reporting preparation. MANIFEST.json records the
 SHA-256 and byte size of every payload file except the manifest itself.
 
 Release gates remain: owner membership and signing Team/provisioning; final

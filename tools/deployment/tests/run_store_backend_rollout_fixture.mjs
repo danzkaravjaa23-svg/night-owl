@@ -12,6 +12,8 @@ const check=async(name,run)=>{await run();passed++;console.log('PASS: '+name);};
 try{
  await seedStoreRolloutFixture(db);
  const {sql,postflight,manifest}=await buildStoreBackendRelease({storageOrigin:'https://fixture.test'});
+ const forwardMigration='supabase/migrations/202611040001_business_conflict_http.sql';
+ const forwardBody=transactionBody(await readFile(new URL('../../../'+forwardMigration,import.meta.url),'utf8'),forwardMigration);
  const snapshot=async()=>{
    const result={};
    const tables=(await db.query("select c.oid::regclass::text name from pg_class c join pg_namespace n on n.oid=c.relnamespace where (n.nspname='public' and c.relkind='r') or (n.nspname='auth' and c.relname='users') or (n.nspname='storage' and c.relname='objects') order by 1")).rows;
@@ -24,6 +26,11 @@ try{
  await check('transaction parser rejects missing, duplicate and nonfinal commit',async()=>{
    for(const source of ['begin;\nselect 1;','begin;\nbegin;\ncommit;','begin;\ncommit;\nselect 2;'])assert.throws(()=>transactionBody(source,'fixture'));
    assert.equal(manifest.bundle_sha256,createHash('sha256').update(sql).digest('hex'));
+   assert.deepEqual(manifest.migration_order,[
+     'supabase/migrations/202611030008_account_erasure.sql',
+     'supabase/migrations/202611030009_ugc_review.sql',forwardMigration]);
+   assert.ok(manifest.sources.some(source=>source.file===forwardMigration));
+   assert.ok(manifest.sources.some(source=>source.file==='tools/deployment/tests/business_conflict_postflight.sql'));
    for(const origin of [undefined,'http://real.example','http://[::1]:54321','https://[::1]','https://user:pass@example.com','https://fixture.test/path',"https://fixture.test/'",'https://fixture.test?x=1','https://fixture.test#fragment'])assert.throws(()=>validateStorageOrigin(origin));
    assert.equal(validateStorageOrigin('http://127.0.0.1:54321'),'http://127.0.0.1:54321');
  });
@@ -34,11 +41,20 @@ try{
    assert.deepEqual(await snapshot(),before);
    await db.exec('alter table posts enable trigger protect_post_publication_clock');
  });
- await check('final assertion failure rolls back both migrations and bucket flags',async()=>{
+ await check('final assertion failure rolls back all migrations and bucket flags',async()=>{
    const broken=sql.replace('do $verify_erasure$',()=>"drop trigger account_erasure_write_guard on storage.objects;\ndo $verify_erasure$");
    await assert.rejects(db.exec(broken),/Erasure postflight failed: storage_write_guard/);await db.exec('rollback');
    assert.equal(await scalar("select to_regnamespace('account_private') is null"),true);
    assert.equal(await scalar("select count(*)::int from pg_attribute where attrelid='public.posts'::regclass and attname='moderation_status' and not attisdropped"),0);
+   assert.deepEqual(await snapshot(),before);
+ });
+ await check('missing business-conflict forward fix aborts the entire install before commit',async()=>{
+   const broken=sql.replace(forwardBody,'-- Deliberately omit the reviewed forward fix.');
+   assert.notEqual(broken,sql);
+   const priorAction=await scalar("select prosrc from pg_proc where oid='public.admin_console_action(text,uuid,text,uuid)'::regprocedure");
+   await assert.rejects(db.exec(broken),/Business-conflict postflight body mismatch/);await db.exec('rollback');
+   assert.equal(await scalar("select to_regnamespace('account_private') is null"),true);
+   assert.equal(await scalar("select prosrc from pg_proc where oid='public.admin_console_action(text,uuid,text,uuid)'::regprocedure"),priorAction);
    assert.deepEqual(await snapshot(),before);
  });
  await check('new unreviewed profile reference aborts before erasure DDL',async()=>{
@@ -53,6 +69,13 @@ try{
    assert.deepEqual(after.buckets,{posts:false,stories:false,avatars:false,venues:false});
    assert.equal(await scalar('select count(*)::int from account_private.erasure_jobs'),0);
    assert.equal(await scalar("select count(*)::int from posts where moderation_status<>'approved'"),0);
+ });
+ await check('standalone postflight detects a reintroduced retryable business conflict',async()=>{
+   const definition=await scalar("select pg_get_functiondef('public.admin_console_report_guard()'::regprocedure)");
+   const regressed=definition.replace("'PT409'","'40001'");assert.notEqual(regressed,definition);
+   await db.exec(regressed);
+   await assert.rejects(db.exec(postflight),/Business-conflict postflight body mismatch/);await db.exec('rollback');
+   await db.exec(definition);await db.exec(postflight);
  });
  await check('unknown outcome rerun is rejected rather than erasing new state',async()=>{
    const after=await snapshot();await assert.rejects(db.exec(sql),/already present or partially installed/);await db.exec('rollback');

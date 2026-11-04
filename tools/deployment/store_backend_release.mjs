@@ -10,6 +10,7 @@ const hash=value=>createHash('sha256').update(value).digest('hex');
 export const migrations=[
  'supabase/migrations/202611030008_account_erasure.sql',
  'supabase/migrations/202611030009_ugc_review.sql',
+ 'supabase/migrations/202611040001_business_conflict_http.sql',
 ];
 const checks={
  pre:['tools/deployment/tests/store_backend_preflight.sql',
@@ -18,6 +19,7 @@ const checks={
    'tools/deployment/tests/interaction_boundaries_postflight.sql'],
  erasure:'tools/deployment/tests/account_erasure_postflight.sql',
  ugc:'tools/deployment/tests/ugc_review_postflight.sql',
+ businessConflict:'tools/deployment/tests/business_conflict_postflight.sql',
 };
 export function transactionBody(source,file,readOnly=false){
  const begin=readOnly?/^begin read only;$/gm:/^begin;$/gm;
@@ -57,8 +59,9 @@ export async function buildStoreBackendRelease({storageOrigin}={}){
  if proof->'unguarded_public_tables' is distinct from '[]'::jsonb then raise exception 'Erasure write guard missing from public tables'; end if;
 end $verify_erasure$;`;
  const ugc=transactionBody(await read(checks.ugc),checks.ugc,true);
- const postflight=`-- Read-only invariants. Never selects a job, profile or report row.\nbegin read only;\n${erasureAssertion}\n${ugc}\ncommit;\n`;
- const sql=`-- Night Owl first-install 008+009 release. Review manifest and runbook first.
+ const businessConflict=transactionBody(await read(checks.businessConflict),checks.businessConflict,true);
+ const postflight=`-- Read-only invariants. Never selects a job, profile or report row.\nbegin read only;\n${erasureAssertion}\n${ugc}\n${businessConflict}\ncommit;\n`;
+ const sql=`-- Night Owl first-install 008+009+202611040001 release. Review manifest and runbook first.
 -- Any assertion/DDL error aborts the whole transaction. Run ROLLBACK after an error.
 -- No account deletion is performed or enabled. Existing UGC is grandfathered.
 -- The four media buckets become private; deploy the compatible client together.
@@ -70,6 +73,7 @@ ${pre.join('\n\n')}
 ${changes.join('\n\n')}
 ${erasureAssertion}
 ${ugc}
+${businessConflict}
 -- Install must not create a job or turn client roles into RLS bypass roles.
 do $$ begin
  if exists(select 1 from account_private.erasure_jobs) then raise exception 'Installation unexpectedly created an erasure job'; end if;
@@ -78,9 +82,9 @@ end $$;
 commit;
 `;
  if((sql.match(/^begin;$/gm)??[]).length!==1||(sql.match(/^commit;$/gm)??[]).length!==1)throw new Error('Bundle transaction boundary mismatch');
- return {sql,postflight,manifest:{prepared:true,executed:false,scope:'First coordinated 008+009 install only',storage_origin:storageOrigin,sources,
+ return {sql,postflight,manifest:{prepared:true,executed:false,scope:'First coordinated 008+009+202611040001 install only',migration_order:[...migrations],storage_origin:storageOrigin,sources,
    bundle_sha256:hash(sql),postflight_sha256:hash(postflight),
-   transaction:{atomic:true,assertions_before_commit:true,lock_timeout:'5s',statement_timeout:'60s'},
+   transaction:{atomic:true,assertions_before_commit:true,lock_timeout:'5s',initial_statement_timeout:'60s',forward_and_final_assertions_statement_timeout:'30s'},
    required_before_execution:['Fresh complete metadata export and reviewed recovery reference',
      'Passing exact-bundle tests and disposable hosted acceptance; component tests are not production parity',
      'Review selected reported-message context access for existing active admins',

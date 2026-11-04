@@ -12,6 +12,9 @@ on:
       - 'tools/deployment/store_backend_release.mjs'
       - 'tools/deployment/tests/*store*'
       - 'tools/deployment/tests/*ugc*'
+      - 'tools/deployment/tests/*business_conflict*'
+      - 'tools/deployment/package_app_store_prep.py'
+      - 'tools/deployment/tests/test_package_app_store_prep.py'
 permissions:
   contents: read
 concurrency:
@@ -31,10 +34,13 @@ jobs:
           version: '2.122.1'
       - name: Check disposable-stack safety guards
         run: node --test tools/deployment/tests/backend_component_safety.test.mjs
+      - name: Verify App Store preparation packaging
+        run: python3 -m unittest discover -s tools/deployment/tests -p 'test_package_app_store_prep.py'
       - name: Verify atomic rollout and retention contracts on synthetic data
         run: |
           npm install --prefix "$RUNNER_TEMP/nightowl-sql" --ignore-scripts --no-audit --no-fund @electric-sql/pglite@0.5.8
           node tools/deployment/tests/run_store_backend_rollout_fixture.mjs "$RUNNER_TEMP/nightowl-sql/node_modules/@electric-sql/pglite/dist/index.js"
+          node tools/deployment/tests/run_business_conflict_fixture.mjs "$RUNNER_TEMP/nightowl-sql/node_modules/@electric-sql/pglite/dist/index.js"
       - name: Exercise real local Auth, Storage and account erasure
         run: node tools/deployment/tests/run_backend_component.mjs
       - name: Remove only this disposable local stack
