@@ -1,0 +1,82 @@
+{
+  "date": "2026-11-04",
+  "status": "free_staging_initialized_application_baseline_pending",
+  "organization_name": "Night Owl Staging",
+  "organization_id": "qbnfftnvlazrepyxorel",
+  "plan": "Free",
+  "monthly_plan_usd": 0,
+  "organization_url": "https://supabase.com/dashboard/org/qbnfftnvlazrepyxorel",
+  "creation_form_quota_block_present": false,
+  "project_creation_verified": true,
+  "project_created_by_owner": true,
+  "project": {
+    "name": "night-owl-staging",
+    "ref": "sreojqqqhdzkfsrbvlpl",
+    "api_url": "https://sreojqqqhdzkfsrbvlpl.supabase.co",
+    "dashboard_url": "https://supabase.com/dashboard/project/sreojqqqhdzkfsrbvlpl",
+    "health": "Healthy",
+    "compute_size": "Nano",
+    "region": "ap-northeast-1",
+    "region_name": "Tokyo"
+  },
+  "creation_form_settings": {
+    "name": "night-owl-staging",
+    "region": "ap-northeast-1",
+    "data_api_enabled": true,
+    "automatically_expose_new_tables": false,
+    "automatic_rls": true
+  },
+  "persisted_configuration_verified": true,
+  "verified_configuration": {
+    "data_api_enabled": true,
+    "automatic_public_schema_exposure": false,
+    "exposed_schemas": [
+      "public",
+      "graphql_public"
+    ],
+    "automatic_rls": true,
+    "automatic_rls_event": {
+      "name": "ensure_rls",
+      "enabled": "O",
+      "function": "public.rls_auto_enable()"
+    },
+    "postgresql_version": "17.11",
+    "public_application_relation_count": 0,
+    "public_nonextension_functions": [
+      "public.rls_auto_enable()"
+    ]
+  },
+  "default_acl_hardening_checked": true,
+  "default_acl_hardening": {
+    "checked": true,
+    "script": "tools/deployment/harden_empty_staging_defaults.sql",
+    "script_sha256": "c08b3e4d3ad4068b983aed6117f6e4ef81b7060134c0ce01c61cc847a41d5169",
+    "execution": "Succeeded through the staging SQL UI",
+    "postflight_passed": true,
+    "postflight_evidence": "build/audit/2026-11-04/free-staging/default-acl-postflight-result.json",
+    "scope": "Only future postgres-created global/public table, sequence and function defaults; automatic grants to PUBLIC, anon, authenticated and service_role removed",
+    "managed_defaults_preserved": true,
+    "roles_preserved": true,
+    "existing_rls_helper_preserved": true,
+    "local_acl_tests_passed": 5,
+    "independent_review_passed": true
+  },
+  "staging_008_009_bundle": {
+    "prepared": true,
+    "origin": "https://sreojqqqhdzkfsrbvlpl.supabase.co",
+    "sha256": "5ba256e2813cbe8f41c2d3f10caf66a9b6f2377bd58156e0bd521c18ef41c62e",
+    "installed": false
+  },
+  "credential_entry": "new_database_password_entered_and_submitted_by_owner",
+  "new_credentials_read_or_entered_by_agent": false,
+  "application_schema_acl_baseline_installed": false,
+  "application_data_loaded": false,
+  "migrations_008_009_installed": false,
+  "edge_functions_installed": false,
+  "roles_changed": false,
+  "paid_upgrade_performed": false,
+  "production_modified": false,
+  "extra_administrator_invited": false,
+  "hosted_acceptance_complete": false,
+  "initialization_receipt": "docs/app-store/evidence/staging-initialization.json"
+}

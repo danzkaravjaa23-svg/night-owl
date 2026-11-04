@@ -1687,7 +1687,7 @@
       "recovery_backup_verified_scope": "Full hosted recovery/operations gate remains incomplete; verified local data and filesystem recovery is recorded separately"
     },
     "pending": [
-      "Free staging capacity: owner to pause an unused project; no paid upgrade or production change performed",
+      "Free staging settings and future default-ACL hardening verified; application schema/ACL baseline, synthetic data, prepared target-specific 008/009 and Edge installation, and hosted acceptance remain pending",
       "Hosted Auth/Storage/ACL recovery and access acceptance, with a responsible recovery operator",
       "Separate hosted copy acceptance with target-specific bundle and synthetic accounts/media",
       "Coordinated 008/009 and compatible client rollout, scoped reported-message admin access and receipt-only gateway configuration",
@@ -1766,12 +1766,81 @@
       ]
     },
     "staging_capacity": {
-      "status": "blocked_by_existing_free_project_limit",
-      "observed_in_dashboard": "An organization member has reached the two active Free project limit; creation of a new staging project is blocked",
-      "owner_action_requested": "Pause an unused project themselves to make capacity available",
+      "status": "free_staging_initialized_application_baseline_pending",
+      "verified_on": "2026-11-04",
+      "organization_name": "Night Owl Staging",
+      "organization_id": "qbnfftnvlazrepyxorel",
+      "organization_plan": "Free",
+      "organization_created": true,
+      "project_creation_form_passed_quota_gate": true,
+      "project_name": "night-owl-staging",
+      "project_ref": "sreojqqqhdzkfsrbvlpl",
+      "api_url": "https://sreojqqqhdzkfsrbvlpl.supabase.co",
+      "dashboard_url": "https://supabase.com/dashboard/project/sreojqqqhdzkfsrbvlpl",
+      "project_created_by_owner": true,
+      "project_health": "Healthy",
+      "compute_size": "Nano",
+      "region": "ap-northeast-1",
+      "region_name": "Tokyo",
+      "creation_form_data_api_enabled": true,
+      "creation_form_automatic_public_schema_exposure": false,
+      "creation_form_automatic_rls": true,
+      "persisted_configuration_verified": true,
+      "verified_configuration": {
+        "data_api_enabled": true,
+        "automatic_public_schema_exposure": false,
+        "exposed_schemas": [
+          "public",
+          "graphql_public"
+        ],
+        "automatic_rls": true,
+        "automatic_rls_event": {
+          "name": "ensure_rls",
+          "enabled": "O",
+          "function": "public.rls_auto_enable()"
+        },
+        "postgresql_version": "17.11",
+        "public_application_relation_count": 0,
+        "public_nonextension_functions": [
+          "public.rls_auto_enable()"
+        ]
+      },
+      "default_acl_hardening_checked": true,
+      "default_acl_hardening": {
+        "checked": true,
+        "script": "tools/deployment/harden_empty_staging_defaults.sql",
+        "script_sha256": "c08b3e4d3ad4068b983aed6117f6e4ef81b7060134c0ce01c61cc847a41d5169",
+        "execution": "Succeeded through the staging SQL UI",
+        "postflight_passed": true,
+        "postflight_evidence": "build/audit/2026-11-04/free-staging/default-acl-postflight-result.json",
+        "scope": "Only future postgres-created global/public table, sequence and function defaults; automatic grants to PUBLIC, anon, authenticated and service_role removed",
+        "managed_defaults_preserved": true,
+        "roles_preserved": true,
+        "existing_rls_helper_preserved": true,
+        "local_acl_tests_passed": 5,
+        "independent_review_passed": true
+      },
+      "staging_008_009_bundle": {
+        "prepared": true,
+        "origin": "https://sreojqqqhdzkfsrbvlpl.supabase.co",
+        "sha256": "5ba256e2813cbe8f41c2d3f10caf66a9b6f2377bd58156e0bd521c18ef41c62e",
+        "installed": false
+      },
+      "database_password_entered_and_submitted_by_owner": true,
+      "database_password_read_by_agent": false,
+      "next_step": "Install the reviewed application schema/ACL baseline, synthetic data, prepared target-specific 008/009 bundle and Edge functions before hosted acceptance",
+      "hosted_staging_created": true,
+      "application_schema_acl_baseline_installed": false,
+      "application_data_loaded": false,
+      "migrations_008_009_installed": false,
+      "edge_functions_installed": false,
+      "hosted_staging_acceptance_verified": false,
+      "roles_changed": false,
+      "additional_admin_added": false,
       "existing_project_paused_by_agent": false,
       "paid_upgrade_performed": false,
-      "hosted_staging_created": false
+      "production_modified": false,
+      "initialization_receipt": "docs/app-store/evidence/staging-initialization.json"
     }
   }
 }

@@ -1,0 +1,83 @@
+{
+  "date": "2026-11-04",
+  "status": "free_staging_initialized_application_baseline_pending",
+  "project_ref": "sreojqqqhdzkfsrbvlpl",
+  "api_origin": "https://sreojqqqhdzkfsrbvlpl.supabase.co",
+  "plan": "Free",
+  "dashboard_health": "Healthy",
+  "region": "ap-northeast-1",
+  "inventory": {
+    "captured_at": "2026-11-04T11:06:09.483394+00:00",
+    "postgres_version": "17.11",
+    "csv_sha256": "31f3c83b9f9c75228540ce18de544304084cb652ea557f6daa3c175c65dcdcdb",
+    "app_relation_count": 0,
+    "public_non_extension_function_count": 1,
+    "only_public_non_extension_function": "rls_auto_enable()",
+    "managed_auth_storage_helpers_present": true,
+    "app_bucket_count": 0,
+    "realtime_app_membership_count": 0
+  },
+  "dashboard_configuration": {
+    "data_api_enabled": true,
+    "automatically_expose_new_tables": false,
+    "exposed_schemas": [
+      "graphql_public",
+      "public"
+    ],
+    "extra_search_path": [
+      "public",
+      "extensions"
+    ],
+    "max_rows": 1000,
+    "automatic_rls_event_trigger": "ensure_rls",
+    "automatic_rls_enabled": true
+  },
+  "default_acl_hardening": {
+    "installed": true,
+    "installer": "tools/deployment/harden_empty_staging_defaults.sql",
+    "installer_sha256": "c08b3e4d3ad4068b983aed6117f6e4ef81b7060134c0ce01c61cc847a41d5169",
+    "postflight": "tools/deployment/tests/empty_staging_defaults_postflight.sql",
+    "postflight_sha256": "38e27686b2c7d7cf6ee65be8670c39a6e4f479b168cd1a58774f6a8aad1e4eee",
+    "postflight_result": {
+      "scopes": [
+        "global",
+        "public"
+      ],
+      "status": "postgres_app_default_acls_hardened",
+      "creator": "postgres",
+      "object_kinds": [
+        "tables",
+        "sequences",
+        "functions"
+      ],
+      "hosted_baseline_installed": false,
+      "client_privileges_require_explicit_grants": true,
+      "existing_object_acl_verification_included": false
+    },
+    "synthetic_tests_passed": [
+      "postflight rejects implicit global PUBLIC execute and client defaults",
+      "install preserves managed defaults and existing helper permissions",
+      "new objects deny inherited clients while explicit grants work",
+      "nonempty application guard refuses changes",
+      "managed-default drift aborts and rolls back all changes"
+    ],
+    "independent_review": "no execution blocker",
+    "scope": "Future postgres-created tables/sequences/functions; global and public schema. Explicit grants required.",
+    "preserved_by_transaction_assertions": [
+      "other creator defaults",
+      "schema ACLs",
+      "role attributes"
+    ],
+    "existing_object_acl_changes_performed": false
+  },
+  "staging_release_bundle": {
+    "prepared": true,
+    "installed": false,
+    "bundle_sha256": "5ba256e2813cbe8f41c2d3f10caf66a9b6f2377bd58156e0bd521c18ef41c62e"
+  },
+  "application_baseline_installed": false,
+  "synthetic_acceptance_complete": false,
+  "production_modified": false,
+  "paid_upgrade_performed": false,
+  "next_required": "Reviewed metadata-only application baseline, then target-specific008009 and Edge configuration followed by synthetic Auth/Storage/moderation/erasure acceptance"
+}

@@ -2,6 +2,14 @@
 
 The builder creates reviewable files. It does not deploy SQL or Edge functions, enable account deletion, schedule maintenance, or delete an account. Production acceptance is still required. The existing 001–007 guards/catalog changes must already be present; they are not replayed.
 
+## Empty Free staging preparation
+
+The separate Free project `night-owl-staging` (`sreojqqqhdzkfsrbvlpl`, Tokyo) was created on 2026-11-04. Its Data API and automatic RLS are enabled; automatic table exposure is off. The scoped default-ACL hardening and read-only postflight passed. See [the initialization receipt](../../docs/app-store/evidence/staging-initialization.json). This is infrastructure preparation, not application acceptance.
+
+`tests/hosted_staging_inventory.sql` reads bounded schema/config metadata without user rows or credentials. `harden_empty_staging_defaults.sql` refuses an existing application schema and restricts only future objects created by `postgres`; it preserves other creators' defaults, managed schemas and role attributes. Verify the exact project in the dashboard before execution. Do not apply it to production. Its matching read-only check is `tests/empty_staging_defaults_postflight.sql`. Run the synthetic test with `node tools/deployment/tests/run_empty_staging_defaults.mjs /absolute/path/to/pglite/dist/index.js`.
+
+The application baseline still needs a reviewed metadata-only installer that preserves managed Auth/Storage objects and restores explicit app grants, RLS, custom triggers, bucket configuration and Realtime membership. Local component fixtures and concatenated legacy SQL are not hosted installers. Do not load production user data into this staging project. Only after the baseline is verified should the target-specific 008/009 bundle, Edge functions and synthetic-account acceptance below run.
+
 ## Prepare and verify
 
 1. Run `tests/store_backend_metadata.sql` and `tests/store_platform_metadata.sql` read-only on the target project. Save both complete results outside the public app. They capture current functions, RLS/policies, grants, table defaults/constraints, triggers, indexes, four bucket flags, role IDs, the Storage bucket enum and standard Auth helpers. An old column/FK inventory is insufficient. Review unexpected tables, functions, triggers, policies and relationships. This is a recovery reference, not a data backup or automatic rollback.
