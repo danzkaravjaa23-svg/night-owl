@@ -1621,7 +1621,7 @@
   "store_completion": {
     "date": "2026-11-04",
     "branch": "codex/app-store-preparation",
-    "status": "Code/build, isolated recovery, hosted staging schema+008/009+conflict fix, Auth/media and moderator/ban/selected-DM API acceptance verified; Apple App ID/capability and Connect app record created; Edge/client/device acceptance, provider/signing, production rollout and App Store submission remain incomplete",
+    "status": "Code/build, isolated recovery, hosted staging schema+008/009+conflict fix, Auth/media, moderation and email-account Edge erasure/receipt recovery verified; Apple Services ID/callback and login key created but key material handoff, provider/signing, remaining hosted/client/device gates, production rollout and Store submission incomplete",
     "source_commits": {
       "backend": "a4924687ae1f739b7735d917fbc7d4f4e2f52c82",
       "client": "b4e60b3fc3f0714669783ae23ba787ebe49c7619",
@@ -1655,7 +1655,11 @@
       "package_allowlist_tests_passed": 3,
       "hosted_staging_moderation_api_checks_passed": 58,
       "hosted_staging_moderation_setup_checks_passed": 17,
-      "hosted_staging_moderation_runner_offline_tests_passed": 23
+      "hosted_staging_moderation_runner_offline_tests_passed": 23,
+      "hosted_staging_edge_erasure_checks_passed": 27,
+      "hosted_staging_edge_erasure_setup_checks_passed": 17,
+      "hosted_staging_edge_erasure_http_requests": 67,
+      "hosted_staging_edge_runner_offline_tests_passed": 17
     },
     "local_logs": "build/audit/2026-11-03/store-completion/",
     "schema_trial": {
@@ -1688,7 +1692,8 @@
       "verify_jwt": true,
       "missing_auth_status": 401,
       "anon_probe_status": 503,
-      "deletion_invoked": false
+      "deletion_invoked": false,
+      "environment": "production"
     },
     "production": {
       "branch": "night-owl-features",
@@ -1706,14 +1711,14 @@
       "business_conflict_forward_fix_installed": false
     },
     "pending": [
-      "Public email signup/delivery, staging Edge and compatible-client/device acceptance remain; Auth/media and moderator/ban/selected-DM API acceptance passed",
-      "Full hosted recovery/ownership/ACL parity and operating procedure, with a responsible recovery operator; local recovery and live API checks are already verified",
-      "Hosted staging Edge deletion/receipt recovery and client acceptance; API fixture cleanup does not establish application account deletion",
-      "Coordinated008/009/202611040001 and compatible client rollout, scoped reported-message admin access and receipt-only gateway configuration",
-      "Successful hosted retention schedule, named operator/moderator and private alert handoff",
-      "Updated license banner review, Services ID/callbacks, provider keys, signing and signed iPhone/iPad acceptance (membership Active, App ID/primary capability and Connect app record created)",
-      "Final native screenshots, reviewer access, owner privacy/export/contact/media-rights declarations and availability regions; age questionnaire is saved",
-      "TestFlight and App Review submission"
+      "Public email signup/delivery and compatible-client/device acceptance remain; Auth/media, moderation and synthetic email-account Edge erasure/receipt recovery passed",
+      "Full hosted recovery/ownership/ACL parity and operating procedure, with a responsible recovery operator; local recovery and scoped live API checks are verified",
+      "Hosted Apple revocation, injected mid-erasure failures, concurrent workers and legacy/shared-content acceptance remain; normal email-account erasure and session-free recovery passed",
+      "Coordinated production 008/009/202611040001 and compatible client rollout, scoped reported-message admin access and receipt-only gateway configuration",
+      "Successful hosted retention schedule, named operator/moderator and private alert handoff; one completed staging erasure journal is retained",
+      "Updated license banner review; recover/private-handoff created Apple key material, configure provider and signing, then signed iPhone/iPad acceptance",
+      "Final native screenshots, reviewer access and owner privacy/export/contact/media-rights declarations; Mongolia-only availability and age questionnaire saved, App Privacy draft unpublished",
+      "TestFlight and App Review submission; retain owner-selected AFTER_APPROVAL"
     ],
     "signed_ipa_created": false,
     "store_uploaded": false,
@@ -1788,7 +1793,7 @@
       ]
     },
     "staging_capacity": {
-      "status": "free_staging_auth_media_and_moderation_api_acceptance_passed_full_acceptance_pending",
+      "status": "free_staging_auth_media_moderation_and_email_edge_erasure_passed_remaining_acceptance_pending",
       "verified_on": "2026-11-04",
       "organization_name": "Night Owl Staging",
       "organization_id": "qbnfftnvlazrepyxorel",
@@ -1858,12 +1863,12 @@
       },
       "database_password_entered_and_submitted_by_owner": true,
       "database_password_read_by_agent": false,
-      "next_step": "Public email signup, staging Edge erasure/receipt recovery, compatible client/device, hosted recovery and retention/operator acceptance before coordinated production rollout",
+      "next_step": "Public email delivery, Apple/failure/concurrency/legacy/shared-content erasure, client/device, hosted recovery parity and retention/operator acceptance before coordinated production rollout",
       "hosted_staging_created": true,
       "application_schema_acl_baseline_installed": true,
       "application_data_loaded": false,
       "migrations_008_009_installed": true,
-      "edge_functions_installed": false,
+      "edge_functions_installed": true,
       "hosted_staging_acceptance_verified": false,
       "roles_changed": false,
       "additional_admin_added": false,
@@ -1934,7 +1939,7 @@
         "public_evidence": "docs/app-store/evidence/staging-initialization.json"
       },
       "minimum_auth_media_api_acceptance_verified": true,
-      "hosted_staging_acceptance_verified_scope": "API Auth/media and moderator/ban/selected-DM checks passed; Edge/client/device, public email and hosted recovery acceptance are incomplete",
+      "hosted_staging_acceptance_verified_scope": "Auth/media, moderation and synthetic email-account Edge erasure/session-free receipt recovery passed; Apple, injected failures/concurrency/shared-content, client/device, public email and full hosted recovery gates remain",
       "business_conflict_forward_fix": {
         "installed": true,
         "migration": "202611040001_business_conflict_http.sql",
@@ -1968,6 +1973,44 @@
         "temporary_moderator_revoked": true,
         "audit_rows_retained": 8,
         "total_audit_rows_retained_across_attempts": 18
+      },
+      "edge_erasure_acceptance": {
+        "status": "passed",
+        "scope": "two_disposable_email_accounts_edge_erasure_and_receipt_recovery",
+        "evidence": "docs/app-store/evidence/staging-edge-erasure-acceptance.json",
+        "checks_passed": 27,
+        "setup_integrity_checks_passed": 17,
+        "http_requests": 67,
+        "runner_offline_tests_passed": 17,
+        "first_live_attempt_passed": true,
+        "cleanup_complete": true,
+        "final_synthetic_inventory_by_account": {
+          "a": {
+            "auth_identities": 0,
+            "auth_users": 0,
+            "posts": 0,
+            "profiles": 0,
+            "storage_objects": 0,
+            "stories": 0
+          },
+          "b": {
+            "auth_identities": 0,
+            "auth_users": 0,
+            "posts": 0,
+            "profiles": 0,
+            "storage_objects": 0,
+            "stories": 0
+          }
+        },
+        "completed_journal_retained": 1,
+        "verify_jwt": false,
+        "account_deletion_enabled": true,
+        "source_sha256": {
+          "supabase/functions/delete-account/index.ts": "e6d2fa3e6caeb137aa31fe79efbb68b9ad6af775bd7422f461ceb55c410c51f9",
+          "supabase/functions/delete-account/apple_revocation.ts": "82e6dff4b15d1e21e32ea155a5de45649ac234cf7342bb47b99291367bb99edb"
+        },
+        "retention_scheduler_configured": false,
+        "full_hosted_erasure_acceptance_complete": false
       }
     },
     "paid_membership_performed_by_agent": false,
@@ -2006,7 +2049,7 @@
       "team_id": "DAVM2JZ4NN",
       "description": "Night Owl UB",
       "sign_in_with_apple": "enabled_primary_app_id",
-      "key_created": false
+      "key_created": true
     },
     "apple_license_update_banner_observed": true,
     "app_store_connect_app": {
@@ -2132,8 +2175,26 @@
       "pricing_set": true,
       "privacy_policy_url": "https://nightowl-ub.netlify.app/privacy.html",
       "app_privacy_collection_questionnaire": {
-        "started": false,
-        "published": false
+        "started": true,
+        "status": "sixteen_type_draft_saved_verified_unpublished",
+        "verified_on": "2026-11-05",
+        "timezone": "Asia/Ulaanbaatar",
+        "selected_data_type_count": 16,
+        "all_per_type_details_saved_verified": true,
+        "set_up_prompts_remaining": 0,
+        "email_details_saved_verified": true,
+        "publish_available": true,
+        "publish_clicked": false,
+        "published": false,
+        "final_owner_attestation": false,
+        "evidence": "docs/app-store/evidence/apple-store-setup.json",
+        "worksheet": "docs/app-store/submission-disclosures-worksheet.json",
+        "local_screenshots": [
+          "build/audit/2026-11-04/app-privacy-16-draft-saved.png",
+          "build/audit/2026-11-04/app-privacy-draft-overview.png"
+        ],
+        "production_authenticated_linkage_tested": false,
+        "production_authenticated_linkage_basis": "Inferred from authenticated staging; anonymous production request only."
       },
       "pricing": {
         "schedule_confirmed": true,
@@ -2144,14 +2205,68 @@
         "amounts_verified": 175,
         "all_verified_amounts": "0.00"
       },
-      "availability_regions_set": false,
+      "availability_regions_set": true,
       "mac_vision_availability": {
         "default_checkboxes_observed_checked": true,
         "changed": false,
         "compatibility_validated": false
+      },
+      "availability": {
+        "saved": true,
+        "available_country_count": 1,
+        "available_countries": [
+          "Mongolia"
+        ],
+        "observed_heading": "Availability (1 Country or Region)",
+        "mongolia_status": "Available on App Release",
+        "other_countries_not_available_count": 174,
+        "automatically_include_new_countries_or_regions": false,
+        "released": false,
+        "price_rows_do_not_establish_distribution_availability": true
       }
     },
     "apple_license_update_banner_observed_after_owner_reported_agree": true,
-    "apple_license_update_resolved": false
+    "apple_license_update_resolved": false,
+    "apple_sign_in_setup": {
+      "evidence": "docs/app-store/evidence/apple-store-setup.json",
+      "staging_services_id": "com.nightowl.ub.web.staging",
+      "services_id_created": true,
+      "primary_app_id": "com.nightowl.ub.nightOwlUb",
+      "primary_app_association_saved": true,
+      "website_domain": "sreojqqqhdzkfsrbvlpl.supabase.co",
+      "return_url": "https://sreojqqqhdzkfsrbvlpl.supabase.co/auth/v1/callback",
+      "web_auth_values_saved_and_reopened": true,
+      "key": {
+        "name": "Night Owl UB Apple Login",
+        "key_id": "KW5USR3XYB",
+        "created": true,
+        "owner_approved_creation": true,
+        "enabled_services": [
+          "Sign in with Apple"
+        ],
+        "dashboard_download_status": "Downloaded",
+        "private_material_recovered": false,
+        "download_path_confirmed": false,
+        "protected_key_file_confirmed": false,
+        "handoff_directory_mode": "0700",
+        "private_handoff_pending": true
+      },
+      "staging_supabase_provider_enabled": false,
+      "provider_configuration_complete": false,
+      "real_apple_login_tested": false,
+      "real_apple_revocation_tested": false,
+      "staging_web_deletion_popup_return_url_configured": false,
+      "production_services_id_confirmed": false
+    },
+    "signing_preparation": {
+      "helper_prepared": true,
+      "signed_candidate_ci_workflow_prepared": true,
+      "signed_candidate_ci_run_started": false,
+      "signed_build_created": false,
+      "development_team_in_source": "DAVM2JZ4NN",
+      "local_iphoneos_sdk_available": false,
+      "local_valid_signing_identity_count": 0,
+      "guide": "docs/app-store/SIGNED_BUILD.md"
+    }
   }
 }

@@ -19,7 +19,7 @@ import zipfile
 
 
 ROOT = Path(__file__).resolve().parents[2]
-PACKAGE_NAME = "night-owl-app-store-prep-2026-11-03.zip"
+PACKAGE_NAME = "night-owl-app-store-prep-2026-11-05.zip"
 EXACT_PATHS = frozenset({
     "docs/APP_STORE_SUBMISSION.md",
     "docs/APPLE_SIGN_IN_SETUP.md",
@@ -29,6 +29,16 @@ EXACT_PATHS = frozenset({
     "tools/deployment/ios_preflight.py",
     "tools/deployment/ios_native_inventory.py",
     "tools/deployment/ios_simulator_smoke.py",
+    "tools/deployment/ios_signing.py",
+    "tools/deployment/build_admin_clients.py",
+    "tools/deployment/tests/test_ios_signing.py",
+    "tools/deployment/tests/test_ios_preflight.py",
+    "tools/deployment/tests/test_admin_clients.py",
+    "tools/deployment/tests/hosted_staging_erasure.py",
+    "tools/deployment/tests/hosted_staging_erasure.test.py",
+    "tools/deployment/tests/hosted_staging_acceptance.py",
+    "tools/deployment/tests/hosted_staging_acceptance.mp4",
+    "tools/deployment/tests/hosted_staging_moderation.py",
     "tools/deployment/package_app_store_prep.py",
     "tools/deployment/STORE_BACKEND_ROLLOUT.md",
     "tools/deployment/store_backend_release.mjs",
@@ -51,6 +61,7 @@ EXACT_PATHS = frozenset({
     "tools/deployment/tests/ugc_review_postflight.sql",
     "tools/deployment/tests/business_conflict_postflight.sql",
     ".github/workflows/ios-preparation.yml",
+    ".github/workflows/ios-signed-candidate.yml",
     ".github/workflows/backend-preparation.yml",
 })
 PREFIXES = ("docs/app-store/", "ios/", "legal/", "supabase/functions/delete-account/")
@@ -133,7 +144,8 @@ an App Store upload, or evidence of production readiness. Use the full checkout
 at that exact commit for dependency resolution, builds and referenced tests.
 
 The pack contains only the explicit tracked allowlist: submission/privacy/legal
-drafts, iOS project sources, unsigned-build helpers, iOS/backend CI definitions,
+drafts, iOS project sources, unsigned and manual-signing build helpers,
+iOS/backend CI definitions, staging erasure acceptance tooling,
 008/009 migrations plus the 202611040001 business-conflict forward fix and
 erasure/reporting preparation. MANIFEST.json records the
 SHA-256 and byte size of every payload file except the manifest itself.

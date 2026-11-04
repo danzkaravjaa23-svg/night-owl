@@ -77,6 +77,29 @@ class SourceTests(unittest.TestCase):
                 path.write_text(original.replace(old, new, 1))
                 self.assertFalse(self.checks()["Runner bundle ID / entitlement in all configurations"])
 
+    def test_missing_wrong_or_unresolved_runner_team_is_blocked(self):
+        path = self.root / "ios/Runner.xcodeproj/project.pbxproj"
+        original = path.read_text()
+        for setting in ("", "DEVELOPMENT_TEAM = OTHERTEAM1;",
+                        'DEVELOPMENT_TEAM = "$(UNKNOWN_TEAM)";'):
+            with self.subTest(setting=setting):
+                path.write_text(original.replace(
+                    f"DEVELOPMENT_TEAM = {module.TEAM_ID};", setting, 1))
+                self.assertFalse(self.checks()[
+                    "Runner registered signing team (not signing identity proof)"])
+
+    def test_conditional_runner_team_cannot_override_registered_team(self):
+        path = self.root / "ios/Runner.xcodeproj/project.pbxproj"
+        original = path.read_text()
+        for setting in ('"DEVELOPMENT_TEAM[sdk=iphoneos*]" = OTHERTEAM1;',
+                        '"DEVELOPMENT_TEAM[sdk=iphoneos*][arch=arm64]" = "$(OTHER_TEAM)";'):
+            with self.subTest(setting=setting):
+                path.write_text(original.replace(
+                    f"DEVELOPMENT_TEAM = {module.TEAM_ID};",
+                    f"DEVELOPMENT_TEAM = {module.TEAM_ID};\n\t\t\t\t" + setting, 1))
+                self.assertFalse(self.checks()[
+                    "Runner registered signing team (not signing identity proof)"])
+
     def test_deployment_target_rejects_old_missing_and_unresolved_values(self):
         path = self.root / "ios/Runner.xcodeproj/project.pbxproj"
         original = path.read_text()

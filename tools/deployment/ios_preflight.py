@@ -17,6 +17,7 @@ import zlib
 ROOT = Path(__file__).resolve().parents[2]
 FLUTTER_VERSION = "3.44.0"
 BUNDLE_ID = "com.nightowl.ub.nightOwlUb"
+TEAM_ID = "DAVM2JZ4NN"
 MINIMUM_IOS_DEPLOYMENT_TARGET = (13, 0)
 
 
@@ -119,6 +120,25 @@ def source_checks(root):
                 return False
             names.append(name[1])
         return set(names) == {"Debug", "Profile", "Release"}
+
+    def runner_team():
+        blocks = re.findall(r"^\t\t[0-9A-F]{24} /\*[^\n]*\*/ = \{(.*?)^\t\t\};",
+                            project_text(), re.MULTILINE | re.DOTALL)
+        runner = [block for block in blocks if "isa = XCBuildConfiguration;" in block
+                  and re.search(r'INFOPLIST_FILE = "?Runner/Info\.plist"?;', block)]
+        if len(runner) != 3:
+            return False
+        for block in runner:
+            # An SDK-specific override must not quietly select another team.
+            teams = re.findall(
+                r'^\s*"?DEVELOPMENT_TEAM(?:\[[^\]\n]+\])*"?\s*=\s*"?([^";\n]+)"?;',
+                block, re.MULTILINE)
+            if not teams or any(value.strip() != TEAM_ID for value in teams):
+                return False
+            if not re.search(r'^\s*DEVELOPMENT_TEAM = ' + TEAM_ID + r';',
+                             block, re.MULTILINE):
+                return False
+        return True
 
     def minimum_deployment_target():
         # Runner currently inherits its deployment target from PBXProject.
@@ -248,6 +268,7 @@ def source_checks(root):
     check("Apple entitlement (not provisioning proof)",
           lambda: plist("Runner.entitlements").get("com.apple.developer.applesignin") == ["Default"])
     check("Runner bundle ID / entitlement in all configurations", runner_configurations)
+    check("Runner registered signing team (not signing identity proof)", runner_team)
     check("Runner minimum deployment target iOS 13+", minimum_deployment_target)
     check("App required-reason privacy API declarations", privacy_reasons)
     check("Privacy manifest in Runner resources", privacy_resource)

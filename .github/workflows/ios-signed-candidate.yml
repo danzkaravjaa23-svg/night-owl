@@ -1,0 +1,227 @@
+name: Prepare signed iOS candidate (no upload)
+on:
+  workflow_dispatch:
+    inputs:
+      source_commit:
+        description: Exact 40-character commit selected for this run
+        required: true
+        type: string
+      build_number:
+        description: Build number confirmed unused in App Store Connect
+        required: true
+        default: '1'
+        type: string
+      backend_environment:
+        description: Must match the protected environment public backend config
+        required: true
+        default: staging
+        type: choice
+        options: [staging, production]
+permissions:
+  contents: read
+concurrency:
+  group: nightowl-ios-signing
+  cancel-in-progress: false
+jobs:
+  source:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Verify exact reviewed source and build number
+        env:
+          EXPECTED_SOURCE: ${{ inputs.source_commit }}
+          BUILD_NUMBER: ${{ inputs.build_number }}
+        run: |
+          python3 - <<'PY'
+          import os, re, subprocess
+          assert os.environ['GITHUB_REF'] == 'refs/heads/codex/app-store-preparation'
+          assert re.fullmatch(r'[0-9a-f]{40}', os.environ['EXPECTED_SOURCE'])
+          assert subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip() == os.environ['EXPECTED_SOURCE']
+          assert re.fullmatch(r'[1-9][0-9]{0,8}', os.environ['BUILD_NUMBER'])
+          PY
+      - run: python3 -m unittest discover -s tools/deployment/tests -p 'test_ios_*.py' -v
+      - run: python3 tools/deployment/ios_preflight.py --source-only
+  sign:
+    needs: source
+    runs-on: macos-15
+    timeout-minutes: 45
+    # Required reviewers + allowed branch must be configured in GitHub before secrets are added.
+    environment: ios-signing
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.3.app/Contents/Developer
+      CANDIDATE_DIR: ${{ github.workspace }}/build/signed-candidate
+      BUILD_NUMBER: ${{ inputs.build_number }}
+      BACKEND_ENVIRONMENT: ${{ inputs.backend_environment }}
+    steps:
+      - name: Require operator-confirmed environment protection
+        env:
+          SIGNING_ENVIRONMENT_READY: ${{ vars.IOS_SIGNING_READY }}
+        run: test "$SIGNING_ENVIRONMENT_READY" = true
+      - name: Define private temporary signing path
+        run: printf '%s\n' "SIGNING_DIR=$RUNNER_TEMP/nightowl-signing-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT" >> "$GITHUB_ENV"
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.44.0'
+          channel: stable
+          cache: false
+      - name: Check toolchain before accessing signing assets
+        run: python3 tools/deployment/ios_preflight.py
+      - name: Import existing assets into an isolated temporary keychain
+        id: signing
+        env:
+          DISTRIBUTION_P12_BASE64: ${{ secrets.IOS_DISTRIBUTION_P12_BASE64 }}
+          DISTRIBUTION_P12_PASSWORD: ${{ secrets.IOS_DISTRIBUTION_P12_PASSWORD }}
+          APP_STORE_PROFILE_BASE64: ${{ secrets.IOS_APP_STORE_PROFILE_BASE64 }}
+          PUBLIC_BACKEND_CONFIG_JSON: ${{ secrets.IOS_PUBLIC_BACKEND_CONFIG_JSON }}
+        run: |
+          set -eu
+          umask 077
+          mkdir "$SIGNING_DIR"
+          python3 - <<'PY'
+          import base64, json, os, secrets, shlex, subprocess
+          from pathlib import Path
+          root = Path(os.environ['SIGNING_DIR'])
+          for variable, filename in [('DISTRIBUTION_P12_BASE64', 'distribution.p12'), ('APP_STORE_PROFILE_BASE64', 'profile.mobileprovision')]:
+              value = os.environ[variable]
+              if not value:
+                  raise SystemExit('Required signing asset is missing')
+              try:
+                  data = base64.b64decode(''.join(value.split()), validate=True)
+              except ValueError:
+                  raise SystemExit('Signing asset is not valid base64') from None
+              (root / filename).write_bytes(data)
+          (root / 'public-config.json').write_text(os.environ['PUBLIC_BACKEND_CONFIG_JSON'])
+          password = secrets.token_hex(32)
+          print('::add-mask::' + password)
+          (root / 'keychain-password').write_text(password)
+          original = subprocess.check_output(['security', 'list-keychains', '-d', 'user'], text=True)
+          (root / 'original-keychains.json').write_text(json.dumps(shlex.split(original)))
+          PY
+          task_keychain_password=$(cat "$SIGNING_DIR/keychain-password")
+          task_keychain="$SIGNING_DIR/signing.keychain-db"
+          security create-keychain -p "$task_keychain_password" "$task_keychain" >/dev/null
+          security set-keychain-settings -lut 21600 "$task_keychain" >/dev/null
+          security unlock-keychain -p "$task_keychain_password" "$task_keychain" >/dev/null
+          security import "$SIGNING_DIR/distribution.p12" -k "$task_keychain" \
+            -P "$DISTRIBUTION_P12_PASSWORD" -T /usr/bin/codesign -T /usr/bin/security >/dev/null
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s \
+            -k "$task_keychain_password" "$task_keychain" >/dev/null
+          python3 - <<'PY'
+          import json, os, subprocess
+          from pathlib import Path
+          root = Path(os.environ['SIGNING_DIR'])
+          original = json.loads((root / 'original-keychains.json').read_text())
+          subprocess.run(['security', 'list-keychains', '-d', 'user', '-s', str(root / 'signing.keychain-db'), *original], check=True, capture_output=True)
+          PY
+          security find-identity -v -p codesigning "$task_keychain" > "$SIGNING_DIR/identities.txt"
+          security cms -D -i "$SIGNING_DIR/profile.mobileprovision" > "$SIGNING_DIR/profile.plist"
+          python3 tools/deployment/ios_signing.py prepare \
+            --config "$SIGNING_DIR/public-config.json" --environment "$BACKEND_ENVIRONMENT" \
+            --profile-plist "$SIGNING_DIR/profile.plist" --identities "$SIGNING_DIR/identities.txt" \
+            --source-commit "$GITHUB_SHA" --build-number "$BUILD_NUMBER" \
+            --output "$CANDIDATE_DIR" --github-output "$GITHUB_OUTPUT"
+          python3 - <<'PY'
+          import json, os, shutil
+          from pathlib import Path
+          root = Path(os.environ['SIGNING_DIR'])
+          uuid = json.loads((Path(os.environ['CANDIDATE_DIR']) / 'input-receipt.json').read_text())['profile_uuid']
+          # New Xcode and legacy profile locations. Never replace a pre-existing profile.
+          for relative in ['Library/Developer/Xcode/UserData/Provisioning Profiles', 'Library/MobileDevice/Provisioning Profiles']:
+              directory = Path.home() / relative
+              directory.mkdir(parents=True, exist_ok=True)
+              target = directory / (uuid + '.mobileprovision')
+              with target.open('xb') as stream:
+                  stream.write((root / 'profile.mobileprovision').read_bytes())
+              with (root / 'installed-profiles.jsonl').open('a') as stream:
+                  stream.write(json.dumps(str(target)) + '\n')
+          PY
+      - name: Generate exact Flutter release configuration
+        run: |
+          set -eu
+          flutter pub get --enforce-lockfile
+          flutter build ios --config-only --release --no-codesign --no-pub \
+            --build-name=1.0.0 --build-number="$BUILD_NUMBER" \
+            --dart-define=DEVICE_PREVIEW=false \
+            --dart-define-from-file="$CANDIDATE_DIR/backend-defines.json"
+      - name: Archive and export with existing manual signing assets
+        env:
+          PROFILE_UUID: ${{ steps.signing.outputs.profile_uuid }}
+          IDENTITY_SHA1: ${{ steps.signing.outputs.identity_sha1 }}
+        run: |
+          set -eu
+          # No provisioning updates, device registration, upload or automatic fallback.
+          xcodebuild -workspace ios/Runner.xcworkspace -scheme Runner \
+            -configuration Release -destination 'generic/platform=iOS' \
+            -archivePath "$CANDIDATE_DIR/Runner.xcarchive" \
+            DEVELOPMENT_TEAM=DAVM2JZ4NN CODE_SIGN_STYLE=Manual \
+            CODE_SIGN_IDENTITY="$IDENTITY_SHA1" NIGHTOWL_APP_PROFILE_UUID="$PROFILE_UUID" \
+            archive > "$SIGNING_DIR/archive.log" 2>&1
+          xcodebuild -exportArchive -archivePath "$CANDIDATE_DIR/Runner.xcarchive" \
+            -exportOptionsPlist "$CANDIDATE_DIR/ExportOptions.plist" \
+            -exportPath "$CANDIDATE_DIR/export" > "$SIGNING_DIR/export.log" 2>&1
+      - name: Verify exported app and prepare sanitized artifact
+        run: |
+          set -eu
+          python3 - <<'PY'
+          import hashlib, json, os, shutil, stat, subprocess, zipfile
+          from pathlib import Path
+          candidate = Path(os.environ['CANDIDATE_DIR'])
+          packages = list((candidate / 'export').glob('*.ipa'))
+          assert len(packages) == 1, 'Expected one IPA'
+          with zipfile.ZipFile(packages[0]) as archive:
+              assert archive.testzip() is None, 'IPA CRC check failed'
+              assert all(not Path(name).is_absolute() and '..' not in Path(name).parts for name in archive.namelist())
+              assert all(not stat.S_ISLNK(entry.external_attr >> 16) for entry in archive.infolist()), 'Unexpected symlink in IPA'
+          subprocess.run(['ditto', '-x', '-k', str(packages[0]), str(candidate / 'verify-export')], check=True)
+          apps = list((candidate / 'verify-export/Payload').glob('*.app'))
+          assert len(apps) == 1, 'Expected one exported app'
+          (candidate / 'exported-app-path').write_text(str(apps[0]))
+          destination = candidate / 'artifact'
+          destination.mkdir()
+          shutil.copyfile(packages[0], destination / 'NightOwl.ipa')
+          (destination / 'ipa-checksum.json').write_text(json.dumps({'sha256': hashlib.sha256(packages[0].read_bytes()).hexdigest(), 'bytes': packages[0].stat().st_size}, indent=2) + '\n')
+          PY
+          task_exported_app=$(cat "$CANDIDATE_DIR/exported-app-path")
+          python3 tools/deployment/ios_signing.py verify --app "$task_exported_app" \
+            --prepared "$CANDIDATE_DIR" --generated-config ios/Flutter/Generated.xcconfig \
+            --receipt "$CANDIDATE_DIR/artifact/verification.json"
+      - name: Retain verified candidate only (no credentials or raw logs)
+        uses: actions/upload-artifact@v4
+        with:
+          name: night-owl-signed-candidate-${{ github.sha }}-${{ inputs.build_number }}
+          path: |
+            build/signed-candidate/artifact/NightOwl.ipa
+            build/signed-candidate/artifact/ipa-checksum.json
+            build/signed-candidate/artifact/verification.json
+          if-no-files-found: error
+          retention-days: 3
+      - name: Remove temporary signing assets and restore keychain search list
+        if: always()
+        run: |
+          python3 - <<'PY'
+          import json, os, shutil, subprocess
+          from pathlib import Path
+          if not os.environ.get('SIGNING_DIR'):
+              raise SystemExit(0)
+          root = Path(os.environ['SIGNING_DIR'])
+          if root.exists():
+              original = root / 'original-keychains.json'
+              if original.exists():
+                  subprocess.run(['security', 'list-keychains', '-d', 'user', '-s', *json.loads(original.read_text())], check=False, capture_output=True)
+              keychain = root / 'signing.keychain-db'
+              if keychain.exists():
+                  subprocess.run(['security', 'delete-keychain', str(keychain)], check=False, capture_output=True)
+              installed = root / 'installed-profiles.jsonl'
+              if installed.exists():
+                  for line in installed.read_text().splitlines():
+                      Path(json.loads(line)).unlink(missing_ok=True)
+              shutil.rmtree(root)
+          candidate = Path(os.environ['CANDIDATE_DIR'])
+          if candidate.exists():
+              shutil.rmtree(candidate)
+          PY

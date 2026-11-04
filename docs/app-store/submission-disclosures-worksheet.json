@@ -1,0 +1,822 @@
+{
+  "reviewed_on": "2026-11-05",
+  "timezone": "Asia/Ulaanbaatar",
+  "source_commit": "c9652d2ab9cd0ed814e8bb1b196c8f8fb333fb1f",
+  "app": "Night Owl UB",
+  "apple_id": "6830714135",
+  "status": "All 16 App Privacy types and their per-type purposes/linkage/tracking details are saved and verified in Connect; no Set Up prompts remain. Publish is available but was not clicked. Final owner attestation and publication remain pending.",
+  "scope": "iOS 1.0.0 free social nightlife release; actual production configuration and final signed archive must match these answers.",
+  "app_privacy": {
+    "data_collected": "Yes",
+    "privacy_policy_url": "https://nightowl-ub.netlify.app/privacy.html",
+    "can_enter_now": [
+      {
+        "data_type": "Name",
+        "purposes": [
+          "App Functionality"
+        ],
+        "linked_to_user": "Yes",
+        "tracking_source_answer": "No",
+        "evidence": [
+          "lib/features/auth/services/apple_auth_service.dart",
+          "lib/features/auth/screens/setup_screen.dart"
+        ],
+        "reason": "Apple first-authorization name and user-entered display name are stored with the account."
+      },
+      {
+        "data_type": "Email Address",
+        "purposes": [
+          "App Functionality"
+        ],
+        "linked_to_user": "Yes",
+        "tracking_source_answer": "No",
+        "evidence": [
+          "lib/features/auth/services/apple_auth_service.dart",
+          "lib/features/auth/screens/register_screen.dart"
+        ],
+        "reason": "Email/password and Apple/Google authentication; Apple relay addresses are also email addresses."
+      },
+      {
+        "data_type": "Phone Number",
+        "purposes": [
+          "App Functionality"
+        ],
+        "linked_to_user": "Yes",
+        "tracking_source_answer": "No",
+        "evidence": [
+          "lib/features/profile/screens/venue_edit_screen.dart",
+          "lib/features/profile/services/venue_editor_service.dart"
+        ],
+        "reason": "Business users submit a contact phone attached to owner_id. This is not phone authentication or device address-book access."
+      },
+      {
+        "data_type": "User ID",
+        "purposes": [
+          "App Functionality",
+          "Product Personalization",
+          "Analytics"
+        ],
+        "linked_to_user": "Yes",
+        "tracking_source_answer": "No",
+        "evidence": [
+          "lib/models/user_profile.dart",
+          "lib/features/feed/providers/feed_provider.dart",
+          "lib/features/discovery/services/discovery_service.dart",
+          "supabase/migrations/202611030002_discovery_analytics_consent.sql"
+        ],
+        "reason": "Account UUID/username, account-scoped feeds and saves, plus optional pilot events linked to user_id. Opt-in does not remove this disclosure."
+      },
+      {
+        "data_type": "Contacts",
+        "purposes": [
+          "App Functionality",
+          "Product Personalization"
+        ],
+        "linked_to_user": "Yes",
+        "tracking_source_answer": "No",
+        "evidence": [
+          "lib/features/profile/providers/follow_provider.dart",
+          "lib/features/feed/providers/feed_provider.dart",
+          "lib/features/dm/providers/group_provider.dart"
+        ],
+        "reason": "Follow/follower and group social graph; the Following feed is customized from it. No phone contacts permission exists."
+      },
+      {
+        "data_type": "Precise Location",
+        "purposes": [
+          "App Functionality"
+        ],
+        "linked_to_user": "Yes",
+        "tracking_source_answer": "No",
+        "evidence": [
+          "lib/features/post/services/content_publication.dart",
+          "lib/models/venue_location.dart",
+          "lib/features/profile/screens/venue_edit_screen.dart",
+          "web/privacy.html"
+        ],
+        "reason": "User-associated check-ins and posts/stories link an exact mapped venue; business users submit exact venue coordinates. This answer does not claim that check-ins are GPS verified or that live GPS is stored."
+      },
+      {
+        "data_type": "Photos or Videos",
+        "purposes": [
+          "App Functionality"
+        ],
+        "linked_to_user": "Yes",
+        "tracking_source_answer": "No",
+        "evidence": [
+          "lib/features/post/services/content_publication.dart",
+          "lib/features/post/utils/post_media_io.dart",
+          "lib/core/utils/image_uploader.dart"
+        ],
+        "reason": "Uploaded profile, post/reel, story and venue media are stored under account-owned paths. Do not claim all EXIF/video metadata is stripped."
+      },
+      {
+        "data_type": "Audio Data",
+        "purposes": [
+          "App Functionality"
+        ],
+        "linked_to_user": "Yes",
+        "tracking_source_answer": "No",
+        "evidence": [
+          "lib/features/post/utils/post_media_io.dart",
+          "lib/features/feed/screens/create_reel_screen.dart",
+          "docs/app-store/MEDIA_RIGHTS.md"
+        ],
+        "reason": "User-selected videos may contain voice/sound tracks and are uploaded intact. No microphone recording permission or separate curated music catalogue is claimed."
+      },
+      {
+        "data_type": "Emails or Text Messages",
+        "purposes": [
+          "App Functionality"
+        ],
+        "linked_to_user": "Yes",
+        "tracking_source_answer": "No",
+        "evidence": [
+          "lib/features/discovery/services/discovery_service.dart",
+          "lib/features/dm/providers/group_provider.dart",
+          "lib/features/profile/services/report_submission_service.dart"
+        ],
+        "reason": "Direct/group text messages and their participants are stored. Explicit reports expose only the selected reported message to moderation."
+      },
+      {
+        "data_type": "Other User Content",
+        "purposes": [
+          "App Functionality",
+          "Product Personalization"
+        ],
+        "linked_to_user": "Yes",
+        "tracking_source_answer": "No",
+        "evidence": [
+          "lib/models/user_profile.dart",
+          "lib/features/auth/screens/setup_screen.dart",
+          "lib/features/discovery/services/discovery_service.dart",
+          "lib/features/profile/services/report_submission_service.dart"
+        ],
+        "reason": "Bio, interests, caption, comments, reviews, notes, collections and moderation reports; interests enable creator filtering."
+      },
+      {
+        "data_type": "Product Interaction",
+        "purposes": [
+          "App Functionality",
+          "Product Personalization",
+          "Analytics"
+        ],
+        "linked_to_user": "Yes",
+        "tracking_source_answer": "No",
+        "evidence": [
+          "lib/features/feed/providers/feed_provider.dart",
+          "lib/features/feed/providers/saved_provider.dart",
+          "lib/features/discovery/services/discovery_service.dart",
+          "supabase/migrations/202611030002_discovery_analytics_consent.sql"
+        ],
+        "reason": "Likes, saved places/posts, follows, RSVP and story views support features; consented pilot actions also measure adoption. Saved/followed content changes what the user sees."
+      },
+      {
+        "data_type": "Other Data Types",
+        "purposes": [
+          "App Functionality"
+        ],
+        "linked_to_user": "Yes",
+        "tracking_source_answer": "No",
+        "evidence": [
+          "lib/core/constants/community_rules.dart",
+          "lib/features/auth/screens/register_screen.dart",
+          "web/privacy.html"
+        ],
+        "reason": "Account-associated adult self-declaration, accepted rule version/time, consent and security/deletion audit records. Do not classify the 18+ checkbox as verified date of birth."
+      }
+    ],
+    "technical_items_to_resolve_before_publish": [
+      {
+        "data_types": [
+          "Other Diagnostic Data",
+          "Search History",
+          "Coarse Location",
+          "Performance Data"
+        ],
+        "proposed_purpose": "App Functionality (operational/security request logging)",
+        "proposed_linked_to_user": "Saved draft linked Yes conservatively from authenticated staging context. The production probe was anonymous; authenticated production linkage remains inferred and untested.",
+        "reason": "The exact anonymous production GET /rest/v1/venues synthetic name-filter request returned 200 with zero rows, and its matching dashboard Raw JSON retained the synthetic search marker in full URL/query. IP, city/region/country, diagnostic and origin/upstream timing fields were populated. The production request was anonymous and auth_user was null; no authenticated production account was probed. Field presence and the matched synthetic search are established, while retention duration and complete downstream uses remain unresolved.",
+        "next_action": "Review retained-log duration and actual provider/operator uses before final owner attestation/publication. Preserve the production authenticated-linkage inference. The Log Drains unavailable-feature empty state is not proof of every handling practice; no paid upgrade is needed for this documentation.",
+        "source": "https://supabase.com/docs/guides/observability/log-field-reference",
+        "status": "Four observed log types saved with all details in the 16-type draft; retention duration, complete provider/operator uses and final owner attestation remain open.",
+        "evidence": [
+          "docs/app-store/evidence/staging-log-field-presence.json",
+          "docs/app-store/evidence/production-anonymous-log-probe.json",
+          "docs/app-store/evidence/production-log-field-presence.json"
+        ],
+        "classification_guidance": [
+          {
+            "data_type": "Search History",
+            "basis": "Production venue-name search-term retention is confirmed in the matching request log, including full URL/query. Include this retained search input in the disclosure work, proposed purpose App Functionality/security. It is server log retention, not proof of a dedicated in-app search-history feature. Authenticated production account linkage remains inferred from staging, not directly tested."
+          },
+          {
+            "data_type": "Coarse Location",
+            "basis": "Production IP-derived city/region/country fields were populated. Include this coarse geographic processing in final classification; it does not establish GPS or precise device location. This anonymous probe does not establish authenticated account linkage."
+          },
+          {
+            "data_type": "Other Diagnostic Data",
+            "basis": "Production request/status, IP, trace/security and related fields were retained. Consider operational/security diagnostics under App Functionality. The absence of a native crash SDK does not remove server-log disclosure; final uses and linkage need accurate declaration."
+          },
+          {
+            "data_type": "Performance Data",
+            "basis": "Production origin_time and upstream-service timing were populated, establishing retained request-performance data. Include that practice in final classification without claiming native device profiling."
+          },
+          {
+            "data_type": "User ID / Device ID / Tracking",
+            "basis": "Authenticated staging logs retained JWT subject/session and auth_user. Production evidence is anonymous with auth_user null, so authenticated linkage is an inference only. JA4 TLS/bot signal is populated in both environments but does not by itself establish a persistent unique device identifier, advertising identifier or cross-company tracking."
+          }
+        ]
+      },
+      {
+        "data_types": [
+          "Customer Support"
+        ],
+        "reason": "In-app moderation reports are already Other User Content; support is an external mail link. Do not assert Apple's optional-disclosure exception without checking that the actual support form/channel meets every condition.",
+        "next_action": "Check the supported contact workflow and retention. If in-app support content is retained as a primary support function, select Customer Support, App Functionality, linked Yes."
+      },
+      {
+        "data_types": [
+          "Other Diagnostic Data",
+          "Other Data Types",
+          "Coarse Location"
+        ],
+        "reason": "The release map defaults to tile.openstreetmap.org. OSMF receives IP and the requested viewport. A tile viewport is not automatically proof of the user's GPS location.",
+        "next_action": "Verify final MAP_TILE_URL and applicable provider retention/data use. Source defaults and OSMF policy alone do not prove a different configured provider's practices."
+      },
+      {
+        "data_types": [
+          "Tracking (all selected data types)"
+        ],
+        "reason": "No advertising/IDFA/ATT SDK or cross-company advertising use was found in app code; eleven embedded framework/plugin manifests declare tracking false. JA4 TLS/bot and IP context are populated in both the owned staging and anonymous production request logs. Staging also has authenticated account/session context; production authenticated linkage is not tested. These observations do not alone establish a unique device identifier or Apple-defined tracking.",
+        "next_action": "Tracking No is saved in the unpublished draft based on audited source and the Supabase DPA restrictions recorded in draft_classification_review. Reconcile actual operator/provider practices before owner attestation/publication. No configured Log Drain was visible and the feature was unavailable on the current plan; this is not an exhaustive handling guarantee. Do not equate JA4 presence with unique Device ID."
+      }
+    ],
+    "do_not_select_without_new_evidence": [
+      "Payment Info, Credit Info, Other Financial Info or Purchase History: payments are deferred",
+      "Health or Fitness: no HealthKit/wellness collection identified",
+      "Sensitive Info: no dedicated sensitive-traits field or inference identified; arbitrary UGC is disclosed as content",
+      "Device ID: no advertising/device identifier found in app source. JA4 TLS/bot signal is populated in observed staging and production logs, but persistent unique-device identification is not established. Classify from actual persistence/use/linkage, not JA4 presence alone.",
+      "Browsing History: no in-app web browsing tracker identified",
+      "Advertising Data: no paid advertising SDK or delivery measurement identified",
+      "Crash Data: no crash-reporting SDK found; normal server errors alone do not establish native crash-log collection",
+      "Gameplay Content, Environment Scanning, Hands, Head: no corresponding features identified"
+    ],
+    "source_rule_summary": "Apple's label covers retained off-device data and integrated partners. Optional use is not an automatic exemption. Social graph falls within Contacts; account-linked pilot events stay linked. No Data Collected is incorrect.",
+    "source": "https://developer.apple.com/app-store/app-privacy-details/",
+    "connect_ui_attempt": {
+      "date": "2026-11-05",
+      "timezone": "Asia/Ulaanbaatar",
+      "status": "sixteen_type_draft_saved_verified_unpublished",
+      "collect_data_yes_selected": true,
+      "selected_data_type_count": 16,
+      "selected_data_types": [
+        "Name",
+        "Email Address",
+        "Phone Number",
+        "User ID",
+        "Contacts",
+        "Precise Location",
+        "Photos or Videos",
+        "Audio Data",
+        "Emails or Text Messages",
+        "Other User Content",
+        "Product Interaction",
+        "Other Data Types",
+        "Search History",
+        "Coarse Location",
+        "Other Diagnostic Data",
+        "Performance Data"
+      ],
+      "sixteen_types_saved": true,
+      "data_type_selection_saved_verified": true,
+      "per_type_details": {
+        "Name": {
+          "purposes": [
+            "App Functionality"
+          ],
+          "linked_to_user": "Yes",
+          "tracking": "No",
+          "details_saved_verified": true,
+          "set_up_prompt_no_longer_present": true
+        },
+        "Email Address": {
+          "purposes": [
+            "App Functionality"
+          ],
+          "linked_to_user": "Yes",
+          "tracking": "No",
+          "details_saved_verified": true,
+          "set_up_prompt_no_longer_present": true
+        },
+        "Phone Number": {
+          "purposes": [
+            "App Functionality"
+          ],
+          "linked_to_user": "Yes",
+          "tracking": "No",
+          "details_saved_verified": true,
+          "set_up_prompt_no_longer_present": true
+        },
+        "User ID": {
+          "purposes": [
+            "App Functionality",
+            "Product Personalization",
+            "Analytics"
+          ],
+          "linked_to_user": "Yes",
+          "tracking": "No",
+          "details_saved_verified": true,
+          "set_up_prompt_no_longer_present": true
+        },
+        "Contacts": {
+          "purposes": [
+            "App Functionality",
+            "Product Personalization"
+          ],
+          "linked_to_user": "Yes",
+          "tracking": "No",
+          "details_saved_verified": true,
+          "set_up_prompt_no_longer_present": true
+        },
+        "Precise Location": {
+          "purposes": [
+            "App Functionality"
+          ],
+          "linked_to_user": "Yes",
+          "tracking": "No",
+          "details_saved_verified": true,
+          "set_up_prompt_no_longer_present": true
+        },
+        "Photos or Videos": {
+          "purposes": [
+            "App Functionality"
+          ],
+          "linked_to_user": "Yes",
+          "tracking": "No",
+          "details_saved_verified": true,
+          "set_up_prompt_no_longer_present": true
+        },
+        "Audio Data": {
+          "purposes": [
+            "App Functionality"
+          ],
+          "linked_to_user": "Yes",
+          "tracking": "No",
+          "details_saved_verified": true,
+          "set_up_prompt_no_longer_present": true
+        },
+        "Emails or Text Messages": {
+          "purposes": [
+            "App Functionality"
+          ],
+          "linked_to_user": "Yes",
+          "tracking": "No",
+          "details_saved_verified": true,
+          "set_up_prompt_no_longer_present": true
+        },
+        "Other User Content": {
+          "purposes": [
+            "App Functionality",
+            "Product Personalization"
+          ],
+          "linked_to_user": "Yes",
+          "tracking": "No",
+          "details_saved_verified": true,
+          "set_up_prompt_no_longer_present": true
+        },
+        "Product Interaction": {
+          "purposes": [
+            "App Functionality",
+            "Product Personalization",
+            "Analytics"
+          ],
+          "linked_to_user": "Yes",
+          "tracking": "No",
+          "details_saved_verified": true,
+          "set_up_prompt_no_longer_present": true
+        },
+        "Other Data Types": {
+          "purposes": [
+            "App Functionality"
+          ],
+          "linked_to_user": "Yes",
+          "tracking": "No",
+          "details_saved_verified": true,
+          "set_up_prompt_no_longer_present": true
+        },
+        "Search History": {
+          "purposes": [
+            "App Functionality"
+          ],
+          "linked_to_user": "Yes",
+          "tracking": "No",
+          "details_saved_verified": true,
+          "set_up_prompt_no_longer_present": true
+        },
+        "Coarse Location": {
+          "purposes": [
+            "App Functionality"
+          ],
+          "linked_to_user": "Yes",
+          "tracking": "No",
+          "details_saved_verified": true,
+          "set_up_prompt_no_longer_present": true
+        },
+        "Other Diagnostic Data": {
+          "purposes": [
+            "App Functionality"
+          ],
+          "linked_to_user": "Yes",
+          "tracking": "No",
+          "details_saved_verified": true,
+          "set_up_prompt_no_longer_present": true
+        },
+        "Performance Data": {
+          "purposes": [
+            "App Functionality"
+          ],
+          "linked_to_user": "Yes",
+          "tracking": "No",
+          "details_saved_verified": true,
+          "set_up_prompt_no_longer_present": true
+        }
+      },
+      "all_per_type_details_complete": true,
+      "all_sixteen_detail_summaries_verified": true,
+      "set_up_prompts_remaining": 0,
+      "email_save_outcome": "saved_verified",
+      "remaining_unconfigured_data_types": [],
+      "remaining_unconfigured_count": 0,
+      "publish_available": true,
+      "publish_clicked": false,
+      "published": false,
+      "final_owner_attestation": false,
+      "local_screenshots": [
+        "build/audit/2026-11-04/app-privacy-16-draft-saved.png",
+        "build/audit/2026-11-04/app-privacy-draft-overview.png"
+      ],
+      "previous_attempts": [
+        {
+          "date": "2026-11-04",
+          "status": "superseded_by_verified_2026_11_05_draft",
+          "initial_save_outcome": "Initially unknown after spinner/session expiry. Owner re-authentication showed 11 types; User ID was added and all 12 original types then verified.",
+          "name_details_saved": true,
+          "email_details_save_outcome_at_that_time": "unknown_after_second_session_expiry",
+          "email_unknown_resolved_on": "2026-11-05"
+        }
+      ],
+      "next_action": "Keep the saved 16-type draft unpublished pending final owner review and resolution of remaining retention/provider, support/map and release configuration questions. Preserve the distinction between anonymous production evidence and authenticated production linkage inferred from staging."
+    },
+    "staging_log_observation": {
+      "evidence": "docs/app-store/evidence/staging-log-field-presence.json",
+      "project_ref": "sreojqqqhdzkfsrbvlpl",
+      "request_scope": "One owned synthetic GET /rest/v1/stories",
+      "actual_values_saved": false,
+      "full_url_and_query_retained": true,
+      "populated_field_groups": {
+        "request_and_query": [
+          "metadata.request.url",
+          "metadata.request.search",
+          "metadata.request.path"
+        ],
+        "network": [
+          "metadata.request.headers.cf_connecting_ip"
+        ],
+        "account_and_session": [
+          "auth_user",
+          "metadata.request.sb.auth_user",
+          "metadata.request.sb.jwt.authorization.payload.subject",
+          "metadata.request.sb.jwt.authorization.payload.session_id"
+        ],
+        "ip_derived_geography": [
+          "metadata.request.cf.city",
+          "metadata.request.cf.region",
+          "metadata.request.cf.country"
+        ],
+        "timing": [
+          "metadata.response.origin_time",
+          "metadata.response.headers.x_envoy_upstream_service_time"
+        ],
+        "tls_bot_signal": [
+          "metadata.request.cf.botManagement.ja4"
+        ]
+      },
+      "production_logging_verified": false,
+      "retention_duration_verified": false,
+      "unique_device_id_established": false
+    },
+    "production_log_observation": {
+      "probe_evidence": "docs/app-store/evidence/production-anonymous-log-probe.json",
+      "field_presence_evidence": "docs/app-store/evidence/production-log-field-presence.json",
+      "project_ref": "jbbdnpsvstwxtgtjoeru",
+      "probe_started_utc": "2026-11-04T15:56:35.826095+00:00",
+      "request_scope": "One anonymous read-only GET venue-name search with synthetic filter",
+      "request_count": 1,
+      "http_status": 200,
+      "rows_returned": 0,
+      "mutations": false,
+      "actual_log_values_saved": false,
+      "search_term_retention_confirmed": true,
+      "full_url_and_query_retained": true,
+      "ip_and_city_region_country_populated": true,
+      "origin_and_upstream_timing_populated": true,
+      "ja4_tls_bot_signal_populated": true,
+      "auth_user_populated": false,
+      "authenticated_production_account_linkage_tested": false,
+      "authenticated_account_linkage_inference": "Authenticated production log linkage is inferred from the observed staging JWT subject/session context, not directly tested in production.",
+      "retention_duration_verified": false,
+      "final_classification_or_publication_complete": false,
+      "log_drains": {
+        "local_followup_date": "2026-11-05",
+        "read_only": true,
+        "observed_state": "Empty upgrade state offering Pro/Team/Enterprise; Log Drains feature unavailable on the current plan",
+        "configured_drain_visible": false,
+        "paid_upgrade_or_configuration_change": false,
+        "screenshot": "build/audit/2026-11-04/production-log-drains-unavailable.png",
+        "limit": "No configured drain was visible in this dashboard; this does not prove absence of all operator-side handling or provider processing"
+      }
+    },
+    "additional_data_types_identified_from_production_logs": {
+      "data_types": [
+        "Search History",
+        "Coarse Location",
+        "Other Diagnostic Data",
+        "Performance Data"
+      ],
+      "purpose_basis": "Retained operational/security request data supports service security, diagnostics and performance. This is the saved draft classification, subject to final owner review of actual practices.",
+      "final_details_configured_in_connect": true,
+      "production_authenticated_account_linkage_tested": false,
+      "next_action": "Review the saved draft against final deployment and actual provider/operator uses before owner attestation/publication; do not represent the anonymous production probe as an authenticated linkage test.",
+      "saved_purposes": [
+        "App Functionality"
+      ],
+      "included_in_current_sixteen_saved_types": true,
+      "draft_details_configured_in_connect": true,
+      "linked_to_user": "Yes",
+      "tracking": "No",
+      "linkage_basis": "Conservative linked Yes: authenticated staging logs retain account/session identifiers. The production probe was anonymous with auth_user null; authenticated production linkage is inferred, not directly tested."
+    },
+    "draft_classification_review": {
+      "reviewed_on": "2026-11-05",
+      "scope": "Four production-log categories configured as an unpublished draft; no additional live request or paid service change.",
+      "saved_answers": {
+        "data_types": [
+          "Search History",
+          "Coarse Location",
+          "Other Diagnostic Data",
+          "Performance Data"
+        ],
+        "purposes": [
+          "App Functionality"
+        ],
+        "linked_to_user": "Yes",
+        "tracking": "No"
+      },
+      "category_basis": {
+        "Search History": "The exact synthetic venue-name search marker was retained in production request URL/query.",
+        "Coarse Location": "IP-derived city/region/country fields were populated in the production request log.",
+        "Other Diagnostic Data": "Production request/status, trace and security fields were retained.",
+        "Performance Data": "Production origin/upstream request timing fields were populated."
+      },
+      "linkage_limit": "Authenticated staging linkage is directly observed; authenticated production linkage remains an inference. The production probe was anonymous.",
+      "tracking_basis": "Audited app/native source showed no advertising, IDFA/ATT or cross-company advertising use. Supabase DPA section 3.3 restricts sale, cross-context behavioral advertising, use outside permitted purposes and certain combining; section 6.2 requires substantially equivalent subprocessor protections. The empty unavailable Log Drains UI is supporting context, not proof of all provider/operator behavior. Actual operations and final owner attestation remain review items.",
+      "device_id_limit": "A populated JA4 TLS/bot signal alone does not establish a persistent unique Device ID or Apple-defined tracking.",
+      "official_sources": [
+        {
+          "url": "https://developer.apple.com/app-store/app-privacy-details/",
+          "basis": "Collection/data-type, App Functionality, account linkage and tracking definitions."
+        },
+        {
+          "url": "https://supabase.com/legal/customer-resources/data-processing-addendum",
+          "observed_version": "1 — August 1, 2026",
+          "basis": "Sections 3.3 and 6.2 support the draft processor-use/tracking assessment; contractual terms do not prove every actual practice."
+        },
+        {
+          "url": "https://supabase.com/docs/guides/observability/log-field-reference",
+          "basis": "Field meanings; actual retained fields are established by the scoped observation receipts."
+        }
+      ]
+    }
+  },
+  "export_compliance": {
+    "known_source_uses": [
+      "HTTPS to auth/database/media/maps",
+      "Apple nonce SHA-256 and SDK authentication",
+      "platform secure storage for private session/deletion state"
+    ],
+    "no_custom_proprietary_algorithm_found": true,
+    "its_app_uses_non_exempt_encryption_in_source": "Not set",
+    "can_prepare_now": "Describe the above limited uses and retain the final binary/dependency inventory for the questionnaire.",
+    "must_verify": "The downloaded unsigned native binary contains BoringSSL and Dart SecureSocket, so Apple-OS-only encryption is disproven for this candidate. Owner selected Mongolia-only availability and it is saved; France is not included. Repeat the inventory for the final signed archive if runtime inputs change and retain the actual Connect questionnaire determination. Final export classification/attestation and exemption plist setting remain pending.",
+    "binary_followup": {
+      "archive": "build/releases/native-b4e60b3/releases/night-owl-iphoneos-unsigned.tar.gz",
+      "inspection": "Read selected tar members in memory; inspect Mach-O LC_LOAD_DYLIB records and bounded known crypto strings. No executable was run and no files were extracted.",
+      "flutter_engine": {
+        "member": "Runner.app/Frameworks/Flutter.framework/Flutter",
+        "sha256": "7291fd6dd1d5d2068512ce7da403a1136b5bff955ec2a55f262a51d8317a391f",
+        "bytes": 9255824,
+        "observed_markers": [
+          "third_party/boringssl/src/ssl/handshake_client.cc",
+          "third_party/boringssl/src/ssl/tls13_client.cc",
+          "third_party/boringssl/src/crypto/fipsmodule/cipher/e_aes.cc.inc",
+          "TLS_AES_128_GCM_SHA256",
+          "TLS_AES_256_GCM_SHA384",
+          "TLS_CHACHA20_POLY1305_SHA256"
+        ]
+      },
+      "compiled_dart_app": {
+        "member": "Runner.app/Frameworks/App.framework/App",
+        "sha256": "f1b992659f03b3cf7a99b06121c193cdfb2e00d6a79c143a6bc9d29699b5fa2c",
+        "observed_markers": [
+          "SecureSocket_Connect",
+          "SecureSocket_Handshake",
+          "RawSecureSocket",
+          "SecureFilter"
+        ]
+      },
+      "secure_storage": {
+        "member": "Runner.app/Frameworks/flutter_secure_storage.framework/flutter_secure_storage",
+        "sha256": "10522023779024743933c091cfb2201accd191517157625dcc3030d92c88f2f6",
+        "observed": "Links Security.framework and imports SecItemAdd/SecItemCopyMatching; local storage uses Apple Keychain. This does not replace the separate BoringSSL transport code."
+      },
+      "questionnaire_mapping": [
+        {
+          "question_meaning": "Does the app contain/use/access encryption?",
+          "justified_answer": "Yes",
+          "basis": "HTTPS/TLS implementation present in linked Flutter engine."
+        },
+        {
+          "question_meaning": "Is encryption restricted to Apple's operating system?",
+          "justified_answer": "No",
+          "basis": "Embedded BoringSSL implements standard TLS outside the OS crypto implementation."
+        },
+        {
+          "question_meaning": "Which encryption category is implemented?",
+          "justified_answer": "Industry-standard algorithms outside or in addition to Apple OS encryption",
+          "basis": "Observed AES-GCM/ChaCha20 TLS suites, not an app-designed proprietary algorithm. Match the live UI wording before selecting."
+        },
+        {
+          "question_meaning": "Proprietary/non-standard algorithms?",
+          "justified_answer": "No based on the reviewed code and binary evidence",
+          "basis": "No app-authored proprietary encryption implementation found. Bundled standard library code is not itself proprietary cryptography."
+        },
+        {
+          "question_meaning": "Available in France?",
+          "justified_answer": "No — owner selected Mongolia-only launch availability",
+          "basis": "Saved Connect availability lists Mongolia Available on App Release; the other 174 regions are unavailable, future-region inclusion is unchecked. This country choice does not itself finalize export compliance."
+        },
+        {
+          "question_meaning": "Non-exempt encryption / documentation exemption?",
+          "justified_answer": "Not yet attested",
+          "basis": "Apple's current table requires a French declaration for standard non-OS algorithms only when distributed in France. Its public docs do not establish a blanket BoringSSL/Flutter HTTPS exemption for every distribution scope. Follow the live questionnaire with truthful scope; retain its resulting determination."
+        }
+      ],
+      "apple_documentation_result": "Standard TLS is standard encryption, not automatically Apple-OS-only or universally exempt. For this standard-algorithm category, Apple's documentation table ties the French declaration to France distribution. Apple's guidance also says exempt encryption may have a separate annual self-classification reporting obligation. No such report or formal classification was made here.",
+      "sources": [
+        "https://developer.apple.com/help/app-store-connect/reference/app-information/export-compliance-documentation-for-encryption",
+        "https://developer.apple.com/help/app-store-connect/manage-app-information/determine-and-upload-app-encryption-documentation",
+        "https://developer.apple.com/documentation/security/complying-with-encryption-export-regulations"
+      ]
+    },
+    "do_not_assert": [
+      "No encryption",
+      "Only Apple OS encryption solely from source-level HTTPS calls",
+      "A final legal classification or an already accepted export declaration"
+    ],
+    "source": "https://developer.apple.com/help/app-store-connect/manage-app-information/overview-of-export-compliance"
+  },
+  "content_rights": {
+    "third_party_content_present": true,
+    "prepared_ui_choice": "The app contains/shows/accesses third-party content; select the option affirming necessary rights only once the actual licence/owner evidence is complete.",
+    "source_backed": [
+      "assets/data/ulaanbaatar_osm_venues.json records ODbL-1.0, source object URLs, retrieval time/hash and OpenStreetMap attribution.",
+      "Runtime map attribution/default tile endpoint are explicit in AppConstants and venue_map_view.dart; standard tiles require OSMF policy compliance.",
+      "assets/fonts contains six OFL texts and the offline-font manifest; runtime Google Fonts fetching is disabled.",
+      "docs/BRAND_REFERENCE.md and docs/AVATAR_ASSETS.json record generated art/logo provenance and Higgsfield jobs; provenance is not a blanket rights attestation.",
+      "lib/core/constants/story_music.dart is empty; unverified SoundHelix demo tracks were removed from the candidate. Existing server stories may still contain old audio references."
+    ],
+    "owner_facts_needed": [
+      "Legal holder/display text for the copyright field, and authority to distribute the approved owl reference/logo and generated art under the applicable account terms.",
+      "Permission or licence for owner-supplied venue/promotional photos and any demonstration media selected for Store screenshots. Keep receipts/private permissions out of Git.",
+      "A responsible moderation/support operator who will review reports and rights complaints after launch."
+    ],
+    "agent_work_remaining": [
+      "Inventory the exact release-visible remote/demo media and old story music references; remove or replace unsupported seed material before attesting.",
+      "Verify map attribution/cache/user-agent policy compliance in the actual native release configuration.",
+      "Do not scrape Google Maps content into the OSM catalogue or treat business-information source links as photo reuse licences."
+    ],
+    "existing_record": "docs/app-store/MEDIA_RIGHTS.md",
+    "primary_source": "https://operations.osmfoundation.org/policies/tiles/"
+  },
+  "screenshots": {
+    "actual_native_current_source": "b4e60b3fc3f0714669783ae23ba787ebe49c7619; runtime inputs match 8d4db3264524166d374cc91ee37b999ba70acff5",
+    "native_evidence": "docs/app-store/evidence/native-build-latest.json",
+    "available_captures": [
+      {
+        "path": "build/releases/native-b4e60b3/native-evidence/startup/iphone-startup.png",
+        "width": 1206,
+        "height": 2622,
+        "kind": "Actual unsigned iPhone 17 simulator startup; language screen only"
+      },
+      {
+        "path": "build/releases/native-b4e60b3/native-evidence/startup/ipad-startup.png",
+        "width": 2064,
+        "height": 2752,
+        "kind": "Actual unsigned iPad Pro 13-inch simulator startup; language screen only"
+      }
+    ],
+    "not_store_feature_capture_evidence": [
+      "docs/design-review.html",
+      "docs/visuals/higgsfield-reference.png",
+      "docs/visuals/mobile-preview-opened.jpg",
+      "Widget/web audit PNGs and marketing reference boards"
+    ],
+    "capture_plan": [
+      "Explore map with venue labels and actual licensed map attribution",
+      "Venue detail and save/directions",
+      "Feed and story using approved test media",
+      "Post composer with optional venue",
+      "Profile with approved owl avatar and saved content"
+    ],
+    "remaining": "Capture current functional native screens from the release candidate with safe licensed test content and no private user data. Verify actual upload slots in Connect. Startup-only screenshots are genuine native evidence but do not demonstrate the app's social/map features."
+  },
+  "owner_input_only": [
+    "Review contact name, reachable phone/email, and responsible moderation contact; do not invent these from the account holder's displayed Apple identity.",
+    "Content rights/copyright facts above.",
+    "User must personally complete any account login, two-factor prompt, new legal agreement or secure secret-entry step presented during configuration."
+  ],
+  "exact_owner_supplied_store_fields": [
+    {
+      "section": "iOS version / General App Information",
+      "field": "Copyright",
+      "needed_value": "Year rights were obtained + legal person/entity holding exclusive app rights, for example YEAR LEGAL HOLDER. Do not use Night Owl UB as the legal holder without confirmation. Apple adds the copyright symbol.",
+      "source": "https://developer.apple.com/help/app-store-connect/reference/app-information/platform-version-information"
+    },
+    {
+      "section": "App Review Information / Contact Information",
+      "fields": [
+        "First name",
+        "Last name",
+        "Phone number with +country code",
+        "Email address"
+      ],
+      "needed_value": "A reachable person able to answer review questions. These are review contact details, not automatically the public support/trader contact.",
+      "source": "https://developer.apple.com/help/app-store-connect/reference/app-information/platform-version-information"
+    },
+    {
+      "section": "Pricing and Availability / App Availability",
+      "fields": [
+        "All Countries or Regions versus Specific Countries or Regions",
+        "Exact selected regions",
+        "Include future countries/regions if offered"
+      ],
+      "needed_value": "Resolved: owner selected Mongolia only, saved in Connect. AFTER_APPROVAL remains selected. Do not ask for this choice again; copyright, contact and other owner attestations remain pending.",
+      "source": "https://developer.apple.com/help/app-store-connect/manage-your-apps-availability/manage-availability-for-your-app-on-the-app-store/",
+      "status": "answered_and_saved",
+      "owner_answer": {
+        "selection": "Specific Countries or Regions",
+        "regions": [
+          "Mongolia"
+        ],
+        "include_future_countries_or_regions": false,
+        "france": false
+      }
+    },
+    {
+      "section": "Content Rights",
+      "needed_value": "Owner confirmation and applicable evidence that app/marketing assets and third-party content may be distributed. The app accesses third-party content, so the no-third-party-content answer is not supportable."
+    },
+    {
+      "section": "EU Digital Services Act (only if relevant to selected distribution)",
+      "fields": [
+        "Trader/non-trader legal status",
+        "For an individual trader: public address or P.O. Box",
+        "Public phone",
+        "Public email",
+        "Verification and supporting documentation if requested"
+      ],
+      "needed_value": "Owner supplies or validates business status and public contact details. A free app and individual Apple membership do not alone establish non-trader status. This is separate from the private App Review contact.",
+      "source": "https://developer.apple.com/help/app-store-connect/manage-compliance-information/manage-european-union-digital-services-act-trader-requirements"
+    }
+  ],
+  "validation_limits": "Source/native evidence plus field-presence-only observations for one authenticated owned staging request and one anonymous read-only production synthetic venue-name search. The production probe returned 200/zero rows and its marker matched retained URL/query; no authenticated production account was probed. No actual log values, private contacts or secrets are included in tracked evidence. Authenticated production linkage is inferred from staging; retention duration and complete provider/operator uses remain unresolved. Log Drains showed a feature-unavailable upgrade state with no configured drain visible; no upgrade was made and broader handling is not certified. On 2026-11-05 Asia/Ulaanbaatar all 16 types and every purpose/linkage/tracking detail were verified saved, including Email Address; no Set Up prompts remain. Publish was available but not clicked. Final owner attestation/publication remain pending. This documentation update performed no live queries or configuration changes.",
+  "owner_distribution_answer": {
+    "status": "answered_and_saved",
+    "countries": [
+      "Mongolia"
+    ],
+    "france_included": false,
+    "include_future_countries_or_regions": false,
+    "evidence": "docs/app-store/evidence/apple-store-setup.json",
+    "release_mode": "AFTER_APPROVAL",
+    "other_owner_attestations_remain_pending": true
+  },
+  "license_review_status": {
+    "modal_opened": true,
+    "surface": "New Apple Developer tab",
+    "agree_awaiting_owner": true,
+    "banner_resolved": false,
+    "agreement_accepted_by_agent": false
+  }
+}

@@ -1,0 +1,307 @@
+{
+  "date": "2026-11-04",
+  "project_ref": "sreojqqqhdzkfsrbvlpl",
+  "scope": "UI Raw JSON of one disposable erasure acceptance GET /rest/v1/stories request; field presence only",
+  "actual_values_saved": false,
+  "fields": [
+    {
+      "field": "id",
+      "populated": true,
+      "type": "string"
+    },
+    {
+      "field": "date",
+      "populated": true,
+      "type": "string"
+    },
+    {
+      "field": "method",
+      "populated": true,
+      "type": "string"
+    },
+    {
+      "field": "pathname",
+      "populated": true,
+      "type": "string"
+    },
+    {
+      "field": "status",
+      "populated": true,
+      "type": "string"
+    },
+    {
+      "field": "timestamp",
+      "populated": true,
+      "type": "string"
+    },
+    {
+      "field": "level",
+      "populated": true,
+      "type": "string"
+    },
+    {
+      "field": "event_message",
+      "populated": true,
+      "type": "string"
+    },
+    {
+      "field": "log_type",
+      "populated": true,
+      "type": "string"
+    },
+    {
+      "field": "log_count",
+      "populated": false,
+      "type": "object"
+    },
+    {
+      "field": "logs",
+      "populated": false,
+      "type": "array"
+    },
+    {
+      "field": "auth_user",
+      "populated": true,
+      "type": "string"
+    },
+    {
+      "field": "metadata",
+      "populated": true,
+      "type": "object"
+    },
+    {
+      "field": "metadata.request.headers.cf_connecting_ip",
+      "populated": true,
+      "type": "string"
+    },
+    {
+      "field": "metadata.trace_id",
+      "populated": true,
+      "type": "string"
+    },
+    {
+      "field": "metadata.request_id",
+      "populated": true,
+      "type": "string"
+    },
+    {
+      "field": "metadata.request.sb.jwt.authorization.payload.signature_prefix",
+      "populated": true,
+      "type": "string"
+    },
+    {
+      "field": "metadata.request.cf.region",
+      "populated": true,
+      "type": "string"
+    },
+    {
+      "field": "metadata.request.sb.jwt.apikey.payload.signature_prefix",
+      "populated": true,
+      "type": "string"
+    },
+    {
+      "field": "metadata.request.sb.jwt.apikey.payload.issued_at",
+      "populated": true,
+      "type": "string"
+    },
+    {
+      "field": "metadata.request.cf.asOrganization",
+      "populated": true,
+      "type": "string"
+    },
+    {
+      "field": "metadata.request.host",
+      "populated": true,
+      "type": "string"
+    },
+    {
+      "field": "metadata.request.headers.cf_ray",
+      "populated": true,
+      "type": "string"
+    },
+    {
+      "field": "metadata.request.cf.botManagement.ja4",
+      "populated": true,
+      "type": "string"
+    },
+    {
+      "field": "metadata.request.cf.clientTrustScore",
+      "populated": true,
+      "type": "string"
+    },
+    {
+      "field": "metadata.response.headers.content_type",
+      "populated": true,
+      "type": "string"
+    },
+    {
+      "field": "metadata.request.url",
+      "populated": true,
+      "type": "string"
+    },
+    {
+      "field": "metadata.request.sb.jwt.authorization.payload.issuer",
+      "populated": true,
+      "type": "string"
+    },
+    {
+      "field": "metadata.request.cf.country",
+      "populated": true,
+      "type": "string"
+    },
+    {
+      "field": "metadata.request.sb.jwt.apikey.payload.issuer",
+      "populated": true,
+      "type": "string"
+    },
+    {
+      "field": "metadata.request.sb.jwt.apikey.payload.role",
+      "populated": true,
+      "type": "string"
+    },
+    {
+      "field": "metadata.request.sb.auth_user",
+      "populated": true,
+      "type": "string"
+    },
+    {
+      "field": "metadata.request.sb.jwt.apikey.payload.expires_at",
+      "populated": true,
+      "type": "string"
+    },
+    {
+      "field": "metadata.request.sb.jwt.authorization.payload.algorithm",
+      "populated": true,
+      "type": "string"
+    },
+    {
+      "field": "metadata.response.headers.sb_gateway_version",
+      "populated": true,
+      "type": "string"
+    },
+    {
+      "field": "metadata.span_id",
+      "populated": true,
+      "type": "string"
+    },
+    {
+      "field": "metadata.request.sb.jwt.authorization.payload.role",
+      "populated": true,
+      "type": "string"
+    },
+    {
+      "field": "metadata.request.sb.jwt.authorization.payload.subject",
+      "populated": true,
+      "type": "string"
+    },
+    {
+      "field": "metadata.identifier",
+      "populated": true,
+      "type": "string"
+    },
+    {
+      "field": "metadata.response.headers.cf_cache_status",
+      "populated": true,
+      "type": "string"
+    },
+    {
+      "field": "metadata.response.headers.x_envoy_attempt_count",
+      "populated": true,
+      "type": "string"
+    },
+    {
+      "field": "metadata.request.cf.city",
+      "populated": true,
+      "type": "string"
+    },
+    {
+      "field": "metadata.response.status_code",
+      "populated": true,
+      "type": "string"
+    },
+    {
+      "field": "metadata.request.cf.colo",
+      "populated": true,
+      "type": "string"
+    },
+    {
+      "field": "metadata.response.headers.content_range",
+      "populated": true,
+      "type": "string"
+    },
+    {
+      "field": "metadata.request.sb.jwt.authorization.payload.session_id",
+      "populated": true,
+      "type": "string"
+    },
+    {
+      "field": "metadata.response.headers.cf_ray",
+      "populated": true,
+      "type": "string"
+    },
+    {
+      "field": "metadata.response.headers.content_length",
+      "populated": true,
+      "type": "string"
+    },
+    {
+      "field": "metadata.request.sb.jwt.authorization.payload.expires_at",
+      "populated": true,
+      "type": "string"
+    },
+    {
+      "field": "metadata.request.sb.jwt.authorization.payload.key_id",
+      "populated": true,
+      "type": "string"
+    },
+    {
+      "field": "metadata.request.sb.jwt.authorization.payload.issued_at",
+      "populated": true,
+      "type": "string"
+    },
+    {
+      "field": "metadata.response.origin_time",
+      "populated": true,
+      "type": "string"
+    },
+    {
+      "field": "metadata.request.method",
+      "populated": true,
+      "type": "string"
+    },
+    {
+      "field": "metadata.request.sb.jwt.apikey.payload.algorithm",
+      "populated": true,
+      "type": "string"
+    },
+    {
+      "field": "metadata.request.search",
+      "populated": true,
+      "type": "string"
+    },
+    {
+      "field": "metadata.request.path",
+      "populated": true,
+      "type": "string"
+    },
+    {
+      "field": "metadata.response.headers.x_envoy_upstream_service_time",
+      "populated": true,
+      "type": "string"
+    },
+    {
+      "field": "metadata.project",
+      "populated": true,
+      "type": "string"
+    }
+  ],
+  "query_string_retained": true,
+  "full_url_retained": true,
+  "production_inspected": false,
+  "source_receipt_sha256": "487ce15738d85e88b7091a8cd974bf20c3e702d38558fbded93919357cfdc6e3",
+  "limits": [
+    "One owned synthetic GET /rest/v1/stories request only; not a venue-search request",
+    "Field presence does not establish retention duration or downstream uses",
+    "No production log/configuration inspection or unique-device-identifier determination"
+  ]
+}

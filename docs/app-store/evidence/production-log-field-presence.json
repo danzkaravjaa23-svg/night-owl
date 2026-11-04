@@ -1,0 +1,305 @@
+{
+  "date": "2026-11-04",
+  "project_ref": "jbbdnpsvstwxtgtjoeru",
+  "scope": "Visible Raw JSON for one anonymous synthetic search; field presence only",
+  "actual_values_saved": false,
+  "request_was_read_only": true,
+  "fields": [
+    {
+      "field": "id",
+      "populated": true,
+      "type": "string"
+    },
+    {
+      "field": "date",
+      "populated": true,
+      "type": "string"
+    },
+    {
+      "field": "method",
+      "populated": true,
+      "type": "string"
+    },
+    {
+      "field": "pathname",
+      "populated": true,
+      "type": "string"
+    },
+    {
+      "field": "status",
+      "populated": true,
+      "type": "string"
+    },
+    {
+      "field": "timestamp",
+      "populated": true,
+      "type": "string"
+    },
+    {
+      "field": "level",
+      "populated": true,
+      "type": "string"
+    },
+    {
+      "field": "event_message",
+      "populated": true,
+      "type": "string"
+    },
+    {
+      "field": "log_type",
+      "populated": true,
+      "type": "string"
+    },
+    {
+      "field": "log_count",
+      "populated": false,
+      "type": "object"
+    },
+    {
+      "field": "logs",
+      "populated": false,
+      "type": "array"
+    },
+    {
+      "field": "auth_user",
+      "populated": false,
+      "type": "object"
+    },
+    {
+      "field": "metadata",
+      "populated": true,
+      "type": "object"
+    },
+    {
+      "field": "metadata.request.headers.cf_connecting_ip",
+      "populated": true,
+      "type": "string"
+    },
+    {
+      "field": "metadata.trace_id",
+      "populated": true,
+      "type": "string"
+    },
+    {
+      "field": "metadata.request_id",
+      "populated": true,
+      "type": "string"
+    },
+    {
+      "field": "metadata.request.sb.jwt.authorization.payload.signature_prefix",
+      "populated": true,
+      "type": "string"
+    },
+    {
+      "field": "metadata.request.cf.region",
+      "populated": true,
+      "type": "string"
+    },
+    {
+      "field": "metadata.request.sb.jwt.apikey.payload.signature_prefix",
+      "populated": true,
+      "type": "string"
+    },
+    {
+      "field": "metadata.request.sb.jwt.apikey.payload.issued_at",
+      "populated": true,
+      "type": "string"
+    },
+    {
+      "field": "metadata.request.cf.asOrganization",
+      "populated": true,
+      "type": "string"
+    },
+    {
+      "field": "metadata.request.host",
+      "populated": true,
+      "type": "string"
+    },
+    {
+      "field": "metadata.request.headers.cf_ray",
+      "populated": true,
+      "type": "string"
+    },
+    {
+      "field": "metadata.request.cf.botManagement.ja4",
+      "populated": true,
+      "type": "string"
+    },
+    {
+      "field": "metadata.request.cf.clientTrustScore",
+      "populated": true,
+      "type": "string"
+    },
+    {
+      "field": "metadata.response.headers.content_type",
+      "populated": true,
+      "type": "string"
+    },
+    {
+      "field": "metadata.request.url",
+      "populated": true,
+      "type": "string"
+    },
+    {
+      "field": "metadata.request.sb.jwt.authorization.payload.issuer",
+      "populated": true,
+      "type": "string"
+    },
+    {
+      "field": "metadata.request.cf.country",
+      "populated": true,
+      "type": "string"
+    },
+    {
+      "field": "metadata.request.sb.jwt.apikey.payload.issuer",
+      "populated": true,
+      "type": "string"
+    },
+    {
+      "field": "metadata.request.sb.jwt.apikey.payload.role",
+      "populated": true,
+      "type": "string"
+    },
+    {
+      "field": "metadata.request.sb.jwt.apikey.payload.expires_at",
+      "populated": true,
+      "type": "string"
+    },
+    {
+      "field": "metadata.request.sb.jwt.authorization.payload.algorithm",
+      "populated": true,
+      "type": "string"
+    },
+    {
+      "field": "metadata.response.headers.sb_gateway_version",
+      "populated": true,
+      "type": "string"
+    },
+    {
+      "field": "metadata.span_id",
+      "populated": true,
+      "type": "string"
+    },
+    {
+      "field": "metadata.request.sb.jwt.authorization.payload.role",
+      "populated": true,
+      "type": "string"
+    },
+    {
+      "field": "metadata.identifier",
+      "populated": true,
+      "type": "string"
+    },
+    {
+      "field": "metadata.response.headers.cf_cache_status",
+      "populated": true,
+      "type": "string"
+    },
+    {
+      "field": "metadata.response.headers.x_envoy_attempt_count",
+      "populated": true,
+      "type": "string"
+    },
+    {
+      "field": "metadata.request.cf.city",
+      "populated": true,
+      "type": "string"
+    },
+    {
+      "field": "metadata.request.headers.accept",
+      "populated": true,
+      "type": "string"
+    },
+    {
+      "field": "metadata.response.status_code",
+      "populated": true,
+      "type": "string"
+    },
+    {
+      "field": "metadata.request.cf.colo",
+      "populated": true,
+      "type": "string"
+    },
+    {
+      "field": "metadata.response.headers.content_range",
+      "populated": true,
+      "type": "string"
+    },
+    {
+      "field": "metadata.response.headers.cf_ray",
+      "populated": true,
+      "type": "string"
+    },
+    {
+      "field": "metadata.response.headers.content_length",
+      "populated": true,
+      "type": "string"
+    },
+    {
+      "field": "metadata.request.sb.jwt.authorization.payload.expires_at",
+      "populated": true,
+      "type": "string"
+    },
+    {
+      "field": "metadata.request.sb.jwt.authorization.payload.issued_at",
+      "populated": true,
+      "type": "string"
+    },
+    {
+      "field": "metadata.response.origin_time",
+      "populated": true,
+      "type": "string"
+    },
+    {
+      "field": "metadata.request.method",
+      "populated": true,
+      "type": "string"
+    },
+    {
+      "field": "metadata.request.sb.jwt.apikey.payload.algorithm",
+      "populated": true,
+      "type": "string"
+    },
+    {
+      "field": "metadata.request.search",
+      "populated": true,
+      "type": "string"
+    },
+    {
+      "field": "metadata.request.path",
+      "populated": true,
+      "type": "string"
+    },
+    {
+      "field": "metadata.response.headers.x_envoy_upstream_service_time",
+      "populated": true,
+      "type": "string"
+    },
+    {
+      "field": "metadata.project",
+      "populated": true,
+      "type": "string"
+    }
+  ],
+  "synthetic_search_marker_retained": true,
+  "authenticated_user_not_probed": true,
+  "source_receipt_sha256": "ec12542a5afe4eea4468013157a84c14daec7687cb74696f612d7d2bb76ddd99",
+  "matched_probe_evidence": "docs/app-store/evidence/production-anonymous-log-probe.json",
+  "exact_synthetic_request_matched_in_dashboard": true,
+  "full_url_and_search_query_retained": true,
+  "auth_user_populated": false,
+  "limits": [
+    "One anonymous synthetic production search only; no authenticated production request was probed",
+    "Search term, IP, geographic and timing field retention observed; log retention duration and all downstream uses not established",
+    "JA4 TLS/bot signal presence does not establish a persistent unique Device ID or cross-company tracking"
+  ],
+  "log_drains_dashboard_observation": {
+    "local_followup_date": "2026-11-05",
+    "read_only": true,
+    "observed_state": "Empty upgrade state offering Pro/Team/Enterprise; Log Drains feature unavailable on the current plan",
+    "configured_drain_visible": false,
+    "paid_upgrade_or_configuration_change": false,
+    "screenshot": "build/audit/2026-11-04/production-log-drains-unavailable.png",
+    "limit": "No configured drain was visible in this dashboard; this does not prove absence of all operator-side handling or provider processing"
+  }
+}

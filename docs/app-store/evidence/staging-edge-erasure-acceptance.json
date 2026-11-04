@@ -1,0 +1,115 @@
+{
+  "date": "2026-11-04",
+  "status": "passed",
+  "project_ref": "sreojqqqhdzkfsrbvlpl",
+  "production_accessed": false,
+  "scope": "two_disposable_email_accounts_edge_erasure_and_receipt_recovery",
+  "first_live_attempt_passed": true,
+  "deployment": {
+    "performed_via": "Supabase staging dashboard after explicit owner approval",
+    "function": "delete-account",
+    "verify_jwt": false,
+    "gateway_change_function_scoped": true,
+    "prepare_and_delete_authenticated_in_handler": true,
+    "account_deletion_enabled": true,
+    "enable_flag_saved_at_utc": "2026-11-04T15:41:46Z",
+    "source_sha256": {
+      "supabase/functions/delete-account/index.ts": "e6d2fa3e6caeb137aa31fe79efbb68b9ad6af775bd7422f461ceb55c410c51f9",
+      "supabase/functions/delete-account/apple_revocation.ts": "82e6dff4b15d1e21e32ea155a5de45649ac234cf7342bb47b99291367bb99edb"
+    },
+    "source_config_sha256": "a029c5d2010e9ce8190569282fe6d4a55fd47cf06a10c9cf1ba6c81fbfdaba3d",
+    "settings_verified_in_dashboard": true,
+    "screenshots": [
+      "build/audit/2026-11-04/staging-edge-jwt-config-saved.png",
+      "build/audit/2026-11-04/staging-edge-activation-saved.png"
+    ]
+  },
+  "runner": {
+    "path": "tools/deployment/tests/hosted_staging_erasure.py",
+    "sha256": "ffe6dd6423a8c0baa2ee475e6b2dccc8186226be58168ff392b0055fafedf4d2",
+    "offline_tests_passed": 17,
+    "independent_review_passed": true,
+    "live_result_sha256": "cbeca437532c74495ba625d3ab8704e4ff1b5cb1e0385a3f6ff9e2163094480b"
+  },
+  "checks_passed": 27,
+  "setup_integrity_checks_passed": 17,
+  "http_requests": 67,
+  "checks": [
+    "edge_function_method_guard",
+    "prepare_requires_auth",
+    "unknown_receipt_rejected",
+    "upload_a_photo_png",
+    "pending_row_a_posts",
+    "signed_positive_before_erasure_posts",
+    "upload_a_video_mp4",
+    "pending_row_a_stories",
+    "signed_positive_before_erasure_stories",
+    "upload_b_photo_png",
+    "pending_row_b_posts",
+    "upload_b_video_mp4",
+    "pending_row_b_stories",
+    "authenticated_prepare_returns_owner_bound_receipt",
+    "receipt_alone_cannot_delete",
+    "another_member_cannot_use_receipt",
+    "upload_a_after-prepare_png",
+    "preparation_preserves_auth_and_allows_writes",
+    "edge_delete_returns_strict_owner_receipt",
+    "receipt_only_recovery_after_auth_deletion",
+    "receipt_status_is_repeatable_without_session",
+    "previously_valid_signed_bytes_absent_posts",
+    "previously_valid_signed_bytes_absent_stories",
+    "deleted_auth_session_rejected",
+    "stale_jwt_cannot_write_post",
+    "stale_jwt_cannot_upload",
+    "other_member_auth_and_media_preserved"
+  ],
+  "synthetic_accounts_created_via_auth_admin": 2,
+  "account_erased_via_application_edge": 1,
+  "other_account_preserved_then_removed_by_fixture_cleanup": true,
+  "resume_cleanup_needed": false,
+  "cleanup_complete": true,
+  "cleanup_inventory": {
+    "a": {
+      "auth_identities": 0,
+      "auth_users": 0,
+      "posts": 0,
+      "profiles": 0,
+      "storage_objects": 0,
+      "stories": 0
+    },
+    "b": {
+      "auth_identities": 0,
+      "auth_users": 0,
+      "posts": 0,
+      "profiles": 0,
+      "storage_objects": 0,
+      "stories": 0
+    }
+  },
+  "erased_owner_inventory": {
+    "auth_identities": 0,
+    "auth_users": 0,
+    "posts": 0,
+    "profiles": 0,
+    "storage_objects": 0,
+    "stories": 0
+  },
+  "retained_completed_journal": 1,
+  "retained_journal_policy": "Completed erasure receipt remains for normal 30-day retention; no manual removal",
+  "retention_scheduler_configured": false,
+  "limits": [
+    "Admin-created email accounts do not prove public signup or email delivery",
+    "No Apple revocation, device UI or full hosted recovery-parity claim",
+    "No injected mid-erasure failure, concurrent workers or legacy/shared-content fixture",
+    "Completed journal retained; no retention scheduler installed by this runner"
+  ],
+  "remaining_gates": [
+    "Public email signup and delivery",
+    "Real Apple provider login and revocation",
+    "Signed device and client UI acceptance",
+    "Hosted injected failure, concurrent-worker and legacy/shared-content erasure cases",
+    "Full hosted recovery/ownership/ACL parity",
+    "Retention scheduling and successful run, responsible operator and private alerts",
+    "Coordinated production rollout"
+  ]
+}

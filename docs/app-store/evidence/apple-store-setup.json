@@ -9,7 +9,7 @@
     "bundle_id": "com.nightowl.ub.nightOwlUb",
     "explicit": true,
     "sign_in_with_apple": "enabled_primary_app_id",
-    "keys_created": false
+    "keys_created": true
   },
   "connect": {
     "apple_id": "6830714135",
@@ -74,7 +74,7 @@
     "base_price": "0.00",
     "saved_country_price_rows_verified": 175,
     "all_saved_prices_zero": true,
-    "availability_regions_configured": false,
+    "availability_regions_configured": true,
     "mac_and_vision_compatibility_validated": false
   },
   "age_questionnaire": {
@@ -162,15 +162,296 @@
     "build/audit/2026-11-04/app-store-info-saved.png",
     "build/audit/2026-11-04/app-store-free-pricing.png",
     "build/audit/2026-11-04/app-store-age-rating-step2.png",
-    "build/audit/2026-11-04/app-store-age-rating-saved.png"
+    "build/audit/2026-11-04/app-store-age-rating-saved.png",
+    "build/audit/2026-11-04/apple-staging-web-auth-saved.png",
+    "build/audit/2026-11-04/app-store-mongolia-availability.png",
+    "build/audit/2026-11-04/app-privacy-16-draft-saved.png",
+    "build/audit/2026-11-04/app-privacy-draft-overview.png"
   ],
   "remaining": [
-    "Finalize privacy, content-rights, export, contact and regional declarations",
-    "Resolve observed updated-license banner",
-    "Confirm distribution regions and eligible platforms",
-    "Apple provider keys and Services ID setup",
+    "Finalize privacy, content-rights, export and contact declarations",
+    "Resolve observed updated-license banner and validate eligible platforms",
+    "Recover and privately hand off the created Apple key material; protected .p8 storage is unconfirmed",
+    "Configure staging Supabase Apple provider and deletion web callback, then test real login/revocation",
     "Signing assets, signed native/device acceptance, screenshots and reviewer access",
-    "Remaining hosted backend/client release gates",
-    "TestFlight and App Review submission"
-  ]
+    "Remaining hosted backend/client release gates, including hosted Apple/failure/concurrency/shared-content erasure and retention acceptance",
+    "TestFlight and App Review submission; keep owner-selected AFTER_APPROVAL release mode"
+  ],
+  "sign_in_with_apple_setup": {
+    "staging_services_id": "com.nightowl.ub.web.staging",
+    "services_id_created": true,
+    "primary_app_id": "com.nightowl.ub.nightOwlUb",
+    "primary_app_association_saved": true,
+    "website_domain": "sreojqqqhdzkfsrbvlpl.supabase.co",
+    "return_url": "https://sreojqqqhdzkfsrbvlpl.supabase.co/auth/v1/callback",
+    "web_auth_values_saved_and_reopened": true,
+    "key": {
+      "name": "Night Owl UB Apple Login",
+      "key_id": "KW5USR3XYB",
+      "created": true,
+      "owner_approved_creation": true,
+      "enabled_services": [
+        "Sign in with Apple"
+      ],
+      "dashboard_download_status": "Downloaded",
+      "private_material_recovered": false,
+      "download_path_confirmed": false,
+      "protected_key_file_confirmed": false,
+      "handoff_directory_mode": "0700",
+      "private_handoff_pending": true
+    },
+    "staging_supabase_provider_enabled": false,
+    "provider_configuration_complete": false,
+    "real_apple_login_tested": false,
+    "real_apple_revocation_tested": false,
+    "staging_web_deletion_popup_return_url_configured": false,
+    "production_services_id_confirmed": false
+  },
+  "availability": {
+    "saved": true,
+    "available_country_count": 1,
+    "available_countries": [
+      "Mongolia"
+    ],
+    "observed_heading": "Availability (1 Country or Region)",
+    "mongolia_status": "Available on App Release",
+    "other_countries_not_available_count": 174,
+    "automatically_include_new_countries_or_regions": false,
+    "released": false,
+    "price_rows_do_not_establish_distribution_availability": true
+  },
+  "signing_preparation": {
+    "helper_prepared": true,
+    "signed_candidate_ci_workflow_prepared": true,
+    "signed_candidate_ci_run_started": false,
+    "signed_build_created": false,
+    "development_team_in_source": "DAVM2JZ4NN",
+    "local_iphoneos_sdk_available": false,
+    "local_valid_signing_identity_count": 0
+  },
+  "staging_edge": {
+    "project_ref": "sreojqqqhdzkfsrbvlpl",
+    "deployed": true,
+    "verify_jwt": false,
+    "account_deletion_enabled": true,
+    "email_account_erasure_acceptance_passed": true,
+    "full_acceptance_complete": false,
+    "evidence": "docs/app-store/evidence/staging-edge-erasure-acceptance.json"
+  },
+  "privacy_collection_draft_attempt": {
+    "date": "2026-11-05",
+    "timezone": "Asia/Ulaanbaatar",
+    "status": "sixteen_type_draft_saved_verified_unpublished",
+    "collect_data_yes_selected": true,
+    "selected_data_type_count": 16,
+    "selected_data_types": [
+      "Name",
+      "Email Address",
+      "Phone Number",
+      "User ID",
+      "Contacts",
+      "Precise Location",
+      "Photos or Videos",
+      "Audio Data",
+      "Emails or Text Messages",
+      "Other User Content",
+      "Product Interaction",
+      "Other Data Types",
+      "Search History",
+      "Coarse Location",
+      "Other Diagnostic Data",
+      "Performance Data"
+    ],
+    "sixteen_types_saved": true,
+    "data_type_selection_saved_verified": true,
+    "per_type_details": {
+      "Name": {
+        "purposes": [
+          "App Functionality"
+        ],
+        "linked_to_user": "Yes",
+        "tracking": "No",
+        "details_saved_verified": true,
+        "set_up_prompt_no_longer_present": true
+      },
+      "Email Address": {
+        "purposes": [
+          "App Functionality"
+        ],
+        "linked_to_user": "Yes",
+        "tracking": "No",
+        "details_saved_verified": true,
+        "set_up_prompt_no_longer_present": true
+      },
+      "Phone Number": {
+        "purposes": [
+          "App Functionality"
+        ],
+        "linked_to_user": "Yes",
+        "tracking": "No",
+        "details_saved_verified": true,
+        "set_up_prompt_no_longer_present": true
+      },
+      "User ID": {
+        "purposes": [
+          "App Functionality",
+          "Product Personalization",
+          "Analytics"
+        ],
+        "linked_to_user": "Yes",
+        "tracking": "No",
+        "details_saved_verified": true,
+        "set_up_prompt_no_longer_present": true
+      },
+      "Contacts": {
+        "purposes": [
+          "App Functionality",
+          "Product Personalization"
+        ],
+        "linked_to_user": "Yes",
+        "tracking": "No",
+        "details_saved_verified": true,
+        "set_up_prompt_no_longer_present": true
+      },
+      "Precise Location": {
+        "purposes": [
+          "App Functionality"
+        ],
+        "linked_to_user": "Yes",
+        "tracking": "No",
+        "details_saved_verified": true,
+        "set_up_prompt_no_longer_present": true
+      },
+      "Photos or Videos": {
+        "purposes": [
+          "App Functionality"
+        ],
+        "linked_to_user": "Yes",
+        "tracking": "No",
+        "details_saved_verified": true,
+        "set_up_prompt_no_longer_present": true
+      },
+      "Audio Data": {
+        "purposes": [
+          "App Functionality"
+        ],
+        "linked_to_user": "Yes",
+        "tracking": "No",
+        "details_saved_verified": true,
+        "set_up_prompt_no_longer_present": true
+      },
+      "Emails or Text Messages": {
+        "purposes": [
+          "App Functionality"
+        ],
+        "linked_to_user": "Yes",
+        "tracking": "No",
+        "details_saved_verified": true,
+        "set_up_prompt_no_longer_present": true
+      },
+      "Other User Content": {
+        "purposes": [
+          "App Functionality",
+          "Product Personalization"
+        ],
+        "linked_to_user": "Yes",
+        "tracking": "No",
+        "details_saved_verified": true,
+        "set_up_prompt_no_longer_present": true
+      },
+      "Product Interaction": {
+        "purposes": [
+          "App Functionality",
+          "Product Personalization",
+          "Analytics"
+        ],
+        "linked_to_user": "Yes",
+        "tracking": "No",
+        "details_saved_verified": true,
+        "set_up_prompt_no_longer_present": true
+      },
+      "Other Data Types": {
+        "purposes": [
+          "App Functionality"
+        ],
+        "linked_to_user": "Yes",
+        "tracking": "No",
+        "details_saved_verified": true,
+        "set_up_prompt_no_longer_present": true
+      },
+      "Search History": {
+        "purposes": [
+          "App Functionality"
+        ],
+        "linked_to_user": "Yes",
+        "tracking": "No",
+        "details_saved_verified": true,
+        "set_up_prompt_no_longer_present": true
+      },
+      "Coarse Location": {
+        "purposes": [
+          "App Functionality"
+        ],
+        "linked_to_user": "Yes",
+        "tracking": "No",
+        "details_saved_verified": true,
+        "set_up_prompt_no_longer_present": true
+      },
+      "Other Diagnostic Data": {
+        "purposes": [
+          "App Functionality"
+        ],
+        "linked_to_user": "Yes",
+        "tracking": "No",
+        "details_saved_verified": true,
+        "set_up_prompt_no_longer_present": true
+      },
+      "Performance Data": {
+        "purposes": [
+          "App Functionality"
+        ],
+        "linked_to_user": "Yes",
+        "tracking": "No",
+        "details_saved_verified": true,
+        "set_up_prompt_no_longer_present": true
+      }
+    },
+    "all_per_type_details_complete": true,
+    "all_sixteen_detail_summaries_verified": true,
+    "set_up_prompts_remaining": 0,
+    "email_save_outcome": "saved_verified",
+    "remaining_unconfigured_data_types": [],
+    "remaining_unconfigured_count": 0,
+    "publish_available": true,
+    "publish_clicked": false,
+    "published": false,
+    "final_owner_attestation": false,
+    "local_screenshots": [
+      "build/audit/2026-11-04/app-privacy-16-draft-saved.png",
+      "build/audit/2026-11-04/app-privacy-draft-overview.png"
+    ],
+    "previous_attempts": [
+      {
+        "date": "2026-11-04",
+        "status": "superseded_by_verified_2026_11_05_draft",
+        "initial_save_outcome": "Initially unknown after spinner/session expiry. Owner re-authentication showed 11 types; User ID was added and all 12 original types then verified.",
+        "name_details_saved": true,
+        "email_details_save_outcome_at_that_time": "unknown_after_second_session_expiry",
+        "email_unknown_resolved_on": "2026-11-05"
+      }
+    ],
+    "next_action": "Keep the saved 16-type draft unpublished pending final owner review and resolution of remaining retention/provider, support/map and release configuration questions. Preserve the distinction between anonymous production evidence and authenticated production linkage inferred from staging.",
+    "selection_source": "docs/app-store/submission-disclosures-worksheet.json: app_privacy.can_enter_now plus additional_data_types_identified_from_production_logs",
+    "classification_review_source": "docs/app-store/submission-disclosures-worksheet.json: app_privacy.draft_classification_review",
+    "production_authenticated_linkage_tested": false,
+    "production_authenticated_linkage_basis": "Inferred from directly observed authenticated staging account/session context; production probe was anonymous."
+  },
+  "license_review_modal": {
+    "opened": true,
+    "surface": "New Apple Developer tab",
+    "agree_awaiting_owner": true,
+    "resolved": false
+  },
+  "last_updated_on": "2026-11-05",
+  "timezone": "Asia/Ulaanbaatar"
 }

@@ -1,0 +1,21 @@
+{
+  "project_ref": "jbbdnpsvstwxtgtjoeru",
+  "method": "GET",
+  "anonymous": true,
+  "public_config_source": "web/admin/index.html",
+  "request_count": 1,
+  "record_contents_printed": false,
+  "mutations": false,
+  "request_started_utc": "2026-11-04T15:56:35.826095+00:00",
+  "http_status": 200,
+  "redirect_followed": false,
+  "row_count": 0,
+  "expected_empty": true,
+  "finished_utc": "2026-11-04T15:56:36.067403+00:00",
+  "date": "2026-11-04",
+  "url_path_query_template": "/rest/v1/venues?select=id&name=ilike.SYNTHETIC_MARKER&limit=1",
+  "synthetic_marker_sha256": "9042f5531ebb9954201efd961e2c32a0ee14b981864904e833fd53fc7cf6eb8e",
+  "synthetic_marker_value_omitted": true,
+  "source_receipt_sha256": "7d1fdf3c1f581c999c90b71dd75a1bdbe84c9d15504b4776e9f4f13c12caffa9",
+  "scope": "One anonymous read-only synthetic venue-name search; no real user or authenticated account queried"
+}
