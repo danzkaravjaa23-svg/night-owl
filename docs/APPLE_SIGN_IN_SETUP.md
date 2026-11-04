@@ -6,11 +6,11 @@
 
 Connect-ийн **1.0.0** хувилбарт promotional text, description, keywords болон support URL хадгалагдсан; App Information-д subtitle, **Social Networking / Lifestyle** ангилал хадгалагдсан. Эзэмшигчийн сонгосон **After Approval** автомат нийтлэх тохиргоог хадгалсан.
 
-Privacy Policy URL **https://nightowl-ub.netlify.app/privacy.html** хадгалсан. US/USD **0.00** суурь үнийн schedule батлагдсан; хадгалсан Prices popover-ийг дахин нээж бүх **175** дүн **0.00** байгааг шалгасан. Түгээх улс/бүс сонгоогүй; App Privacy collection questionnaire эхлээгүй/нийтлээгүй. Насны асуулга **Step 2** дээр контентийн давтамжийн хариулт хүлээж байгаа; эцсийн rating хадгалагдаагүй. [Бүртгэл ба metadata нотолгоо](app-store/evidence/apple-store-setup.json).
+Privacy Policy URL **https://nightowl-ub.netlify.app/privacy.html** хадгалсан. US/USD **0.00** суурь үнийн schedule батлагдсан; хадгалсан Prices popover-ийг дахин нээж бүх **175** дүн **0.00** байгааг шалгасан. Түгээх улс/бүс сонгоогүй; App Privacy collection questionnaire эхлээгүй/нийтлээгүй. Насны асуулга хадгалагдаж, хуудсыг бүтнээр дахин нээхэд батлагдсан: Apple-ийн тооцоолсон **18+** нь **173 улс/бүсэд**, **Бразил 16+**, **Солонгос 19+**; OS 26-аас өмнөх хувилбарын ерөнхий ангилал **17+**, бүсийн онцлог ангилалтай. Override хийгээгүй. [Бүртгэл ба metadata нотолгоо](app-store/evidence/apple-store-setup.json).
 
 Түлхүүр/signing asset, шинэ signed build, upload, review submission үүсээгүй; Supabase provider ба production өгөгдөл энэ Apple бүртгэлээр өөрчлөгдөөгүй. [Эзэмшигчийн дараагийн алхам](app-store/OWNER_NEXT_STEPS.md).
 
-**Насны боломжийн хүрээ:** Connect-ийн Social Media Age Restrictions асуулт Declared Age Range API шаардаж байна. Энэ API одоогийн аппад хэрэгжээгүй; 18+ checkbox зөвхөн өөрийн мэдүүлэг тул **No** draft сонголттой. Насны асуулга эцэслэн хадгалагдаагүй, Apple-ийн эцсийн насны ангилал батлагдаагүй.
+**Насны боломжийн хүрээ:** Connect-ийн Social Media Age Restrictions асуултад **No** гэж хадгалсан: шаардсан **Declared Age Range API** одоогийн аппад хэрэгжээгүй, 18+ checkbox зөвхөн өөрийн мэдүүлэг. Аппын **18+ хамтын орчин** гэсэн бүтээгдэхүүний бодлого нь Apple-ийн бүс бүрийн хадгалсан ангилал болон бодит нас баталгаажуулалтаас тусдаа. Lifestyle secondary category байгаа тул Step 7-ийн мэдэгдлээр Афганистан, Ирак, Ливи, Мальдив, Марокко, Саудын Араб, АНЭУ-д энэ апп түгээгдэхгүй; Brazil Games restriction энэ аппад хамаарахгүй. Availability-ийн улс/бүсийг хараахан сонгоогүй.
 
 ## Одоогийн төлөв
 

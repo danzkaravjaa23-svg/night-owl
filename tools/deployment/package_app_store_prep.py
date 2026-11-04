@@ -138,10 +138,10 @@ drafts, iOS project sources, unsigned-build helpers, iOS/backend CI definitions,
 erasure/reporting preparation. MANIFEST.json records the
 SHA-256 and byte size of every payload file except the manifest itself.
 
-Release gates remain: owner membership and signing Team/provisioning; final
+Release gates remain: signing assets and provisioning; final
 signed archive/device and Apple login/revocation verification; reviewed backend
 staging rollout and explicit service activation; moderation operations;
-reviewer access/contact, screenshots and privacy/age/export declarations.
+reviewer access/contact, screenshots and privacy/export declarations.
 Read docs/APP_STORE_SUBMISSION.md and docs/RELEASE_READINESS.md for exact status.
 An unsigned native build is not signing, deployment or App Store approval.
 

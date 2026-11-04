@@ -78,10 +78,11 @@
     "mac_and_vision_compatibility_validated": false
   },
   "age_questionnaire": {
-    "finalized": false,
-    "current_step": "Step2 Mature Themes",
-    "owner_content_frequency_confirmation_pending": true,
-    "draft_step1": {
+    "finalized": true,
+    "current_step": "Completed Step 7 and saved",
+    "owner_content_frequency_confirmation_pending": false,
+    "owner_authorization": "Owner requested completion of Steps 2-7 after the nightlife content direction was proposed",
+    "step1": {
       "parental_controls": false,
       "age_assurance": false,
       "unrestricted_web_access": false,
@@ -91,9 +92,62 @@
       "messaging_and_chat": true,
       "paid_advertising": false
     },
+    "step2_mature_themes": {
+      "profanity_or_crude_humor": "Infrequent",
+      "horror_fear_themes": "None",
+      "alcohol_tobacco_or_drug_use_or_references": "Frequent"
+    },
+    "step3_medical_or_wellness": {
+      "medical_or_treatment_information": "None",
+      "health_or_wellness_topics": false
+    },
+    "step4_sexuality_or_nudity": {
+      "mature_or_suggestive_themes": "Infrequent",
+      "sexual_content_or_nudity": "None",
+      "graphic_sexual_content_and_nudity": "None"
+    },
+    "step5_violence": {
+      "cartoon_or_fantasy_violence": "None",
+      "realistic_violence": "None",
+      "prolonged_graphic_or_sadistic_realistic_violence": "None",
+      "guns_or_other_weapons": "None"
+    },
+    "step6_chance_based_activities": {
+      "simulated_gambling": "None",
+      "contests": "None",
+      "gambling": false,
+      "loot_boxes": false
+    },
+    "step7_additional_information": {
+      "calculated_rating": "18+",
+      "rating_override_applied": false,
+      "age_suitability_url": null
+    },
     "declared_age_range_api_implemented": false,
+    "current_adult_checkbox_is_self_declaration_only": true,
     "adult_community_intent": "18+",
-    "apple_assigned_rating": null
+    "apple_assigned_rating": "18+",
+    "saved_rating_verified_after_fresh_page_load": true,
+    "regional_ratings_verified_in_details": {
+      "173_countries_or_regions": "18+",
+      "Brazil": "16+",
+      "Korea_Republic_of": "19+"
+    },
+    "operating_systems_earlier_than_version_26": "Global rating of 17+ with regional exceptions",
+    "step7_distribution_notice": {
+      "not_sold_when_primary_or_secondary_category_is_entertainment_lifestyle_or_games": [
+        "Afghanistan",
+        "Iraq",
+        "Libya",
+        "Maldives",
+        "Morocco",
+        "Saudi Arabia",
+        "United Arab Emirates"
+      ],
+      "current_secondary_lifestyle_category_matches_restriction": true,
+      "brazil_games_category_restriction_applies": false,
+      "rating_country_count_does_not_confirm_distribution_availability": true
+    }
   },
   "privacy_collection_declaration_published": false,
   "content_rights_attested": false,
@@ -107,10 +161,10 @@
     "build/audit/2026-11-04/apple-app-id-registered.png",
     "build/audit/2026-11-04/app-store-info-saved.png",
     "build/audit/2026-11-04/app-store-free-pricing.png",
-    "build/audit/2026-11-04/app-store-age-rating-step2.png"
+    "build/audit/2026-11-04/app-store-age-rating-step2.png",
+    "build/audit/2026-11-04/app-store-age-rating-saved.png"
   ],
   "remaining": [
-    "Complete owner-confirmed age/content questionnaire",
     "Finalize privacy, content-rights, export, contact and regional declarations",
     "Resolve observed updated-license banner",
     "Confirm distribution regions and eligible platforms",
