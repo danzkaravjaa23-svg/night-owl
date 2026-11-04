@@ -1,6 +1,16 @@
 # Night Owl — Apple нэвтрэлтийн тохиргоо
 
-2026-11-04-нд App Store бэлтгэлээр шинэчилсэн. Apple Developer membership **Active**, Team ID **`DAVM2JZ4NN`** dashboard-аас батлагдсан. App Store Connect-ийн Apps хуудас нээгдсэн; агент гэрээ зөвшөөрөөгүй. App ID-г Sign in with Apple primary capability-тай бүртгэх review дэлгэц бэлэн, эцсийн Register зөвшөөрөл хүлээгдэж байна. Provider болон native signing/device login хүлээгдэж байна. Энэ зааврыг шинэчлэхдээ Apple/Supabase тохиргоо, түлхүүр болон production өгөгдөл өөрчлөөгүй. Membership-ийн шинэ баталгааг [эзэмшигчийн дараагийн алхам](app-store/OWNER_NEXT_STEPS.md)-аас авна.
+2026-11-04-нд шинэчилсэн. Apple Developer membership **Active**, Team ID **`DAVM2JZ4NN`** батлагдсан. **Night Owl UB** description-тай explicit App ID **`com.nightowl.ub.nightOwlUb`** бүртгэгдэж, Sign in with Apple capability **primary App ID** байдлаар идэвхжсэн. [App Store Connect app record](https://appstoreconnect.apple.com/apps/6830714135/distribution) үүссэн: Apple ID **`6830714135`**, iOS, **Night Owl UB**, primary language **en-US**, SKU **`night-owl-ub-ios`**, төлөв **Prepare for Submission**. Энэ нь provider тохиргоо эсвэл signed build биш.
+
+Эзэмшигч Agree дарсан гэж мэдээлсэн ч шинэчилсэн license banner дараа нь харагдсан хэвээр тул асуудал шийдэгдсэн гэж тэмдэглэхгүй; агент гэрээ зөвшөөрөөгүй.
+
+Connect-ийн **1.0.0** хувилбарт promotional text, description, keywords болон support URL хадгалагдсан; App Information-д subtitle, **Social Networking / Lifestyle** ангилал хадгалагдсан. Эзэмшигчийн сонгосон **After Approval** автомат нийтлэх тохиргоог хадгалсан.
+
+Privacy Policy URL **https://nightowl-ub.netlify.app/privacy.html** хадгалсан. US/USD **0.00** суурь үнийн schedule батлагдсан; хадгалсан Prices popover-ийг дахин нээж бүх **175** дүн **0.00** байгааг шалгасан. Түгээх улс/бүс сонгоогүй; App Privacy collection questionnaire эхлээгүй/нийтлээгүй. Насны асуулга **Step 2** дээр контентийн давтамжийн хариулт хүлээж байгаа; эцсийн rating хадгалагдаагүй. [Бүртгэл ба metadata нотолгоо](app-store/evidence/apple-store-setup.json).
+
+Түлхүүр/signing asset, шинэ signed build, upload, review submission үүсээгүй; Supabase provider ба production өгөгдөл энэ Apple бүртгэлээр өөрчлөгдөөгүй. [Эзэмшигчийн дараагийн алхам](app-store/OWNER_NEXT_STEPS.md).
+
+**Насны боломжийн хүрээ:** Connect-ийн Social Media Age Restrictions асуулт Declared Age Range API шаардаж байна. Энэ API одоогийн аппад хэрэгжээгүй; 18+ checkbox зөвхөн өөрийн мэдүүлэг тул **No** draft сонголттой. Насны асуулга эцэслэн хадгалагдаагүй, Apple-ийн эцсийн насны ангилал батлагдаагүй.
 
 ## Одоогийн төлөв
 
@@ -30,7 +40,7 @@ Build-ийн `BACKEND_URL` болон `BACKEND_PUBLIC_KEY` нэг төслийн
 
 ## Сервер ба Apple Developer тохиргоо
 
-1. Membership **Active** болон зөв team-ийн эрхийг баталсны дараа native App ID-ийн эзэмшлийг шалгаж, Sign in with Apple capability-г идэвхжүүлнэ. Xcode team/provisioning profile энэ capability-г дэмжих ёстой; repository дахь entitlement ганцаараа хангалтгүй. [Apple-ийн capability ба web association заавар](https://developer.apple.com/help/account/capabilities/configure-sign-in-with-apple-for-the-web/).
+1. Membership **Active**, Team **`DAVM2JZ4NN`**, native App ID **`com.nightowl.ub.nightOwlUb`** болон Sign in with Apple primary capability бүртгэгдсэн. Дараагийн Xcode team/provisioning profile энэ capability-г дэмжих ёстой; repository дахь entitlement болон App ID бүртгэл ганцаараа signed build эсвэл provider login-ийг батлахгүй. [Apple-ийн capability ба web association заавар](https://developer.apple.com/help/account/capabilities/configure-sign-in-with-apple-for-the-web/).
 2. Бүртгэгдсэн Services ID-г primary App ID-тай холбож, сонгосон орчны Website domain/Return URL-ийг тохируулна. Staging/production Services ID тусад нь ашиглахыг бэлтгэлийн сонголт болгон санал болгож байна; энэ нь аль нэг ID үүссэн гэсэн үг биш. Сонгосон Supabase төслийн Auth → Providers → Apple-д тухайн Services ID-г Client IDs-ийн **эхний** утга, `com.nightowl.ub.nightOwlUb`-г нэмэлт native audience болгон оруулна. Web OAuth эхний audience-ийг ашигладаг. Staging тохиргоог шалгасны дараа production-ийн өөрийн утгуудаар тусад нь тохируулна. [Supabase Apple тохиргоо](https://supabase.com/docs/guides/auth/social-sign-in/auth-apple#configuration).
 3. Apple Team ID, Key ID, `.p8` signing key-ээр үүсгэсэн signed client secret-ийг зөвхөн Supabase/server тохиргоонд хадгална. Flutter client, Dart define, repo, чатад signing key/secret хийхгүй. OAuth secret-ийг зургаан сарын хугацаа дуусахаас өмнө шинэчилнэ. Native-only урсгалд энэ rotation шаардлагагүй боловч энэ апп web/Android OAuth мөн ашиглаж байгаа. [Supabase-ийн secret rotation заавар](https://supabase.com/docs/guides/auth/social-login/auth-apple).
 4. Supabase Auth → URL Configuration-д дээрх хүснэгтийн **тухайн орчны** web/native redirect-ийг нэмнэ. Dashboard дээр төслийн ref-ийг дахин тулгаж, Site URL болон бодит login return хоёрыг шалгана.
@@ -52,14 +62,14 @@ Sign in with Apple-ийн `.p8` нь OAuth exchange/revoke-д зориулсан
 
 | Алхам | Бодитоор батлах зүйл |
 |---|---|
-| Membership / team | Apple Developer membership Active, зөв team, шаардлагатай account access. Team ID-г dashboard-аас баталж авна; source-д одоогоор `DEVELOPMENT_TEAM` байхгүй. |
-| App record | App Store Connect-д `com.nightowl.ub.nightOwlUb`-тай iOS app record; нэр, primary language, SKU, access. Latest agreement гарвал Account Holder өөрөө уншиж зөвшөөрнө. [Apple app record заавар](https://developer.apple.com/help/app-store-connect/create-an-app-record/add-a-new-app/). |
+| Membership / team | Apple Developer membership **Active**, Team **`DAVM2JZ4NN`** батлагдсан; source-д одоогоор `DEVELOPMENT_TEAM` байхгүй. |
+| App record | [Apple ID `6830714135`](https://appstoreconnect.apple.com/apps/6830714135/distribution) үүссэн: iOS, **Night Owl UB**, `com.nightowl.ub.nightOwlUb`, **en-US**, SKU **`night-owl-ub-ios`**; **Prepare for Submission**. License banner хэвээр ажиглагдсан тул Account Holder-ийн гэрээний төлөвийг нягтална. [Apple app record заавар](https://developer.apple.com/help/app-store-connect/create-an-app-record/add-a-new-app/). |
 | Native signing | Xcode-д `ios/Runner.xcworkspace` нээж Runner-ийн зөв Team, bundle ID, Sign in with Apple capability-г шалгана. Automatic signing хэрэглэвэл Xcode distribution profile-ийг удирдана; manual signing сонговол тохирох explicit App ID, distribution certificate/private key, App Store Connect profile хэрэгтэй. [Apple provisioning заавар](https://developer.apple.com/help/account/provisioning-profiles/create-an-app-store-provisioning-profile/). |
 | Candidate build | Upload-д нийцэх Xcode/SDK, яг сонгосон backend, `DEVICE_PREVIEW=false`, давтагдаагүй build number, commit. `tools/deployment/build_ios.sh` нь зөвхөн unsigned `Runner.app` гаргадаг; signed archive/IPA болон upload хийхгүй. |
 | Archive / upload | Signed Release archive-ийг Validate App хийгээд App Store Connect руу upload хийнэ. Bundle/version/build-ийг app record-той тулгана; Apple processing дууссаны дараа TestFlight-д харагдсаныг шалгана. [Apple upload заавар](https://developer.apple.com/help/app-store-connect/manage-builds/upload-builds/). |
 | Device acceptance | Эхлээд internal TestFlight: iPhone/iPad дээр login, revoke/delete, media, permission, moderation ба recovery-г [review test plan](app-store/REVIEW_TEST_PLAN.md)-аар шалгана. Production rollout болон App Review нь эдгээр gate дууссаны дараах алхам. |
 
-Нууц түлхүүр, certificate export/password, session, provisioning profile-ийг Git/тайлан/чатад хийхгүй. Apple login `.p8`, distribution key болон App Store Connect API key-г нэг түлхүүр мэт орлуулж ашиглахгүй. Энэ бэлтгэлээр signing asset, signed archive, App Store record, TestFlight upload үүсгээгүй.
+Нууц түлхүүр, certificate export/password, session, provisioning profile-ийг Git/тайлан/чатад хийхгүй. Apple login `.p8`, distribution key болон App Store Connect API key-г нэг түлхүүр мэт орлуулж ашиглахгүй. App Store record үүссэн; signing asset, signed archive/IPA болон TestFlight upload хараахан үүсээгүй.
 
 ## Account deletion-тай хамт дуусгах зүйл
 

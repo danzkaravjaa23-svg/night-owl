@@ -1,0 +1,122 @@
+{
+  "date": "2026-11-04",
+  "scope": "Observed Apple Developer and App Store Connect setup; no signed build, upload or review submission",
+  "team_id": "DAVM2JZ4NN",
+  "membership_status": "Active",
+  "app_id": {
+    "registered": true,
+    "description": "Night Owl UB",
+    "bundle_id": "com.nightowl.ub.nightOwlUb",
+    "explicit": true,
+    "sign_in_with_apple": "enabled_primary_app_id",
+    "keys_created": false
+  },
+  "connect": {
+    "apple_id": "6830714135",
+    "url": "https://appstoreconnect.apple.com/apps/6830714135/distribution",
+    "name": "Night Owl UB",
+    "platform": "iOS",
+    "primary_locale": "en-US",
+    "sku": "night-owl-ub-ios",
+    "version": "1.0.0",
+    "status": "Prepare for Submission",
+    "created": true
+  },
+  "listing_draft": {
+    "fields": {
+      "name": {
+        "source": "docs/app-store/metadata/en-US/name.txt",
+        "characters": 12,
+        "sha256_utf8_without_final_newline": "90faa197678d3697ab5708b680b30ea91cce25097737fb2c93d0e7825c537e9e",
+        "saved": true
+      },
+      "subtitle": {
+        "source": "docs/app-store/metadata/en-US/subtitle.txt",
+        "characters": 27,
+        "sha256_utf8_without_final_newline": "ac6fec735cccd38f4b0d540d6438723c1777ed4f8e23d9b4ff5762ba507ca8cc",
+        "saved": true
+      },
+      "promotional_text": {
+        "source": "docs/app-store/metadata/en-US/promotional_text.txt",
+        "characters": 151,
+        "sha256_utf8_without_final_newline": "e9f0dafa6f8c4d84070f6f1e209b9e2d2f0bee7cfa559d7193f24c68feffe59a",
+        "saved": true
+      },
+      "description": {
+        "source": "docs/app-store/metadata/en-US/description.txt",
+        "characters": 1755,
+        "sha256_utf8_without_final_newline": "fbdbdaf44b7bf5605f18b2808bc8e4442bf3145ac3f241c3f0e6b6a6b6dfb198",
+        "saved": true
+      },
+      "keywords": {
+        "source": "docs/app-store/metadata/en-US/keywords.txt",
+        "characters": 88,
+        "sha256_utf8_without_final_newline": "cdc9a75ba8f4b4da7d623b583cbb6513620cd15aeacbac43119c6daccb79744b",
+        "saved": true
+      }
+    },
+    "support_url": "https://nightowl-ub.netlify.app/support.html",
+    "privacy_policy_url": "https://nightowl-ub.netlify.app/privacy.html",
+    "primary_category": "Social Networking",
+    "secondary_category": "Lifestyle",
+    "release_mode": "AFTER_APPROVAL",
+    "release_mode_explicitly_selected_by_owner": true,
+    "saved_values_verified_after_fresh_page_load": true,
+    "review_notes_uploaded": false,
+    "review_contact_entered": false,
+    "review_credentials_entered": false,
+    "screenshots_uploaded": false
+  },
+  "pricing": {
+    "saved": true,
+    "base_country": "USA",
+    "base_currency": "USD",
+    "base_price": "0.00",
+    "saved_country_price_rows_verified": 175,
+    "all_saved_prices_zero": true,
+    "availability_regions_configured": false,
+    "mac_and_vision_compatibility_validated": false
+  },
+  "age_questionnaire": {
+    "finalized": false,
+    "current_step": "Step2 Mature Themes",
+    "owner_content_frequency_confirmation_pending": true,
+    "draft_step1": {
+      "parental_controls": false,
+      "age_assurance": false,
+      "unrestricted_web_access": false,
+      "user_generated_content": true,
+      "social_media": true,
+      "social_media_disabled_under_13_using_declared_age_range_api": false,
+      "messaging_and_chat": true,
+      "paid_advertising": false
+    },
+    "declared_age_range_api_implemented": false,
+    "adult_community_intent": "18+",
+    "apple_assigned_rating": null
+  },
+  "privacy_collection_declaration_published": false,
+  "content_rights_attested": false,
+  "license_update_banner_still_observed": true,
+  "agreement_accepted_by_agent": false,
+  "signed_ipa_created": false,
+  "build_uploaded": false,
+  "submitted_for_review": false,
+  "publicly_released": false,
+  "local_screenshots": [
+    "build/audit/2026-11-04/apple-app-id-registered.png",
+    "build/audit/2026-11-04/app-store-info-saved.png",
+    "build/audit/2026-11-04/app-store-free-pricing.png",
+    "build/audit/2026-11-04/app-store-age-rating-step2.png"
+  ],
+  "remaining": [
+    "Complete owner-confirmed age/content questionnaire",
+    "Finalize privacy, content-rights, export, contact and regional declarations",
+    "Resolve observed updated-license banner",
+    "Confirm distribution regions and eligible platforms",
+    "Apple provider keys and Services ID setup",
+    "Signing assets, signed native/device acceptance, screenshots and reviewer access",
+    "Remaining hosted backend/client release gates",
+    "TestFlight and App Review submission"
+  ]
+}

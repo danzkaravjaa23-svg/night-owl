@@ -1621,7 +1621,7 @@
   "store_completion": {
     "date": "2026-11-04",
     "branch": "codex/app-store-preparation",
-    "status": "Code/build, isolated recovery, hosted staging schema+008/009+conflict fix, Auth/media and moderator/ban/selected-DM API acceptance verified; Edge/client/device acceptance, production rollout and App Store submission remain incomplete",
+    "status": "Code/build, isolated recovery, hosted staging schema+008/009+conflict fix, Auth/media and moderator/ban/selected-DM API acceptance verified; Apple App ID/capability and Connect app record created; Edge/client/device acceptance, provider/signing, production rollout and App Store submission remain incomplete",
     "source_commits": {
       "backend": "a4924687ae1f739b7735d917fbc7d4f4e2f52c82",
       "client": "b4e60b3fc3f0714669783ae23ba787ebe49c7619",
@@ -1711,7 +1711,7 @@
       "Hosted staging Edge deletion/receipt recovery and client acceptance; API fixture cleanup does not establish application account deletion",
       "Coordinated008/009/202611040001 and compatible client rollout, scoped reported-message admin access and receipt-only gateway configuration",
       "Successful hosted retention schedule, named operator/moderator and private alert handoff",
-      "Apple App ID/capability registration confirmation, updated license banner review, provider keys, signing and signed iPhone/iPad acceptance (membership Active, Team and Connect access verified)",
+      "Updated license banner review, Services ID/callbacks, provider keys, signing and signed iPhone/iPad acceptance (membership Active, App ID/primary capability and Connect app record created)",
       "Final native screenshots, reviewer access, owner privacy/age/export/contact/media-rights declarations",
       "TestFlight and App Review submission"
     ],
@@ -1984,7 +1984,7 @@
     },
     "apple_team_id": "DAVM2JZ4NN",
     "app_store_connect_terms_accepted_by_agent": false,
-    "app_store_connect_access": "Apps page verified accessible; empty app list; New App draft prepared, not created",
+    "app_store_connect_access": "App record 6830714135 created and distribution page accessible; Prepare for Submission",
     "native_candidate": {
       "source_commit": "b4e60b3fc3f0714669783ae23ba787ebe49c7619",
       "run_url": "https://github.com/danzkaravjaa23-svg/night-owl/actions/runs/41844335898",
@@ -2001,13 +2001,86 @@
       "artifact_verification": "passed"
     },
     "apple_app_id_registration": {
-      "status": "review_prepared_awaiting_owner_confirmation",
+      "status": "registered",
       "bundle_id": "com.nightowl.ub.nightOwlUb",
       "team_id": "DAVM2JZ4NN",
       "description": "Night Owl UB",
-      "sign_in_with_apple": "selected_as_primary_app_id_not_registered",
+      "sign_in_with_apple": "enabled_primary_app_id",
       "key_created": false
     },
-    "apple_license_update_banner_observed": true
+    "apple_license_update_banner_observed": true,
+    "app_store_connect_app": {
+      "created": true,
+      "apple_id": "6830714135",
+      "url": "https://appstoreconnect.apple.com/apps/6830714135/distribution",
+      "platform": "iOS",
+      "name": "Night Owl UB",
+      "primary_language": "en-US",
+      "sku": "night-owl-ub-ios",
+      "bundle_id": "com.nightowl.ub.nightOwlUb",
+      "status": "Prepare for Submission",
+      "metadata_save_status": "specified_version_and_app_information_fields_saved_remaining_fields_incomplete",
+      "build_uploaded": false,
+      "review_submitted": false,
+      "version": "1.0.0",
+      "metadata_evidence": "docs/app-store/evidence/apple-store-setup.json",
+      "version_metadata": {
+        "saved": true,
+        "locale": "en-US",
+        "source_directory": "docs/app-store/metadata/en-US",
+        "file_fields": [
+          "promotional_text",
+          "description",
+          "keywords"
+        ],
+        "file_values_match_after_trim": true,
+        "support_url": "https://nightowl-ub.netlify.app/support.html"
+      },
+      "app_information": {
+        "saved": true,
+        "subtitle": "Places, moments and friends",
+        "subtitle_characters": 27,
+        "primary_category": "Social Networking",
+        "secondary_category": "Lifestyle"
+      },
+      "release_option": {
+        "value": "AFTER_APPROVAL",
+        "owner_explicitly_selected": true,
+        "existing_default_retained": true,
+        "release_performed": false,
+        "fresh_version_page_checked_verified": true
+      },
+      "age_rating": {
+        "questionnaire_status": "step_2_awaiting_owner_content_frequency_answer_not_final_saved",
+        "final_rating_confirmed": false,
+        "social_media_age_restrictions_draft_answer": "No",
+        "declared_age_range_api_implemented": false,
+        "current_adult_checkbox_is_self_declaration_only": true
+      },
+      "privacy_policy_url_saved": true,
+      "pricing_set": true,
+      "privacy_policy_url": "https://nightowl-ub.netlify.app/privacy.html",
+      "app_privacy_collection_questionnaire": {
+        "started": false,
+        "published": false
+      },
+      "pricing": {
+        "schedule_confirmed": true,
+        "base_country": "US",
+        "base_currency": "USD",
+        "base_amount": "0.00",
+        "saved_prices_popover_reopened": true,
+        "amounts_verified": 175,
+        "all_verified_amounts": "0.00"
+      },
+      "availability_regions_set": false,
+      "mac_vision_availability": {
+        "default_checkboxes_observed_checked": true,
+        "changed": false,
+        "compatibility_validated": false
+      }
+    },
+    "apple_license_update_banner_observed_after_owner_reported_agree": true,
+    "apple_license_update_resolved": false
   }
 }

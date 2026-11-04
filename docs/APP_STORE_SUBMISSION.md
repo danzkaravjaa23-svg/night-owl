@@ -2,7 +2,13 @@
 
 Шинэчилсэн: **2026-11-04, Asia/Ulaanbaatar**. Client `b4e60b3`, backend forward fix `8d4db32`; нийтэд ажиллаж буй web `e0e1d45` (privacy-only; runtime `7cc568e`-тэй ижил).
 
-**Apple membership Active, Team `DAVM2JZ4NN` болон App Store Connect Apps хандалт батлагдсан.** Night Owl App ID-г Sign in with Apple capability-тай бүртгэх review бэлэн; эцсийн Register зөвшөөрөл хүлээгдэж байна. Agent гэрээ зөвшөөрөөгүй, түлхүүр/signing asset үүсгээгүй. App record, signed IPA, TestFlight upload болон review submission хараахан үүсээгүй.
+**Apple membership Active; Team `DAVM2JZ4NN` дээр App ID болон App Store Connect record үүссэн.** Explicit App ID **`com.nightowl.ub.nightOwlUb`**, description **Night Owl UB**, Sign in with Apple capability **primary** байдлаар бүртгэгдсэн. [App Store Connect — Apple ID `6830714135`](https://appstoreconnect.apple.com/apps/6830714135/distribution): iOS, **Night Owl UB**, **en-US**, SKU **`night-owl-ub-ios`**, төлөв **Prepare for Submission**.
+
+Connect-ийн **1.0.0** хувилбарт promotional text, description, keywords болон support URL хадгалагдсан; App Information-д subtitle, **Social Networking / Lifestyle** ангилал хадгалагдсан. Эзэмшигчийн сонгосон **After Approval** автомат нийтлэх тохиргоог хадгалсан.
+
+Privacy Policy URL **https://nightowl-ub.netlify.app/privacy.html** хадгалсан. US/USD **0.00** суурь үнийн schedule батлагдсан; хадгалсан Prices popover-ийг дахин нээж бүх **175** дүн **0.00** байгааг шалгасан. Түгээх улс/бүс сонгоогүй; App Privacy collection questionnaire эхлээгүй/нийтлээгүй. Насны асуулга **Step 2** дээр контентийн давтамжийн хариулт хүлээж байгаа; эцсийн rating хадгалагдаагүй. [Бүртгэл ба metadata нотолгоо](app-store/evidence/apple-store-setup.json).
+
+Эзэмшигч Agree дарсан гэж мэдээлсэн ч шинэчилсэн license banner харагдсан хэвээр; шийдэгдсэн гэж батлаагүй, агент гэрээ зөвшөөрөөгүй. Provider/key/signing тохиргоо, signed IPA, TestFlight upload болон review submission хийгдээгүй.
 
 Суурь `23a7258`-ийн 886 Flutter тест PASS; газрын нэр болон шинэ conflict handling-д focused шалгалтууд нэмж давсан. Одоогийн `b4e60b3` unsigned iPhone/simulator build болон iPhone/iPad startup PASS; архивын checksum, bundle/12 privacy manifest болон эхлэх дэлгэцүүдийг татаж баталгаажуулсан. Backend `8d4db32`-ийн бодит local Auth/Storage/Edge 10 бүлэг PASS. Staging baseline+008/009+`202611040001` сууж, minimum Auth/media85 болон moderation58+setup17 API шалгалт PASS; scoped fixture cleanup дууссан. Local DB/медиа recovery батлагдсан ч hosted recovery/ACL/operator gate үлдэнэ.
 
@@ -66,14 +72,15 @@ Post болон **Богино видео / Reel** нийтлэх нь нэг ca
 
 ## Хийж бэлдсэн listing багц
 
-[metadata/en-US](app-store/metadata/en-US) дотор нэр, subtitle, promotional text, description, keywords болон reviewer notes-ийн тусдаа текстүүд бий. `en-US` нь санал болгосон listing locale; аппын үндсэн UI Монгол гэдгийг тайлбарласан. Native боломжуудын тест, нэрийн availability болон эзэмшигчийн талбарууд дуусахаас өмнө submit хийхгүй.
+[metadata/en-US](app-store/metadata/en-US) дотор нэр, subtitle, promotional text, description, keywords болон reviewer notes-ийн тусдаа текстүүд бий. Connect app record **en-US** primary language-тай үүссэн. **1.0.0** хувилбарын promotional text, description, keywords нь эдгээр файлын эхлэл/төгсгөлийн whitespace-ийг хассан агуулгатай яг таарч хадгалагдсан. Subtitle **Places, moments and friends** (27 тэмдэгт) болон ангиллууд App Information-д тусдаа хадгалагдсан. Аппын үндсэн UI Монгол гэдгийг description-д тайлбарласан. Reviewer notes, бүх Store талбар болон submission бүрэн дууссан гэж үзэхгүй; native acceptance, нас/privacy/export мэдүүлэг болон review материал үлдсэн. [Хадгалсан талбаруудын нотолгоо](app-store/evidence/apple-store-setup.json).
 
-- Name: **Night Owl UB**; primary category санал: **Social Networking**, secondary **Lifestyle**.
-- Price: **Free**; IAP/subscription/payments одоогоор байхгүй.
-- Privacy: `https://nightowl-ub.netlify.app/privacy.html`
-- Support: `https://nightowl-ub.netlify.app/support.html`; одоогийн support `osokhe@gmail.com`.
-- SKU санал: `NIGHTOWL-UB-IOS`; Connect-д давхцаагүйг шалгана.
+- Name: **Night Owl UB**; хадгалсан primary category: **Social Networking**, secondary: **Lifestyle**.
+- Price: **Free** — US/USD **0.00** schedule батлагдсан; хадгалсан Prices popover-ийн **175** дүн бүгд **0.00**. IAP/subscription/payments одоогоор байхгүй. Түгээх улс/бүс хараахан тохируулаагүй.
+- Privacy Policy URL: `https://nightowl-ub.netlify.app/privacy.html` — Connect-д хадгалсан. App Privacy collection questionnaire эхлээгүй, нийтлээгүй.
+- Support URL: `https://nightowl-ub.netlify.app/support.html` — Connect-д хадгалсан; одоогийн support `osokhe@gmail.com`.
+- Бодитоор үүссэн SKU: **`night-owl-ub-ios`**.
 - Review contact: эзэмшигчийн нэр, international phone; test account credentials-ийг Connect-д шууд оруулна.
+- Mac/Vision availability checkbox-ууд default checked харагдсан; өөрчлөөгүй, эдгээр платформын нийцлийг баталгаажуулаагүй.
 
 Privacy questionnaire-д contact/identifier, photo/video/text/DM, хэрэглэгчийн сонгосон venue, interaction/optional analytics, техникийн лог/SDK практикийг хамруулна. Account ID-тай холбогдох өгөгдлийг unlinked гэж, эсвэл аппыг No Data Collected гэж мэдүүлэхгүй. Map provider-ийн IP/tile request, EXIF/video metadata, retention-ийг тусад нь нягтална. IDFA/ATT advertising SDK одоогийн кодод харагдаагүй нь бүх provider tracking-гүй гэсэн баталгаа биш. [Apple App Privacy](https://developer.apple.com/app-store/app-privacy-details/).
 
@@ -92,7 +99,7 @@ Privacy questionnaire-д contact/identifier, photo/video/text/DM, хэрэглэ
 
 Зураг/видеоны бүх EXIF/GPS metadata-г арилгадаг гэж код батлахгүй; төхөөрөмжийн permission-ийг татгалзсан ч сонгосон файлын metadata-г тусад нь шалгана. Видеоны audio track, owner venue-ийн phone/address болон гуравдагч provider-ийн хадгалалтыг эцсийн data inventory-д оруулна. Optional analytics нь account-тай холбогддог учраас зөвхөн opt-in гэдэг шалтгаанаар disclosure-оос хасахгүй.
 
-Age-rating questionnaire-д user-generated content, messaging, насанд хүрэгчдийн nightlife/архи харагдах боломжийг бодитоор мэдүүлнэ. 18+ өөрийн мэдүүлэг нь parent control эсвэл албан ёсны age verification биш; тийм capability гэж тэмдэглэхгүй. Үнэгүй энэ хувилбарт gambling/ticket purchase/payment боломж зарлахгүй.
+Age-rating questionnaire-д user-generated content, messaging, насанд хүрэгчдийн nightlife/архи харагдах боломжийг бодитоор мэдүүлнэ. Асуулга **Step 2** дээр контентийн давтамжийн эзэмшигчийн хариулт хүлээж байгаа; эцсийн хариулт/насны ангилал хараахан хадгалагдаагүй. Connect-ийн **Social Media Age Restrictions** талбарын UI нь **Declared Age Range API** шаардаж байгааг харуулсан; апп энэ API-г хэрэгжүүлээгүй. Одоогийн 18+ checkbox нь зөвхөн өөрийн мэдүүлэг тул тухайн талбарт **No**-г draft байдлаар сонгосон. Энэ нь parent control эсвэл албан ёсны age verification биш, Apple-ийн эцсийн насны ангиллыг тогтоохгүй. Үнэгүй энэ хувилбарт gambling/ticket purchase/payment боломж зарлахгүй.
 
 Encryption: эх кодод HTTPS, Apple nonce-ийн SHA-256, платформын secure storage байна. Өөрийн шинэ encryption algorithm олдоогүй. Built bundle-ийн embedded SDK manifest inventory-г CI artifact-аас авч, Connect-ийн export-compliance асуулгыг эцсийн binary-гаар шийднэ. `ITSAppUsesNonExemptEncryption`-ийг эзэмшигчийн мэдүүлэггүйгээр автоматаар тохируулаагүй. [Apple export compliance](https://developer.apple.com/help/app-store-connect/manage-app-information/overview-of-export-compliance/).
 
