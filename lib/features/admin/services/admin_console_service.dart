@@ -215,7 +215,7 @@ class AdminConsoleService {
                         ? 'invalid'
                         : code == 'P0002'
                             ? 'missing'
-                            : code == '40001'
+                            : code == 'PT409' || code == '40001'
                                 ? 'conflict'
                                 : 'network');
         if (failure.code == 'authentication' || failure.code == 'denied') {

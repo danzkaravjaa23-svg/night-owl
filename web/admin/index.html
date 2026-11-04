@@ -122,7 +122,7 @@ async function request(captured, path, {method = 'POST', body, mutation = false,
    if (response.status === 401 || (api === 'rest/v1' && (response.status === 403 || code === '42501'))) { deny(captured); throw new StaleRequest(); }
    if (api === 'storage/v1') throw new AdminError('Медиа харах эрх эсвэл хадгалалтын тохиргоо бэлэн биш байна.', code);
    if (code === 'PGRST202' || response.status === 404) throw new AdminError('Удирдлагын серверийн шинэчлэлт бэлэн болоогүй. Админ RPC migration-ийг байршуулсны дараа дахин шалгана уу.', code);
-   if (code === '40001') throw new AdminError('Энэ бүртгэлийн төлөв өөрчлөгдсөн байна. Шинэчлээд дахин шалгана уу.', code);
+   if (code === 'PT409' || code === '40001') throw new AdminError('Энэ бүртгэлийн төлөв өөрчлөгдсөн байна. Шинэчлээд дахин шалгана уу.', code);
    if (code === 'P0002') throw new AdminError('Бүртгэл олдсонгүй. Өөр админ өөрчилсөн байж болно. Шинэчлээд шалгана уу.', code);
    if (code === '22023') throw new AdminError('Оруулсан утга эсвэл үйлдэл зөвшөөрөгдөхгүй байна.', code);
    throw new AdminError('Сервер хүсэлтийг биелүүлсэнгүй. Дахин шалгана уу.', code);

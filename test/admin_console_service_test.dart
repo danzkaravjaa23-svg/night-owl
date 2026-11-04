@@ -147,16 +147,20 @@ void main() {
       'p_report_id': 'report-id',
     });
   });
-  test('stale report action fails explicitly without success receipt',
-      () async {
-    respond = (_) async => jsonResponse({'code': '40001'}, 409);
-    await expectLater(
-        service.action(capture(),
-            action: 'resolve_report',
-            targetId: 'report-id',
-            reason: 'Шалгасан'),
-        throwsA(failure('conflict')));
-  });
+  for (final code in ['PT409', '40001']) {
+    test('stale report action ($code) fails explicitly without success receipt',
+        () async {
+      respond = (_) async => jsonResponse({'code': code}, 409);
+      await expectLater(
+          service.action(capture(),
+              action: 'resolve_report',
+              targetId: 'report-id',
+              reason: 'Шалгасан'),
+          throwsA(failure('conflict')));
+      expect(requests, hasLength(1),
+          reason: 'Conflicts must not retry mutations.');
+    });
+  }
   test('denial revokes every captured route for the same account', () async {
     final dashboard = capture();
     final pushedReport = capture();

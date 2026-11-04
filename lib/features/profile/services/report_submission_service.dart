@@ -70,7 +70,9 @@ class ReportSubmissionService extends ContentPublicationService {
         final payload = jsonDecode(response.body);
         final code = payload is Map ? payload['code'] : null;
         throw PublicationFailure(switch (code) {
-          '40001' => 'Энэ агуулгын тухай таны өмнөх мэдээлэл шалгагдаж байна.',
+          'PT409' ||
+          '40001' =>
+            'Энэ агуулгын тухай таны өмнөх мэдээлэл шалгагдаж байна.',
           'P0002' => 'Мэдээлэх агуулга олдсонгүй. Хуудсыг шинэчилнэ үү.',
           '42501' =>
             'Энэ үйлдлийг хийх эрхгүй. Нэвтрэлт болон агуулгын эрхээ шалгана уу.',

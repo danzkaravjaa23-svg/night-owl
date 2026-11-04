@@ -110,7 +110,7 @@ test('server denial hides private UI immediately and never echoes raw errors',as
 });
 
 test('missing migration and conflict are explicit errors, never empty pages',async()=>{
- for(const [code,pattern] of [['PGRST202',/migration/],['40001',/төлөв өөрчлөгдсөн/]]){
+ for(const [code,pattern] of [['PGRST202',/migration/],['PT409',/төлөв өөрчлөгдсөн/],['40001',/төлөв өөрчлөгдсөн/]]){
   const f=fixture(async()=>fail(code));
   await assert.rejects(f.api.requireAdmin(f.api.scope()),pattern);
  }
@@ -161,12 +161,12 @@ test('account change while reason dialog is open prevents mutation',async()=>{
  assert.equal(requests,0);
 });
 
-test('server action failure does not optimistically remove or reload rows',async()=>{
- let refreshes=0,message='';const f=fixture(async()=>fail('40001'));
+for (const code of ['PT409','40001']) test(`server action conflict ${code} does not retry, remove or reload rows`,async()=>{
+ let refreshes=0,message='',requests=0;const f=fixture(async()=>{requests++;return fail(code);});
  f.context.refreshed=()=>refreshes++;f.context.notified=text=>message=text;
  vm.runInContext('reasonDialog=async()=>"checked reason";navigate=async()=>refreshed();toast=notified;',f.context);
  await f.api.runAction(f.api.ticket(),'resolve_report','report','label',null,{disabled:false,isConnected:true});
- assert.equal(refreshes,0);assert.match(message,/төлөв өөрчлөгдсөн/);
+ assert.equal(refreshes,0);assert.equal(requests,1);assert.match(message,/төлөв өөрчлөгдсөн/);
 });
 
 test('legacy venue writes require active gate and exact affected row',async()=>{

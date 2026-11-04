@@ -136,7 +136,7 @@ void main() {
     test(
         'server denial and duplicate results never become success or expose raw error',
         () async {
-      for (final code in ['42501', '40001', 'P0002']) {
+      for (final code in ['42501', 'PT409', '40001', 'P0002']) {
         response = (_) async => http.Response(
             jsonEncode({'code': code, 'message': 'private-body-and-token'}),
             403);
@@ -147,6 +147,20 @@ void main() {
                 'safe message', isNot(contains('private-body')))));
       }
     });
+    for (final code in ['PT409', '40001']) {
+      test('duplicate report ($code) shows pending state without retry',
+          () async {
+        response = (_) async => http.Response(jsonEncode({'code': code}), 409);
+        await expectLater(
+            service.submit(session,
+                targetType: 'message', targetId: _receipt, reason: 'spam'),
+            throwsA(isA<PublicationFailure>().having(
+                (e) => e.message,
+                'duplicate report message',
+                contains('өмнөх мэдээлэл шалгагдаж'))));
+        expect(sent, hasLength(1));
+      });
+    }
     test('malformed receipt cannot claim a report was accepted', () async {
       response = (_) async => http.Response('[]', 200);
       await expectLater(
