@@ -101,22 +101,39 @@ class Database:
         known = [(u, r.state["run"]) for r in (members, moderator) for u in r.state["users"]
                  if u.get("id") and not u.get("cleaned")]
         if not known:
-            return {"messages": 0, "reports": 0}
+            return {"messages": 0, "reports": 0, "dm_requests": 0}
         guards = "\n".join(f"if not exists(select 1 from auth.users where {identity_predicate(u, run)}) "
                             "then raise exception 'Synthetic identity mismatch'; end if;" for u, run in known)
         ids = ",".join("'" + u["id"] + "'::uuid" for u, _ in known)
         message_ids = ",".join("'" + value + "'::uuid" for value in context["messages"]) or "null::uuid"
+        pair = context.get("dm_pair")
+        pair_clause, request_pair_clause = "false", "false"
+        if pair is not None:
+            member_ids = {u["label"]: u.get("id") for u in members.state["users"]}
+            require(pair == {"sender": member_ids.get("a"), "receiver": member_ids.get("b")}, "dm_pair_outside_synthetic_members")
+            pair_clause = f"sender_id='{pair['sender']}'::uuid and receiver_id='{pair['receiver']}'::uuid"
+            request_pair_clause = f"requester_id='{pair['sender']}'::uuid and target_id='{pair['receiver']}'::uuid"
+        message_scope = f"(id in ({message_ids}) or ({pair_clause}))"
+        report_scope = f"(target_id in ({message_ids}) or target_id in (select id from public.messages where {pair_clause}))"
         # A report is generated server-side; exact target IDs + synthetic reporter
         # identity cover an unknown response without searching other reports.
         result = self.query(f"""begin;
         do $guard$ begin {guards} end $guard$;
-        delete from public.reports where reporter_id in ({ids}) and target_type='message' and target_id in ({message_ids});
-        delete from public.messages where sender_id in ({ids}) and receiver_id in ({ids}) and id in ({message_ids});
+        delete from public.reports where reporter_id in ({ids}) and target_type='message' and {report_scope};
+        -- Verify unknown-response report targets while their pair-scoped
+        -- message rows still exist. A suppressed report delete must abort.
+        do $verify_reports$ begin
+          if exists(select 1 from public.reports where reporter_id in ({ids}) and target_type='message' and {report_scope})
+          then raise exception 'Synthetic reported context remains'; end if;
+        end $verify_reports$;
+        delete from public.messages where sender_id in ({ids}) and receiver_id in ({ids}) and {message_scope};
+        delete from public.dm_requests where {request_pair_clause};
         select jsonb_build_object(
-          'messages',(select count(*) from public.messages where id in ({message_ids})),
-          'reports',(select count(*) from public.reports where reporter_id in ({ids}) and target_type='message' and target_id in ({message_ids})));
+          'messages',(select count(*) from public.messages where {message_scope}),
+          'reports',(select count(*) from public.reports where reporter_id in ({ids})),
+          'dm_requests',(select count(*) from public.dm_requests where {request_pair_clause}));
         commit;""")
-        require(result == {"messages": 0, "reports": 0}, "synthetic_context_cleanup_incomplete")
+        require(result == {"messages": 0, "reports": 0, "dm_requests": 0}, "synthetic_context_cleanup_incomplete")
         return result
 
     def final_inventory(self, members, moderator):
@@ -136,10 +153,12 @@ class Database:
           'stories',(select count(*) from public.stories where user_id in ({literals})),
           'storage_objects',(select count(*) from storage.objects where split_part(name,'/',1) in ({text_ids})),
           'messages',(select count(*) from public.messages where sender_id in ({literals}) or receiver_id in ({literals})),
+          'dm_requests',(select count(*) from public.dm_requests where requester_id in ({literals}) or target_id in ({literals})),
+          'notifications',(select count(*) from public.notifications where user_id in ({literals}) or actor_id in ({literals})),
           'reports',(select count(*) from public.reports where reporter_id in ({literals})));
         commit;""")
         require(isinstance(result, dict) and set(result) == {"auth_users", "auth_identities", "profiles", "posts", "stories",
-                "storage_objects", "messages", "reports"} and all(type(v) is int and v == 0 for v in result.values()),
+                "storage_objects", "messages", "dm_requests", "notifications", "reports"} and all(type(v) is int and v == 0 for v in result.values()),
                 "synthetic_final_inventory_not_empty")
         return result
 
@@ -168,12 +187,16 @@ class Database:
 
 
 def validate_context(context, member_run, moderator_run):
-    require(isinstance(context, dict) and set(context) == {"member_run", "moderator_run", "messages", "audits"}
+    require(isinstance(context, dict) and set(context) in ({"member_run", "moderator_run", "messages", "audits"}, {"member_run", "moderator_run", "messages", "audits", "dm_pair"})
             and context["member_run"] == member_run and context["moderator_run"] == moderator_run,
             "invalid_moderation_context")
     messages = context["messages"]
     require(isinstance(messages, list) and len(messages) <= 8 and len(set(messages)) == len(messages)
             and all(isinstance(v, str) and base.UUID.fullmatch(v) for v in messages), "invalid_message_inventory")
+    pair = context.get("dm_pair")
+    require(pair is None or isinstance(pair, dict) and set(pair) == {"sender", "receiver"}
+            and all(isinstance(v, str) and base.UUID.fullmatch(v) for v in pair.values())
+            and pair["sender"] != pair["receiver"], "invalid_dm_pair")
     audits = context["audits"]
     require(isinstance(audits, list) and len(audits) <= 16, "invalid_audit_inventory")
     seen = set()
@@ -217,7 +240,7 @@ class Moderation:
         self.moderator = self.runner("moderator", resume)
         self.context = (base.private_json(directory / "moderation-context.json") if resume else
                         {"member_run": self.members.state["run"],
-                         "moderator_run": self.moderator.state["run"], "messages": [], "audits": []})
+                         "moderator_run": self.moderator.state["run"], "messages": [], "audits": [], "dm_pair": None})
         validate_context(self.context, self.members.state["run"], self.moderator.state["run"])
         self.journal()
         self.report = {"scope": "synthetic_moderator_ban_selected_dm_api_acceptance", "project_ref": base.REF,
@@ -293,15 +316,30 @@ class Moderation:
         reply = self.api.request(stage, f"/rest/v1/{table}?id=eq.{uid}&select=id", token=token)
         self.check(reply.status == 200 and reply.json() == ([{"id": uid}] if expected else []), stage)
 
+    def relationship(self, target, token, expected, stage):
+        reply = self.rpc("get_relationship", {"p_target": target}, token)
+        self.check(reply.status == 200 and reply.json().get("dm_state") == expected, stage)
+
     def message(self, sender, recipient, token, body):
-        mid = str(uuid.uuid4())
+        pair = {"sender": sender["id"], "receiver": recipient["id"]}
+        require(self.context.get("dm_pair") in (None, pair), "synthetic_dm_pair_changed")
+        member_ids = {u["label"]: u.get("id") for u in self.members.state["users"]}
+        require(pair == {"sender": member_ids.get("a"), "receiver": member_ids.get("b")}, "dm_pair_outside_synthetic_members")
+        # The real client RPC generates the UUID. Journal its exact synthetic
+        # pair before sending, so a lost response is recoverable without broad
+        # user searches or guessing the new message ID.
+        self.context["dm_pair"] = pair
+        self.journal()
+        reply = self.rpc("send_direct_message", {"p_receiver": recipient["id"], "p_body": body,
+                         "p_note": None, "p_story": None, "p_venue": None}, token, "create_dm")
+        require(reply.status == 200 and isinstance(reply.json(), str) and base.UUID.fullmatch(reply.json()),
+                "synthetic_dm_create_failed")
+        mid = reply.json()
         self.context["messages"].append(mid)
         self.journal()
-        reply = self.api.request("create_dm", "/rest/v1/messages", method="POST", token=token,
-                                 data={"id": mid, "sender_id": sender["id"], "receiver_id": recipient["id"], "body": body},
-                                 headers={"Prefer": "return=representation"})
-        require(reply.status == 201 and len(reply.json()) == 1 and reply.json()[0].get("id") == mid
-                and reply.json()[0].get("body") == body, "synthetic_dm_create_failed")
+        verified = self.api.request("created_dm_read", f"/rest/v1/messages?id=eq.{mid}&select=id,sender_id,receiver_id,body", token=token)
+        require(verified.status == 200 and verified.json() == [{"id": mid, "sender_id": sender["id"],
+                "receiver_id": recipient["id"], "body": body}], "synthetic_dm_identity_mismatch")
         return mid
 
     def exercise(self):
@@ -356,7 +394,14 @@ class Moderation:
             publications.append((bucket, row, obj, created["moderation_version"]))
         # A moderator receives one participant-selected snapshot, never a DM browser.
         selected_body, sibling_body = "Selected synthetic report context", "Unreported synthetic private context"
+        self.relationship(b["id"], owner, "new", "dm_initial_requestable")
         selected = self.message(a, b, owner, selected_body)
+        self.relationship(b["id"], owner, "requested", "dm_request_sent")
+        self.relationship(a["id"], peer, "incoming", "dm_request_received")
+        accepted = self.rpc("respond_message_request", {"p_requester": a["id"], "p_accept": True}, peer)
+        self.check(accepted.status in {200, 204}, "dm_request_accepted")
+        self.relationship(b["id"], owner, "accepted", "dm_sender_acceptance_confirmed")
+        self.relationship(a["id"], peer, "accepted", "dm_recipient_acceptance_confirmed")
         sibling = self.message(a, b, owner, sibling_body)
         for mid in (selected, sibling):
             reply = self.api.request("moderator_dm_read", f"/rest/v1/messages?id=eq.{mid}&select=id,body", token=admin)
@@ -389,11 +434,8 @@ class Moderation:
         reply = self.api.request("banned_upload", f"/storage/v1/object/posts/{blocked['name']}", method="POST", token=owner,
                                  binary=base.image_fixture(), mime="image/png")
         self.check(reply.status in {400, 401, 403}, "banned_upload_denied")
-        blocked_mid = str(uuid.uuid4())
-        self.context["messages"].append(blocked_mid)
-        self.journal()
-        reply = self.api.request("banned_send", "/rest/v1/messages", method="POST", token=owner,
-                                 data={"id": blocked_mid, "sender_id": a["id"], "receiver_id": b["id"], "body": "Blocked synthetic message"})
+        reply = self.rpc("send_direct_message", {"p_receiver": b["id"], "p_body": "Blocked synthetic message",
+                         "p_note": None, "p_story": None, "p_venue": None}, owner, "banned_send")
         self.check(reply.status in {401, 403}, "banned_message_denied")
         denied = self.rpc("report_ugc", {"p_target_type": "message", "p_target_id": sibling,
                           "p_reason": "spam", "p_details": None}, owner)

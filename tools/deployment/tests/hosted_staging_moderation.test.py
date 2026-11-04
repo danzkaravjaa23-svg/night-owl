@@ -171,7 +171,7 @@ class Tests(unittest.TestCase):
         db = self.db()
         context = {"member_run": self.run, "moderator_run": "b" * 32, "messages": [], "audits": []}
         with patch.object(db, "query", side_effect=AssertionError("Already removed identity cannot block SQL guard")):
-            self.assertEqual(db.cleanup_context(runner.members, runner.moderator, context), {"messages": 0, "reports": 0})
+            self.assertEqual(db.cleanup_context(runner.members, runner.moderator, context), {"messages": 0, "reports": 0, "dm_requests": 0})
 
     def test_ambiguous_auth_delete_present_identity_keeps_exact_marker_guard(self):
         body = {"id": self.user["id"], "email": self.user["email"],
@@ -257,6 +257,62 @@ class Tests(unittest.TestCase):
         self.assertFalse(m.business_conflict(base.Response(409, b'{"code":"40001"}')))
         self.assertFalse(m.business_conflict(base.Response(409, b'{"code":"23505"}')))
         self.assertFalse(m.business_conflict(base.Response(500, b'{"code":"PT409"}')))
+
+
+    def dm_fixture(self):
+        a, b = synthetic(self.run, "a"), synthetic(self.run, "b")
+        runner = object.__new__(m.Moderation)
+        runner.members = SimpleNamespace(state={"origin": base.ORIGIN, "run": self.run, "users": [a, b]})
+        runner.context = {"member_run": self.run, "moderator_run": "b" * 32, "messages": [], "audits": [], "dm_pair": None}
+        return runner, a, b
+
+    def test_dm_exact_pair_is_journaled_before_unknown_rpc_response(self):
+        runner, a, b = self.dm_fixture()
+        events = []
+        runner.journal = lambda: events.append(("journal", json.loads(json.dumps(runner.context))))
+        def lost_response(name, body, token, stage):
+            events.append(("rpc", name, body))
+            raise base.Failure("transport_failure_request_outcome_unknown", request_attempted=True)
+        runner.rpc = lost_response
+        with self.assertRaises(base.Failure):
+            runner.message(a, b, "synthetic-session", "Synthetic selected message")
+        self.assertEqual(events[0][0], "journal")
+        self.assertEqual(events[0][1]["dm_pair"], {"sender": a["id"], "receiver": b["id"]})
+        self.assertEqual(events[1][1], "send_direct_message")
+        self.assertEqual(runner.context["messages"], [])
+
+    def test_dm_foreign_pair_refused_before_journal_or_rpc(self):
+        runner, a, b = self.dm_fixture()
+        runner.journal = lambda: self.fail("Foreign pair must not be journaled")
+        runner.rpc = lambda *args: self.fail("Foreign pair must not receive a message")
+        with self.assertRaisesRegex(base.Failure, "dm_pair_outside_synthetic_members"):
+            runner.message(a, {**b, "id": str(uuid.uuid4())}, "synthetic-session", "Synthetic message")
+
+    def test_unknown_dm_response_cleanup_binds_exact_pair_and_verifies_reports_before_deleting_messages(self):
+        runner, a, b = self.dm_fixture()
+        runner.context["dm_pair"] = {"sender": a["id"], "receiver": b["id"]}
+        moderator = SimpleNamespace(state={"origin": base.ORIGIN, "run": "b" * 32, "users": []})
+        db = self.db()
+        with patch.object(db, "query", return_value={"messages": 0, "reports": 0, "dm_requests": 0}) as query:
+            db.cleanup_context(runner.members, moderator, runner.context)
+        sql = query.call_args.args[0]
+        pair = f"sender_id='{a['id']}'::uuid and receiver_id='{b['id']}'::uuid"
+        self.assertIn("select id from public.messages where " + pair, sql)
+        self.assertLess(sql.index("delete from public.reports"), sql.index("do $verify_reports$"))
+        self.assertLess(sql.index("Synthetic reported context remains"), sql.index("delete from public.messages"))
+        self.assertIn(f"delete from public.dm_requests where requester_id='{a['id']}'::uuid and target_id='{b['id']}'::uuid", sql)
+        self.assertIn("'dm_requests',(select count(*)", sql)
+        runner.context["dm_pair"]["receiver"] = str(uuid.uuid4())
+        with self.assertRaisesRegex(base.Failure, "dm_pair_outside_synthetic_members"):
+            db.cleanup_context(runner.members, moderator, runner.context)
+
+    def test_surviving_dm_request_cannot_pass_context_cleanup(self):
+        runner, a, b = self.dm_fixture()
+        moderator = SimpleNamespace(state={"origin": base.ORIGIN, "run": "b" * 32, "users": []})
+        db = self.db()
+        with patch.object(db, "query", return_value={"messages": 0, "reports": 0, "dm_requests": 1}), \
+             self.assertRaisesRegex(base.Failure, "synthetic_context_cleanup_incomplete"):
+            db.cleanup_context(runner.members, moderator, runner.context)
 
 
 if __name__ == "__main__":

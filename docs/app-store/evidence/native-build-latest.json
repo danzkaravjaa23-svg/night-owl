@@ -1,7 +1,7 @@
 {
   "scope": "Unsigned native compile, bundle inventory and signed-out first-run simulator startup only; no signed-device, Apple-provider, authenticated-feature or App Store approval claim.",
-  "source_commit": "23a72582fe1d2382b7ec26261b05e6ad3eb886ab",
-  "runtime_inputs_match_commit": "f3f3a985e514aa18dbba994465465e6b79326fb1",
+  "source_commit": "b4e60b3fc3f0714669783ae23ba787ebe49c7619",
+  "runtime_inputs_match_commit": "8d4db3264524166d374cc91ee37b999ba70acff5",
   "runtime_inputs_compared": [
     "lib",
     "ios",
@@ -14,17 +14,14 @@
     "tools/deployment/ios_native_inventory.py",
     "tools/deployment/ios_simulator_smoke.py"
   ],
-  "run_url": "https://github.com/danzkaravjaa23-svg/night-owl/actions/runs/41616509440",
-  "run_id": 41616509440,
-  "run_attempt": 2,
-  "job_id": 125859751775,
+  "run_url": "https://github.com/danzkaravjaa23-svg/night-owl/actions/runs/41844335898",
+  "run_id": 41844335898,
+  "run_attempt": 1,
+  "job_id": 126623796466,
   "ci_conclusion": "success",
-  "artifact_id": 13223189145,
-  "artifact_created_at": "2026-11-03T10:41:17Z",
-  "archive_sha256": "c232873d10c828f7dba8f50f956d788241bc47a2a312764fde4578a1927cff9b",
-  "archive_bytes": 93815256,
-  "local_archive": "build/releases/night-owl-native-unsigned-23a7258-attempt2.zip",
-  "remote_artifact_expires_at": "2026-11-17T10:41:14Z",
+  "archive_sha256": "4b01868a25e7d2e3b8e214151c0fddb245c97daa2b84a45df58cb72b1c0440dd",
+  "archive_bytes": 93843613,
+  "local_archive": "build/releases/night-owl-native-unsigned-b4e60b3.zip",
   "source_verified": true,
   "archive_integrity_verified": true,
   "bundle_inventory": {
@@ -201,15 +198,15 @@
   },
   "bundles": {
     "iphoneos": {
-      "bytes": 19159629,
-      "sha256": "b288fe4cc0cf6e9f97d420727b8442c8332769dfc379a94ba63a8ea5494cf2d1",
+      "bytes": 19168249,
+      "sha256": "097875ce1f1392068745f9cc23b68ca121fb15d15e593323a30d8e5707c4007e",
       "bundle_id": "com.nightowl.ub.nightOwlUb",
       "sdk": "iphoneos26.2",
       "minimum_os": "13.0"
     },
     "simulator": {
-      "bytes": 73850249,
-      "sha256": "42d01ebef94a720e938d28a9f30d836026d43180bb586dbb96a053737d375f89",
+      "bytes": 73853279,
+      "sha256": "a77cbe461c1a7ba0711c48341f67d953c6cabdfdfa6466cb23ee063ba450f483",
       "bundle_id": "com.nightowl.ub.nightOwlUb",
       "sdk": "iphonesimulator26.2",
       "minimum_os": "13.0"
@@ -232,7 +229,7 @@
   "screenshots": [
     {
       "device_family": "iphone",
-      "local_path": "build/releases/native-23a7258-attempt2/native-evidence/startup/iphone-startup.png",
+      "local_path": "build/releases/native-b4e60b3/native-evidence/startup/iphone-startup.png",
       "width": 1206,
       "height": 2622,
       "sha256": "9a0a57bb570ff93f54d8b8de496022e530fe5cce95c12b2a7ba09dec1d4a0d1c",
@@ -241,27 +238,27 @@
     },
     {
       "device_family": "ipad",
-      "local_path": "build/releases/native-23a7258-attempt2/native-evidence/startup/ipad-startup.png",
+      "local_path": "build/releases/native-b4e60b3/native-evidence/startup/ipad-startup.png",
       "width": 2064,
       "height": 2752,
-      "sha256": "81ae5710c2858fe4501a4915dd3a14570bb98914f783a96a5682f05c6a7f303a",
+      "sha256": "996c19a384ecdc3f4eb8d8072ceed917d57b503a8801e52059d0a23c0bbe0d71",
       "visually_inspected": true,
       "observed": "Night Owl language-selection screen rendered; logo, language cards and continue action visible; no framework error or blank launch screen."
     }
   ],
   "screenshots_visually_inspected": true,
   "signed": false,
-  "local_evidence_directory": "build/releases/native-23a7258-attempt2/native-evidence",
-  "prior_attempts": [
-    {
-      "run_attempt": 1,
-      "ci_conclusion": "failure",
-      "artifact_id": 13222391661,
-      "archive_sha256": "65bcf5b5672064a11943b8b2fdcbf34cad4de53cbbed78151fbaca4f01966e6b",
-      "archive_bytes": 92258864,
-      "local_archive": "build/releases/night-owl-native-unsigned-23a7258-attempt1.zip",
-      "local_evidence": "build/releases/native-23a7258-attempt1/sanitized-result.json",
-      "startup": "incomplete: iPhone boot completed, but simctl launch timed out after 180s before a PID/screenshot. No app crash established; one fresh-runner retry passed."
-    }
-  ]
+  "local_evidence_directory": "build/releases/native-b4e60b3/native-evidence",
+  "github_artifact_digest_matched": true,
+  "download_tls_verified": true,
+  "artifact_id": 13331587746,
+  "artifact_created_at": "2026-11-04T14:24:52Z",
+  "remote_artifact_expires_at": "2026-11-18T14:24:48Z",
+  "privacy_manifest_bytes_verified": 12,
+  "bundle_plists_verified": [
+    "iphoneos",
+    "simulator"
+  ],
+  "main_executable_arm64_verified": true,
+  "startup_png_crc_verified": true
 }

@@ -1621,11 +1621,12 @@
   "store_completion": {
     "date": "2026-11-04",
     "branch": "codex/app-store-preparation",
-    "status": "Code/build, isolated recovery, hosted staging schema+008/009 and minimum Auth/media API acceptance verified; moderator/Edge/client/device acceptance, production rollout and App Store submission remain incomplete",
+    "status": "Code/build, isolated recovery, hosted staging schema+008/009+conflict fix, Auth/media and moderator/ban/selected-DM API acceptance verified; Edge/client/device acceptance, production rollout and App Store submission remain incomplete",
     "source_commits": {
       "backend": "a4924687ae1f739b7735d917fbc7d4f4e2f52c82",
-      "client": "23a72582fe1d2382b7ec26261b05e6ad3eb886ab",
-      "real_storage_fixture": "f3f3a985e514aa18dbba994465465e6b79326fb1"
+      "client": "b4e60b3fc3f0714669783ae23ba787ebe49c7619",
+      "real_storage_fixture": "f3f3a985e514aa18dbba994465465e6b79326fb1",
+      "backend_forward_conflict_fix": "8d4db3264524166d374cc91ee37b999ba70acff5"
     },
     "checks": {
       "flutter_tests_passed": 886,
@@ -1641,7 +1642,20 @@
       "hosted_staging_baseline_local_groups_passed": 11,
       "hosted_staging_auth_media_api_checks_passed": 85,
       "hosted_staging_api_runner_offline_tests_passed": 30,
-      "staging_private_input_tests_passed": 34
+      "staging_private_input_tests_passed": 34,
+      "map_names_focused_checks_passed": 7,
+      "map_names_related_suite_checks_passed": 45,
+      "map_names_validation_scope": "45 related tests passed before the final geometry refinement; all7 name/accessibility tests and analyzer passed afterward. Baseline886 full-suite result belongs to23a7258, not a new full-suite run.",
+      "deterministic_conflict_flutter_tests_passed": 39,
+      "deterministic_conflict_web_admin_tests_passed": 35,
+      "deterministic_conflict_flutter_analyze": "No issues found",
+      "business_conflict_sql_groups_passed": 14,
+      "updated_atomic_rollout_groups_passed": 12,
+      "updated_hosted_baseline_groups_passed": 11,
+      "package_allowlist_tests_passed": 3,
+      "hosted_staging_moderation_api_checks_passed": 58,
+      "hosted_staging_moderation_setup_checks_passed": 17,
+      "hosted_staging_moderation_runner_offline_tests_passed": 23
     },
     "local_logs": "build/audit/2026-11-03/store-completion/",
     "schema_trial": {
@@ -1652,8 +1666,8 @@
       "full_hosted_parity_claimed": false
     },
     "backend_components": {
-      "run_url": "https://github.com/danzkaravjaa23-svg/night-owl/actions/runs/41616849314",
-      "source_commit": "f3f3a985e514aa18dbba994465465e6b79326fb1",
+      "run_url": "https://github.com/danzkaravjaa23-svg/night-owl/actions/runs/41845473325",
+      "source_commit": "8d4db3264524166d374cc91ee37b999ba70acff5",
       "evidence": "docs/app-store/evidence/backend-components-latest.json",
       "groups_passed": 10,
       "source_hashes_matched": 11,
@@ -1688,33 +1702,31 @@
       "public_privacy_evidence": "docs/app-store/evidence/public-privacy.json",
       "public_runtime_unchanged_from": "7cc568e346c376ec2020c2c3fbeea90f09b0939b",
       "public_privacy_deployed": true,
-      "recovery_backup_verified_scope": "Full hosted recovery/operations gate remains incomplete; verified local data and filesystem recovery is recorded separately"
+      "recovery_backup_verified_scope": "Full hosted recovery/operations gate remains incomplete; verified local data and filesystem recovery is recorded separately",
+      "business_conflict_forward_fix_installed": false
     },
     "pending": [
-      "Minimum hosted Auth/media API acceptance passed; public email signup, moderator approval/rejection/ban, staging Edge and compatible-client/device acceptance remain",
-      "Full hosted recovery/ownership/ACL parity and operating procedure, with a responsible recovery operator; local recovery and minimum live API checks are already verified",
-      "Complete hosted staging Edge deletion/receipt recovery, selected-message moderation and client acceptance; the minimum Auth/media API pass does not establish full hosted acceptance",
-      "Coordinated 008/009 and compatible client rollout, scoped reported-message admin access and receipt-only gateway configuration",
+      "Public email signup/delivery, staging Edge and compatible-client/device acceptance remain; Auth/media and moderator/ban/selected-DM API acceptance passed",
+      "Full hosted recovery/ownership/ACL parity and operating procedure, with a responsible recovery operator; local recovery and live API checks are already verified",
+      "Hosted staging Edge deletion/receipt recovery and client acceptance; API fixture cleanup does not establish application account deletion",
+      "Coordinated008/009/202611040001 and compatible client rollout, scoped reported-message admin access and receipt-only gateway configuration",
       "Successful hosted retention schedule, named operator/moderator and private alert handoff",
-      "Apple Developer membership, provider keys, signing and signed iPhone/iPad acceptance",
+      "Apple App ID/capability registration confirmation, updated license banner review, provider keys, signing and signed iPhone/iPad acceptance (membership Active, Team and Connect access verified)",
       "Final native screenshots, reviewer access, owner privacy/age/export/contact/media-rights declarations",
       "TestFlight and App Review submission"
     ],
-    "paid_membership_performed": false,
     "signed_ipa_created": false,
     "store_uploaded": false,
     "package_builder": "tools/deployment/package_app_store_prep.py",
     "native": {
-      "evidence": "docs/app-store/evidence/native-build-latest.json",
-      "source_commit": "23a72582fe1d2382b7ec26261b05e6ad3eb886ab",
-      "runtime_inputs_identical_to_current_checkout": true,
-      "run_url": "https://github.com/danzkaravjaa23-svg/night-owl/actions/runs/41616509440",
-      "run_attempt": 2,
+      "source_commit": "b4e60b3fc3f0714669783ae23ba787ebe49c7619",
+      "run_url": "https://github.com/danzkaravjaa23-svg/night-owl/actions/runs/41844335898",
+      "run_attempt": 1,
       "ci_conclusion": "success",
-      "artifact_id": 13223189145,
-      "local_archive": "build/releases/night-owl-native-unsigned-23a7258-attempt2.zip",
-      "archive_sha256": "c232873d10c828f7dba8f50f956d788241bc47a2a312764fde4578a1927cff9b",
-      "archive_bytes": 93815256,
+      "artifact_id": 13331587746,
+      "local_archive": "build/releases/night-owl-native-unsigned-b4e60b3.zip",
+      "archive_sha256": "4b01868a25e7d2e3b8e214151c0fddb245c97daa2b84a45df58cb72b1c0440dd",
+      "archive_bytes": 93843613,
       "simulator_startup": {
         "status": "passed",
         "runtime": "com.apple.CoreSimulator.SimRuntime.iOS-26-2",
@@ -1730,11 +1742,17 @@
         ]
       },
       "screenshots_visually_inspected": true,
-      "privacy_manifests_inventoried": 12,
       "signed": false,
+      "github_artifact_digest_matched": true,
+      "evidence": "docs/app-store/evidence/native-build-latest.json",
+      "runtime_inputs_identical_to_current_checkout": true,
+      "runtime_inputs_match_commit": "8d4db3264524166d374cc91ee37b999ba70acff5",
+      "privacy_manifests_inventoried": 12,
+      "privacy_manifest_bytes_verified": 12,
       "physical_devices_tested": false,
       "apple_live_provider_tested": false,
-      "first_attempt": "Compiled successfully; simulator launch command timed out before PID/screenshots. Preserved as incomplete evidence; one fresh-runner retry passed."
+      "archive_integrity_verified": true,
+      "download_tls_verified": true
     },
     "recovery": {
       "verified_at": "2026-11-03T13:30:18.055564+00:00",
@@ -1770,7 +1788,7 @@
       ]
     },
     "staging_capacity": {
-      "status": "free_staging_minimum_auth_media_api_acceptance_passed_full_acceptance_pending",
+      "status": "free_staging_auth_media_and_moderation_api_acceptance_passed_full_acceptance_pending",
       "verified_on": "2026-11-04",
       "organization_name": "Night Owl Staging",
       "organization_id": "qbnfftnvlazrepyxorel",
@@ -1840,7 +1858,7 @@
       },
       "database_password_entered_and_submitted_by_owner": true,
       "database_password_read_by_agent": false,
-      "next_step": "Complete public email signup, moderator/ban and selected-message review, staging Edge erasure/receipt recovery, compatible client/device and retention/operator acceptance before production rollout",
+      "next_step": "Public email signup, staging Edge erasure/receipt recovery, compatible client/device, hosted recovery and retention/operator acceptance before coordinated production rollout",
       "hosted_staging_created": true,
       "application_schema_acl_baseline_installed": true,
       "application_data_loaded": false,
@@ -1916,7 +1934,80 @@
         "public_evidence": "docs/app-store/evidence/staging-initialization.json"
       },
       "minimum_auth_media_api_acceptance_verified": true,
-      "hosted_staging_acceptance_verified_scope": "Full moderator/Edge/client/device and recovery acceptance is not complete; minimum Auth/media API acceptance passed separately"
-    }
+      "hosted_staging_acceptance_verified_scope": "API Auth/media and moderator/ban/selected-DM checks passed; Edge/client/device, public email and hosted recovery acceptance are incomplete",
+      "business_conflict_forward_fix": {
+        "installed": true,
+        "migration": "202611040001_business_conflict_http.sql",
+        "evidence": "docs/app-store/evidence/staging-business-conflict.json",
+        "functions": 4,
+        "nonretryable_conflicts": 11,
+        "function_attributes_preserved": true,
+        "rls_relation_privileges_preserved": true,
+        "production_installed": false
+      },
+      "moderation_api_acceptance": {
+        "status": "passed",
+        "evidence": "docs/app-store/evidence/staging-moderation-acceptance.json",
+        "checks_passed": 58,
+        "setup_checks": 17,
+        "http_requests": 108,
+        "runner_offline_tests_passed": 23,
+        "cleanup_complete": true,
+        "final_synthetic_inventory": {
+          "auth_identities": 0,
+          "auth_users": 0,
+          "dm_requests": 0,
+          "messages": 0,
+          "notifications": 0,
+          "posts": 0,
+          "profiles": 0,
+          "reports": 0,
+          "storage_objects": 0,
+          "stories": 0
+        },
+        "temporary_moderator_revoked": true,
+        "audit_rows_retained": 8,
+        "total_audit_rows_retained_across_attempts": 18
+      }
+    },
+    "paid_membership_performed_by_agent": false,
+    "membership_activation_verified": true,
+    "apple_developer_account_status": "Active",
+    "staging_web_preview": {
+      "commit": "31e30016431f2e86085241db59c55e8d86972728",
+      "environment": "staging",
+      "backend_origin": "https://sreojqqqhdzkfsrbvlpl.supabase.co",
+      "main_dart_sha256": "ac4ae1b5f2fffd5f34a084153f67d0f1ea0ffb054bf34f553d01bd2d43c3c95c",
+      "url": "http://127.0.0.1:8776/#/explore",
+      "production_deployed": false,
+      "phone_width_map_caption_tap_verified": true
+    },
+    "apple_team_id": "DAVM2JZ4NN",
+    "app_store_connect_terms_accepted_by_agent": false,
+    "app_store_connect_access": "Apps page verified accessible; empty app list; New App draft prepared, not created",
+    "native_candidate": {
+      "source_commit": "b4e60b3fc3f0714669783ae23ba787ebe49c7619",
+      "run_url": "https://github.com/danzkaravjaa23-svg/night-owl/actions/runs/41844335898",
+      "status": "success",
+      "signed": false,
+      "artifact_verified": true,
+      "artifact_id": 13331587746,
+      "evidence": "docs/app-store/evidence/native-build-latest.json"
+    },
+    "backend_candidate": {
+      "run_url": "https://github.com/danzkaravjaa23-svg/night-owl/actions/runs/41845473325",
+      "source_commit": "8d4db3264524166d374cc91ee37b999ba70acff5",
+      "ci_conclusion": "success",
+      "artifact_verification": "passed"
+    },
+    "apple_app_id_registration": {
+      "status": "review_prepared_awaiting_owner_confirmation",
+      "bundle_id": "com.nightowl.ub.nightOwlUb",
+      "team_id": "DAVM2JZ4NN",
+      "description": "Night Owl UB",
+      "sign_in_with_apple": "selected_as_primary_app_id_not_registered",
+      "key_created": false
+    },
+    "apple_license_update_banner_observed": true
   }
 }

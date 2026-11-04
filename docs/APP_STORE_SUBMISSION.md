@@ -1,10 +1,12 @@
 # Night Owl UB — App Store эхний хувилбарын бэлтгэл
 
-Шалгасан: **2026-11-03, Asia/Ulaanbaatar**. Одоогийн шалгасан client `23a7258`, backend/component `f3f3a98`; нийтэд ажиллаж буй web `e0e1d45` (privacy-only; runtime `7cc568e`-тэй ижил).
+Шинэчилсэн: **2026-11-04, Asia/Ulaanbaatar**. Client `b4e60b3`, backend forward fix `8d4db32`; нийтэд ажиллаж буй web `e0e1d45` (privacy-only; runtime `7cc568e`-тэй ижил).
 
-**Код, автомат шалгалт болон unsigned native build-ийн бэлтгэл шалгагдсан; App Store-д илгээхэд хараахан бэлэн биш.** Эзэмшигч энэ удаа Apple Developer гишүүнчлэлээ идэвхжүүлээгүйг баталсан. IPA, TestFlight upload болон review submission үүсээгүй. Unsigned native compile нь signing, Apple login, бодит төхөөрөмжийн тестийг орлохгүй.
+**Apple membership Active, Team `DAVM2JZ4NN` болон App Store Connect Apps хандалт батлагдсан.** Night Owl App ID-г Sign in with Apple capability-тай бүртгэх review бэлэн; эцсийн Register зөвшөөрөл хүлээгдэж байна. Agent гэрээ зөвшөөрөөгүй, түлхүүр/signing asset үүсгээгүй. App record, signed IPA, TestFlight upload болон review submission хараахан үүсээгүй.
 
-Одоогийн client-ийн 886 Flutter тест болон analyzer PASS; шинэ backend-ийн бодит local component 10 бүлэг PASS. 008/009 production-д суулгаагүй; Edge эх deploy хийгдсэн боловч устгал идэвхгүй. Free багцад automatic backup байхгүй, сэргээх manual DB/Storage backup болон hosted acceptance батлагдаагүй тул төлбөрөөс гадна эдгээр gate үлдсэн. Түүхэн нотолгоо [build receipt](BUILD_VERIFICATION.json), [release тайлан](RELEASE_READINESS.md)-д хадгалагдана.
+Суурь `23a7258`-ийн 886 Flutter тест PASS; газрын нэр болон шинэ conflict handling-д focused шалгалтууд нэмж давсан. Одоогийн `b4e60b3` unsigned iPhone/simulator build болон iPhone/iPad startup PASS; архивын checksum, bundle/12 privacy manifest болон эхлэх дэлгэцүүдийг татаж баталгаажуулсан. Backend `8d4db32`-ийн бодит local Auth/Storage/Edge 10 бүлэг PASS. Staging baseline+008/009+`202611040001` сууж, minimum Auth/media85 болон moderation58+setup17 API шалгалт PASS; scoped fixture cleanup дууссан. Local DB/медиа recovery батлагдсан ч hosted recovery/ACL/operator gate үлдэнэ.
+
+Public email delivery, staging Edge deletion/receipt recovery, signed Apple/device acceptance, retention/moderator ажиллагаа, coordinated production rollout ба Store мэдүүлгүүд дутуу. Unsigned compile нь signing болон бодит Apple login-ийг орлохгүй. [Одоогийн receipt](BUILD_VERIFICATION.json) · [release тайлан](RELEASE_READINESS.md) · [эзэмшигчийн алхам](app-store/OWNER_NEXT_STEPS.md).
 
 ## Оруулсны дараа засаж болох уу?
 
@@ -27,7 +29,7 @@ Apple-ийн одоогийн review-status хуудсанд submission-ийн *
 
 Apple Developer Program **жилд 99 USD**, боломжтой оронд дотоод валютаар. Апп үнэгүй байсан ч Store түгээлтэд гишүүнчлэл хэрэгтэй. Төлбөр, хэнээр бүртгүүлэх (individual/organization), гэрээг эзэмшигч шийднэ. Individual бүртгэлд хууль ёсны нэр seller name болдог; байгууллагад D-U-N-S зэрэг баталгаажуулалт шаардаж болно. [Enrollment](https://developer.apple.com/help/account/membership/program-enrollment), [бүртгэлийн шаардлага](https://developer.apple.com/programs/enroll/).
 
-## Бодит төлөв ба хааж буй зүйлс
+## 2026-11-03-ны суурь шалгалт (түүхэн)
 
 | Зүйл | 2026-11-03-нд баталсан төлөв | Дараагийн шалгалт |
 |---|---|---|

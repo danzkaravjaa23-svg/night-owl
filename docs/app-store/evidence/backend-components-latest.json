@@ -3,7 +3,7 @@
   "production_schema_parity": false,
   "apple_live_provider_tested": false,
   "hosted_project_accessed": false,
-  "source_commit": "f3f3a985e514aa18dbba994465465e6b79326fb1",
+  "source_commit": "8d4db3264524166d374cc91ee37b999ba70acff5",
   "cli_version": "2.122.1",
   "passed": [
     "official local stack and actual Edge source are reachable",
@@ -48,7 +48,7 @@
     "supabase_kong_nightowl-component public.ecr.aws/supabase/kong:2.8.1",
     "supabase_db_nightowl-component public.ecr.aws/supabase/postgres:17.11.0.006"
   ],
-  "elapsed_seconds": 96,
+  "elapsed_seconds": 102,
   "http_trace": [
     {
       "stage": "control_reconcile",
@@ -235,12 +235,19 @@
   ],
   "passed_count": 10,
   "ci": {
-    "run_id": 41616849314,
-    "run_url": "https://github.com/danzkaravjaa23-svg/night-owl/actions/runs/41616849314",
+    "run_id": 41845473325,
+    "run_url": "https://github.com/danzkaravjaa23-svg/night-owl/actions/runs/41845473325",
     "conclusion": "success",
-    "artifact_id": 13221886268,
-    "artifact_zip_sha256": "7e349801021254abda99df8faa220e5a8be9c7bb6a2397e84923fc305129aa69",
-    "downloaded_json_sha256": "b8bf5bec3c8af4e8c1cec229220443b43865abb3824c5f6cc7b066b3d3a140c5",
-    "source_hashes_verified_against_checkout": 11
+    "artifact_id": 13329969380,
+    "artifact_zip_sha256": "e9d0ce205552d6e60417f4ed4110d1f72124f316b0c02507bbfa4ef19c700443",
+    "downloaded_json_sha256": "7df972fd9ea99bffbe6cb2ea88ff4de64a254889b8837092282a1a73654e94aa",
+    "source_hashes_verified_against_checkout": 11,
+    "source_hashes_verified_against_commit": "8d4db3264524166d374cc91ee37b999ba70acff5",
+    "artifact_bytes": 1926,
+    "github_artifact_digest_matched": true,
+    "archive_crc_verified": true,
+    "download_tls_verified": true,
+    "artifact_created_at": "2026-11-04T14:15:53Z",
+    "remote_artifact_expires_at": "2026-11-18T14:15:53Z"
   }
 }

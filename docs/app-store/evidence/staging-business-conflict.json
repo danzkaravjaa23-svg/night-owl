@@ -1,0 +1,102 @@
+{
+  "project_ref": "sreojqqqhdzkfsrbvlpl",
+  "production_accessed": false,
+  "tls": "verify-full",
+  "source_sha256": {
+    "migration": "03026107358f1b2ae085e9d843e5b4aa708d4f760613c56e8d54e3cbed719e5a",
+    "postflight": "83ca3b9af86929836e6e462e41356528c61040ee66cd2432b3c17d0b38005a4f"
+  },
+  "status": "passed",
+  "before": {
+    "origin": "https://sreojqqqhdzkfsrbvlpl.supabase.co",
+    "functions": [
+      {
+        "signature": "public.admin_console_action(text,uuid,text,uuid)",
+        "pt409_raises": 0,
+        "attributes_sha256": "eb2fcad007ac9b3d4dcd516399df3507dce488390983f673eea9570430a34a1f",
+        "definition_sha256": "af16a57cb444d8223bde07747983dd1aab7321b15630bb5ee38e33a64467ecf1",
+        "serialization_raises": 7,
+        "body_normalized_sha256": "1917fb21a180ce3c761648b220f2308520db28ae997b172f5e705e093bf4d9a1"
+      },
+      {
+        "signature": "public.admin_console_report_guard()",
+        "pt409_raises": 0,
+        "attributes_sha256": "bf4a5df9d41b5f534d6d3e0be86629cbc71bd7a7e3ee14a9cca653f66996ac2c",
+        "definition_sha256": "f347f80e1f130c4d47a62aa060559bfc35f42ad2e80cb2dc396bcd8606c64819",
+        "serialization_raises": 1,
+        "body_normalized_sha256": "db8ec010c6ba778e80abee707f46961c1777688782f125008bf9dede396b308b"
+      },
+      {
+        "signature": "public.admin_console_review(text,uuid,uuid,text,text)",
+        "pt409_raises": 0,
+        "attributes_sha256": "a77682e608ce29302a2dfb4a893b7ec8ebbc329b44dda9dca99cb9452f022ae0",
+        "definition_sha256": "04e6e7c43134965aba76e2074c85b1a8afffa763487e246b9db9b2a1d59e6e47",
+        "serialization_raises": 2,
+        "body_normalized_sha256": "99bde51bb4b9f750dfe763f27adcbadac13794140e571c4cceb981ff98995074"
+      },
+      {
+        "signature": "public.check_in_venue(uuid)",
+        "pt409_raises": 0,
+        "attributes_sha256": "6c4afcdf2f72f457520bffdaace9b950093218980956cddd905caff43fd1dbe2",
+        "definition_sha256": "ad4d491b0040ccc0090174cc81fbc4d0a75b5a072ae51bf882081fba9eb7180f",
+        "serialization_raises": 1,
+        "body_normalized_sha256": "3e71eebbbb168386c7d44b794b46947677eb89f4735cb16b574f61f1c73889ec"
+      }
+    ],
+    "policies_sha256": "368cb60b739ca0340faebbbe28353c5f5d7b70efde389775c14844a8105b7257",
+    "relation_security_sha256": "ce17b1987c42228efc52b9f2f5c9e12c2f9fe1453bc967a948e16bf4b6a2e45a"
+  },
+  "transaction_sha256": "7f3f9a3e7df9243a8f376c7ed90d8eb24b3c20aed72c89601b004c531fbb5327",
+  "after": {
+    "origin": "https://sreojqqqhdzkfsrbvlpl.supabase.co",
+    "functions": [
+      {
+        "signature": "public.admin_console_action(text,uuid,text,uuid)",
+        "pt409_raises": 7,
+        "attributes_sha256": "eb2fcad007ac9b3d4dcd516399df3507dce488390983f673eea9570430a34a1f",
+        "definition_sha256": "b2eb3c9608db268e362be42063e082cda45e0ddd3078d5379e019d4e661c421d",
+        "serialization_raises": 0,
+        "body_normalized_sha256": "1917fb21a180ce3c761648b220f2308520db28ae997b172f5e705e093bf4d9a1"
+      },
+      {
+        "signature": "public.admin_console_report_guard()",
+        "pt409_raises": 1,
+        "attributes_sha256": "bf4a5df9d41b5f534d6d3e0be86629cbc71bd7a7e3ee14a9cca653f66996ac2c",
+        "definition_sha256": "50c71915330f14a7d7bccaa62b3c3de2353d4f6fdf41c4d2380c3a196a5992f5",
+        "serialization_raises": 0,
+        "body_normalized_sha256": "db8ec010c6ba778e80abee707f46961c1777688782f125008bf9dede396b308b"
+      },
+      {
+        "signature": "public.admin_console_review(text,uuid,uuid,text,text)",
+        "pt409_raises": 2,
+        "attributes_sha256": "a77682e608ce29302a2dfb4a893b7ec8ebbc329b44dda9dca99cb9452f022ae0",
+        "definition_sha256": "b6ce3a794c495880624bae5cc622d73996da07706ff5434f5c1924c71c09493c",
+        "serialization_raises": 0,
+        "body_normalized_sha256": "99bde51bb4b9f750dfe763f27adcbadac13794140e571c4cceb981ff98995074"
+      },
+      {
+        "signature": "public.check_in_venue(uuid)",
+        "pt409_raises": 1,
+        "attributes_sha256": "6c4afcdf2f72f457520bffdaace9b950093218980956cddd905caff43fd1dbe2",
+        "definition_sha256": "f78f7e693b8c4a3347fc74e1f4dc1ddb7b5011852963c91bb0db94838074747e",
+        "serialization_raises": 0,
+        "body_normalized_sha256": "3e71eebbbb168386c7d44b794b46947677eb89f4735cb16b574f61f1c73889ec"
+      }
+    ],
+    "policies_sha256": "368cb60b739ca0340faebbbe28353c5f5d7b70efde389775c14844a8105b7257",
+    "relation_security_sha256": "ce17b1987c42228efc52b9f2f5c9e12c2f9fe1453bc967a948e16bf4b6a2e45a"
+  },
+  "function_count": 4,
+  "nonretryable_conflicts": 11,
+  "function_attributes_preserved": true,
+  "rls_and_relation_privileges_preserved": true,
+  "recorded_at": "2026-11-04T14:14:21.064208+00:00",
+  "source_commit": "8d4db3264524166d374cc91ee37b999ba70acff5",
+  "scope": "Staging-only forward fix after previously installed baseline+008/009; no initializer replay",
+  "local_validation": {
+    "business_conflict_groups_passed": 14,
+    "atomic_rollout_groups_passed": 12,
+    "fresh_baseline_groups_passed": 11,
+    "package_tests_passed": 3
+  }
+}
