@@ -1,22 +1,11 @@
 {
   "date": "2026-11-04",
-  "status": "free_staging_initialized_application_baseline_pending",
+  "status": "free_staging_application_installed_minimum_auth_media_api_acceptance_passed",
   "project_ref": "sreojqqqhdzkfsrbvlpl",
   "api_origin": "https://sreojqqqhdzkfsrbvlpl.supabase.co",
   "plan": "Free",
   "dashboard_health": "Healthy",
   "region": "ap-northeast-1",
-  "inventory": {
-    "captured_at": "2026-11-04T11:06:09.483394+00:00",
-    "postgres_version": "17.11",
-    "csv_sha256": "31f3c83b9f9c75228540ce18de544304084cb652ea557f6daa3c175c65dcdcdb",
-    "app_relation_count": 0,
-    "public_non_extension_function_count": 1,
-    "only_public_non_extension_function": "rls_auto_enable()",
-    "managed_auth_storage_helpers_present": true,
-    "app_bucket_count": 0,
-    "realtime_app_membership_count": 0
-  },
   "dashboard_configuration": {
     "data_api_enabled": true,
     "automatically_expose_new_tables": false,
@@ -68,16 +57,75 @@
       "schema ACLs",
       "role attributes"
     ],
-    "existing_object_acl_changes_performed": false
+    "existing_object_acl_changes_performed": false,
+    "postflight_result_is_initial_preinstall_evidence": true
   },
   "staging_release_bundle": {
     "prepared": true,
-    "installed": false,
+    "installed": true,
     "bundle_sha256": "5ba256e2813cbe8f41c2d3f10caf66a9b6f2377bd58156e0bd521c18ef41c62e"
   },
-  "application_baseline_installed": false,
-  "synthetic_acceptance_complete": false,
+  "application_baseline_installed": true,
+  "synthetic_acceptance_complete": true,
   "production_modified": false,
   "paid_upgrade_performed": false,
-  "next_required": "Reviewed metadata-only application baseline, then target-specific008009 and Edge configuration followed by synthetic Auth/Storage/moderation/erasure acceptance"
+  "next_required": "Staging moderator/ban, erasure Edge and receipt recovery, compatible client/device acceptance, recovery ownership/retention and coordinated production rollout remain separate gates.",
+  "initial_inventory": {
+    "captured_at": "2026-11-04T11:06:09.483394+00:00",
+    "postgres_version": "17.11",
+    "csv_sha256": "31f3c83b9f9c75228540ce18de544304084cb652ea557f6daa3c175c65dcdcdb",
+    "app_relation_count": 0,
+    "public_non_extension_function_count": 1,
+    "only_public_non_extension_function": "rls_auto_enable()",
+    "managed_auth_storage_helpers_present": true,
+    "app_bucket_count": 0,
+    "realtime_app_membership_count": 0
+  },
+  "inventory": {
+    "captured_at": "2026-11-04T12:01:57.869154+00:00",
+    "postgres_version": "17.11",
+    "app_relation_count": 44,
+    "public_non_extension_function_count": 98,
+    "includes_existing_rls_helper": true,
+    "app_bucket_count": 4,
+    "all_app_buckets_private": true,
+    "realtime_app_membership_count": 8,
+    "complement_sha256": "edcb273b9db59c6ee6baba3cf60a510f176903d44c7692a64fc5f3e9311ad0a9"
+  },
+  "application_installation": {
+    "generator": "tools/deployment/hosted_staging_baseline.mjs",
+    "combined_bundle_sha256": "1e3809f55566471a51334809224f9af2d268048883b6fba72dd716bb0081a6d5",
+    "postflight_sha256": "7e31d9e642e0dda20e4d9f39f79f7b222386e61c873d91a34ffea90d95ef3d13",
+    "baseline_counts": {
+      "app_tables": 39,
+      "public_functions": 78,
+      "app_constraints": 129,
+      "app_indexes": 92,
+      "application_policies": 155,
+      "storage_policies": 14,
+      "application_triggers": 46,
+      "private_buckets": 4,
+      "realtime_tables": 8
+    },
+    "combined_app_table_count": 44,
+    "live_preflight_passed": true,
+    "atomic_installation_passed": true,
+    "live_postflight_passed": true,
+    "reviewed_source_and_target_metadata_pinned": true,
+    "live_locale_guard_passed": true,
+    "managed_storage_triggers_preserved": 11,
+    "added_application_storage_guards": [
+      "account_erasure_write_guard",
+      "ugc_media_write_guard"
+    ],
+    "managed_platform_before_after_sha256": "79790aef377d0124f693e6c698bf5f8b2a4bb383126940d280016d7bdb9bcdee",
+    "source_user_rows_copied": false,
+    "source_default_acls_replayed": false,
+    "client_table_rights_normalized": true,
+    "local_fixture_groups_passed": 11,
+    "local_fixture_locale_substitution_only": true
+  },
+  "synthetic_acceptance_scope": "Minimum two-user Auth/password/refresh and pending image/video API acceptance only; see staging-acceptance.json",
+  "synthetic_acceptance_evidence": "staging-acceptance.json",
+  "full_store_release_acceptance_complete": false
 }

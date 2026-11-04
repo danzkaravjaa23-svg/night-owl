@@ -1619,9 +1619,9 @@
     "scope": "Web startup/cache delivery only; app/backend source unchanged from production 9c8b862. App Store 008/009/Edge rollout remains pending."
   },
   "store_completion": {
-    "date": "2026-11-03",
+    "date": "2026-11-04",
     "branch": "codex/app-store-preparation",
-    "status": "Code/build and isolated database/filesystem recovery verified; hosted coordinated rollout and App Store submission are not complete",
+    "status": "Code/build, isolated recovery, hosted staging schema+008/009 and minimum Auth/media API acceptance verified; moderator/Edge/client/device acceptance, production rollout and App Store submission remain incomplete",
     "source_commits": {
       "backend": "a4924687ae1f739b7735d917fbc7d4f4e2f52c82",
       "client": "23a72582fe1d2382b7ec26261b05e6ad3eb886ab",
@@ -1637,7 +1637,11 @@
       "atomic_rollout_operations_groups_passed": 10,
       "captured_schema_trial_groups_passed": 8,
       "real_backend_component_groups_passed": 10,
-      "migration_offline_tests_passed": 97
+      "migration_offline_tests_passed": 97,
+      "hosted_staging_baseline_local_groups_passed": 11,
+      "hosted_staging_auth_media_api_checks_passed": 85,
+      "hosted_staging_api_runner_offline_tests_passed": 30,
+      "staging_private_input_tests_passed": 34
     },
     "local_logs": "build/audit/2026-11-03/store-completion/",
     "schema_trial": {
@@ -1687,9 +1691,9 @@
       "recovery_backup_verified_scope": "Full hosted recovery/operations gate remains incomplete; verified local data and filesystem recovery is recorded separately"
     },
     "pending": [
-      "Free staging settings and future default-ACL hardening verified; application schema/ACL baseline, synthetic data, prepared target-specific 008/009 and Edge installation, and hosted acceptance remain pending",
-      "Hosted Auth/Storage/ACL recovery and access acceptance, with a responsible recovery operator",
-      "Separate hosted copy acceptance with target-specific bundle and synthetic accounts/media",
+      "Minimum hosted Auth/media API acceptance passed; public email signup, moderator approval/rejection/ban, staging Edge and compatible-client/device acceptance remain",
+      "Full hosted recovery/ownership/ACL parity and operating procedure, with a responsible recovery operator; local recovery and minimum live API checks are already verified",
+      "Complete hosted staging Edge deletion/receipt recovery, selected-message moderation and client acceptance; the minimum Auth/media API pass does not establish full hosted acceptance",
       "Coordinated 008/009 and compatible client rollout, scoped reported-message admin access and receipt-only gateway configuration",
       "Successful hosted retention schedule, named operator/moderator and private alert handoff",
       "Apple Developer membership, provider keys, signing and signed iPhone/iPad acceptance",
@@ -1766,7 +1770,7 @@
       ]
     },
     "staging_capacity": {
-      "status": "free_staging_initialized_application_baseline_pending",
+      "status": "free_staging_minimum_auth_media_api_acceptance_passed_full_acceptance_pending",
       "verified_on": "2026-11-04",
       "organization_name": "Night Owl Staging",
       "organization_id": "qbnfftnvlazrepyxorel",
@@ -1800,10 +1804,18 @@
           "function": "public.rls_auto_enable()"
         },
         "postgresql_version": "17.11",
-        "public_application_relation_count": 0,
-        "public_nonextension_functions": [
-          "public.rls_auto_enable()"
-        ]
+        "public_application_relation_count": 38,
+        "initial_empty_app_inventory": {
+          "public_application_relation_count": 0,
+          "public_nonextension_functions": [
+            "public.rls_auto_enable()"
+          ]
+        },
+        "public_nonextension_function_count": 98,
+        "managed_public_helper": "public.rls_auto_enable()",
+        "application_relations_including_private_schemas": 44,
+        "private_app_buckets": 4,
+        "realtime_application_tables": 8
       },
       "default_acl_hardening_checked": true,
       "default_acl_hardening": {
@@ -1824,15 +1836,15 @@
         "prepared": true,
         "origin": "https://sreojqqqhdzkfsrbvlpl.supabase.co",
         "sha256": "5ba256e2813cbe8f41c2d3f10caf66a9b6f2377bd58156e0bd521c18ef41c62e",
-        "installed": false
+        "installed": true
       },
       "database_password_entered_and_submitted_by_owner": true,
       "database_password_read_by_agent": false,
-      "next_step": "Install the reviewed application schema/ACL baseline, synthetic data, prepared target-specific 008/009 bundle and Edge functions before hosted acceptance",
+      "next_step": "Complete public email signup, moderator/ban and selected-message review, staging Edge erasure/receipt recovery, compatible client/device and retention/operator acceptance before production rollout",
       "hosted_staging_created": true,
-      "application_schema_acl_baseline_installed": false,
+      "application_schema_acl_baseline_installed": true,
       "application_data_loaded": false,
-      "migrations_008_009_installed": false,
+      "migrations_008_009_installed": true,
       "edge_functions_installed": false,
       "hosted_staging_acceptance_verified": false,
       "roles_changed": false,
@@ -1840,7 +1852,71 @@
       "existing_project_paused_by_agent": false,
       "paid_upgrade_performed": false,
       "production_modified": false,
-      "initialization_receipt": "docs/app-store/evidence/staging-initialization.json"
+      "initialization_receipt": "docs/app-store/evidence/staging-initialization.json",
+      "production_user_data_loaded": false,
+      "synthetic_api_acceptance": {
+        "status": "passed",
+        "verified": true,
+        "scope": "Minimum hosted Auth/media API acceptance only",
+        "evidence": "docs/app-store/evidence/staging-acceptance.json",
+        "checks_passed": 85,
+        "runner_offline_tests_passed": 30,
+        "private_input_tests_passed": 34,
+        "synthetic_users": 2,
+        "accounts_provisioned_via_admin_api": true,
+        "password_login_refresh_profile_trigger_verified": true,
+        "png_mp4_upload_download_verified": true,
+        "pending_post_story_private_signed_media_verified": true,
+        "cross_user_and_anonymous_denials_verified": true,
+        "self_approval_noop_status_unchanged_verified": true,
+        "overwrite_guards_verified": true,
+        "one_account_cleanup_preserves_other_session_media": true,
+        "cleanup_complete": true,
+        "prior_attempt_scoped_cleanup_passed": true,
+        "final_counts": {
+          "auth_users": 0,
+          "auth_identities": 0,
+          "profiles": 0,
+          "posts": 0,
+          "stories": 0,
+          "storage_objects": 0
+        },
+        "final_counts_sha256": "6515f8da8488191f41a4a745833c426ae8b3bb28e4409a9cb70cb2892b0fcb07",
+        "excluded": [
+          "Public email signup and email delivery",
+          "Moderator approval/rejection/ban acceptance",
+          "Browser/native UI and signed devices",
+          "Application Edge account erasure and receipt recovery",
+          "Full hosted recovery/ownership/ACL parity",
+          "Production cutover"
+        ]
+      },
+      "initialization": {
+        "generator": "tools/deployment/hosted_staging_baseline.mjs",
+        "bundle": "build/hosted-staging-baseline-release-v2/install-staging-baseline-008-009.sql",
+        "bundle_sha256": "1e3809f55566471a51334809224f9af2d268048883b6fba72dd716bb0081a6d5",
+        "preflight_passed": true,
+        "install_passed": true,
+        "postflight_passed": true,
+        "atomic_transaction": true,
+        "tls_certificate_and_hostname_verified": true,
+        "runtime_locale_guard_passed": true,
+        "source_and_target_locale": "UTF8 / ICU en-US / en_US.UTF-8 / recorded version 153.121",
+        "input_metadata_pinned": true,
+        "native_storage_triggers_preserved": 11,
+        "application_storage_guards_added": 2,
+        "platform_boundary_before_after_sha256": "79790aef377d0124f693e6c698bf5f8b2a4bb383126940d280016d7bdb9bcdee",
+        "managed_roles_defaults_preserved": true,
+        "client_table_Dxtm_and_grant_options_removed": true,
+        "all_four_buckets_private_from_creation": true,
+        "local_fixture_groups_passed": 11,
+        "local_fixture_locale_substitution_only": true,
+        "original_locale_guard_rejection_tested": true,
+        "local_receipt": "build/audit/2026-11-04/hosted-staging-install/fixture-release-v2.json",
+        "public_evidence": "docs/app-store/evidence/staging-initialization.json"
+      },
+      "minimum_auth_media_api_acceptance_verified": true,
+      "hosted_staging_acceptance_verified_scope": "Full moderator/Edge/client/device and recovery acceptance is not complete; minimum Auth/media API acceptance passed separately"
     }
   }
 }
