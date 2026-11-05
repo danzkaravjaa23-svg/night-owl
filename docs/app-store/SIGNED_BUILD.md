@@ -1,14 +1,20 @@
 # Signed iOS archive and local export
 
-Prepared on 2026-11-04 for Team `DAVM2JZ4NN`, bundle `com.nightowl.ub.nightOwlUb`, App Store Connect app `6830714135`, version `1.0.0`. Runner Debug/Profile/Release now select this verified Team. The source preflight checks the Team in every configuration; this does not prove a certificate or provisioning profile exists.
+Updated on 2026-11-05 for Team `DAVM2JZ4NN`, bundle `com.nightowl.ub.nightOwlUb`, App Store Connect app `6830714135`, version `1.0.0`. Runner Debug/Profile/Release select this verified Team. Source checks and the installed signing assets below do not prove a signed build or upload.
 
-The local Mac currently runs macOS 15.5 (`24F74`), with only `/Library/Developer/CommandLineTools` selected. Full Xcode and the iPhoneOS SDK are absent, and `security find-identity -v -p codesigning` reports **0 valid identities**. Nothing was installed, exported, registered, archived or uploaded during this preparation. Use a compatible Xcode host, such as the existing CI toolchain Xcode 26.3 / iOS SDK 26.2, after its signing assets are configured. Local Xcode 26.3 requires a compatible macOS update first; the previously downloaded OS update is not an installed update.
+**Local toolchain:** official Apple-silicon Xcode **26.3** is now at `/Applications/Xcode.app`. Its download passed `pkgutil` system-trust verification as signed Apple Software, and the app passed `codesign --deep --strict`. Xcode requires macOS **15.6+**; the last verified host version is **15.5 (`24F74`)**. On 2026-11-05 the owner explicitly approved the Sequoia **15.8.2** EULA and **Agree** was clicked. The owner entered the Mac password locally and later reported a restart. The local reboot record confirms a reboot at **2026-11-05 01:40 +08**, but fresh `sw_vers` and System Settings still show **15.5 (`24F74`)**. Sequoia **15.8.2** is downloaded/prepared and System Settings shows **Restart Now** (about 20 minutes); only that update is selected, with macOS 27 and Safari unchecked. After the owner authorized it, **Restart Now** was clicked. System Settings requested the Mac password again in **“Enter your password to install software update”**, with an empty secure field. The owner must complete this second authorization locally; the installation restart has not started and OS update completion is not confirmed. Xcode first launch, its separate license and platform components are not complete; the developer directory must select full Xcode after the OS update. No signed archive, export or upload has run.
+
+Installation selected `/Applications/Xcode.app/Contents/Developer` system-wide, so Apple tool shims currently stop at the unaccepted Xcode license. Until the owner completes setup, read-only repository work can use `env DEVELOPER_DIR=/Library/Developer/CommandLineTools git …`; this per-command workaround does not enable iOS builds or accept any license. Restoring the system-wide selection requires administrator authentication and has not been performed.
+
+**Local signing assets verified on 2026-11-05:** Apple Distribution certificate **`B24XM2GM33`**, Team **`DAVM2JZ4NN`**, SHA-1 **`D1BFC420BB731368787AAE217CB8FA9B976F16FE`**, was created with the owner's explicit approval. Its public key matches the Keychain-generated CSR; the private key remains in the login Keychain and was not exported. Apple's WWDR G3 intermediate was verified against the existing root and imported without a trust override. `security find-identity` reports **1 valid identity**.
+
+App Store Connect profile **Night Owl UB App Store 2026-11-05** (portal ID **`73ZQZ7J549`**, UUID **`179bf2a0-640f-4b1a-b1c2-6a8b5b221bbc`**) expires **2027-11-04T16:44:33Z**. The helper validated its exact `DAVM2JZ4NN.com.nightowl.ub.nightOwlUb` app identifier, `com.apple.developer.applesignin = ['Default']`, `get-task-allow = false`, `beta-reports-active = true` and matching certificate SHA-1. The profile is installed in both standard Xcode and MobileDevice provisioning-profile folders with mode **0600**. Supporting signing files are in `/Users/usukhesbesty/Night Owl Apple Access 2026-11-04` with file mode **0600**; this does not establish possession of the separate Apple-login `.p8` key. [Verified local setup receipt](evidence/local-ios-signing-setup.json).
 
 ## Required inputs
 
 - A committed, clean iOS/runtime candidate; the old unsigned CI artifact does not prove this Team change has compiled.
 - Pinned Flutter 3.44.0, CocoaPods, full Xcode 26+ and iOS SDK 26+, with the owner's license/first-launch setup completed.
-- An **already installed** Apple Distribution certificate with its private key in the build host's keychain, and an unexpired App Store Connect distribution profile for this Team, explicit bundle and Sign in with Apple entitlement. Only the profile UUID and certificate SHA-1 fingerprint go into the commands below. These are metadata, not private keys. The `.p8` Apple login key is not an app signing identity.
+- The **installed and verified** local Distribution identity and profile above; recheck their validity before each build. The helper reads public profile/identity metadata, not the private key. The `.p8` Apple login key is not an app signing identity.
 - One public JSON config containing exactly `BACKEND_MODE`, `BACKEND_URL`, `BACKEND_PUBLIC_KEY`; the existing validator rejects server/user credentials. Staging uses `sreojqqqhdzkfsrbvlpl`; production uses `jbbdnpsvstwxtgtjoeru`. The `anon` JWT's project ref must match the chosen origin. Never supply a server `.env`, service-role key or signing key.
 - A build number verified unused in Connect. `1` matches the current source and no build has been uploaded as of this preparation; recheck before each upload. Staging acceptance is not a production submission candidate.
 
@@ -35,74 +41,35 @@ After ZIP integrity, exported code-signature, bundle/Team/entitlement/version an
 
 ## Archive and export, after those inputs exist
 
-Run from the repository root in a shell on the signing host. Replace the three input placeholders first. The script refuses an existing destination, records the source/config identity, and uses manual signing with existing assets. It does not upload or pass provisioning-update/device-registration flags. Flutter 3.44's ordinary `flutter build ipa` export path includes those flags, so this procedure runs `xcodebuild` directly after Flutter generates its configuration.
+Run from the repository root only after the OS update and Xcode first launch are complete. Set the public config path, choose staging or production, and confirm the build number first. `ios_signing.py prepare` refuses an existing destination and generates the receipt consumed by its `verify` command. It uses the existing local identity/profile without exporting a private key. This recipe does not upload or pass provisioning-update/device-registration flags. Flutter 3.44's ordinary `flutter build ipa` export path includes those flags, so it runs `xcodebuild` directly after Flutter generates its configuration.
 
 ```sh
 set -eu
+umask 077
+export DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
 nightowl_config='/absolute/path/to/public-backend.json'
-nightowl_profile_uuid='REPLACE_WITH_INSTALLED_APP_STORE_PROFILE_UUID'
-nightowl_identity_sha1='REPLACE_WITH_EXISTING_DISTRIBUTION_CERTIFICATE_SHA1'
-nightowl_backend_ref='sreojqqqhdzkfsrbvlpl'
+nightowl_profile="$HOME/Library/Developer/Xcode/UserData/Provisioning Profiles/179bf2a0-640f-4b1a-b1c2-6a8b5b221bbc.mobileprovision"
+nightowl_environment='staging'
 nightowl_build_number='1'
-export nightowl_config nightowl_profile_uuid nightowl_identity_sha1
-export nightowl_backend_ref nightowl_build_number
 
 python3 tools/deployment/ios_preflight.py
-python3 - <<'PY'
-import base64, json, os, re
-from pathlib import Path
-from sys import path
-path.insert(0, str(Path('tools/deployment').resolve()))
-from build_admin_clients import ClientConfig, CONFIG_KEYS
-values = json.loads(Path(os.environ['nightowl_config']).read_text())
-assert isinstance(values, dict) and set(values) == CONFIG_KEYS, 'Use only the three public settings'
-config = ClientConfig.parse(values, ('', ''))
-ref = os.environ['nightowl_backend_ref']
-assert ref in {'sreojqqqhdzkfsrbvlpl', 'jbbdnpsvstwxtgtjoeru'}, 'Unknown release environment'
-assert config.mode == 'supabase' and config.url == f'https://{ref}.supabase.co', 'Wrong backend'
-segment = config.public_key.split('.')[1]
-claims = json.loads(base64.urlsafe_b64decode(segment + '=' * (-len(segment) % 4)))
-assert claims.get('ref') == ref, 'Public key belongs to a different project'
-assert re.fullmatch(r'[0-9A-Fa-f]{8}(?:-[0-9A-Fa-f]{4}){3}-[0-9A-Fa-f]{12}', os.environ['nightowl_profile_uuid']), 'Profile UUID required'
-assert re.fullmatch(r'[0-9A-Fa-f]{40}', os.environ['nightowl_identity_sha1']), 'Certificate SHA-1 required'
-assert re.fullmatch(r'[1-9][0-9]{0,8}', os.environ['nightowl_build_number']), 'Positive build number required'
-PY
-
-test -z "$(git status --porcelain --untracked-files=normal -- ios lib assets pubspec.yaml pubspec.lock tools/deployment/ios_preflight.py tools/deployment/build_admin_clients.py)"
+test -z "$(git status --porcelain --untracked-files=normal -- ios lib assets pubspec.yaml pubspec.lock tools/deployment/ios_preflight.py tools/deployment/ios_signing.py tools/deployment/build_admin_clients.py)"
 nightowl_commit=$(git rev-parse HEAD)
 nightowl_bundle="$(pwd)/build/ios-signing/${nightowl_commit}-1.0.0-${nightowl_build_number}"
-export nightowl_commit nightowl_bundle
+export nightowl_bundle
 test ! -e "$nightowl_bundle"
-mkdir -p "$nightowl_bundle"
-python3 tools/deployment/build_admin_clients.py --config "$nightowl_config" \
-  --output "$nightowl_bundle/admin-clients" \
-  --defines-output "$nightowl_bundle/backend-defines.json" --execute
-python3 - <<'PY'
-import hashlib, json, os, plistlib
-from pathlib import Path
-bundle = Path(os.environ['nightowl_bundle'])
-options = {
-    'method': 'app-store-connect', 'destination': 'export',
-    'teamID': 'DAVM2JZ4NN', 'signingStyle': 'manual',
-    'signingCertificate': os.environ['nightowl_identity_sha1'],
-    'provisioningProfiles': {'com.nightowl.ub.nightOwlUb': os.environ['nightowl_profile_uuid']},
-    'manageAppVersionAndBuildNumber': False, 'stripSwiftSymbols': True,
-}
-with (bundle / 'ExportOptions.plist').open('xb') as stream:
-    plistlib.dump(options, stream)
-receipt = {
-    'source_commit': os.environ['nightowl_commit'], 'version': '1.0.0',
-    'build_number': os.environ['nightowl_build_number'],
-    'team_id': 'DAVM2JZ4NN', 'bundle_id': 'com.nightowl.ub.nightOwlUb',
-    'backend_origin': 'https://' + os.environ['nightowl_backend_ref'] + '.supabase.co',
-    'public_defines_sha256': hashlib.sha256((bundle / 'backend-defines.json').read_bytes()).hexdigest(),
-    'device_preview': False, 'upload_requested': False,
-    'status': 'inputs_prepared_not_build_success',
-}
-with (bundle / 'input-receipt.json').open('x') as stream:
-    json.dump(receipt, stream, indent=2)
-    stream.write('\n')
-PY
+nightowl_metadata=$(mktemp -d "${TMPDIR:-/tmp}/nightowl-signing-metadata.XXXXXX")
+trap 'rm -rf "$nightowl_metadata"' EXIT
+security cms -D -i "$nightowl_profile" > "$nightowl_metadata/profile.plist"
+security find-identity -v -p codesigning > "$nightowl_metadata/identities.txt"
+python3 tools/deployment/ios_signing.py prepare \
+  --config "$nightowl_config" --environment "$nightowl_environment" \
+  --profile-plist "$nightowl_metadata/profile.plist" \
+  --identities "$nightowl_metadata/identities.txt" \
+  --source-commit "$nightowl_commit" --build-number "$nightowl_build_number" \
+  --output "$nightowl_bundle"
+nightowl_profile_uuid=$(python3 -c 'import json,os; print(json.load(open(os.environ["nightowl_bundle"]+"/input-receipt.json"))["profile_uuid"])')
+nightowl_identity_sha1=$(python3 -c 'import json,os; print(json.load(open(os.environ["nightowl_bundle"]+"/input-receipt.json"))["signing_identity_sha1"])')
 
 flutter pub get --enforce-lockfile
 flutter build ios --config-only --release --no-codesign --no-pub \
@@ -120,6 +87,6 @@ xcodebuild -exportArchive -archivePath "$nightowl_bundle/Runner.xcarchive" \
   -exportPath "$nightowl_bundle/export"
 ```
 
-The commands above are a prepared recipe, **not an executed or native-validated signed build**. A missing/expired identity or profile must be resolved on the signing host; do not turn on automatic provisioning as a silent fallback. Check the archive and exported IPA for the exact Team, bundle, `1.0.0`/chosen build number, Apple entitlement, selected backend and `DEVICE_PREVIEW=false`, then run archive validation and the device acceptance plan. Retain the archive, symbols, config digest and build result together in ignored/private storage. An input receipt alone does not prove build success.
+The commands above are a prepared recipe, **not an executed or native-validated signed build**. A missing/expired identity or profile must be resolved on the signing host; do not turn on automatic provisioning as a silent fallback. Check the exported IPA's ZIP integrity and paths before extracting it with executable permissions preserved, then run `ios_signing.py verify` with `--app` pointing to the extracted `Payload/Runner.app`, `--prepared` to the generated bundle directory, `--generated-config ios/Flutter/Generated.xcconfig` and `--receipt` to a new verification JSON file in that private build directory. This checks the exact Team, bundle, `1.0.0`/chosen build number, Apple entitlement, selected backend and `DEVICE_PREVIEW=false`; follow the same extraction checks as the CI workflow. Retain the archive, symbols, config digest and build result together in ignored/private storage. An input receipt alone does not prove build success.
 
 Upload is a separate step after signed artifact validation and the backend/provider gates. TestFlight processing, device acceptance and App Review are still outstanding. [Flutter's official iOS release guide](https://docs.flutter.dev/deployment/ios) describes version/build flags and archive/export; verify export-option support with `xcodebuild -help` on the actual signing host. [Existing acceptance plan](REVIEW_TEST_PLAN.md) covers the required iPhone/iPad behavior.
