@@ -7,6 +7,8 @@ import '../../../core/widgets/owl_loading.dart';
 import '../../../core/router/app_router.dart';
 import '../../profile/services/account_deletion_service.dart';
 import '../widgets/auth_ui.dart';
+import '../widgets/auth_provider_options.dart';
+import '../services/auth_provider_settings.dart';
 
 class AuthLandingScreen extends StatefulWidget {
   final AccountDeletionService? deletionService;
@@ -45,12 +47,13 @@ class _AuthLandingScreenState extends State<AuthLandingScreen> {
     if (_authBusy) return;
     setState(() => _gLoading = true);
     try {
-      await signInWithGoogle();
-    } catch (_) {
+      await signInWithGoogle(settings: AuthProviderSettingsScope.of(context));
+    } catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content:
-                Text('Google-ээр нэвтрэхэд алдаа гарлаа. Дахин оролдоно уу.')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(error is AuthProviderCheckFailure
+                ? error.message
+                : 'Google-ээр нэвтрэхэд алдаа гарлаа. Дахин оролдоно уу.')));
       }
     } finally {
       if (mounted) setState(() => _gLoading = false);
@@ -184,45 +187,50 @@ class _AuthLandingScreenState extends State<AuthLandingScreen> {
                                             ? null
                                             : () =>
                                                 context.push(AppRoutes.login)),
-                                    const SizedBox(height: 12),
-                                    OutlinedButton(
-                                        onPressed:
-                                            _authBusy ? null : _googleSignIn,
-                                        style: OutlinedButton.styleFrom(
-                                            foregroundColor:
-                                                AppColors.textPrimary,
-                                            minimumSize:
-                                                const Size.fromHeight(52),
-                                            side: BorderSide(
-                                                color: AppColors.hairline2),
-                                            shape: RoundedRectangleBorder(
-                                                borderRadius:
-                                                    BorderRadius.circular(16))),
-                                        child: Row(
-                                            mainAxisAlignment:
-                                                MainAxisAlignment.center,
-                                            children: [
-                                              if (_gLoading)
-                                                const OwlLoading(
-                                                    size: 24,
-                                                    compact: true,
-                                                    message:
-                                                        'Google-ээр нэвтэрч байна')
-                                              else
-                                                const GoogleMark(),
-                                              const SizedBox(width: 10),
-                                              Flexible(
-                                                  child: Text(_gLoading
-                                                      ? 'Түр хүлээнэ үү...'
-                                                      : 'Google-ээр үргэлжлүүлэх')),
-                                            ])),
-                                    AppleSignInButton(
+                                    AuthProviderOptions(
+                                        showDivider: false,
                                         enabled: !_authBusy,
-                                        onBusyChanged: (busy) {
-                                          if (mounted) {
-                                            setState(() => _aLoading = busy);
-                                          }
-                                        }),
+                                        googleButton: OutlinedButton(
+                                            onPressed: _authBusy
+                                                ? null
+                                                : _googleSignIn,
+                                            style: OutlinedButton.styleFrom(
+                                                foregroundColor:
+                                                    AppColors.textPrimary,
+                                                minimumSize:
+                                                    const Size.fromHeight(52),
+                                                side: BorderSide(
+                                                    color: AppColors.hairline2),
+                                                shape: RoundedRectangleBorder(
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            16))),
+                                            child: Row(
+                                                mainAxisAlignment:
+                                                    MainAxisAlignment.center,
+                                                children: [
+                                                  if (_gLoading)
+                                                    const OwlLoading(
+                                                        size: 24,
+                                                        compact: true,
+                                                        message:
+                                                            'Google-ээр нэвтэрч байна')
+                                                  else
+                                                    const GoogleMark(),
+                                                  const SizedBox(width: 10),
+                                                  Flexible(
+                                                      child: Text(_gLoading
+                                                          ? 'Түр хүлээнэ үү...'
+                                                          : 'Google-ээр үргэлжлүүлэх')),
+                                                ])),
+                                        appleButton: AppleSignInButton(
+                                            enabled: !_authBusy,
+                                            onBusyChanged: (busy) {
+                                              if (mounted) {
+                                                setState(
+                                                    () => _aLoading = busy);
+                                              }
+                                            })),
                                     const SizedBox(height: 16),
                                     TextButton(
                                         onPressed: _authBusy

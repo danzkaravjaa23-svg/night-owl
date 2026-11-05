@@ -126,7 +126,7 @@ Future<void> requireAppleProvider({http.Client? client}) async {
     }
     if (external['apple'] != true) {
       throw const AppleSignInFailure(
-          'Apple нэвтрэлт одоогоор идэвхгүй байна. Google эсвэл имэйлээр нэвтэрнэ үү.');
+          'Apple нэвтрэлт одоогоор идэвхгүй байна. Имэйлээр нэвтэрнэ үү.');
     }
   } on AppleSignInFailure {
     rethrow;

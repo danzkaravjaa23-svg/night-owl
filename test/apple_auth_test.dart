@@ -38,8 +38,8 @@ void main() {
           throwsA(isA<AppleSignInFailure>().having(
               (e) => e.message,
               'message',
-              allOf(contains('идэвхгүй'), contains('Google'),
-                  contains('имэйл')))));
+              allOf(contains('идэвхгүй'), isNot(contains('Google')),
+                  contains('Имэйл')))));
     });
 
     for (final body in [

@@ -17,6 +17,8 @@ import 'package:night_owl_ub/features/auth/screens/auth_landing_screen.dart';
 import 'package:night_owl_ub/features/auth/screens/login_screen.dart';
 import 'package:night_owl_ub/features/auth/screens/register_screen.dart';
 import 'package:night_owl_ub/features/auth/widgets/auth_ui.dart';
+import 'package:night_owl_ub/features/auth/widgets/auth_provider_options.dart';
+import 'package:night_owl_ub/features/auth/services/auth_provider_settings.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -79,7 +81,9 @@ void main() {
   Future<void> render(WidgetTester tester, String route,
       {Size size = const Size(390, 900),
       double scale = 1,
-      bool dark = true}) async {
+      bool dark = true,
+      bool googleEnabled = true,
+      bool appleEnabled = true}) async {
     tester.view.physicalSize = size;
     tester.view.devicePixelRatio = 1;
     AppColors.isDarkMode = dark;
@@ -101,13 +105,21 @@ void main() {
               const Scaffold(body: Text('Explore destination'))),
     ]);
     addTearDown(router.dispose);
-    await tester.pumpWidget(MaterialApp.router(
-        routerConfig: router,
-        theme: ThemeData(brightness: dark ? Brightness.dark : Brightness.light),
-        builder: (context, child) => MediaQuery(
-            data: MediaQuery.of(context).copyWith(
-                textScaler: TextScaler.linear(scale), disableAnimations: true),
-            child: child!)));
+    final settingsClient = MockClient((request) async => response(request, {
+          'external': {'google': googleEnabled, 'apple': appleEnabled}
+        }));
+    addTearDown(settingsClient.close);
+    await tester.pumpWidget(AuthProviderSettingsScope(
+        settings: AuthProviderSettings(client: settingsClient),
+        child: MaterialApp.router(
+            routerConfig: router,
+            theme: ThemeData(
+                brightness: dark ? Brightness.dark : Brightness.light),
+            builder: (context, child) => MediaQuery(
+                data: MediaQuery.of(context).copyWith(
+                    textScaler: TextScaler.linear(scale),
+                    disableAnimations: true),
+                child: child!))));
     await tester.pumpAndSettle();
   }
 
@@ -147,6 +159,25 @@ void main() {
   Finder google() => find.text('Google-ээр үргэлжлүүлэх');
   Finder agreement() =>
       find.byKey(const ValueKey('register-community-agreement'));
+
+  for (final route in ['/auth', '/auth/login', '/auth/register']) {
+    testWidgets('$route keeps email usable without disabled OAuth choices',
+        (tester) async {
+      await render(tester, route, googleEnabled: false, appleEnabled: false);
+      expect(google(), findsNothing);
+      expect(find.byType(AppleSignInButton), findsNothing);
+      expect(find.byType(OrDivider), findsNothing);
+      if (route == '/auth') {
+        await tap(tester, find.text('Имэйлээр нэвтрэх'));
+        await tester.pumpAndSettle();
+        expect(find.byType(LoginScreen), findsOneWidget);
+      } else {
+        expect(tester.widget<GradientButton>(submit()).onPressed, isNotNull);
+      }
+      expect(requests, isEmpty);
+      expect(tester.takeException(), isNull);
+    });
+  }
 
   testWidgets(
       'registration requires explicit 18+ agreement and sends complete metadata once',

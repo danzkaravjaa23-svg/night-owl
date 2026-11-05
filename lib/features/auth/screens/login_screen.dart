@@ -9,6 +9,8 @@ import '../../../core/widgets/gradient_button.dart';
 import '../../../core/widgets/mesh_gradient.dart';
 import '../../../core/router/app_router.dart';
 import '../widgets/auth_ui.dart';
+import '../widgets/auth_provider_options.dart';
+import '../services/auth_provider_settings.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -126,11 +128,12 @@ class _LoginScreenState extends State<LoginScreen> {
       _error = null;
     });
     try {
-      await signInWithGoogle();
-    } catch (_) {
+      await signInWithGoogle(settings: AuthProviderSettingsScope.of(context));
+    } catch (error) {
       if (mounted) {
-        setState(() =>
-            _error = 'Google-ээр нэвтрэхэд алдаа гарлаа. Дахин оролдоно уу.');
+        setState(() => _error = error is AuthProviderCheckFailure
+            ? error.message
+            : 'Google-ээр нэвтрэхэд алдаа гарлаа. Дахин оролдоно уу.');
       }
     } finally {
       if (mounted) setState(() => _gLoading = false);
@@ -323,29 +326,31 @@ class _LoginScreenState extends State<LoginScreen> {
                                                 size: 19),
                                       ),
                                     ),
-                                    const SizedBox(height: 20),
-                                    const AuthEntrance(
-                                        index: 6, child: OrDivider()),
-                                    const SizedBox(height: 20),
-                                    AuthEntrance(
-                                      index: 7,
-                                      child: _GhostBtn(
-                                        label: _gLoading
-                                            ? 'Түр хүлээнэ үү...'
-                                            : 'Google-ээр үргэлжлүүлэх',
-                                        leading: _gLoading
-                                            ? const BtnSpinner()
-                                            : const GoogleMark(),
-                                        onTap: _authBusy ? null : _googleSignIn,
-                                      ),
-                                    ),
-                                    AppleSignInButton(
+                                    AuthProviderOptions(
+                                        showDivider: true,
                                         enabled: !_authBusy,
-                                        onBusyChanged: (busy) {
-                                          if (mounted) {
-                                            setState(() => _aLoading = busy);
-                                          }
-                                        }),
+                                        googleButton: AuthEntrance(
+                                          index: 7,
+                                          child: _GhostBtn(
+                                            label: _gLoading
+                                                ? 'Түр хүлээнэ үү...'
+                                                : 'Google-ээр үргэлжлүүлэх',
+                                            leading: _gLoading
+                                                ? const BtnSpinner()
+                                                : const GoogleMark(),
+                                            onTap: _authBusy
+                                                ? null
+                                                : _googleSignIn,
+                                          ),
+                                        ),
+                                        appleButton: AppleSignInButton(
+                                            enabled: !_authBusy,
+                                            onBusyChanged: (busy) {
+                                              if (mounted) {
+                                                setState(
+                                                    () => _aLoading = busy);
+                                              }
+                                            })),
                                     const SizedBox(height: 12),
                                   ],
                                 ),

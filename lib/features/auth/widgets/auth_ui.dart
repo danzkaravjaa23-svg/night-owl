@@ -9,6 +9,7 @@ import '../../../core/utils/auth_callback.dart';
 import '../../../core/widgets/app_motion.dart';
 import '../../../core/widgets/owl_loading.dart';
 import '../services/apple_auth_service.dart';
+import '../services/auth_provider_settings.dart';
 
 /// Нэвтрэлтийн дэлгэцүүдийн хуваалцсан UI хэсгүүд.
 /// login/register/forgot дээр давхардаж байсан кодыг нэг дор нэгтгэв.
@@ -17,7 +18,8 @@ import '../services/apple_auth_service.dart';
 const int kPasswordMinLength = 8;
 
 // ── Google OAuth — жинхэнэ нэвтрэлт (web: одоогийн origin, native: deep link руу буцна) ──
-Future<void> signInWithGoogle() async {
+Future<void> signInWithGoogle({AuthProviderSettings? settings}) async {
+  await (settings ?? AuthProviderSettings.shared).requireGoogle();
   final opened = await Supabase.instance.client.auth.signInWithOAuth(
     OAuthProvider.google,
     // AndroidManifest-ийн intent-filter-тэй тохирно; Supabase Redirect URLs-д бүртгэнэ
