@@ -1,0 +1,76 @@
+{
+  "recorded_at": "2026-11-07",
+  "recorded_by": "Claude session continuing Codex work",
+  "environment": "staging only (sreojqqqhdzkfsrbvlpl); production jbbdnpsvstwxtgtjoeru untouched",
+  "sign_in_with_apple": {
+    "key_id": "45KNSM48Z4",
+    "team_id": "DAVM2JZ4NN",
+    "client_id": "com.nightowl.ub.nightOwlUb",
+    "private_key_storage": "owner private folder, mode 0600; value never displayed",
+    "edge_secrets_saved_utc": "2026-11-07T03:22:39Z",
+    "edge_secret_names": [
+      "APPLE_CLIENT_ID",
+      "APPLE_TEAM_ID",
+      "APPLE_KEY_ID",
+      "APPLE_PRIVATE_KEY"
+    ],
+    "non_secret_digest_check": "bd2e9744/fa67b025/00288583 matched locally computed SHA-256 prefixes",
+    "auth_provider": {
+      "apple": "enabled",
+      "client_ids": "com.nightowl.ub.nightOwlUb",
+      "oauth_secret": "empty (native only)",
+      "google": "disabled",
+      "email": "enabled",
+      "custom_smtp": "off"
+    }
+  },
+  "device_acceptance": {
+    "device": "owner iPhone",
+    "build": "1.0.0 (3)",
+    "apple_sign_in": "pass",
+    "account_deletion_with_revocation": {
+      "erasure_job_created_utc": "2026-11-07T03:28:28Z",
+      "apple_revoked_utc": "2026-11-07T03:28:38Z",
+      "completed_utc": "2026-11-07T03:28:42Z"
+    },
+    "re_sign_in_new_account_utc": "2026-11-07T03:30:10Z"
+  },
+  "ugc_publish_immediately": {
+    "migration": "supabase/migrations/202611070001_ugc_publish_immediately.sql",
+    "applied_utc": "2026-11-07T05:52:23Z",
+    "pasted_sha256": "fd749564991c2a75d9ff5e7a771be5dba0e540ae471892fb1446d84495f2dd98",
+    "bytes": 37256,
+    "post_checks": {
+      "state_tables": 4,
+      "client_privileges_on_state": 0,
+      "publish_immediately": true,
+      "report_hide_threshold": 3,
+      "profile_report_hide_threshold": 5,
+      "reporter_min_account_age": "24:00:00",
+      "hold_links": true,
+      "hold_phone_numbers": true,
+      "blocked_terms": 25,
+      "report_trigger_enabled": true,
+      "reporter_hide_policies": 6,
+      "internal_helpers_exposed": 0
+    },
+    "offline_tests": "run_ugc_publish_immediately_fixture 32/32; regression fixtures pass (PGlite 0.5.8)"
+  },
+  "moderation_operations": {
+    "moderator": "owner's staging Apple account (is_admin=true)",
+    "sample_content": "2 images + 1 short video approved",
+    "response_wording": "aims to act within 24 hours"
+  },
+  "app_store_connect": {
+    "test_information_saved": true,
+    "sign_in_required": true,
+    "review_credentials": "pasted by owner from private reviewer file; not recorded here",
+    "what_to_test_build_3_saved": true,
+    "texts_match_repo": "SHA-256 compared in browser for description, review notes and What to Test",
+    "public_link": "withheld from public repository"
+  },
+  "known_limits": [
+    "email sign-up confirmation not delivered to external testers (custom SMTP off)",
+    "build 3 shows older 'sent for review' snackbar after posting"
+  ]
+}
