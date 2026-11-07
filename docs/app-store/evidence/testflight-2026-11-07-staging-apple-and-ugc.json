@@ -100,5 +100,28 @@
     ],
     "status": "Ready to Submit",
     "external": "not yet — Apple allows one version-1.0.0 build in Beta App Review at a time; add to Night Owl Early Access after build 3 is approved"
+  },
+  "build_5": {
+    "source_commit": "b6485747d75594ceb09f43442eb6aea7dabaae90",
+    "changes": [
+      "splash fills the screen (was shrink-wrapped to ~270pt in the top-left on real iPhones)",
+      "real-font layout audit: 30 measured iPhone layout defects fixed (shrink-wrap, docked auth sheet, overflow, safe area, tap targets, duplicate sheet handles, DM short-reply emoji detection)",
+      "NSLocationAlwaysAndWhenInUseUsageDescription added; iOS deployment target 15.0 (ITMS-90683 / ITMS-90068 on build 4)"
+    ],
+    "ipa_bytes": 33646148,
+    "ipa_sha256": "1ee602efc876adbf520fb9984072b488483a7a929e7344fc5c7ca3c91a97368f",
+    "ipa_info_plist": {
+      "CFBundleVersion": "5",
+      "MinimumOSVersion": "15.0",
+      "NSLocationAlwaysAndWhenInUseUsageDescription": "present"
+    },
+    "tests": "full Flutter suite 960 pass; same 5 pre-existing venue test failures as before these changes",
+    "upload": "run by the owner from Terminal (external-staging-5); COMPLETE / VALID / APP_STORE_ELIGIBLE",
+    "export_compliance": "answered by the owner (same answers as builds 2-4)",
+    "what_to_test_saved": true,
+    "groups": [
+      "Night Owl Internal"
+    ],
+    "status": "Ready to Submit"
   }
 }
