@@ -42,6 +42,7 @@ EXPECTED_AUDIENCE = 'INTERNAL_ONLY'
 EXTERNAL_CANDIDATE = ROOT / 'build/ios-signing/67e8b1c79764285df6cd21981e066b62790eac70-1.0.0-2-staging-external'
 EXTERNAL_CANDIDATE_3 = ROOT / 'build/ios-signing/d56e6efcf10dd98d567a388e05aa4c52a3393a65-1.0.0-3-staging-external'
 EXTERNAL_CANDIDATE_4 = ROOT / 'build/ios-signing/b2d58f21c53b3d416bd6d20a6b9ec4ea20dd201e-1.0.0-4-staging-external'
+EXTERNAL_CANDIDATE_5 = ROOT / 'build/ios-signing/b6485747d75594ceb09f43442eb6aea7dabaae90-1.0.0-5-staging-external'
 PROFILES = {
     'internal-staging-1': {
         'CANDIDATE': CANDIDATE, 'DEFAULT_IPA': DEFAULT_IPA, 'DEFAULT_STATE': DEFAULT_STATE,
@@ -65,6 +66,12 @@ PROFILES = {
         'DEFAULT_STATE': EXTERNAL_CANDIDATE_4 / 'direct-upload-state.json',
         'BUILD': '4', 'SHA256': '3aef80816d0e9e7f045ae89e652522de8f0d41d0a2cb61449e9299dd215ac6b7',
         'IPA_SIZE': 33649006, 'INTERNAL_ONLY': False, 'EXPECTED_AUDIENCE': 'APP_STORE_ELIGIBLE'},
+    'external-staging-5': {
+        'CANDIDATE': EXTERNAL_CANDIDATE_5,
+        'DEFAULT_IPA': EXTERNAL_CANDIDATE_5 / 'export/night_owl_ub.ipa',
+        'DEFAULT_STATE': EXTERNAL_CANDIDATE_5 / 'direct-upload-state.json',
+        'BUILD': '5', 'SHA256': '1ee602efc876adbf520fb9984072b488483a7a929e7344fc5c7ca3c91a97368f',
+        'IPA_SIZE': 33646148, 'INTERNAL_ONLY': False, 'EXPECTED_AUDIENCE': 'APP_STORE_ELIGIBLE'},
 }
 API_HOST = 'api.appstoreconnect.apple.com'
 API = 'https://' + API_HOST

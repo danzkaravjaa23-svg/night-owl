@@ -343,6 +343,25 @@ class CandidateProfileTests(unittest.TestCase):
                     {'cfBundleShortVersionString': '1.0.0', 'cfBundleVersion': '4', 'platform': 'IOS'})
             self.assertEqual(upload.BUILD, '1')
 
+    def test_build5_pins_new_artifact_and_rejects_build4_journal(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / 'state.json'
+            with upload.candidate_profile('external-staging-4'):
+                previous_path, previous_hash = upload.DEFAULT_IPA, upload.SHA256
+                upload.Journal(path).save(phase='new')
+            with upload.candidate_profile('external-staging-5'):
+                self.assertEqual(upload.BUILD, '5')
+                self.assertEqual(upload.IPA_SIZE, 33646148)
+                self.assertEqual(upload.SHA256, '1ee602efc876adbf520fb9984072b488483a7a929e7344fc5c7ca3c91a97368f')
+                self.assertEqual(upload.EXPECTED_AUDIENCE, 'APP_STORE_ELIGIBLE')
+                self.assertNotEqual(upload.DEFAULT_IPA, previous_path)
+                self.assertNotEqual(upload.SHA256, previous_hash)
+                with self.assertRaises(upload.UploadError):
+                    upload.Journal(path)
+                self.assertEqual(upload.create_upload_body()['data']['attributes'],
+                    {'cfBundleShortVersionString': '1.0.0', 'cfBundleVersion': '5', 'platform': 'IOS'})
+            self.assertEqual(upload.BUILD, '1')
+
     def test_build3_external_workflow_verifies_exact_remote_build_number(self):
         raw = b'abcdef'
         with tempfile.TemporaryDirectory() as folder, upload.candidate_profile('external-staging-3'), \
