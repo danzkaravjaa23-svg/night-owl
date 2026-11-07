@@ -608,7 +608,7 @@
     "no_custom_proprietary_algorithm_found": true,
     "its_app_uses_non_exempt_encryption_in_source": "Not set",
     "can_prepare_now": "Describe the above limited uses and retain the final binary/dependency inventory for the questionnaire.",
-    "must_verify": "The downloaded unsigned native binary contains BoringSSL and Dart SecureSocket, so Apple-OS-only encryption is disproven for this candidate. Owner selected Mongolia-only availability and it is saved; France is not included. Repeat the inventory for the final signed archive if runtime inputs change and retain the actual Connect questionnaire determination. Final export classification/attestation and exemption plist setting remain pending.",
+    "must_verify": "Exact signed/uploaded 1.0.0 (1) IPA was checked: Flutter BoringSSL confirms standard TLS outside Apple OS. The live questionnaire was saved with standard algorithms and France=No, consistent with Mongolia-only availability. Apple now displays Ready to Test. Reassess if dependencies or distribution change; signed Info.plist remains unchanged. This does not constitute a formal legal classification or annual filing.",
     "binary_followup": {
       "archive": "build/releases/native-b4e60b3/releases/night-owl-iphoneos-unsigned.tar.gz",
       "inspection": "Read selected tar members in memory; inspect Mach-O LC_LOAD_DYLIB records and bounded known crypto strings. No executable was run and no files were extracted.",
@@ -684,7 +684,33 @@
       "Only Apple OS encryption solely from source-level HTTPS calls",
       "A final legal classification or an already accepted export declaration"
     ],
-    "source": "https://developer.apple.com/help/app-store-connect/manage-app-information/overview-of-export-compliance"
+    "source": "https://developer.apple.com/help/app-store-connect/manage-app-information/overview-of-export-compliance",
+    "signed_build_questionnaire_result": {
+      "observed_on_local": "2026-11-06",
+      "timezone": "Asia/Ulaanbaatar",
+      "app_id": "6830714135",
+      "version": "1.0.0",
+      "build_number": "1",
+      "build_id": "bcac3ebf-1cfe-4780-a2dd-e74de1a344af",
+      "testflight_status": "Ready to Test",
+      "audience": "INTERNAL_ONLY",
+      "expires_in_days_as_displayed": 90,
+      "encryption_questionnaire_saved": true,
+      "encryption_category": "Standard encryption algorithms instead of, or in addition to, using or accessing the encryption within Apple operating system",
+      "available_in_france": false,
+      "basis": "Exact uploaded IPA contains Flutter BoringSSL standard TLS; no app-authored proprietary algorithm found. Owner-approved availability is Mongolia only.",
+      "missing_compliance_resolved": true,
+      "signed_ipa_or_info_plist_modified": false,
+      "groups_or_testers_added": false,
+      "device_acceptance_completed": false,
+      "app_review_submitted": false,
+      "screenshot": "build/audit/2026-11-05/testflight-ready-to-test.png",
+      "url": "https://appstoreconnect.apple.com/teams/4872ab22-2848-4eb3-8aaf-a99094b787b0/apps/6830714135/testflight/ios",
+      "sources": [
+        "https://developer.apple.com/help/app-store-connect/reference/app-information/export-compliance-documentation-for-encryption/"
+      ],
+      "limit": "This is the saved Apple build questionnaire result, not a formal legal classification or annual self-classification filing."
+    }
   },
   "content_rights": {
     "third_party_content_present": true,
