@@ -72,5 +72,15 @@
   "known_limits": [
     "email sign-up confirmation not delivered to external testers (custom SMTP off)",
     "build 3 shows older 'sent for review' snackbar after posting"
-  ]
+  ],
+  "external_beta_review": {
+    "submitted_utc": "2026-11-07T06:08Z",
+    "group": "Night Owl Early Access (7222927f-9055-4e7d-8bd9-e6f7e380caad)",
+    "build": "1.0.0 (3)",
+    "status_after_submit": "Waiting for Review",
+    "sign_in_required": true,
+    "automatically_notify_testers": true,
+    "tester_limit": "0 of 50",
+    "public_link": "withheld from public repository"
+  }
 }
