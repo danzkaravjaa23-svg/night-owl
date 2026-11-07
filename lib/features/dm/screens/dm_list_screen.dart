@@ -517,15 +517,8 @@ class _ConvoTileState extends State<_ConvoTile> {
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
       builder: (sheetCtx) => SafeArea(
+          // The theme's drag handle (showDragHandle) is the grabber.
           child: Column(mainAxisSize: MainAxisSize.min, children: [
-        const SizedBox(height: 10),
-        Container(
-            width: 40,
-            height: 4,
-            decoration: BoxDecoration(
-                color: AppColors.hairline,
-                borderRadius: BorderRadius.circular(2))),
-        const SizedBox(height: 12),
         Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
             child: Row(children: [

@@ -345,7 +345,10 @@ class _LiveViewerScreenState extends State<LiveViewerScreen> {
         )),
 
         // ── Дээд мэдээлэл ──
-        SafeArea(child: Padding(
+        // Pinned to the top: as the Stack's only non-positioned child it was
+        // given the full body height and its Row drew vertically centred.
+        Positioned(top: 0, left: 0, right: 0, child: SafeArea(bottom: false,
+            child: Padding(
           padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
           child: Row(children: [
             // Буцах — шилэн дугуй товч
@@ -419,7 +422,7 @@ class _LiveViewerScreenState extends State<LiveViewerScreen> {
                 ])),
             ],
           ]),
-        )),
+        ))),
 
         // ── Доод: коммент + оруулах ──
         if (!_ended && !_loading && !showError)

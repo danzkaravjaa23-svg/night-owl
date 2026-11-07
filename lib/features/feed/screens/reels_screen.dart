@@ -439,16 +439,9 @@ class _ReelsScreenState extends ConsumerState<ReelsScreen>
             borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
         builder: (s) => _themedNavBar(
             s,
+            // The theme's drag handle (showDragHandle) is the grabber.
             SafeArea(
                 child: Column(mainAxisSize: MainAxisSize.min, children: [
-              const SizedBox(height: 10),
-              Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                      color: AppColors.hairline2,
-                      borderRadius: BorderRadius.circular(2))),
-              const SizedBox(height: 6),
               ListTile(
                   leading:
                       Icon(Icons.link_rounded, color: AppColors.textSecondary),
@@ -1022,11 +1015,10 @@ class _ReelPageState extends State<_ReelPage>
     final comments = reel['comments_count'] as int? ?? 0;
     final initial = username.isNotEmpty ? username[0].toUpperCase() : '?';
     final userId = reel['user_id'];
-    // Доод зай: MainShell `extendBody: true` тул body-ийн padding.bottom нь
-    // хөвөгч док (92) + системийн доод зай (home indicator)-г АЛЬ ХЭДИЙН
-    // агуулна. Дээр нь дахин dockClearance нэмбэл давхар тоологдож бүх
-    // overlay ~92px хэт дээр гардаг байсан. Shell-ээс гадуур нээгдвэл зөвхөн
-    // системийн зай үлдэж, overlay доод ирмэг рүү буудаг — энэ нь зөв.
+    // Доод зай: MainShell `extendBody: false` тул док body-ийн доор байрлаж,
+    // shell дотор body-ийн padding.bottom = 0 (док нь home indicator-ийг
+    // өөрөө агуулна). Shell-ээс гадуур нээгдвэл зөвхөн системийн доод зай
+    // үлдэнэ. Аль ч тохиолдолд dockClearance дахин нэмэх шаардлагагүй.
     final dock = MediaQuery.of(context).padding.bottom;
 
     return Stack(fit: StackFit.expand, children: [
@@ -1097,10 +1089,18 @@ class _ReelPageState extends State<_ReelPage>
       ))),
 
       // ── Баруун үйлдлийн рейл — TikTok маягийн босоо стек ──
+      // Bounded below the top controls (search / mute row) and scaled down on
+      // short screens or large text instead of running under them.
       Positioned(
           right: 10,
+          top: MediaQuery.paddingOf(context).top + 92,
           bottom: dock + 14,
-          child: Column(children: [
+          child: Align(
+            alignment: Alignment.bottomCenter,
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.bottomCenter,
+              child: Column(mainAxisSize: MainAxisSize.min, children: [
             // (1) Зохиогчийн avatar 44 — градиент ring + "+" badge → /creator/:id
             _Pressable(
               semanticLabel: '@$username профайл',
@@ -1254,7 +1254,7 @@ class _ReelPageState extends State<_ReelPage>
                     onDark: true),
               ),
             ),
-          ])),
+          ])))),
 
       // ── Доод зүүн: зохиогч + дагах pill + тайлбар + аудио мөр ──
       Positioned(

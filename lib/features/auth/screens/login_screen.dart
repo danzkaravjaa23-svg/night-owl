@@ -148,7 +148,10 @@ class _LoginScreenState extends State<LoginScreen> {
         children: [
           // ── Futurist Nightscape aura ──
           const AuthAura(),
+          // The glass sheet docks to the screen edge; its footer pads itself
+          // above the home indicator instead.
           SafeArea(
+            bottom: false,
             child: Column(
               children: [
                 // ── Дээд hero (~30%) — back chip + owl mini + мэндчилгээ ──
@@ -359,7 +362,8 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                           // Footer — sheet-ийн доод захад бэхлэгдсэн
                           Padding(
-                            padding: const EdgeInsets.fromLTRB(20, 6, 20, 16),
+                            padding: EdgeInsets.fromLTRB(20, 6, 20,
+                                16 + MediaQuery.paddingOf(context).bottom),
                             child: Wrap(
                               alignment: WrapAlignment.center,
                               crossAxisAlignment: WrapCrossAlignment.center,

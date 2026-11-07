@@ -170,39 +170,36 @@ class _CreateGroupSheetState extends State<_CreateGroupSheet> {
         _nameCtrl.text.trim().isNotEmpty &&
         _selected.isNotEmpty &&
         !_busy;
+    // While typing (keyboard up) the decorative header collapses so the
+    // member list and create button still fit on short phones.
+    final keyboardOpen = MediaQuery.viewInsetsOf(context).bottom > 0;
     return Padding(
       padding:
           EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
       child: SizedBox(
         height: MediaQuery.of(context).size.height * 0.78,
+        // The theme's drag handle (showDragHandle) is the grabber.
         child: Column(children: [
-          const SizedBox(height: 12),
-          Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                  color: AppColors.hairline2,
-                  borderRadius: BorderRadius.circular(2))),
-          const SizedBox(height: 18),
-
           // ── Header — gradient групп badge + гарчиг + micro тайлбар ──
-          Container(
-              width: 48,
-              height: 48,
-              decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: AppColors.accentGradient,
-                  boxShadow: AppColors.glowShadow(AppColors.accentStart,
-                      blur: 16, offset: const Offset(0, 4))),
-              child: const SculptedIcon(Icons.groups_rounded,
-                  color: Colors.white, size: 24, onDark: true)),
-          const SizedBox(height: 10),
-          Text('Групп чат үүсгэх', style: AppTextStyles.h2),
-          const SizedBox(height: 3),
-          Text('Найзуудаа нэг чатад цуглуул',
-              style: AppTextStyles.bodyXs
-                  .copyWith(color: AppColors.textSecondary)),
-          const SizedBox(height: 16),
+          if (!keyboardOpen) ...[
+            Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: AppColors.accentGradient,
+                    boxShadow: AppColors.glowShadow(AppColors.accentStart,
+                        blur: 16, offset: const Offset(0, 4))),
+                child: const SculptedIcon(Icons.groups_rounded,
+                    color: Colors.white, size: 24, onDark: true)),
+            const SizedBox(height: 10),
+            Text('Групп чат үүсгэх', style: AppTextStyles.h2),
+            const SizedBox(height: 3),
+            Text('Найзуудаа нэг чатад цуглуул',
+                style: AppTextStyles.bodyXs
+                    .copyWith(color: AppColors.textSecondary)),
+            const SizedBox(height: 16),
+          ],
 
           // Группийн нэр — шилэн pill талбар
           Padding(

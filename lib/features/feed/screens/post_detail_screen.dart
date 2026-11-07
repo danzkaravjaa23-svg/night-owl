@@ -883,7 +883,11 @@ class _PostHeaderState extends ConsumerState<_PostHeader> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(children: [
-                    Text(author?.username ?? '—', style: AppTextStyles.labelLg),
+                    Flexible(
+                        child: Text(author?.username ?? '—',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: AppTextStyles.labelLg)),
                     if (author?.isVerified == true) ...[
                       const SizedBox(width: 4),
                       const Icon(Icons.verified,
@@ -900,9 +904,12 @@ class _PostHeaderState extends ConsumerState<_PostHeader> {
                           const Icon(Icons.location_on,
                               size: 10, color: AppColors.accentStart),
                           const SizedBox(width: 2),
-                          Text(post.venueName!,
-                              style: AppTextStyles.bodyXs
-                                  .copyWith(color: AppColors.textSecondary)),
+                          Flexible(
+                              child: Text(post.venueName!,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: AppTextStyles.bodyXs.copyWith(
+                                      color: AppColors.textSecondary))),
                         ])),
                 ],
               ),
@@ -922,9 +929,11 @@ class _PostHeaderState extends ConsumerState<_PostHeader> {
       ),
 
       // ── Action glass bar — like / comment / share / save ──
+      // Each action has a 44pt hit box; the bar's padding shrinks by the same
+      // amount so the icons keep their positions and the bar its height.
       Container(
         margin: const EdgeInsets.symmetric(horizontal: 20),
-        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+        padding: const EdgeInsets.fromLTRB(18, 2, 8, 2),
         decoration: BoxDecoration(
           color: AppColors.bgElevated.withValues(alpha: 0.72),
           borderRadius: BorderRadius.circular(20),
@@ -935,7 +944,8 @@ class _PostHeaderState extends ConsumerState<_PostHeader> {
           _Press(
             scale: 0.85,
             onTap: widget.onLike,
-            child: Row(children: [
+            child: _ActionHitBox(
+                child: Row(children: [
               Icon(
                 post.isLikedByMe ? Icons.favorite : Icons.favorite_border,
                 color:
@@ -946,35 +956,44 @@ class _PostHeaderState extends ConsumerState<_PostHeader> {
               Text(post.formattedLikes,
                   style: AppTextStyles.labelSm
                       .copyWith(color: AppColors.textSecondary)),
-            ]),
+            ])),
           ),
           const SizedBox(width: 20),
           _Press(
             scale: 0.88,
             onTap: widget.onComment,
-            child: Row(children: [
+            child: _ActionHitBox(
+                child: Row(children: [
               Icon(Icons.chat_bubble_outline,
                   color: AppColors.textSecondary, size: 24),
               const SizedBox(width: 6),
               Text(_fmt(widget.commentCount ?? post.commentsCount),
                   style: AppTextStyles.labelSm
                       .copyWith(color: AppColors.textSecondary)),
-            ]),
+            ])),
           ),
           const Spacer(),
           _Press(
             scale: 0.85,
             onTap: _share,
-            child: Icon(Icons.send_outlined,
-                color: AppColors.textSecondary, size: 24),
+            child: SizedBox(
+                width: 44,
+                height: 44,
+                child: Center(
+                    child: Icon(Icons.send_outlined,
+                        color: AppColors.textSecondary, size: 24))),
           ),
-          const SizedBox(width: 18),
           _Press(
             scale: 0.85,
             onTap: _toggleSave,
-            child: Icon(_saved ? Icons.bookmark : Icons.bookmark_border,
-                color: _saved ? AppColors.saved : AppColors.textSecondary,
-                size: 24),
+            child: SizedBox(
+                width: 44,
+                height: 44,
+                child: Center(
+                    child: Icon(_saved ? Icons.bookmark : Icons.bookmark_border,
+                        color:
+                            _saved ? AppColors.saved : AppColors.textSecondary,
+                        size: 24))),
           ),
         ]),
       ),
@@ -1083,7 +1102,11 @@ class _CommentTileState extends State<_CommentTile> {
           child:
               Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Row(children: [
-              Text(author?.username ?? '—', style: AppTextStyles.labelSm),
+              Flexible(
+                  child: Text(author?.username ?? '—',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTextStyles.labelSm)),
               const SizedBox(width: 6),
               Text(comment.timeAgo,
                   style: AppTextStyles.bodyXs
@@ -1161,14 +1184,8 @@ class _CommentTileState extends State<_CommentTile> {
       builder: (_) => SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(20),
+          // The theme's drag handle (showDragHandle) is the grabber.
           child: Column(mainAxisSize: MainAxisSize.min, children: [
-            Container(
-                width: 36,
-                height: 4,
-                decoration: BoxDecoration(
-                    color: AppColors.hairline,
-                    borderRadius: BorderRadius.circular(2))),
-            const SizedBox(height: 20),
             Text('Сэтгэгдэл устгах уу?', style: AppTextStyles.labelLg),
             const SizedBox(height: 8),
             Text(
@@ -1443,4 +1460,20 @@ class _DetailCarouselState extends State<_DetailCarousel> {
       ]),
     );
   }
+}
+
+/// A 44pt minimum hit box for an action-bar control whose visual content is
+/// smaller. Content stays left-aligned so the icon does not move.
+class _ActionHitBox extends StatelessWidget {
+  final Widget child;
+  const _ActionHitBox({required this.child});
+
+  @override
+  Widget build(BuildContext context) => ConstrainedBox(
+      constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+      child: Align(
+          alignment: Alignment.centerLeft,
+          widthFactor: 1,
+          heightFactor: 1,
+          child: child));
 }

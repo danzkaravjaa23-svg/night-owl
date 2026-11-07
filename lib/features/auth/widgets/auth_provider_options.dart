@@ -64,31 +64,38 @@ class _AuthProviderOptionsState extends State<AuthProviderOptions> {
       builder: (context, snapshot) {
         // Do not retain a previously enabled button while retrying a new check.
         if (snapshot.connectionState != ConnectionState.done) {
+          // Parents may pass a loose width (e.g. a start-aligned Column), so
+          // take the full width or the centred text hugs the left edge.
           return Padding(
               padding: const EdgeInsets.only(top: 12),
-              child: Semantics(
-                  liveRegion: true,
-                  child: Text('Нэвтрэх нэмэлт аргуудыг шалгаж байна…',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(color: AppColors.textSecondary))));
+              child: SizedBox(
+                  width: double.infinity,
+                  child: Semantics(
+                      liveRegion: true,
+                      child: Text('Нэвтрэх нэмэлт аргуудыг шалгаж байна…',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(color: AppColors.textSecondary)))));
         }
         if (snapshot.hasError || !snapshot.hasData) {
           return Padding(
               padding: const EdgeInsets.only(top: 12),
-              child: Column(children: [
-                Semantics(
-                    liveRegion: true,
-                    child: Text('Apple, Google нэвтрэлтийг шалгаж чадсангүй.',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(color: AppColors.textSecondary))),
-                TextButton.icon(
-                    key: const ValueKey('auth-providers-retry'),
-                    onPressed: widget.enabled ? _retry : null,
-                    style:
-                        TextButton.styleFrom(minimumSize: const Size(48, 48)),
-                    icon: const Icon(Icons.refresh),
-                    label: const Text('Дахин шалгах')),
-              ]));
+              child: SizedBox(
+                  width: double.infinity,
+                  child: Column(children: [
+                    Semantics(
+                        liveRegion: true,
+                        child: Text(
+                            'Apple, Google нэвтрэлтийг шалгаж чадсангүй.',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(color: AppColors.textSecondary))),
+                    TextButton.icon(
+                        key: const ValueKey('auth-providers-retry'),
+                        onPressed: widget.enabled ? _retry : null,
+                        style: TextButton.styleFrom(
+                            minimumSize: const Size(48, 48)),
+                        icon: const Icon(Icons.refresh),
+                        label: const Text('Дахин шалгах')),
+                  ])));
         }
         final providers = snapshot.requireData;
         if (!providers.anyEnabled) return const SizedBox.shrink();

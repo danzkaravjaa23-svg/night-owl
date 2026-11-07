@@ -364,15 +364,8 @@ class _DmThreadScreenState extends State<_ScopedDmThread>
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
       builder: (sheetCtx) => SafeArea(
+          // The theme's drag handle (showDragHandle) is the grabber.
           child: Column(mainAxisSize: MainAxisSize.min, children: [
-        const SizedBox(height: 10),
-        Container(
-            width: 40,
-            height: 4,
-            decoration: BoxDecoration(
-                color: AppColors.hairline,
-                borderRadius: BorderRadius.circular(2))),
-        const SizedBox(height: 12),
         Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
             child:
@@ -1356,11 +1349,14 @@ const _kStickers = [
   '🫶',
 ];
 
-// Зөвхөн эмодзиос бүрдсэн богино мессежийг том (sticker) хэлбэрээр харуулна
+// Зөвхөн эмодзиос бүрдсэн богино мессежийг том (sticker) хэлбэрээр харуулна.
+// Any Unicode letter or digit (Cyrillic 'За', 'Тийм' included) makes it text.
+final _letterOrDigit = RegExp(r'[\p{L}\p{N}]', unicode: true);
+
 bool _isEmojiOnly(String s) {
   final t = s.trim();
   if (t.isEmpty || t.runes.length > 8) return false;
-  return !RegExp(r'[A-Za-z0-9]').hasMatch(t);
+  return !_letterOrDigit.hasMatch(t);
 }
 
 class _Bubble extends StatelessWidget {

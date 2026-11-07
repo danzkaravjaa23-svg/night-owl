@@ -196,22 +196,17 @@ class NotesRowState extends State<NotesRow> {
       backgroundColor: AppColors.bgElevated,
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
+      // Scrolls inside the 9/16 sheet cap so a long note or large text never
+      // pushes the reply button off screen. The theme draws the grabber.
       builder: (sheetCtx) => SafeArea(
           top: false,
-          child: Padding(
+          child: SingleChildScrollView(
+              child: Padding(
             padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
             child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Center(
-                      child: Container(
-                          width: 40,
-                          height: 4,
-                          decoration: BoxDecoration(
-                              color: AppColors.hairline,
-                              borderRadius: BorderRadius.circular(2)))),
-                  const SizedBox(height: 16),
                   Row(children: [
                     AppAvatar(
                         imageUrl: n['avatar_url'] as String?,
@@ -287,7 +282,7 @@ class NotesRowState extends State<NotesRow> {
                                 .copyWith(color: Colors.white))),
                   ),
                 ]),
-          )),
+          ))),
     );
   }
 
@@ -580,11 +575,15 @@ class _NoteComposerState extends ConsumerState<_NoteComposer> {
   @override
   Widget build(BuildContext context) {
     if (_stale || !_session.isCurrent) {
+      // Full width: the M3 sheet's width is loose.
       return const SafeArea(
-          child: Padding(
-              padding: EdgeInsets.all(24),
-              child: Text(
-                  'Нэвтрэх хаяг өөрчлөгдсөн байна. Note-оо дахин нээнэ үү.')));
+          child: SizedBox(
+              width: double.infinity,
+              child: Padding(
+                  padding: EdgeInsets.all(24),
+                  child: Text(
+                      'Нэвтрэх хаяг өөрчлөгдсөн байна. Note-оо дахин нээнэ үү.',
+                      textAlign: TextAlign.center))));
     }
     final editing = widget.existing != null;
     return Padding(
@@ -593,16 +592,10 @@ class _NoteComposerState extends ConsumerState<_NoteComposer> {
           left: 16,
           right: 16,
           top: 16),
+      // The theme's drag handle (showDragHandle) is the grabber.
       child: SafeArea(
           top: false,
           child: Column(mainAxisSize: MainAxisSize.min, children: [
-            Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                    color: AppColors.hairline,
-                    borderRadius: BorderRadius.circular(2))),
-            const SizedBox(height: 14),
             Text('Note үлдээх', style: AppTextStyles.labelLg),
             const SizedBox(height: 4),
             Text('Найзууд чинь 24 цаг харна',
@@ -634,10 +627,13 @@ class _NoteComposerState extends ConsumerState<_NoteComposer> {
             // Зөвхөн venue тэмдэглэх
             _Pressable(
               onTap: _busy ? null : _pickVenue,
+              // The row stays 46pt tall; with a venue set, the clear button's
+              // 44pt box replaces the vertical/right padding.
               child: Container(
                 width: double.infinity,
+                constraints: const BoxConstraints(minHeight: 46),
                 padding:
-                    const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                    EdgeInsets.fromLTRB(14, 1, _venueName != null ? 2 : 14, 1),
                 decoration: BoxDecoration(
                     color: AppColors.bgSurface,
                     borderRadius: BorderRadius.circular(12),
@@ -652,12 +648,17 @@ class _NoteComposerState extends ConsumerState<_NoteComposer> {
                           ? AppColors.accentStart
                           : AppColors.textSecondary),
                   const SizedBox(width: 8),
+                  // Own vertical padding: the row's padding is only 1pt so the
+                  // 44pt clear box fits, but wrapped names must not touch the border.
                   Expanded(
-                      child: Text(_venueName ?? 'Газар тэмдэглэх (заавал биш)',
-                          style: AppTextStyles.bodyMd.copyWith(
-                              color: _venueName != null
-                                  ? AppColors.textPrimary
-                                  : AppColors.textSecondary))),
+                      child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 11),
+                          child: Text(
+                              _venueName ?? 'Газар тэмдэглэх (заавал биш)',
+                              style: AppTextStyles.bodyMd.copyWith(
+                                  color: _venueName != null
+                                      ? AppColors.textPrimary
+                                      : AppColors.textSecondary)))),
                   if (_venueName != null)
                     _Pressable(
                         onTap: _busy
@@ -666,8 +667,16 @@ class _NoteComposerState extends ConsumerState<_NoteComposer> {
                                   _venueId = null;
                                   _venueName = null;
                                 }),
-                        child: SculptedIcon(Icons.close,
-                            size: 16, color: AppColors.textTertiary)),
+                        child: Semantics(
+                            button: true,
+                            label: 'Газрыг арилгах',
+                            child: SizedBox(
+                                width: 44,
+                                height: 44,
+                                child: Center(
+                                    child: SculptedIcon(Icons.close,
+                                        size: 16,
+                                        color: AppColors.textTertiary))))),
                 ]),
               ),
             ),
@@ -761,16 +770,10 @@ class _VenueSearchSheetState extends State<_VenueSearchSheet> {
           left: 16,
           right: 16,
           top: 16),
+      // The theme's drag handle (showDragHandle) is the grabber.
       child: SafeArea(
           top: false,
           child: Column(mainAxisSize: MainAxisSize.min, children: [
-            Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                    color: AppColors.hairline,
-                    borderRadius: BorderRadius.circular(2))),
-            const SizedBox(height: 12),
             Text('Газар сонгох', style: AppTextStyles.labelLg),
             const SizedBox(height: 12),
             TextField(
@@ -790,35 +793,40 @@ class _VenueSearchSheetState extends State<_VenueSearchSheet> {
                       borderSide: BorderSide.none)),
             ),
             const SizedBox(height: 8),
-            SizedBox(
-                height: 320,
-                child: _loading
-                    ? const Center(
-                        child: CircularProgressIndicator(
-                            color: AppColors.accentStart, strokeWidth: 2))
-                    : _results.isEmpty
-                        ? Center(
-                            child: Text('Газар олдсонгүй',
-                                style: AppTextStyles.bodyMd
-                                    .copyWith(color: AppColors.textSecondary)))
-                        : ListView.builder(
-                            itemCount: _results.length,
-                            itemBuilder: (_, i) {
-                              final r = _results[i];
-                              return ListTile(
-                                leading: const SculptedIcon(Icons.location_on,
-                                    color: AppColors.accentStart),
-                                title: Text(r['name'] as String? ?? '',
+            // Shrinks to the space left above the keyboard on short phones.
+            Flexible(
+                child: SizedBox(
+                    height: 320,
+                    child: _loading
+                        ? const Center(
+                            child: CircularProgressIndicator(
+                                color: AppColors.accentStart, strokeWidth: 2))
+                        : _results.isEmpty
+                            ? Center(
+                                child: Text('Газар олдсонгүй',
                                     style: AppTextStyles.bodyMd.copyWith(
-                                        color: AppColors.textPrimary)),
-                                subtitle: r['district'] != null
-                                    ? Text(r['district'] as String,
-                                        style: AppTextStyles.bodyXs.copyWith(
-                                            color: AppColors.textSecondary))
-                                    : null,
-                                onTap: () => Navigator.pop(context, r),
-                              );
-                            })),
+                                        color: AppColors.textSecondary)))
+                            : ListView.builder(
+                                itemCount: _results.length,
+                                itemBuilder: (_, i) {
+                                  final r = _results[i];
+                                  return ListTile(
+                                    leading: const SculptedIcon(
+                                        Icons.location_on,
+                                        color: AppColors.accentStart),
+                                    title: Text(r['name'] as String? ?? '',
+                                        style: AppTextStyles.bodyMd.copyWith(
+                                            color: AppColors.textPrimary)),
+                                    subtitle: r['district'] != null
+                                        ? Text(r['district'] as String,
+                                            style: AppTextStyles.bodyXs
+                                                .copyWith(
+                                                    color: AppColors
+                                                        .textSecondary))
+                                        : null,
+                                    onTap: () => Navigator.pop(context, r),
+                                  );
+                                }))),
             const SizedBox(height: 12),
           ])),
     );

@@ -221,6 +221,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   child: RefreshIndicator(
                     color: AppColors.accentStart,
                     backgroundColor: AppColors.bgElevated,
+                    // The header draws under the status bar; start the
+                    // spinner below it instead of under the Dynamic Island.
+                    edgeOffset: MediaQuery.paddingOf(context).top,
                     onRefresh: _onRefresh,
                     child: ScrollConfiguration(
                       behavior: ScrollConfiguration.of(context)

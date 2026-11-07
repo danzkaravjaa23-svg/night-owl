@@ -242,7 +242,9 @@ class _VenueDetailScreenState extends ConsumerState<VenueDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (_loading) return _skeleton();
+    // Skeleton only on the first load: a refresh keeps the loaded page (and
+    // its scroll offset / RefreshIndicator spinner) mounted until it settles.
+    if (_loading && _venue == null) return _skeleton();
     if (_error || _notFound) return _problemView();
 
     final name = _venue?['name'] as String? ?? 'Газар';
@@ -516,30 +518,51 @@ class _VenueDetailScreenState extends ConsumerState<VenueDetailScreen> {
       );
 
   // ── Ачаалж байх үеийн skeleton — шинэ layout-ын хэлбэрээр ──
+  // The back button stays reachable while a slow load is pending (the custom
+  // slide route has no iOS edge-swipe back).
   Widget _skeleton() => Scaffold(
         backgroundColor: AppColors.bgBase,
-        body: const SingleChildScrollView(
-          physics: NeverScrollableScrollPhysics(),
-          child:
-              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            _SkelBox(height: 240, radius: 0), // hero
-            Padding(
-              padding: EdgeInsets.all(20),
+        body: Stack(children: [
+          const Positioned.fill(
+            child: SingleChildScrollView(
+              physics: NeverScrollableScrollPhysics(),
               child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _SkelBox(
-                        height: 230, radius: AppRadii.lg), // хөвөгч info card
-                    SizedBox(height: 28),
-                    _SkelBox(width: 140, height: 12, radius: 6),
-                    SizedBox(height: 12),
-                    _SkelBox(height: 84, radius: AppRadii.lg),
-                    SizedBox(height: 10),
-                    _SkelBox(height: 84, radius: AppRadii.lg),
+                    _SkelBox(height: 240, radius: 0), // hero
+                    Padding(
+                      padding: EdgeInsets.all(20),
+                      child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _SkelBox(
+                                height: 230,
+                                radius: AppRadii.lg), // хөвөгч info card
+                            SizedBox(height: 28),
+                            _SkelBox(width: 140, height: 12, radius: 6),
+                            SizedBox(height: 12),
+                            _SkelBox(height: 84, radius: AppRadii.lg),
+                            SizedBox(height: 10),
+                            _SkelBox(height: 84, radius: AppRadii.lg),
+                          ]),
+                    ),
                   ]),
             ),
-          ]),
-        ),
+          ),
+          // left only (no right: 0): a tight width would centre the button.
+          Positioned(
+              top: 0,
+              left: 0,
+              child: SafeArea(
+                  bottom: false,
+                  child: Padding(
+                      padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+                      child: GlassIconButton(
+                          icon: Icons.chevron_left_rounded,
+                          onMedia: true,
+                          tooltip: 'Буцах',
+                          onTap: _goBack)))),
+        ]),
       );
 
   // ── Алдаа / олдсонгүй байдал — чимээгүй хоосон дэлгэцийн оронд ──
@@ -1014,14 +1037,17 @@ class _VenueReviewsSheetState extends State<VenueReviewsSheet> {
                       children: [
                         Text('Таны үнэлгээ', style: AppTextStyles.labelLg),
                         const SizedBox(height: 8),
+                        // 44pt hit box per star; the 34pt star is unchanged.
                         Row(children: [
                           for (int i = 1; i <= 5; i++)
                             _Tap(
                                 behavior: HitTestBehavior.opaque,
                                 onTap: () => setState(() => _myRating = i),
-                                child: Padding(
-                                    padding: const EdgeInsets.only(right: 4),
-                                    child: Icon(
+                                child: SizedBox(
+                                    width: 44,
+                                    height: 44,
+                                    child: Center(
+                                        child: Icon(
                                         i <= _myRating
                                             ? Icons.star_rounded
                                             : Icons.star_border_rounded,
@@ -1034,7 +1060,7 @@ class _VenueReviewsSheetState extends State<VenueReviewsSheet> {
                                                         .withValues(alpha: 0.5),
                                                     blurRadius: 10)
                                               ]
-                                            : null)))
+                                            : null))))
                         ]),
                         const SizedBox(height: 10),
                         TextField(

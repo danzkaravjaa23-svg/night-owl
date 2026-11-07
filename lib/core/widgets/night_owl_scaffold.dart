@@ -30,7 +30,10 @@ class NightOwlScaffold extends StatelessWidget {
       extendBodyBehindAppBar: extendBehindAppBar,
       appBar: appBar,
       bottomNavigationBar: bottomNavigationBar,
+      // StackFit.expand: Scaffold gives its body a loose size, so a loose
+      // Stack would shrink-wrap a short body (and the aurora) to the top-left.
       body: Stack(
+        fit: StackFit.expand,
         children: [
           if (showAurora) _AuroraBackground(),
           body,

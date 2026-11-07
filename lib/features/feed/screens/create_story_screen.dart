@@ -1,5 +1,6 @@
 import '../../../core/widgets/content_review_notice.dart';
 import 'dart:async';
+import 'dart:math' as math;
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -319,6 +320,9 @@ class _CreateStoryScreenState extends ConsumerState<CreateStoryScreen> {
   // Өнгөний filter
   int _filter = 0;
   bool _filterBar = false;
+
+  // Height of the bottom panel (chips + share), which bounds the toolbar.
+  double _bottomPanelHeight = 0;
 
   String? _venueId;
   String? _venueRef;
@@ -663,6 +667,8 @@ class _CreateStoryScreenState extends ConsumerState<CreateStoryScreen> {
       context: context,
       backgroundColor: AppColors.bgElevated,
       isScrollControlled: true,
+      // Keep the full-height sheet clear of the status bar / Dynamic Island.
+      useSafeArea: true,
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (_) => const _PickerSheet(mode: _PickerMode.user),
@@ -691,14 +697,7 @@ class _CreateStoryScreenState extends ConsumerState<CreateStoryScreen> {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Container(
-                        width: 40,
-                        height: 4,
-                        margin: const EdgeInsets.only(bottom: 14),
-                        alignment: Alignment.center,
-                        decoration: BoxDecoration(
-                            color: AppColors.hairline2,
-                            borderRadius: BorderRadius.circular(2))),
+                    // The theme's drag handle (showDragHandle) is the grabber.
                     Row(children: [
                       const Text('🎵 ', style: TextStyle(fontSize: 18)),
                       Text('Хөгжим',
@@ -1124,111 +1123,147 @@ class _CreateStoryScreenState extends ConsumerState<CreateStoryScreen> {
                     padding: const EdgeInsets.all(8),
                     child: _circleBtn(Icons.close, _requestClose)))),
 
-        // Баруун toolbar
-        SafeArea(
-            child: Align(
+        // Баруун toolbar — hidden while drawing (the draw bar takes the top).
+        // Bounded to the space above the bottom panel (measured, so it grows
+        // with the filter strip, venue, mentions and large text) and
+        // scrollable, so its buttons are never covered on short phones.
+        if (!_drawMode)
+          SafeArea(
+            child: LayoutBuilder(
+              builder: (context, safe) => Align(
                 alignment: Alignment.topRight,
                 child: Padding(
                   padding: const EdgeInsets.only(top: 8, right: 8),
-                  child: Column(children: [
-                    _toolBtn(Icons.text_fields_rounded, _editText),
-                    if (hasText && !_isVideo) ...[
-                      _toolBtnChild(
-                          Text('Aa',
-                              style:
-                                  _textStyle(15).copyWith(color: Colors.white)),
-                          () => setState(() => _font = (_font + 1) % 4)),
-                      _toolBtnChild(
-                          Container(
-                              width: 18,
-                              height: 18,
-                              decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: _kTextColors[_color],
-                                  border: Border.all(color: Colors.white54))),
-                          () => setState(() =>
-                              _color = (_color + 1) % _kTextColors.length)),
-                    ],
-                    _toolBtn(Icons.emoji_emotions_outlined, _pickSticker),
-                    if (!_isVideo)
-                      _toolBtn(Icons.music_note_rounded, _musicSheet,
-                          active: _songTitle != null),
-                    _toolBtn(Icons.alternate_email_rounded, _pickMentions),
-                    if (!_isVideo)
-                      _toolBtn(Icons.auto_awesome_rounded,
-                          () => setState(() => _filterBar = !_filterBar),
-                          active: _filterBar || _filter != 0),
-                    if (!_isVideo)
-                      _toolBtn(Icons.brush_rounded,
-                          () => setState(() => _drawMode = !_drawMode),
-                          active: _drawMode),
-                    Tooltip(
-                        message: _venueRef == null
-                            ? 'Байршил нэмэх'
-                            : 'Байршил солих',
-                        child: _toolBtn(Icons.location_on_outlined, _pickVenue,
-                            active: _venueRef != null)),
-                  ]),
-                ))),
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                        maxHeight: math.max(
+                            0.0, safe.maxHeight - 8 - _bottomPanelHeight - 8)),
+                    child: SingleChildScrollView(
+                        child: Column(children: [
+                          _toolBtn(Icons.text_fields_rounded, _editText),
+                          if (hasText && !_isVideo) ...[
+                            _toolBtnChild(
+                                Text('Aa',
+                                    style:
+                                        _textStyle(15).copyWith(color: Colors.white)),
+                                () => setState(() => _font = (_font + 1) % 4)),
+                            _toolBtnChild(
+                                Container(
+                                    width: 18,
+                                    height: 18,
+                                    decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        color: _kTextColors[_color],
+                                        border: Border.all(color: Colors.white54))),
+                                () => setState(() =>
+                                    _color = (_color + 1) % _kTextColors.length)),
+                          ],
+                          _toolBtn(Icons.emoji_emotions_outlined, _pickSticker),
+                          if (!_isVideo)
+                            _toolBtn(Icons.music_note_rounded, _musicSheet,
+                                active: _songTitle != null),
+                          _toolBtn(Icons.alternate_email_rounded, _pickMentions),
+                          if (!_isVideo)
+                            _toolBtn(Icons.auto_awesome_rounded,
+                                () => setState(() => _filterBar = !_filterBar),
+                                active: _filterBar || _filter != 0),
+                          if (!_isVideo)
+                            _toolBtn(Icons.brush_rounded,
+                                () => setState(() => _drawMode = !_drawMode),
+                                active: _drawMode),
+                          Tooltip(
+                              message: _venueRef == null
+                                  ? 'Байршил нэмэх'
+                                  : 'Байршил солих',
+                              child: _toolBtn(Icons.location_on_outlined, _pickVenue,
+                                  active: _venueRef != null)),
+                        ])),
+                  ),
+                ),
+              ),
+            ),
+          ),
 
-        // Зурах горимын удирдлага
+        // Зурах горимын удирдлага — below the close button (the right toolbar
+        // is hidden while drawing), scaled down rather than overlapping the
+        // corner controls on narrow phones. Every control has a 44pt-tall
+        // hit area.
         if (_drawMode)
           SafeArea(
               child: Align(
                   alignment: Alignment.topCenter,
                   child: Padding(
-                    padding: const EdgeInsets.only(top: 10),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 6),
-                      decoration: BoxDecoration(
-                          color: Colors.black54,
-                          borderRadius: BorderRadius.circular(24)),
-                      child: Row(mainAxisSize: MainAxisSize.min, children: [
-                        // Өнгө сонгох
-                        for (var i = 0; i < _kTextColors.length; i++)
+                    padding: const EdgeInsets.fromLTRB(16, 60, 16, 0),
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10),
+                        decoration: BoxDecoration(
+                            color: Colors.black54,
+                            borderRadius: BorderRadius.circular(24)),
+                        child: Row(mainAxisSize: MainAxisSize.min, children: [
+                          // Өнгө сонгох
+                          for (var i = 0; i < _kTextColors.length; i++)
+                            GestureDetector(
+                                behavior: HitTestBehavior.opaque,
+                                onTap: () => setState(() => _drawColor = i),
+                                child: Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 6, vertical: 10),
+                                    child: Container(
+                                        width: 24,
+                                        height: 24,
+                                        decoration: BoxDecoration(
+                                            shape: BoxShape.circle,
+                                            color: _kTextColors[i],
+                                            border: Border.all(
+                                                color: _drawColor == i
+                                                    ? Colors.white
+                                                    : Colors.white24,
+                                                width: _drawColor == i
+                                                    ? 3
+                                                    : 1))))),
+                          Container(
+                              width: 1,
+                              height: 24,
+                              color: Colors.white24,
+                              margin:
+                                  const EdgeInsets.symmetric(horizontal: 6)),
+                          // Буцаах
                           GestureDetector(
-                              onTap: () => setState(() => _drawColor = i),
-                              child: Container(
-                                  margin:
-                                      const EdgeInsets.symmetric(horizontal: 3),
-                                  width: 24,
-                                  height: 24,
-                                  decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      color: _kTextColors[i],
-                                      border: Border.all(
-                                          color: _drawColor == i
-                                              ? Colors.white
-                                              : Colors.white24,
-                                          width: _drawColor == i ? 3 : 1)))),
-                        Container(
-                            width: 1,
-                            height: 24,
-                            color: Colors.white24,
-                            margin: const EdgeInsets.symmetric(horizontal: 6)),
-                        // Буцаах
-                        GestureDetector(
-                            onTap: _strokes.isEmpty
-                                ? null
-                                : () => setState(() => _strokes.removeLast()),
-                            child: Icon(Icons.undo_rounded,
-                                size: 22,
-                                color: _strokes.isEmpty
-                                    ? Colors.white30
-                                    : Colors.white)),
-                        const SizedBox(width: 12),
-                        // Болсон
-                        GestureDetector(
-                            onTap: () => setState(() => _drawMode = false),
-                            child: const Padding(
-                                padding: EdgeInsets.symmetric(horizontal: 4),
-                                child: Text('Болсон',
-                                    style: TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w700)))),
-                      ]),
+                              behavior: HitTestBehavior.opaque,
+                              onTap: _strokes.isEmpty
+                                  ? null
+                                  : () =>
+                                      setState(() => _strokes.removeLast()),
+                              child: SizedBox(
+                                  height: 44,
+                                  child: Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 8),
+                                      child: Icon(Icons.undo_rounded,
+                                          size: 22,
+                                          color: _strokes.isEmpty
+                                              ? Colors.white30
+                                              : Colors.white)))),
+                          // Болсон
+                          GestureDetector(
+                              behavior: HitTestBehavior.opaque,
+                              onTap: () => setState(() => _drawMode = false),
+                              child: const SizedBox(
+                                  height: 44,
+                                  child: Padding(
+                                      padding:
+                                          EdgeInsets.symmetric(horizontal: 8),
+                                      child: Center(
+                                          child: Text('Болсон',
+                                              style: TextStyle(
+                                                  color: Colors.white,
+                                                  fontSize: 14,
+                                                  fontWeight:
+                                                      FontWeight.w700)))))),
+                        ]),
+                      ),
                     ),
                   ))),
 
@@ -1237,7 +1272,9 @@ class _CreateStoryScreenState extends ConsumerState<CreateStoryScreen> {
           top: false,
           child: Align(
               alignment: Alignment.bottomCenter,
-              child: Padding(
+              child: _HeightReporter(
+                  onHeight: _onBottomPanelHeight,
+                  child: Padding(
                   padding: const EdgeInsets.fromLTRB(14, 0, 14, 12),
                   child: Column(mainAxisSize: MainAxisSize.min, children: [
                     // ── Filter сонгох зурвас (зөөлөн нээгдэж/хаагдана) ──
@@ -1412,10 +1449,16 @@ class _CreateStoryScreenState extends ConsumerState<CreateStoryScreen> {
                     Text('24 цагийн дараа харагдахаа болино',
                         style: AppTextStyles.bodyXs
                             .copyWith(color: Colors.white54)),
-                  ]))),
+                  ])))),
         ),
       ]),
     );
+  }
+
+  void _onBottomPanelHeight(double height) {
+    if (mounted && height != _bottomPanelHeight) {
+      setState(() => _bottomPanelHeight = height);
+    }
   }
 
   Widget _pickerScreen() => Scaffold(
@@ -1472,8 +1515,8 @@ class _CreateStoryScreenState extends ConsumerState<CreateStoryScreen> {
   Widget _circleBtn(IconData icon, VoidCallback onTap) => _Pressable(
       onTap: onTap,
       child: Container(
-          width: 38,
-          height: 38,
+          width: 44,
+          height: 44,
           decoration: const BoxDecoration(
               shape: BoxShape.circle, color: Colors.black38),
           child: Icon(icon, color: Colors.white, size: 22)));
@@ -1498,9 +1541,11 @@ class _CreateStoryScreenState extends ConsumerState<CreateStoryScreen> {
                       color: active ? AppColors.accentStart : Colors.black38),
                   child: child)));
 
+  // The remove button's padding sets the chip height, so its hit area is the
+  // chip's full height instead of a 20pt box.
   Widget _selChip(IconData icon, String label, VoidCallback onClear) =>
       Container(
-          padding: const EdgeInsets.fromLTRB(10, 5, 6, 5),
+          padding: const EdgeInsets.only(left: 10),
           decoration: BoxDecoration(
               color: Colors.black54, borderRadius: BorderRadius.circular(20)),
           child: Row(mainAxisSize: MainAxisSize.min, children: [
@@ -1508,11 +1553,10 @@ class _CreateStoryScreenState extends ConsumerState<CreateStoryScreen> {
             const SizedBox(width: 4),
             Text(label,
                 style: const TextStyle(color: Colors.white, fontSize: 12)),
-            const SizedBox(width: 2),
             _Pressable(
                 onTap: _canEdit ? onClear : null,
                 child: const Padding(
-                    padding: EdgeInsets.all(3),
+                    padding: EdgeInsets.all(12),
                     child: Icon(Icons.close, color: Colors.white60, size: 14))),
           ]));
 }
@@ -1552,6 +1596,37 @@ class _PressableState extends State<_Pressable> {
 }
 
 enum _PickerMode { venue, user }
+
+/// Reports its child's laid-out height after the frame, so a sibling in a
+/// Stack can keep clear of it.
+class _HeightReporter extends SingleChildRenderObjectWidget {
+  final ValueChanged<double> onHeight;
+  const _HeightReporter({required this.onHeight, required super.child});
+
+  @override
+  RenderObject createRenderObject(BuildContext context) =>
+      _RenderHeightReporter(onHeight);
+
+  @override
+  void updateRenderObject(
+          BuildContext context, _RenderHeightReporter renderObject) =>
+      renderObject.onHeight = onHeight;
+}
+
+class _RenderHeightReporter extends RenderProxyBox {
+  _RenderHeightReporter(this.onHeight);
+  ValueChanged<double> onHeight;
+  double? _reported;
+
+  @override
+  void performLayout() {
+    super.performLayout();
+    final height = size.height;
+    if (height == _reported) return;
+    _reported = height;
+    WidgetsBinding.instance.addPostFrameCallback((_) => onHeight(height));
+  }
+}
 
 class _PickerSheet extends StatefulWidget {
   final _PickerMode mode;
@@ -1624,20 +1699,16 @@ class _PickerSheetState extends State<_PickerSheet> {
   @override
   Widget build(BuildContext context) {
     final isVenue = widget.mode == _PickerMode.venue;
+    // padding.bottom is 0 while the keyboard is up, so the list clears the
+    // home indicator only when it is hidden. The theme draws the grabber.
     return Padding(
       padding: EdgeInsets.only(
-          bottom: MediaQuery.of(context).viewInsets.bottom,
+          bottom: MediaQuery.viewInsetsOf(context).bottom +
+              MediaQuery.paddingOf(context).bottom,
           left: 16,
           right: 16,
           top: 16),
       child: Column(mainAxisSize: MainAxisSize.min, children: [
-        Container(
-            width: 40,
-            height: 4,
-            decoration: BoxDecoration(
-                color: AppColors.hairline,
-                borderRadius: BorderRadius.circular(2))),
-        const SizedBox(height: 12),
         Text(isVenue ? 'Байршил сонгох' : 'Хүн тэмдэглэх',
             style: AppTextStyles.labelLg),
         const SizedBox(height: 12),
@@ -1657,7 +1728,9 @@ class _PickerSheetState extends State<_PickerSheet> {
                   borderSide: BorderSide.none)),
         ),
         const SizedBox(height: 8),
-        SizedBox(
+        // Shrinks to the space left above the keyboard on short phones.
+        Flexible(
+            child: SizedBox(
           height: 340,
           child: _loading
               ? const Center(
@@ -1704,7 +1777,7 @@ class _PickerSheetState extends State<_PickerSheet> {
                           onTap: () => Navigator.pop(context, r),
                         );
                       }),
-        ),
+        )),
         const SizedBox(height: 12),
       ]),
     );

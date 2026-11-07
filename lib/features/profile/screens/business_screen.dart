@@ -81,10 +81,17 @@ class _BusinessScreenState extends ConsumerState<BusinessScreen> {
                 FilledButton.icon(onPressed: _busy ? null : _becomeBusiness,
                   icon: const Icon(Icons.business_center_outlined), label: Text(_busy ? 'Түр хүлээнэ үү' : 'Бизнес хаяг идэвхжүүлэх')),
               const SizedBox(height: 12),
-              Wrap(spacing: 12, runSpacing: 12, children: [
-                _stat('Газрууд', data.venues.length), _stat('Пост', data.posts),
-                _stat('Удахгүй болох эвент', data.events), _stat('Идэвхтэй check-in', data.checkins),
-              ]),
+              // Two columns sized from the available width (a fixed 170pt card
+              // fell to one left-aligned column below 392pt); one column for
+              // very large text, as in the admin panel.
+              LayoutBuilder(builder: (context, c) {
+                final w = MediaQuery.textScalerOf(context).scale(14) > 20
+                    ? c.maxWidth : (c.maxWidth - 12) / 2;
+                return Wrap(spacing: 12, runSpacing: 12, children: [
+                  _stat('Газрууд', data.venues.length, w), _stat('Пост', data.posts, w),
+                  _stat('Удахгүй болох эвент', data.events, w), _stat('Идэвхтэй check-in', data.checkins, w),
+                ]);
+              }),
               const SizedBox(height: 24),
               FilledButton.icon(onPressed: () async {
                 await context.push(AppRoutes.createEvent);
@@ -102,7 +109,7 @@ class _BusinessScreenState extends ConsumerState<BusinessScreen> {
             ]))),
     );
   }
-  Widget _stat(String label, int value) => Container(width: 170, padding: const EdgeInsets.all(16),
+  Widget _stat(String label, int value, double width) => Container(width: width, padding: const EdgeInsets.all(16),
     decoration: BoxDecoration(color: AppColors.bgElevated, borderRadius: BorderRadius.circular(18),
       border: Border.all(color: AppColors.hairline)),
     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [

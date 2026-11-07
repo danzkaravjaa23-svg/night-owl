@@ -635,20 +635,27 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                           AppTextStyles.bodyXs.copyWith(color: Colors.white)),
                 )),
 
-          // Remove current
+          // Remove current — the 28pt disc sits in a 44pt hit box, inset so
+          // the disc keeps its 12pt offset from the corner.
           if (_canEdit)
             Positioned(
-                top: 12,
-                right: 12,
+                top: 4,
+                right: 4,
                 child: _Press(
                   scale: 0.85,
                   onTap: () => _removeAt(_page),
-                  child: Container(
-                    padding: const EdgeInsets.all(6),
-                    decoration: const BoxDecoration(
-                        color: Colors.black54, shape: BoxShape.circle),
-                    child:
-                        const Icon(Icons.close, color: Colors.white, size: 16),
+                  child: SizedBox(
+                    width: 44,
+                    height: 44,
+                    child: Center(
+                      child: Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: const BoxDecoration(
+                            color: Colors.black54, shape: BoxShape.circle),
+                        child: const Icon(Icons.close,
+                            color: Colors.white, size: 16),
+                      ),
+                    ),
                   ),
                 )),
 
@@ -800,19 +807,32 @@ class _Thumb extends StatelessWidget {
           clipBehavior: Clip.antiAlias,
           child: Stack(fit: StackFit.expand, children: [
             Image(image: image, fit: BoxFit.cover),
+            // The 16pt badge keeps its spot; the hit box is the thumbnail's
+            // top-right 24pt corner. A larger box would cover the centre of
+            // the 54x62 thumbnail and turn "view this photo" taps into deletes.
             if (onRemove != null)
               Positioned(
-                  top: 2,
-                  right: 2,
+                  top: 0,
+                  right: 0,
                   child: _Press(
                     scale: 0.8,
                     onTap: onRemove,
-                    child: Container(
-                      padding: const EdgeInsets.all(2),
-                      decoration: const BoxDecoration(
-                          color: Colors.black54, shape: BoxShape.circle),
-                      child: const Icon(Icons.close,
-                          color: Colors.white, size: 12),
+                    child: SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: Align(
+                        alignment: Alignment.topRight,
+                        child: Padding(
+                          padding: const EdgeInsets.all(2),
+                          child: Container(
+                            padding: const EdgeInsets.all(2),
+                            decoration: const BoxDecoration(
+                                color: Colors.black54, shape: BoxShape.circle),
+                            child: const Icon(Icons.close,
+                                color: Colors.white, size: 12),
+                          ),
+                        ),
+                      ),
                     ),
                   )),
           ]),

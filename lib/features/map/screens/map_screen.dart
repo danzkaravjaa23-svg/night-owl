@@ -368,10 +368,16 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                                     showList: filtered.isNotEmpty,
                                     maxHeight: math.max(
                                         0, constraints.maxHeight - 32))),
+                          // Short maps (iPhone SE in the shell) would put
+                          // this over the zoom/fit stack, which ends 168pt
+                          // below the map top: keep its 48pt box below that.
                           Positioned(
                               right: 16,
                               bottom: selected == null
-                                  ? 48
+                                  ? math.min(
+                                      48.0,
+                                      math.max(8.0,
+                                          constraints.maxHeight - 176 - 48))
                                   : cardHeight + attributionGap + 8,
                               child: _locationButton()),
                           if (selected != null)

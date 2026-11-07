@@ -46,7 +46,11 @@ class _ExploreScreenState extends State<ExploreScreen> {
   @override
   Widget build(BuildContext context) => ColoredBox(
       color: Theme.of(context).scaffoldBackgroundColor,
-      child: LayoutBuilder(builder: (context, constraints) {
+      // Keep scrolled content out from under the status bar / Dynamic Island.
+      // MapScreen's own SafeArea then sees no top inset, so nothing doubles.
+      child: SafeArea(
+          bottom: false,
+          child: LayoutBuilder(builder: (context, constraints) {
         // Large text wraps the controls and list introduction onto more lines.
         // Give the retained map/list enough room for useful content; the outer
         // scroll still makes the discovery action reachable on short screens.
@@ -109,5 +113,5 @@ class _ExploreScreenState extends State<ExploreScreen> {
                 const SizedBox(height: 24),
               ]),
             ]));
-      }));
+      })));
 }

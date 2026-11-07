@@ -152,7 +152,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
         children: [
           // ── Futurist Nightscape aura — login-той ижил гэр бүл ──
           const AuthAura(),
+          // The glass sheet docks to the screen edge; its footer pads itself
+          // above the home indicator instead.
           SafeArea(
+            bottom: false,
             child: Column(
               children: [
                 // ── Дээд hero (~30%) — back chip + glyph + гарчиг ──
@@ -211,7 +214,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           ),
                           // Footer — sheet-ийн доод захад бэхлэгдсэн
                           Padding(
-                            padding: const EdgeInsets.fromLTRB(20, 6, 20, 16),
+                            padding: EdgeInsets.fromLTRB(20, 6, 20,
+                                16 + MediaQuery.paddingOf(context).bottom),
                             child: Wrap(
                               alignment: WrapAlignment.center,
                               crossAxisAlignment: WrapCrossAlignment.center,

@@ -465,7 +465,10 @@ class _SetupScreenState extends State<SetupScreen> {
         children: [
           // ── Futurist Nightscape aura — auth гэр бүлтэй ижил ──
           const AuthAura(),
+          // The glass sheet docks to the screen edge; its scroll content pads
+          // itself above the home indicator instead.
           SafeArea(
+            bottom: false,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -637,7 +640,8 @@ class _SetupScreenState extends State<SetupScreen> {
 
   Widget _formView() => SingleChildScrollView(
         key: const ValueKey('form'),
-        padding: const EdgeInsets.fromLTRB(20, 24, 20, 20),
+        padding: EdgeInsets.fromLTRB(
+            20, 24, 20, 20 + MediaQuery.paddingOf(context).bottom),
         child: Form(
           key: _formKey,
           child: Column(
@@ -707,8 +711,11 @@ class _SetupScreenState extends State<SetupScreen> {
                         child: Text('Профайл ачаалж чадсангүй',
                             style: AppTextStyles.bodySm
                                 .copyWith(color: _amberInk))),
-                    TapScale(
-                      onTap: _loadExistingProfile,
+                    TextButton(
+                      onPressed: _loadExistingProfile,
+                      style: TextButton.styleFrom(
+                          minimumSize: const Size(44, 44),
+                          padding: const EdgeInsets.symmetric(horizontal: 8)),
                       child: Text('Дахин оролдох',
                           style: AppTextStyles.labelSm.copyWith(
                               color: AppColors.neonCyan, letterSpacing: 0)),
@@ -839,41 +846,48 @@ class _SetupScreenState extends State<SetupScreen> {
               Text('Хамгийн ихдээ 6-г сонгоно',
                   style: AppTextStyles.bodyXs
                       .copyWith(color: AppColors.textTertiary)),
-              const SizedBox(height: 12),
+              // 6 + the chips' 6.5pt tap padding keeps the old ~12pt gap.
+              const SizedBox(height: 6),
+              // Rows touch (runSpacing 0): each chip carries 6.5pt vertical
+              // padding inside its TapScale, so the 31pt chip gets a 44pt hit
+              // area and a 13pt visible gap between rows.
               Wrap(
                 spacing: 8,
-                runSpacing: 8,
+                runSpacing: 0,
                 children: AppConstants.interestOptions.map((tag) {
                   final active = _interests.contains(tag);
                   return TapScale(
                     onTap: () => _toggleInterest(tag),
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 150),
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 14, vertical: 8),
-                      decoration: BoxDecoration(
-                        color: active
-                            ? AppColors.accentStart.withValues(alpha: 0.18)
-                            : AppColors.bgSurface,
-                        borderRadius: BorderRadius.circular(999),
-                        border: Border.all(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 6.5),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 150),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 14, vertical: 8),
+                        decoration: BoxDecoration(
                           color: active
-                              ? AppColors.accentStart
-                              : AppColors.hairline,
-                          width: active ? 1.5 : 1,
-                        ),
-                        boxShadow: active
-                            ? AppColors.glowShadow(AppColors.accentStart,
-                                alpha: 0.22, blur: 14)
-                            : null,
-                      ),
-                      child: Text(tag,
-                          style: AppTextStyles.labelSm.copyWith(
+                              ? AppColors.accentStart.withValues(alpha: 0.18)
+                              : AppColors.bgSurface,
+                          borderRadius: BorderRadius.circular(999),
+                          border: Border.all(
                             color: active
                                 ? AppColors.accentStart
-                                : AppColors.textSecondary,
-                            letterSpacing: 0.2,
-                          )),
+                                : AppColors.hairline,
+                            width: active ? 1.5 : 1,
+                          ),
+                          boxShadow: active
+                              ? AppColors.glowShadow(AppColors.accentStart,
+                                  alpha: 0.22, blur: 14)
+                              : null,
+                        ),
+                        child: Text(tag,
+                            style: AppTextStyles.labelSm.copyWith(
+                              color: active
+                                  ? AppColors.accentStart
+                                  : AppColors.textSecondary,
+                              letterSpacing: 0.2,
+                            )),
+                      ),
                     ),
                   );
                 }).toList(),
@@ -1025,7 +1039,8 @@ class _FormSkeletonState extends State<_FormSkeleton>
         opacity: Tween<double>(begin: 0.45, end: 0.9)
             .animate(CurvedAnimation(parent: _c, curve: Curves.easeInOut)),
         child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(20, 24, 20, 20),
+          padding: EdgeInsets.fromLTRB(
+              20, 24, 20, 20 + MediaQuery.paddingOf(context).bottom),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [

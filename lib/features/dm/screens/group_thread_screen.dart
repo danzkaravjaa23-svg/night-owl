@@ -245,23 +245,21 @@ class _GroupThreadScreenState extends State<_ScopedGroupThread> {
           borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
       builder: (sheetCtx) => StreamBuilder<AuthState>(
           stream: SupabaseService.client.auth.onAuthStateChange,
+          // Full width: the M3 sheet's width is loose, so a lone Text would
+          // shrink the whole sheet to a narrow card.
           builder: (_, __) => !_isCurrent
               ? const SafeArea(
-                  child: Padding(
-                      padding: EdgeInsets.all(24),
-                      child: Text('Нэвтрэх хаяг өөрчлөгдсөн байна.')))
+                  child: SizedBox(
+                      width: double.infinity,
+                      child: Padding(
+                          padding: EdgeInsets.all(24),
+                          child: Text('Нэвтрэх хаяг өөрчлөгдсөн байна.',
+                              textAlign: TextAlign.center))))
               : SafeArea(
                   child: Padding(
                   padding: const EdgeInsets.only(bottom: 8),
+                  // The theme's drag handle (showDragHandle) is the grabber.
                   child: Column(mainAxisSize: MainAxisSize.min, children: [
-                    const SizedBox(height: 10),
-                    Container(
-                        width: 40,
-                        height: 4,
-                        decoration: BoxDecoration(
-                            color: AppColors.hairline,
-                            borderRadius: BorderRadius.circular(2))),
-                    const SizedBox(height: 14),
                     Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 20),
                         child: Row(children: [
@@ -1153,25 +1151,23 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
   Widget build(BuildContext context) {
     return StreamBuilder<AuthState>(
         stream: SupabaseService.client.auth.onAuthStateChange,
+        // Full width: the M3 sheet's width is loose, so a lone Text would
+        // shrink the whole sheet to a narrow card.
         builder: (_, __) => !_active
             ? const SafeArea(
-                child: Padding(
-                    padding: EdgeInsets.all(24),
-                    child: Text('Нэвтрэх хаяг өөрчлөгдсөн байна.')))
+                child: SizedBox(
+                    width: double.infinity,
+                    child: Padding(
+                        padding: EdgeInsets.all(24),
+                        child: Text('Нэвтрэх хаяг өөрчлөгдсөн байна.',
+                            textAlign: TextAlign.center))))
             : Padding(
                 padding: EdgeInsets.only(
                     bottom: MediaQuery.of(context).viewInsets.bottom),
                 child: SizedBox(
                   height: MediaQuery.of(context).size.height * 0.72,
+                  // The theme's drag handle (showDragHandle) is the grabber.
                   child: Column(children: [
-                    const SizedBox(height: 12),
-                    Container(
-                        width: 40,
-                        height: 4,
-                        decoration: BoxDecoration(
-                            color: AppColors.hairline2,
-                            borderRadius: BorderRadius.circular(2))),
-                    const SizedBox(height: 14),
                     Text('Гишүүн нэмэх', style: AppTextStyles.h2),
                     const SizedBox(height: 12),
                     // Хайлт — апп даяарх нэгдсэн шилэн pill талбар (48)
