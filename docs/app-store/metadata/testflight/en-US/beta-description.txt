@@ -1,0 +1,5 @@
+Night Owl UB is a beta social and place-discovery app for adults aged 18 and over in Ulaanbaatar. Browse venues on a map, save favorites, and try profiles, photos, short videos, stories and messages. The main interface is in Mongolian.
+
+This beta uses a separate staging service. Use test content and avoid private or sensitive information. Map activity reflects venue-tagged content, not live crowd levels or confirmed opening hours. Check venue details directly before visiting.
+
+Current limitations: Apple and Google sign-in are not yet enabled in staging. Email account flows and device behavior are still being validated. New public content can wait for manual moderation. Remote push delivery, calls, streaming, ticket sales and payments are not provided.

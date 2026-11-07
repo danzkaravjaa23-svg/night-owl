@@ -1,0 +1,14 @@
+LOCAL DRAFT — complete review access and the listed readiness gaps before submission.
+
+Night Owl UB is a free Ulaanbaatar social/place-discovery app, primarily in Mongolian, for an adult community. This beta connects to the staging backend. It contains no in-app purchases, subscriptions, payments or ticket sales.
+
+Guest Explore opens the map and venue details; location permission is optional. Use the persistent, non-admin review account supplied separately in App Store Connect. On first login, normal onboarding opens: confirm or enter a username (3–20 letters, digits, underscores or periods), personally select the 18+ and community-rules checkbox, then save. Display name, bio, interests and avatar are optional; no date of birth is requested. Age and community-rules acceptance have not been pre-filled on the reviewer's behalf. Owner-confirmed review contact details are prepared in App Store Connect but not saved. Representative approved content remains a separate preparation item.
+
+Create opens the post/story/short-video flows. New public content is manually moderated. Provide approved sample content and a responsive moderation operator so the reviewer can inspect the full experience.
+
+Content menus expose reporting; user options expose blocking. Profile > Settings contains account deletion (Бүртгэл устгах). Use a separately designated disposable account for destructive deletion testing.
+
+Readiness gaps at preparation: Build 3 hides disabled providers; Apple and Google providers remain disabled in staging; public email delivery/recovery, signed-device login, Apple revocation and remaining deletion/moderation acceptance are not yet verified. Do not present these paths as tested or submit these unresolved notes as proof of completeness.
+
+Privacy: https://nightowl-ub.netlify.app/privacy.html
+Support: https://nightowl-ub.netlify.app/support.html

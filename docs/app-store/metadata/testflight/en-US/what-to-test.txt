@@ -1,0 +1,7 @@
+Start with guest Explore: browse the map and venue details, search, save favorites where available, and check the privacy/support links. Try denying location permission, losing connectivity and returning to the app.
+
+With an approved beta test account, check sign-in/out, profile setup, photo/video selection, posts, stories, follows, privacy controls and messages. Report confusing errors, permission problems, layout issues and crashes. Public content may remain pending until manually reviewed.
+
+Check reporting and blocking with safe test content. Test account deletion only with a disposable account designated for that purpose.
+
+Build 3 hides sign-in providers that are not configured. Apple and Google sign-in are currently unavailable in staging. Check that email login remains usable and that a failed provider-settings request offers Retry. Include your device model, iOS version, build number and reproduction steps in feedback. Do not include passwords, authentication codes or other people's private messages.
