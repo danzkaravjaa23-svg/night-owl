@@ -84,6 +84,47 @@ install. Isolated checks are `run_ugc_review_fixture.mjs` and
 `run_erasure_ugc_fixture.mjs`; both take an absolute PGlite module path. The second
 uses the 69-FK synthetic schema and installs actual `008` plus `009` together.
 
+## Publish-immediately safeguards — prepared, not applied
+
+`202611070001_ugc_publish_immediately.sql` (staging first, owner approval
+required) publishes ordinary posts/Reels, stories, comments, notes, reviews,
+public collections and profile edits on save. The same queue then shows only
+what a safeguard held: blocked terms in any public text, web links or phone
+numbers in any text but usernames, edits that add media to a published post,
+story or collection, items hidden after 3 distinct established reporters (5 for
+a profile; new or unpublished accounts do not count), and edits of rejected
+items. Venues and events still wait for approval. Each held item carries a
+`moderation_hold` line inside its content (shown in Mongolian) plus
+`hold_reason` (`reports`, `blocked_term`, `link`, `phone`, `rejected_before` or
+null, e.g. for a media swap) and `report_count`. Approving a report-held item
+restores it and only reports made afterwards count again; rejecting keeps it
+hidden through any number of author edits until a moderator approves it. No new
+RPC is added, so build 3 and this console need no change.
+
+Blocked terms and settings live in `admin_private` and are managed in the
+Supabase SQL Editor of the **staging** project (not from this console):
+
+```sql
+-- add a term ('prefix' also catches endings; 'word' = exact word; 'substring' ignores spaces)
+insert into admin_private.ugc_blocked_terms(term,match_mode,category) values ('үг','prefix','custom') on conflict do nothing;
+-- remove a term
+delete from admin_private.ugc_blocked_terms where term='үг';
+-- too many phone-number or link holds
+update admin_private.ugc_publish_config set hold_phone_numbers=false;
+update admin_private.ugc_publish_config set hold_links=false;
+-- reports needed to hide content for everyone (allowed 2–50; profiles use profile_report_hide_threshold)
+update admin_private.ugc_publish_config set report_hide_threshold=4;
+-- minimum Auth account age for a report to count (default 24 hours; 0 lets brand-new accounts hide content)
+update admin_private.ugc_publish_config set reporter_min_account_age=interval '24 hours';
+-- emergency: every new write waits for review again (undo with =true)
+update admin_private.ugc_publish_config set publish_immediately=false;
+```
+
+Re-running the migration never restores a deleted term or changed setting.
+Read-only proof: `tools/deployment/tests/ugc_publish_immediately_postflight.sql`.
+Isolated check: `run_ugc_publish_immediately_fixture.mjs` (absolute PGlite path).
+Exact rollback: `tools/deployment/ugc_publish_immediately_rollback.sql`.
+
 ## Pages and actions
 
 | Page | Behavior |
