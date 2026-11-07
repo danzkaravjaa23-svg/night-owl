@@ -11,6 +11,8 @@
 	<string>Зураг, видео хуваалцахад зургийн сангаас сонгоно.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Ойролцоох газрууд, өөрийн байршлыг газрын зураг дээр харуулахад байршил ашиглана.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>Night Owl байршлыг зөвхөн аппыг ашиглаж байх үед ойролцоох газрууд болон өөрийн байршлыг газрын зураг дээр харуулахад ашиглана. Арын горимд байршил цуглуулахгүй.</string>
 	<key>CFBundleURLTypes</key>
 	<array><dict>
 		<key>CFBundleURLSchemes</key><array><string>com.nightowl.ub</string></array>

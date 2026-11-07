@@ -105,15 +105,15 @@ class SourceTests(unittest.TestCase):
         original = path.read_text()
         for value in ("12.0", "$(CUSTOM_IOS_VERSION)", "invalid"):
             with self.subTest(value=value):
-                path.write_text(original.replace("IPHONEOS_DEPLOYMENT_TARGET = 13.0;",
+                path.write_text(original.replace("IPHONEOS_DEPLOYMENT_TARGET = 15.0;",
                                                  f"IPHONEOS_DEPLOYMENT_TARGET = {value};", 1))
                 self.assertFalse(self.checks()["Runner minimum deployment target iOS 13+"])
-        path.write_text(original.replace("IPHONEOS_DEPLOYMENT_TARGET = 13.0;", ""))
+        path.write_text(original.replace("IPHONEOS_DEPLOYMENT_TARGET = 15.0;", ""))
         self.assertFalse(self.checks()["Runner minimum deployment target iOS 13+"])
 
     def test_target_override_can_raise_inherited_old_project_version(self):
         path = self.root / "ios/Runner.xcodeproj/project.pbxproj"
-        source = path.read_text().replace("IPHONEOS_DEPLOYMENT_TARGET = 13.0;",
+        source = path.read_text().replace("IPHONEOS_DEPLOYMENT_TARGET = 15.0;",
                                          "IPHONEOS_DEPLOYMENT_TARGET = 12.0;")
         source = source.replace("INFOPLIST_FILE = Runner/Info.plist;",
                                 "INFOPLIST_FILE = Runner/Info.plist;\n"
