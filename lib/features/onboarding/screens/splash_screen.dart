@@ -108,47 +108,55 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   Widget build(BuildContext context) => Scaffold(
         backgroundColor: const Color(0xFF0B0D17),
-        body: DecoratedBox(
-          decoration: const BoxDecoration(
-            gradient: RadialGradient(
-              center: Alignment(0, -.28),
-              radius: 1.1,
-              colors: [Color(0xFF211737), Color(0xFF0B0D17)],
+        // Scaffold gives its body a loose width, so expand explicitly: without
+        // this the gradient and content shrink-wrap to the widest line and sit
+        // in the top-left corner of the screen.
+        body: SizedBox.expand(
+          child: DecoratedBox(
+            decoration: const BoxDecoration(
+              gradient: RadialGradient(
+                center: Alignment(0, -.28),
+                radius: 1.1,
+                colors: [Color(0xFF211737), Color(0xFF0B0D17)],
+              ),
             ),
-          ),
-          child: SafeArea(
-            child: LayoutBuilder(builder: (context, constraints) {
-              return SingleChildScrollView(
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(minHeight: constraints.maxHeight),
-                  child: const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-                    child: AppEntrance(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          NightOwlMark(size: 124),
-                          SizedBox(height: 20),
-                          NightOwlLogoText(fontSize: 36, onDark: true),
-                          SizedBox(height: 14),
-                          Text('Оройн газрууд. Өөрийн хүмүүс.',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                  color: Color(0xFFB6A4FF),
-                                  fontSize: 14,
-                                  height: 1.5)),
-                          SizedBox(height: 48),
-                          OwlLoading(
-                              size: 44,
-                              onDark: true,
-                              message: 'Night Owl-ийг нээж байна'),
-                        ],
+            child: SafeArea(
+              child: LayoutBuilder(builder: (context, constraints) {
+                return SingleChildScrollView(
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                        minHeight: constraints.maxHeight,
+                        minWidth: constraints.maxWidth),
+                    child: const Padding(
+                      padding:
+                          EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+                      child: AppEntrance(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            NightOwlMark(size: 124),
+                            SizedBox(height: 20),
+                            NightOwlLogoText(fontSize: 36, onDark: true),
+                            SizedBox(height: 14),
+                            Text('Оройн газрууд. Өөрийн хүмүүс.',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                    color: Color(0xFFB6A4FF),
+                                    fontSize: 14,
+                                    height: 1.5)),
+                            SizedBox(height: 48),
+                            OwlLoading(
+                                size: 44,
+                                onDark: true,
+                                message: 'Night Owl-ийг нээж байна'),
+                          ],
+                        ),
                       ),
                     ),
                   ),
-                ),
-              );
-            }),
+                );
+              }),
+            ),
           ),
         ),
       );
