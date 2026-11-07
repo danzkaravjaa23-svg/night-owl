@@ -82,5 +82,23 @@
     "automatically_notify_testers": true,
     "tester_limit": "0 of 50",
     "public_link": "withheld from public repository"
+  },
+  "build_4": {
+    "source_commit": "b2d58f21c53b3d416bd6d20a6b9ec4ea20dd201e",
+    "changes": [
+      "onboarding slides fill the iPhone screen (centred text, CTA anchored, subtle highlight, 'Эхлэх')",
+      "post-save feedback follows the saved row's moderation_status"
+    ],
+    "ipa_bytes": 33649006,
+    "ipa_sha256": "3aef80816d0e9e7f045ae89e652522de8f0d41d0a2cb61449e9299dd215ac6b7",
+    "local_verification": "ios_signing.py verify PASS; cert0 matches distribution identity; applesignin entitlement present; staging backend config",
+    "upload": "run by the owner from Terminal with the fixed uploader profile external-staging-4; Apple COMPLETE / VALID / APP_STORE_ELIGIBLE",
+    "export_compliance": "answered by the owner in App Store Connect (same answers as builds 2-3)",
+    "what_to_test_saved": true,
+    "groups": [
+      "Night Owl Internal"
+    ],
+    "status": "Ready to Submit",
+    "external": "not yet — Apple allows one version-1.0.0 build in Beta App Review at a time; add to Night Owl Early Access after build 3 is approved"
   }
 }
