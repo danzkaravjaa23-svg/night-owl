@@ -118,7 +118,7 @@ class AppStrings {
 
   // ─── Buttons ───
   String get btnSkip        => _t('Skip', 'Алгасах');
-  String get btnStart       => _t('START', 'ЭХЛЭХ');
+  String get btnStart       => _t('Start', 'Эхлэх');
   String get btnAllow       => _t('Allow', 'Зөвшөөрөх');
   String get btnLater       => _t('Not Now', 'Дараа нь');
   String get btnContinue    => _t('Continue', 'Үргэлжлүүлэх');

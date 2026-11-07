@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
@@ -140,6 +142,13 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     // Гэрэлтэлтэд үргэлж тод неон өнгө — цайвар горимд бараан cyan бохир
     // уур болохоос сэргийлнэ (харанхуй горимд өөрчлөлтгүй)
     final glow = AppColors.toDark(data.color)!;
+    // The viewport starts below the status bar / Dynamic Island, so scrolled
+    // content (large text, short screens) is clipped there instead of sliding
+    // under the system clock. The bottom stays full-bleed and the bottom inset
+    // is padding inside the content, so the CTA glow fades out into the
+    // home-indicator area instead of being cut by a hard clip line.
+    final safe = MediaQuery.paddingOf(context);
+    final bottomGap = math.max(safe.bottom, 16.0) + 28;
 
     return Scaffold(
       backgroundColor: AppColors.bgBase,
@@ -149,118 +158,150 @@ class _OnboardingScreenState extends State<OnboardingScreen>
           const Positioned.fill(child: MeshGradientBackground()),
           // Слайд бүрд зөөлөн шилждэг неон aura (гүн + өнгөт уур амьсгал)
           _OnboardAura(accent: glow),
-          SafeArea(
-            child: LayoutBuilder(
-                builder: (context, constraints) => SingleChildScrollView(
-                    controller: _scroll,
-                    child: Center(
-                        child: ConstrainedBox(
-                            constraints: const BoxConstraints(maxWidth: 480),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: [
-                                // ── Дээд бар — progress pill (зүүн) + Алгасах (баруун) ──
-                                Padding(
-                                  padding:
-                                      const EdgeInsets.fromLTRB(20, 10, 8, 0),
-                                  child: Row(
-                                    children: [
-                                      _ProgressPill(slide: _slideNumber),
-                                      const Spacer(),
-                                      TextButton(
-                                        onPressed: _skip,
-                                        child: Text(s.btnSkip,
-                                            style: AppTextStyles.labelMd
-                                                .copyWith(
-                                                    color: AppColors
-                                                        .textSecondary)),
-                                      ),
-                                    ],
+          // Positioned.fill — viewport-д tight хэмжээ өгнө. Энгийн Stack хүүхэд
+          // loose constraint авч scroll view агуулгандаа агшдаг байсан тул
+          // слайд дэлгэцийн дээд ~70%-д шахагдаж, CTA голд хөвдөг байв.
+          Positioned.fill(
+            top: safe.top,
+            child: LayoutBuilder(builder: (context, constraints) {
+              final viewport = constraints.maxHeight;
+              final contentWidth =
+                  math.min(constraints.maxWidth - safe.horizontal, 480.0);
+              // Медальоны хэмжээ — дэлгэцийн бүтэн өндрөөс (status bar орно).
+              final medallion = math.min(
+                  ((viewport + safe.top) * 0.27).clamp(168.0, 240.0),
+                  contentWidth * 0.62);
+              // Медальоны хэсгийн дээд өндөр. iPhone дээр уян зай үүнээс бага
+              // тул байршил өөрчлөгдөхгүй; өндөр хүрээнд (iPad дээрх 420 өргөн
+              // MobileFrame) илүү зай зураг + текстийн дээд, доод талд хуваагдаж,
+              // зураг гарчигтайгаа ойр хэвээр үлдэнэ.
+              final medallionArea = medallion + 240;
+              return SingleChildScrollView(
+                controller: _scroll,
+                padding: EdgeInsets.only(left: safe.left, right: safe.right),
+                child: Align(
+                  alignment: Alignment.topCenter,
+                  child: ConstrainedBox(
+                    // Дор хаяж дэлгэцийн өндөр — Expanded медальоныг голлуулж,
+                    // текст + CTA-г доод захад барина. Богино дэлгэц / том
+                    // фонт үед агуулга өндөр болж scroll хийгдэнэ.
+                    constraints:
+                        BoxConstraints(maxWidth: 480, minHeight: viewport),
+                    child: IntrinsicHeight(
+                      child: Padding(
+                        padding: EdgeInsets.only(bottom: bottomGap),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            // ── Дээд бар — progress pill (зүүн) + Алгасах (баруун) ──
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(20, 10, 8, 0),
+                              child: Row(
+                                children: [
+                                  _ProgressPill(slide: _slideNumber),
+                                  const Spacer(),
+                                  TextButton(
+                                    onPressed: _skip,
+                                    child: Text(s.btnSkip,
+                                        style: AppTextStyles.labelMd.copyWith(
+                                            color: AppColors.textSecondary)),
                                   ),
-                                ),
+                                ],
+                              ),
+                            ),
 
-                                // ── Медальон — томруулсан, дэлгэцийн голд ──
-                                SizedBox(
-                                  height: (constraints.maxHeight * 0.38)
-                                      .clamp(180.0, 300.0),
-                                  child: FadeTransition(
+                            // ── Медальон + текст — уян зайг дүүргэнэ ──
+                            // Flexible (loose) + maxHeight: медальоны хэсэг
+                            // medallionArea-аас өндөр болохгүй; үлдсэн зай
+                            // MainAxisAlignment.center-ээр дээд, доод талд
+                            // тэнцүү хуваагдана.
+                            Expanded(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  Flexible(
+                                    child: ConstrainedBox(
+                                      constraints: BoxConstraints(
+                                          maxHeight: medallionArea),
+                                      child: Padding(
+                                        padding: const EdgeInsets.symmetric(
+                                            vertical: 24),
+                                        child: Center(
+                                          child: FadeTransition(
+                                            opacity: _fade,
+                                            child: SlideTransition(
+                                              position: _slide,
+                                              child: _GlassIconMedallion(
+                                                  illustration:
+                                                      data.illustration,
+                                                  glow: glow,
+                                                  size: medallion),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+
+                                  // ── Текст блок — голлуулсан ──
+                                  FadeTransition(
                                     opacity: _fade,
                                     child: SlideTransition(
                                       position: _slide,
-                                      child: Center(
-                                        child: _GlassIconMedallion(
-                                            illustration: data.illustration,
-                                            glow: glow,
-                                            size: 210),
+                                      child: Padding(
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 28),
+                                        child: Column(
+                                          children: [
+                                            Text(data.title,
+                                                textAlign: TextAlign.center,
+                                                style: AppTextStyles.displayMd
+                                                    .copyWith(height: 1.12)),
+                                            const SizedBox(height: 12),
+                                            Text(data.sub,
+                                                textAlign: TextAlign.center,
+                                                style: AppTextStyles.bodyMd
+                                                    .copyWith(
+                                                        color: AppColors
+                                                            .textSecondary,
+                                                        height: 1.55)),
+                                          ],
+                                        ),
                                       ),
                                     ),
                                   ),
-                                ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 32),
 
-                                // ── Текст блок — доод талд, CTA-ийн яг дээр зүүн зэрэгцээ ──
-                                FadeTransition(
-                                  opacity: _fade,
-                                  child: SlideTransition(
-                                    position: _slide,
-                                    child: Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 20),
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          // Слайдын дугаар — mono eyebrow
-                                          // (цайвар горимд уншигдахуйц бараан бэх — accent-ийг textPrimary руу холино)
-                                          Text('0$_slideNumber — 03',
-                                              style: AppTextStyles.monoSm.copyWith(
-                                                  letterSpacing: 2,
-                                                  color: AppColors.isDarkMode
-                                                      ? data.color.withValues(
-                                                          alpha: 0.85)
-                                                      : Color.lerp(
-                                                          data.color,
-                                                          AppColors
-                                                              .textPrimaryLight,
-                                                          0.35))),
-                                          const SizedBox(height: 10),
-                                          Text(data.title,
-                                              style: AppTextStyles.displayMd
-                                                  .copyWith(height: 1.12)),
-                                          const SizedBox(height: 12),
-                                          Text(data.sub,
-                                              style: AppTextStyles.bodyMd
-                                                  .copyWith(
-                                                      color: AppColors
-                                                          .textSecondary,
-                                                      height: 1.55)),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(height: 28),
-
-                                // ── CTA — pill primary, дэлгэцийн доод захад ──
-                                Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 20),
-                                  child: GradientButton(
-                                    label: _slideNumber == 3
-                                        ? s.btnStart
-                                        : s.btnContinue,
-                                    onPressed: _next,
-                                    borderRadius: 999,
-                                    trailing: Icon(
-                                        _slideNumber == 3
-                                            ? Icons.auto_awesome_rounded
-                                            : Icons.arrow_forward_rounded,
-                                        color: Colors.white,
-                                        size: 19),
-                                  ),
-                                ),
-                                const SizedBox(height: 24),
-                              ],
-                            ))))),
+                            // ── CTA — pill primary, доод захад (safe area-аас дээш) ──
+                            Padding(
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 20),
+                              child: GradientButton(
+                                label: _slideNumber == 3
+                                    ? s.btnStart
+                                    : s.btnContinue,
+                                onPressed: _next,
+                                borderRadius: 999,
+                                trailing: Icon(
+                                    _slideNumber == 3
+                                        ? Icons.auto_awesome_rounded
+                                        : Icons.arrow_forward_rounded,
+                                    color: Colors.white,
+                                    size: 19),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            }),
           ),
         ],
       ),
@@ -485,26 +526,64 @@ class _GlassIconMedallionState extends State<_GlassIconMedallion>
                       widget.glow.withValues(alpha: 0.5),
                       Colors.transparent,
                     ]))),
+            // Шилэн гялбаа — зүүн дээд талд маш бүдэг радиал туяа (SVG-ийн
+            // доор тул зураг тод хэвээр). Өмнөх тунгалаг бус pill iPhone дээр
+            // саарал толбо шиг харагддаг байв.
+            Container(
+                width: sz * 0.82,
+                height: sz * 0.82,
+                decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: RadialGradient(
+                        center: const Alignment(-0.35, -0.7),
+                        radius: 0.6,
+                        colors: [
+                          Colors.white.withValues(alpha: 0.10),
+                          Colors.white.withValues(alpha: 0.0),
+                        ]))),
             // Neon illustration (SVG) — өөрийн неон өнгөтэй, glow-г медальон өгнө
             SvgPicture.asset(widget.illustration,
                 width: sz * 0.56, height: sz * 0.56),
-            // Дээд талын specular highlight (шилэн гялбаа)
-            Positioned(
-              top: sz * 0.16,
-              left: sz * 0.26,
-              child: Container(
-                  width: sz * 0.22,
-                  height: sz * 0.10,
-                  decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(sz),
-                      gradient: LinearGradient(colors: [
-                        Colors.white.withValues(alpha: 0.45),
-                        Colors.white.withValues(alpha: 0.0),
-                      ]))),
+            // Дээд ирмэгийн нарийн гэрлийн нум (шилэн rim highlight)
+            SizedBox(
+              width: sz * 0.82,
+              height: sz * 0.82,
+              child: const CustomPaint(painter: _GlassRimPainter()),
             ),
           ]),
         );
       },
     );
   }
+}
+
+/// Шилэн медальоны дээд ирмэгийн нарийн гэрлийн нум — хоёр үзүүртээ уусна.
+class _GlassRimPainter extends CustomPainter {
+  const _GlassRimPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rect = (Offset.zero & size).deflate(size.shortestSide * 0.035);
+    // Canvas-ийн өнцөг цагийн зүүний дагуу: 1.5π = яг дээд цэг.
+    const start = math.pi * 1.08;
+    const sweep = math.pi * 0.84;
+    final paint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round
+      ..strokeWidth = math.max(1.2, size.shortestSide * 0.009)
+      ..shader = SweepGradient(
+        startAngle: start,
+        endAngle: start + sweep,
+        colors: [
+          Colors.white.withValues(alpha: 0.0),
+          Colors.white.withValues(alpha: 0.32),
+          Colors.white.withValues(alpha: 0.0),
+        ],
+        stops: const [0.0, 0.42, 1.0],
+      ).createShader(rect);
+    canvas.drawArc(rect, start, sweep, false, paint);
+  }
+
+  @override
+  bool shouldRepaint(_GlassRimPainter oldDelegate) => false;
 }

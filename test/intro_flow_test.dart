@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -125,8 +126,8 @@ void main() {
     expect(find.text('Байршлаа өөрөө сонго'), findsOneWidget);
     expect(find.textContaining('Зөвшөөрөлгүйгээр ч'), findsOneWidget);
     expect(tester.takeException(), isNull);
-    await tester.ensureVisible(find.text('ЭХЛЭХ'));
-    await tester.tap(find.text('ЭХЛЭХ'));
+    await tester.ensureVisible(find.text('Эхлэх'));
+    await tester.tap(find.text('Эхлэх'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 350));
     expect(
@@ -147,6 +148,65 @@ void main() {
     expect(find.text('Auth destination'), findsOneWidget);
     expect(
         (await SharedPreferences.getInstance()).getBool('onboarded'), isTrue);
+    expect(tester.takeException(), isNull);
+  });
+
+  Future<void> pumpSized(WidgetTester tester, GoRouter router,
+      {required Size size,
+      required double top,
+      required double bottom,
+      double textScale = 1}) async {
+    tester.view.physicalSize = size;
+    tester.view.devicePixelRatio = 1;
+    tester.view.padding = FakeViewPadding(top: top, bottom: bottom);
+    tester.view.viewPadding = FakeViewPadding(top: top, bottom: bottom);
+    addTearDown(() {
+      tester.view.reset();
+      router.dispose();
+    });
+    await tester.pumpWidget(MaterialApp.router(
+        routerConfig: router,
+        builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(context)
+                .copyWith(textScaler: TextScaler.linear(textScale)),
+            child: child!)));
+    await tester.pump(const Duration(milliseconds: 350));
+  }
+
+  testWidgets(
+      'scrolled intro stays below the status bar and still reaches the bottom edge',
+      (tester) async {
+    SharedPreferences.setMockInitialValues({'locale': 'mn'});
+    // iPhone SE with Dynamic Type around AX1: slide 3 has to scroll.
+    await pumpSized(tester, onboardingRouter(3),
+        size: const Size(375, 667), top: 20, bottom: 0, textScale: 1.65);
+    final viewport = find.descendant(
+        of: find.byType(OnboardingScreen), matching: find.byType(Scrollable));
+    final rect = tester.getRect(viewport);
+    expect(rect.top, 20, reason: 'content must clip below the status bar');
+    expect(rect.bottom, 667, reason: 'CTA glow must not hit a clip line');
+    final position = tester.state<ScrollableState>(viewport).position;
+    expect(position.maxScrollExtent, greaterThan(0));
+    position.jumpTo(position.maxScrollExtent);
+    await tester.pump();
+    expect(find.text('Эхлэх').hitTestable(), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets(
+      'tall phone frame keeps the illustration next to its title and the CTA at the bottom',
+      (tester) async {
+    SharedPreferences.setMockInitialValues({'locale': 'mn'});
+    // iPad Pro 12.9" portrait as MobileFrame shows it: 420 wide, full height.
+    await pumpSized(tester, onboardingRouter(3),
+        size: const Size(420, 1366), top: 24, bottom: 20);
+    final art = tester.getRect(find.byType(SvgPicture));
+    final title = tester.getRect(find.text('Байршлаа өөрөө сонго'));
+    final skip = tester.getRect(find.text('Алгасах'));
+    final cta = tester.getRect(find.text('Эхлэх'));
+    expect(title.top - art.bottom, inInclusiveRange(40, 200));
+    expect(skip.top, lessThan(100));
+    expect(cta.bottom, greaterThan(1366 - 120));
     expect(tester.takeException(), isNull);
   });
 
