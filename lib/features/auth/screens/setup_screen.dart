@@ -15,6 +15,7 @@ import '../../../core/constants/app_constants.dart';
 import '../../../core/constants/avatar_presets.dart';
 import '../../../core/constants/community_rules.dart';
 import '../../../core/widgets/policy_links.dart';
+import '../../../core/widgets/content_review_notice.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/services/supabase_service.dart';
 import '../../../core/utils/image_compress.dart';
@@ -24,6 +25,8 @@ import '../services/account_metadata_service.dart';
 import '../../feed/providers/feed_provider.dart';
 import '../../feed/providers/reels_provider.dart';
 import '../../feed/providers/stories_provider.dart';
+import '../../post/services/content_publication.dart'
+    show savedModerationStatus;
 import '../widgets/auth_ui.dart';
 
 /// A saved profile name wins over the one-time name supplied by Apple.
@@ -400,7 +403,14 @@ class _SetupScreenState extends State<SetupScreen> {
       if (!mounted || !_isSetupUser(savedUser)) return;
       if (avatarUrl != null) updates['avatar_url'] = avatarUrl;
 
-      await Supabase.instance.client.from('profiles').upsert(updates);
+      // The content guard decides whether the edit is public now or held;
+      // the owner can always read the resulting row back.
+      final saved = await Supabase.instance.client
+          .from('profiles')
+          .upsert(updates)
+          .select('moderation_status')
+          .maybeSingle();
+      final savedStatus = savedModerationStatus(saved);
       if (!mounted || !_isSetupUser(savedUser)) return;
 
       // "Профайл дуусгасан" тэмдгийг auth metadata-д тавина — router AuthGate
@@ -427,9 +437,7 @@ class _SetupScreenState extends State<SetupScreen> {
       if (!mounted || !_isSetupUser(savedUser)) return;
       if (widget.forceEdit) {
         // Засах горим — ирсэн газраа буцна (профайл/тохиргоо)
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text(
-                'Профайлын өөрчлөлтийг шалгалтад илгээлээ. Баталсан мэдээлэл хэвээр байна.')));
+        showPublicationFeedback(context, SavedContentKind.profile, savedStatus);
         context.canPop() ? context.pop() : context.go(AppRoutes.profile);
       } else {
         context.go(destination);

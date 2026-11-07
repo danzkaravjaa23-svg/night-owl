@@ -247,10 +247,9 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
       await _service.publishEvent(_session, _pendingRow!);
       if (!mounted) return;
       _session.check();
-      showSubmittedForReview(context);
+      // Events stay pre-moderated: never claim they are already public.
+      showPublicationFeedback(context, SavedContentKind.event, null);
       ref.invalidate(upcomingEventsProvider);
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('Эвент нийтлэгдлээ 🎉')));
       setState(() => _allowExit = true);
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted && !_invalidated && _session.isCurrent) _close();

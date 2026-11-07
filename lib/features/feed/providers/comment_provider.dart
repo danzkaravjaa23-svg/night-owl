@@ -3,6 +3,8 @@ import '../../../core/services/supabase_service.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../discovery/services/discovery_service.dart';
 import '../../../models/comment.dart';
+import '../../post/services/content_publication.dart'
+    show savedModerationStatus;
 
 // ─── Comments for a post (realtime stream) ───────────────────────────────────
 final commentsProvider =
@@ -80,27 +82,36 @@ final commentCountProvider = Provider.family<int, String>((ref, postId) {
 
 // ─── Comment actions ─────────────────────────────────────────────────────────
 class CommentService {
-  static Future<String?> addComment({
+  /// error: null on success, otherwise the snackbar text. status: the saved
+  /// comment's moderation_status ('approved' = visible now, 'pending' = held),
+  /// or null when the server did not return it.
+  static Future<({String? error, String? status})> addComment({
     required String postId,
     required String body,
     String? parentId,
   }) async {
     final user = SupabaseService.currentUser;
-    if (user == null) return 'Нэвтэрнэ үү';
+    if (user == null) return (error: 'Нэвтэрнэ үү', status: null);
     final trimmed = body.trim();
-    if (trimmed.isEmpty) return 'Сэтгэгдэл хоосон байна';
-    if (trimmed.length > 500) return 'Хэт урт (500 тэмдэгт хүртэл)';
+    if (trimmed.isEmpty) return (error: 'Сэтгэгдэл хоосон байна', status: null);
+    if (trimmed.length > 500) {
+      return (error: 'Хэт урт (500 тэмдэгт хүртэл)', status: null);
+    }
 
     try {
-      await SupabaseService.client.from('comments').insert({
-        'post_id': postId,
-        'user_id': user.id,
-        'body': trimmed,
-        if (parentId != null) 'parent_id': parentId,
-      });
-      return null;
+      final saved = await SupabaseService.client
+          .from('comments')
+          .insert({
+            'post_id': postId,
+            'user_id': user.id,
+            'body': trimmed,
+            if (parentId != null) 'parent_id': parentId,
+          })
+          .select('moderation_status')
+          .maybeSingle();
+      return (error: null, status: savedModerationStatus(saved));
     } catch (e) {
-      return e.toString();
+      return (error: e.toString(), status: null);
     }
   }
 

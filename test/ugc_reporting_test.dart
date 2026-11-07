@@ -315,6 +315,9 @@ void main() {
                 ])))));
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
-    expect(find.textContaining('Баталсны дараа бусдад'), findsOneWidget);
+    expect(
+        find.textContaining('Модератор баталсны дараа бусдад'), findsOneWidget);
+    expect(
+        find.textContaining('Модератор баталсны дараа нийтэд'), findsOneWidget);
   });
 }

@@ -5,6 +5,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:image/image.dart' as image;
@@ -72,6 +73,7 @@ class FakeEventService extends EventService {
   Completer<String>? uploadPending;
   Completer<void>? mutationPending;
   Completer<void>? publishPending;
+  bool publishSucceeds = false;
   final scopes = <FakeSession>[];
   @override
   PublicationSession captureSession() {
@@ -104,6 +106,7 @@ class FakeEventService extends EventService {
       PublicationSession session, Map<String, dynamic> row) async {
     rows.add(Map.from(row));
     await publishPending?.future;
+    if (publishSucceeds) return;
     throw const PublicationFailure('Нийтлэгдсэн байж болно. Дахин шалгана уу.');
   }
 
@@ -468,6 +471,60 @@ void main() {
     expect(find.text('Зураг илгээгээгүй'), findsOneWidget);
     expect(
         tester.widget<TextField>(find.byType(TextField).first).enabled, isTrue);
+  });
+
+  testWidgets(
+      'published event says it is in review and never claims it is public',
+      (tester) async {
+    final png =
+        Uint8List.fromList(image.encodePng(image.Image(width: 4, height: 4)));
+    final service = FakeEventService()..publishSucceeds = true;
+    await tester.binding.setSurfaceSize(const Size(800, 1200));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final router = GoRouter(initialLocation: '/home', routes: [
+      GoRoute(
+          path: '/home',
+          builder: (context, _) => Scaffold(
+              body: TextButton(
+                  onPressed: () => context.push('/create'),
+                  child: const Text('Open composer')))),
+      GoRoute(
+          path: '/create',
+          builder: (_, __) => CreateEventScreen(
+              service: service, coverPicker: () async => png)),
+    ]);
+    addTearDown(router.dispose);
+    await tester.pumpWidget(ProviderScope(
+        overrides: [
+          sessionUserIdProvider.overrideWithValue(owner),
+          eventServiceProvider.overrideWithValue(service),
+        ],
+        child: MaterialApp.router(routerConfig: router)));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Open composer'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Cover зураг'));
+    await tester.runAsync(
+        () async => Future<void>.delayed(const Duration(milliseconds: 50)));
+    await tester.pumpAndSettle();
+    await fillForm(tester);
+    await tester.tap(find.text('Эвент нийтлэх'));
+    await tester.pumpAndSettle();
+    expect(service.rows, hasLength(1));
+    // Composer closed back to the opener; its snackbar is the only feedback.
+    expect(find.text('Open composer'), findsOneWidget);
+    expect(
+        find.text('Эвентийг шалгалтад илгээлээ. '
+            'Модератор баталсны дараа бусдад харагдана.'),
+        findsOneWidget);
+    expect(find.textContaining('нийтлэгдлээ'), findsNothing);
+    expect(find.textContaining('Нийтлэгдлээ'), findsNothing);
+    // A second, queued snackbar would only appear once the first times out.
+    await tester.pump(const Duration(seconds: 5));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('нийтлэгдлээ'), findsNothing);
+    expect(find.textContaining('Нийтлэгдлээ'), findsNothing);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('account change during cover upload prevents event insert',

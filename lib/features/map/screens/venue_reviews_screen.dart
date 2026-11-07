@@ -16,6 +16,8 @@ import '../../events/providers/event_provider.dart' show EventItem;
 import '../../events/widgets/events_rail.dart' show showEventDetailSheet;
 import '../providers/venue_provider.dart';
 import '../../../models/venue.dart';
+import '../../post/services/content_publication.dart'
+    show savedModerationStatus;
 
 const _kMonths = [
   '',
@@ -210,7 +212,7 @@ class _VenueDetailScreenState extends ConsumerState<VenueDetailScreen> {
       shape: const RoundedRectangleBorder(
           borderRadius:
               BorderRadius.vertical(top: Radius.circular(AppRadii.xl))),
-      builder: (_) => _ReviewsSheet(venueId: widget.venueId),
+      builder: (_) => VenueReviewsSheet(venueId: widget.venueId),
     ).then((_) => _load()); // хаагдахад дундаж шинэчлэх
   }
 
@@ -859,14 +861,16 @@ class _SkelBoxState extends State<_SkelBox>
 }
 
 // ─── Үнэлгээ / сэтгэгдэл sheet ───
-class _ReviewsSheet extends StatefulWidget {
+// Public only so its submit feedback can be tested; opened via _openReviews.
+@visibleForTesting
+class VenueReviewsSheet extends StatefulWidget {
   final String venueId;
-  const _ReviewsSheet({required this.venueId});
+  const VenueReviewsSheet({super.key, required this.venueId});
   @override
-  State<_ReviewsSheet> createState() => _ReviewsSheetState();
+  State<VenueReviewsSheet> createState() => _VenueReviewsSheetState();
 }
 
-class _ReviewsSheetState extends State<_ReviewsSheet> {
+class _VenueReviewsSheetState extends State<VenueReviewsSheet> {
   List<Map<String, dynamic>> _reviews = [];
   int _myRating = 0;
   final _commentCtrl = TextEditingController();
@@ -930,18 +934,23 @@ class _ReviewsSheetState extends State<_ReviewsSheet> {
     }
     setState(() => _busy = true);
     try {
-      await SupabaseService.client.from('venue_reviews').upsert({
-        'venue_id': widget.venueId,
-        'user_id': _myId,
-        'rating': _myRating,
-        'comment': _commentCtrl.text.trim(),
-      }, onConflict: 'venue_id, user_id');
+      final saved = await SupabaseService.client
+          .from('venue_reviews')
+          .upsert({
+            'venue_id': widget.venueId,
+            'user_id': _myId,
+            'rating': _myRating,
+            'comment': _commentCtrl.text.trim(),
+          }, onConflict: 'venue_id, user_id')
+          .select('moderation_status')
+          .maybeSingle();
+      final status = savedModerationStatus(saved);
       await _load();
       if (mounted) {
         FocusScope.of(context).unfocus();
-        messenger.showSnackBar(const SnackBar(
-            content: Text(
-                'Үнэлгээг шалгалтад илгээлээ. Баталсны дараа нийтэд харагдана.')));
+        messenger.showSnackBar(SnackBar(
+            content:
+                Text(publicationFeedback(SavedContentKind.review, status))));
       }
     } catch (_) {
       if (mounted) {

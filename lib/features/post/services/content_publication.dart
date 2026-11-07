@@ -10,6 +10,24 @@ import '../../../core/services/supabase_service.dart';
 import '../../../core/utils/image_compress.dart';
 import '../utils/post_media.dart';
 
+/// The moderation_status of a row the server returned after a save: a row map,
+/// a one-row list or a JSON body of either. Anything else is unknown (null).
+String? savedModerationStatus(Object? saved) {
+  var row = saved;
+  if (row is String) {
+    try {
+      row = row.isEmpty ? null : jsonDecode(row);
+    } on FormatException {
+      return null;
+    }
+  }
+  if (row is List) row = row.length == 1 ? row.single : null;
+  final status = row is Map ? row['moderation_status'] : null;
+  return const {'approved', 'pending', 'rejected'}.contains(status)
+      ? status as String
+      : null;
+}
+
 class PublicationFailure implements Exception {
   final String message;
   const PublicationFailure(this.message);
@@ -217,7 +235,10 @@ class ContentPublicationService {
     }
   }
 
-  Future<void> publish(PublicationSession session, String table,
+  /// Saves [row] and returns its moderation_status as the server set it:
+  /// 'approved' when it is public right away, 'pending' when it is held for a
+  /// moderator, or null when the response did not include it.
+  Future<String?> publish(PublicationSession session, String table,
       Map<String, dynamic> row) async {
     session.check();
     if (!const {'posts', 'stories'}.contains(table) ||
@@ -232,14 +253,21 @@ class ContentPublicationService {
       // a newer login, and would still send our old pinned header afterwards.
       // Like uploads, these owner-scoped requests use the raw HTTP transport.
       final endpoint = Uri.parse('${client.rest.url}/$table');
+      // Authors can always read their own rows, so the insert returns the
+      // review state the server's content guard gave it.
+      final insert =
+          endpoint.replace(queryParameters: {'select': 'moderation_status'});
       final response = await connection
-          .post(endpoint,
+          .post(insert,
               headers: _headers(session, contentType: 'application/json')
-                ..['Prefer'] = 'return=minimal',
+                ..['Prefer'] = 'return=representation',
               body: jsonEncode(row))
           .timeout(requestTimeout);
       session.check();
-      if (response.statusCode < 200 || response.statusCode >= 300) {
+      String? status;
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        status = savedModerationStatus(response.body);
+      } else {
         final error = jsonDecode(response.body);
         if (response.statusCode != 409 ||
             error is! Map ||
@@ -250,7 +278,7 @@ class ContentPublicationService {
         final lookup = await connection
             .get(
               endpoint.replace(queryParameters: {
-                'select': 'id,user_id',
+                'select': 'id,user_id,moderation_status',
                 'id': 'eq.${row['id']}',
                 'user_id': 'eq.${session.ownerId}',
               }),
@@ -268,8 +296,10 @@ class ContentPublicationService {
             existing['user_id'] != session.ownerId) {
           throw const FormatException('Publication does not match');
         }
+        status = savedModerationStatus(existing);
       }
       session.check();
+      return status;
     } on PublicationFailure {
       rethrow;
     } catch (_) {

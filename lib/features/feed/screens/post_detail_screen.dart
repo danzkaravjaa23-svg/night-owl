@@ -213,7 +213,7 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
     // Reply бол эх сэтгэгдэлд (нэг түвшний thread): reply-д хариулбал эхэнд нь
     final parentId =
         _replyTo == null ? null : (_replyTo!.parentId ?? _replyTo!.id);
-    final err = await CommentService.addComment(
+    final result = await CommentService.addComment(
       postId: widget.postId,
       body: text,
       parentId: parentId,
@@ -224,6 +224,7 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
       _replyTo = null;
     });
 
+    final err = result.error;
     if (err != null) {
       ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(err), backgroundColor: AppColors.error));
@@ -231,7 +232,7 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
     }
 
     _commentCtrl.clear();
-    showSubmittedForReview(context);
+    showPublicationFeedback(context, SavedContentKind.comment, result.status);
     HapticFeedback.lightImpact();
     // Scroll to bottom after new comment
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -328,10 +329,11 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
       currentCaption: post.caption,
       onEditCaption: (text) async {
         if (!_isCurrent(request)) throw StateError('Пост өөрчлөгдсөн байна');
-        await ref.read(feedProvider.notifier).editCaption(post.id, text);
+        final status =
+            await ref.read(feedProvider.notifier).editCaption(post.id, text);
         if (_isCurrent(request)) {
-          setState(() => _post =
-              _post!.copyWith(caption: text, moderationStatus: 'pending'));
+          setState(() =>
+              _post = _post!.copyWith(caption: text, moderationStatus: status));
         }
       },
       onDelete: () async {

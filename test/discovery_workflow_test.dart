@@ -664,6 +664,30 @@ void main() {
     expect(feed.state.value!.single.likesCount, 0);
   });
 
+  for (final (saved, expected) in [
+    ({'id': 'reaction-post', 'moderation_status': 'approved'}, 'approved'),
+    ({'id': 'reaction-post', 'moderation_status': 'pending'}, 'pending'),
+    ({'id': 'reaction-post'}, 'pending'),
+  ]) {
+    test('caption edit keeps the server review state $saved', () async {
+      final feed = _FixtureFeed(Post(
+          id: 'reaction-post',
+          userId: me,
+          caption: 'Old caption',
+          createdAt: DateTime.utc(2026, 10, 16)));
+      addTearDown(feed.dispose);
+      await feed.loadFeed();
+      respond = (r) async {
+        expect(r.method, 'PATCH');
+        expect(r.url.queryParameters['select'], 'id,moderation_status');
+        return json(r, saved);
+      };
+      expect(await feed.editCaption('reaction-post', 'New caption'), expected);
+      expect(feed.state.value!.single.caption, 'New caption');
+      expect(feed.state.value!.single.moderationStatus, expected);
+    });
+  }
+
   for (final denied in [false, true]) {
     testWidgets('detail zero-count unlike stays nonnegative, denied=$denied',
         (tester) async {
@@ -921,6 +945,69 @@ void main() {
           findsOneWidget);
       expect(find.text('Second post draft'), findsOneWidget);
       expect(find.text('Лайк илгээж чадсангүй'), findsNothing);
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox());
+    });
+  }
+
+  for (final (saved, message) in [
+    ({'moderation_status': 'approved'}, 'Сэтгэгдэл нэмэгдлээ'),
+    (
+      {'moderation_status': 'pending'},
+      'Шалгалтад байна. Модератор баталсны дараа бусдад харагдана.'
+    ),
+    (null, 'Хадгалагдлаа'),
+  ]) {
+    testWidgets('comment send reports the saved state $saved truthfully',
+        (tester) async {
+      http.Request? insert;
+      respond = (r) async {
+        if (r.url.path.endsWith('/posts')) {
+          return json(r, {
+            'id': 'comment-post',
+            'user_id': other,
+            'caption': 'Caption comment-post',
+            'created_at': '2026-10-16T00:00:00Z',
+          });
+        }
+        if (r.url.path.endsWith('/profiles')) {
+          return json(r, {'id': me, 'username': 'fixture_me'});
+        }
+        if (r.method == 'POST' && r.url.path.endsWith('/comments')) {
+          insert = r;
+          return saved == null
+              ? http.Response('', 201, request: r)
+              : json(r, saved, 201);
+        }
+        if (r.url.path.endsWith('/likes')) {
+          return http.Response('null', 200,
+              headers: {'content-type': 'application/json'}, request: r);
+        }
+        return json(r, []);
+      };
+      final container = ProviderContainer(overrides: [
+        sessionUserIdProvider.overrideWithValue(me),
+        feedProvider.overrideWith((ref) => _FixtureFeed(Post(
+            id: 'comment-post',
+            userId: other,
+            createdAt: DateTime.utc(2026, 10, 16)))),
+        commentsProvider('comment-post')
+            .overrideWith((ref) => Stream.value([])),
+      ]);
+      addTearDown(container.dispose);
+      await tester.pumpWidget(UncontrolledProviderScope(
+          container: container,
+          child: const MaterialApp(
+              home: PostDetailScreen(postId: 'comment-post'))));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField), 'Nice place');
+      await tester.tap(find.byIcon(Icons.send_rounded));
+      await tester.pumpAndSettle();
+      expect(insert, isNotNull);
+      expect(insert!.url.queryParameters['select'], 'moderation_status');
+      expect(jsonDecode(insert!.body)['body'], 'Nice place');
+      expect(find.text(message), findsOneWidget);
+      expect(find.textContaining('Шалгалтад илгээлээ'), findsNothing);
       expect(tester.takeException(), isNull);
       await tester.pumpWidget(const SizedBox());
     });

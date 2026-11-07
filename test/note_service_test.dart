@@ -76,7 +76,8 @@ void main() {
     expect(request.method, 'POST');
     expect(request.url.path, '/rest/v1/notes');
     expect(request.url.queryParameters['on_conflict'], 'user_id');
-    expect(request.url.queryParameters['select'], 'user_id,text');
+    expect(request.url.queryParameters['select'],
+        'user_id,text,moderation_status');
     expect(request.headers['authorization'], 'Bearer $token');
     expect(request.headers['apikey'], 'fixture-key');
     expect(request.headers['content-type'], 'application/json');
@@ -91,6 +92,21 @@ void main() {
             .difference(DateTime.parse(row['created_at'] as String)),
         const Duration(hours: 24));
   });
+
+  for (final status in ['approved', 'pending', null]) {
+    test('save returns the saved note review state $status', () async {
+      respond = (r) async => json([
+            {
+              'user_id': owner,
+              'text': 'Saved note',
+              if (status != null) 'moderation_status': status
+            }
+          ]);
+      final session = service.captureSession();
+      addTearDown(session.close);
+      expect(await service.save(session, 'Saved note', null), status);
+    });
+  }
 
   test('delete verifies the row returned for the captured owner', () async {
     final session = service.captureSession();

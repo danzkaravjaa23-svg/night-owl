@@ -464,6 +464,31 @@ void main() {
     });
   }
 
+  for (final (saved, message) in [
+    ({'moderation_status': 'approved'}, 'Профайл хадгалагдлаа'),
+    (
+      {'moderation_status': 'pending'},
+      'Шалгалтад байна. Модератор баталсны дараа бусдад харагдана.'
+    ),
+    (<String, Object>{}, 'Хадгалагдлаа'),
+  ]) {
+    testWidgets('profile edit reports the saved state $saved truthfully',
+        (tester) async {
+      saveReply = (request) async {
+        expect(request.url.queryParameters['select'], 'moderation_status');
+        return response(request, saved);
+      };
+      await render(tester);
+      await save(tester);
+      await settleSave(tester);
+      expect(writes, hasLength(1));
+      expect(find.text('Profile destination'), findsOneWidget);
+      expect(find.text(message), findsOneWidget);
+      expect(find.textContaining('шалгалтад илгээлээ'), findsNothing);
+      expect(tester.takeException(), isNull);
+    });
+  }
+
   for (final preset in NightOwlAvatars.all) {
     testWidgets(
         'explicit ${preset.id} choice previews and persists without uploading',

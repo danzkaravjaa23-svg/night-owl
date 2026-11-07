@@ -897,9 +897,10 @@ class _CreateStoryScreenState extends ConsumerState<CreateStoryScreen> {
         });
       }
       setState(() => _progressLabel = 'Нийтлэлийг баталгаажуулж байна…');
-      await _publisher.publish(_session, 'stories', _pendingRow!);
+      final status =
+          await _publisher.publish(_session, 'stories', _pendingRow!);
       if (!mounted || !_session.isCurrent) return;
-      showSubmittedForReview(context);
+      showPublicationFeedback(context, SavedContentKind.story, status);
       _previewPlayer.stop();
       ref.invalidate(storiesProvider);
       ref.invalidate(venueStoryActivityProvider);

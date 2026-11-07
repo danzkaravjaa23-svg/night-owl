@@ -5,6 +5,8 @@ import '../../../core/constants/app_constants.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../../models/post.dart';
 import '../../discovery/services/discovery_service.dart';
+import '../../post/services/content_publication.dart'
+    show savedModerationStatus;
 
 // ─── Feed posts (paginated, RPC-based for correct isLikedByMe) ───────────────
 class FeedNotifier extends StateNotifier<AsyncValue<List<Post>>> {
@@ -233,28 +235,29 @@ class FeedNotifier extends StateNotifier<AsyncValue<List<Post>>> {
   }
 
   // ── Edit own post caption ───────────────────────────────────────────────────
-  Future<void> editCaption(String postId, String caption) async {
+  /// Returns the edited post's moderation_status. A clean edit stays public
+  /// ('approved'); only a held edit is 'pending'. An unknown answer is treated
+  /// as pending so the post never claims to be public when it may not be.
+  Future<String> editCaption(String postId, String caption) async {
     final user = SupabaseService.currentUser;
     if (user == null) throw StateError('Нэвтэрнэ үү');
     final trimmed = caption.trim();
-    try {
-      await SupabaseService.client
-          .from('posts')
-          .update({'caption': trimmed})
-          .eq('id', postId)
-          .eq('user_id', user.id)
-          .select('id')
-          .single();
-    } catch (_) {
-      rethrow;
-    }
-    if (!mounted) return;
+    final saved = await SupabaseService.client
+        .from('posts')
+        .update({'caption': trimmed})
+        .eq('id', postId)
+        .eq('user_id', user.id)
+        .select('id, moderation_status')
+        .single();
+    final status = savedModerationStatus(saved) ?? 'pending';
+    if (!mounted) return status;
     final list = (state.valueOrNull ?? [])
         .map((p) => p.id == postId
-            ? p.copyWith(caption: trimmed, moderationStatus: 'pending')
+            ? p.copyWith(caption: trimmed, moderationStatus: status)
             : p)
         .toList();
     state = AsyncValue.data(list);
+    return status;
   }
 
   // ── Delete own post ─────────────────────────────────────────────────────────

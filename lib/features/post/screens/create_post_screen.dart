@@ -295,9 +295,9 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
         });
       }
       setState(() => _uploadProgress = null);
-      await _publisher.publish(_session, 'posts', _pendingRow!);
+      final status = await _publisher.publish(_session, 'posts', _pendingRow!);
       if (!mounted || !_session.isCurrent) return;
-      showSubmittedForReview(context);
+      showPublicationFeedback(context, SavedContentKind.post, status);
       ref.invalidate(feedProvider);
       ref.read(postsVersionProvider.notifier).state++;
       ref.invalidate(currentProfileProvider);

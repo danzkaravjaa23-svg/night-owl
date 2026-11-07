@@ -53,6 +53,7 @@ class ComposerService extends ContentPublicationService {
   Completer<String>? pendingUpload;
   Completer<void>? pendingPublish;
   Object? failure;
+  String? status = 'approved';
   ComposerService(this.imageBytes);
   @override
   PublicationSession captureSession() => scope;
@@ -81,11 +82,12 @@ class ComposerService extends ContentPublicationService {
           {required String path, required String contentType}) =>
       upload();
   @override
-  Future<void> publish(PublicationSession session, String table,
+  Future<String?> publish(PublicationSession session, String table,
       Map<String, dynamic> row) async {
     rows.add(jsonDecode(jsonEncode(row)) as Map<String, dynamic>);
     await pendingPublish?.future;
     if (failure != null) throw failure!;
+    return status;
   }
 }
 
@@ -205,6 +207,37 @@ void main() {
       expect(jsonDecode(requests.single.body), row());
     });
 
+    for (final status in ['approved', 'pending']) {
+      test('publish returns the saved $status review state', () async {
+        respond = (_) async => jsonResponse([
+              {'moderation_status': status}
+            ], 201);
+        final scope = service.captureSession();
+        addTearDown(scope.close);
+        expect(await service.publish(scope, 'posts', row()), status);
+        expect(requests.single.url.path, '/rest/v1/posts');
+        expect(
+            requests.single.url.queryParameters['select'], 'moderation_status');
+        expect(requests.single.headers['prefer'], 'return=representation');
+      });
+    }
+
+    for (final body in [
+      '',
+      '[]',
+      '{}',
+      'not json',
+      '[{"moderation_status":7}]'
+    ]) {
+      test('unreadable insert body "$body" still publishes, status unknown',
+          () async {
+        respond = (_) async => http.Response(body, 201);
+        final scope = service.captureSession();
+        addTearDown(scope.close);
+        expect(await service.publish(scope, 'stories', row()), isNull);
+      });
+    }
+
     test('publication uses its injected transport, not ambient auth transport',
         () async {
       final sent = <http.Request>[];
@@ -278,8 +311,10 @@ void main() {
         }
         expect(request.url.queryParameters['id'], 'eq.$postId');
         expect(request.url.queryParameters['user_id'], 'eq.$owner');
+        expect(request.url.queryParameters['select'],
+            'id,user_id,moderation_status');
         return jsonResponse([
-          {'id': postId, 'user_id': owner}
+          {'id': postId, 'user_id': owner, 'moderation_status': 'pending'}
         ]);
       };
       final scope = service.captureSession();
@@ -288,7 +323,7 @@ void main() {
           service.publish(scope, 'posts', row()),
           throwsA(isA<PublicationFailure>().having((e) => e.message,
               'safe uncertainty', contains('Нийтлэгдсэн байж болно'))));
-      await service.publish(scope, 'posts', row());
+      expect(await service.publish(scope, 'posts', row()), 'pending');
       expect(
           requests.where((r) => r.method == 'POST').map((r) => r.body).toSet(),
           hasLength(1));
@@ -544,10 +579,46 @@ void main() {
       expect(publisher.uploads, 1);
       expect(loads, 2);
       expect(find.text('Feed fixture'), findsOneWidget);
-      expect(find.text('Шалгалтад илгээлээ. Баталсны дараа бусдад харагдана.'),
-          findsOneWidget);
+      expect(find.text('Нийтлэгдлээ'), findsOneWidget);
+      expect(find.textContaining('Шалгалтад'), findsNothing);
       expect(tester.takeException(), isNull);
     });
+
+    for (final (status, message) in [
+      (
+        'pending',
+        'Шалгалтад байна. Модератор баталсны дараа бусдад харагдана.'
+      ),
+      (null, 'Хадгалагдлаа'),
+    ]) {
+      testWidgets('story save reports $status state truthfully',
+          (tester) async {
+        publisher.status = status;
+        final router = GoRouter(initialLocation: '/story', routes: [
+          GoRoute(
+              path: '/story',
+              builder: (_, __) => CreateStoryScreen(
+                  publicationService: publisher,
+                  imagePicker: () async => png,
+                  venueLoader: storyVenueLoader)),
+          GoRoute(
+              path: '/feed',
+              builder: (_, __) => const Scaffold(body: Text('Feed fixture'))),
+        ]);
+        addTearDown(router.dispose);
+        await tester.pumpWidget(
+            ProviderScope(child: MaterialApp.router(routerConfig: router)));
+        await tester.pumpAndSettle();
+        await pickStoryImage(tester);
+        await tester.tap(find.text('Story-д хуваалцах'));
+        await tester.pumpAndSettle();
+        expect(publisher.rows, hasLength(1));
+        expect(find.text('Feed fixture'), findsOneWidget);
+        expect(find.text(message), findsOneWidget);
+        expect(find.text('Нийтлэгдлээ'), findsNothing);
+        expect(tester.takeException(), isNull);
+      });
+    }
 
     testWidgets(
         'account switch while choosing location cannot attach or publish',
@@ -694,6 +765,7 @@ void main() {
       expect(publisher.uploads, 1);
       expect(loads, 2);
       expect(find.text('Feed fixture'), findsOneWidget);
+      expect(find.text('Нийтлэгдлээ'), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
 

@@ -24,11 +24,13 @@ class NoteService {
       ContentPublicationService(client: client).captureSession();
   Stream<void> get sessionChanges => client.auth.onAuthStateChange.map((_) {});
 
-  Future<void> save(PublicationSession session, String text, String? venueId) =>
+  /// Returns the saved note's moderation_status, or null when unknown.
+  Future<String?> save(
+          PublicationSession session, String text, String? venueId) =>
       _write(session, text: text.trim(), venueId: venueId);
   Future<void> delete(PublicationSession session) => _write(session);
 
-  Future<void> _write(PublicationSession session,
+  Future<String?> _write(PublicationSession session,
       {String? text, String? venueId}) async {
     session.check();
     if (text != null && (text.isEmpty || text.characters.length > 100)) {
@@ -38,7 +40,7 @@ class NoteService {
     final uri =
         Uri.parse('${client.rest.url.replaceFirst(RegExp(r'/$'), '')}/notes')
             .replace(queryParameters: {
-      'select': 'user_id,text',
+      'select': 'user_id,text,moderation_status',
       if (deleting) 'user_id': 'eq.${session.ownerId}',
       if (!deleting) 'on_conflict': 'user_id',
     });
@@ -81,6 +83,7 @@ class NoteService {
         throw const PublicationFailure(
             'Өөрчлөлт баталгаажаагүй байна. Дахин оролдоно уу.');
       }
+      return savedModerationStatus(rows);
     } finally {
       if (_transport == null) connection.close();
     }

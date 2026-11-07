@@ -545,13 +545,16 @@ class _NoteComposerState extends ConsumerState<_NoteComposer> {
     final venue = _venueId;
     setState(() => _busy = true);
     try {
+      String? status;
       if (deleting) {
         await _service.delete(_session);
       } else {
-        await _service.save(_session, text, venue);
+        status = await _service.save(_session, text, venue);
       }
       if (mounted && _session.isCurrent) {
-        if (!deleting) showSubmittedForReview(context);
+        if (!deleting) {
+          showPublicationFeedback(context, SavedContentKind.note, status);
+        }
         Navigator.pop(context, true);
       }
     } catch (_) {

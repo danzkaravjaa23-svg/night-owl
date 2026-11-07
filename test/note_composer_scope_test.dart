@@ -125,6 +125,50 @@ void main() {
     });
   }
 
+  for (final (status, message) in [
+    ('approved', 'Нийтлэгдлээ'),
+    ('pending', 'Шалгалтад байна. Модератор баталсны дараа бусдад харагдана.'),
+    (null, 'Хадгалагдлаа'),
+  ]) {
+    testWidgets('note save reports the saved $status state truthfully',
+        (tester) async {
+      respond = (request) async {
+        if (request.url.path.endsWith('/profiles')) {
+          return json(request, {'id': account, 'username': 'fixture'});
+        }
+        if (request.method == 'POST' && request.url.path.endsWith('/notes')) {
+          expect(request.url.queryParameters['select'],
+              'user_id,text,moderation_status');
+          return json(request, [
+            {
+              'user_id': account,
+              'text': 'Tonight at the bar',
+              if (status != null) 'moderation_status': status,
+            }
+          ]);
+        }
+        return json(request, []);
+      };
+      await render(tester);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Note үлдээх...'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField), 'Tonight at the bar');
+      await tester.tap(find.text('Хуваалцах'));
+      await tester.pumpAndSettle();
+      expect(
+          requests.where((request) =>
+              request.method == 'POST' && request.url.path.endsWith('/notes')),
+          hasLength(1));
+      expect(find.byType(TextField), findsNothing);
+      expect(find.text(message), findsOneWidget);
+      if (status != 'approved') expect(find.text('Нийтлэгдлээ'), findsNothing);
+      expect(find.textContaining('Шалгалтад илгээлээ'), findsNothing);
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox());
+    });
+  }
+
   testWidgets('a late profile load cannot resume the old account note query',
       (tester) async {
     final pending = Completer<http.Response>();
