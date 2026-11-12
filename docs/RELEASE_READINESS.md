@@ -354,7 +354,7 @@ flutter build ios --no-pub --release --no-codesign
 flutter build ipa --no-pub --release
 ```
 
-`python3 scripts/export_icons.py` нь хэрэглэгчийн сонгосон reference-ээс сэргээн бүтээсэн owl icon-ыг одоогийн iOS/Android/web asset slot-уудад дахин экспортлоно (Pillow шаардлагатай).
+`python3 scripts/export_icons.py` нь хэрэглэгчийн сонгосон reference-ээс сэргээн бүтээсэн owl icon-ыг одоогийн iOS/Android/web asset slot-уудад дахин экспортлоно (Pillow шаардлагатай). Android adaptive foreground, monochrome (themed) давхарга болон web maskable icon-ыг launcher-ийн маскад тайрагдахгүйгээр safe zone-ийн зайтай гаргана.
 
 ## Үндсэн ажиллагааны матриц
 
