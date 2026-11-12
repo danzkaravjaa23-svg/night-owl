@@ -150,12 +150,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                           icon: Icons.lock_outline,
                           label: 'Нууц үг солих',
                           onTap: () => context.push(AppRoutes.changePassword)),
-                      const _RowDivider(),
-                      _SettingRow(
-                          icon: Icons.language_outlined,
-                          label: 'Хэл',
-                          trailingValue: 'Монгол',
-                          onTap: () => context.push(AppRoutes.langSelect)),
                     ]),
                     const SizedBox(height: 28),
                     const _SectionLabel('Нууцлал ба мэдэгдэл'),

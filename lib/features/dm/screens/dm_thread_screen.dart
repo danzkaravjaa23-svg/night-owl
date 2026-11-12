@@ -357,21 +357,11 @@ class _DmThreadScreenState extends State<_ScopedDmThread>
   void _showThreadOptions() {
     final username =
         (_partner?['username'] as String? ?? 'User').replaceAll('@', '');
+    // Бариулыг theme (showDragHandle) зурна — энд дахин зурахгүй.
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppColors.bgElevated,
-      shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
       builder: (sheetCtx) => SafeArea(
           child: Column(mainAxisSize: MainAxisSize.min, children: [
-        const SizedBox(height: 10),
-        Container(
-            width: 40,
-            height: 4,
-            decoration: BoxDecoration(
-                color: AppColors.hairline,
-                borderRadius: BorderRadius.circular(2))),
-        const SizedBox(height: 12),
         Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
             child:

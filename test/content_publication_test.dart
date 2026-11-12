@@ -11,6 +11,7 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:image/image.dart' as image;
 import 'package:night_owl_ub/core/theme/app_fonts.dart';
+import 'package:night_owl_ub/core/widgets/gradient_button.dart';
 import 'package:night_owl_ub/features/feed/screens/create_story_screen.dart';
 import 'package:night_owl_ub/features/discovery/services/discovery_service.dart';
 import 'package:night_owl_ub/features/map/providers/venue_story_activity_provider.dart';
@@ -353,6 +354,31 @@ void main() {
       await tester.pumpAndSettle();
     }
 
+    // The post screen has a single publish action: the primary button pinned
+    // under the scrolling form (the app-bar copy was removed). It is always
+    // on screen, so no scrolling is needed to reach it.
+    Finder publishButton() => find.byKey(const ValueKey('post-publish'));
+
+    void expectOnScreen(WidgetTester tester, Finder finder) {
+      final rect = tester.getRect(finder);
+      final screen = Offset.zero & tester.view.physicalSize;
+      expect(screen.contains(rect.topLeft) && screen.contains(rect.bottomRight),
+          isTrue,
+          reason: '$rect is not fully inside $screen');
+      expect(finder.hitTestable(), findsOneWidget);
+    }
+
+    Future<void> revealPublish(WidgetTester tester, String label) async {
+      expectOnScreen(tester, publishButton());
+      expect(find.descendant(of: publishButton(), matching: find.text(label)),
+          findsOneWidget);
+    }
+
+    Future<void> tapPublish(WidgetTester tester, String label) async {
+      await revealPublish(tester, label);
+      await tester.tap(publishButton());
+    }
+
     Future<void> pickStoryImage(WidgetTester tester) async {
       await tester.tap(find.text('Зургийн сан'));
       await tester.runAsync(() async {
@@ -536,7 +562,11 @@ void main() {
       await tester.tap(remove);
       await tester.pumpAndSettle();
       expect(find.text('Байршил нэмэх (сонголтоор)'), findsOneWidget);
-      await tester.tap(find.widgetWithText(TextButton, 'Хуваалцах'));
+      expect(
+          find.descendant(
+              of: find.byType(AppBar), matching: find.text('Хуваалцах')),
+          findsNothing);
+      await tapPublish(tester, 'Хуваалцах');
       await tester.pumpAndSettle();
       expect(publisher.rows, hasLength(1));
       expect(publisher.rows.single.containsKey('venue_ref'), isFalse);
@@ -558,7 +588,8 @@ void main() {
               venueLoader: storyVenueLoader));
       await pickPost(tester);
       await choosePostVenue(tester, 'Газрын зураг дахь газар');
-      final share = find.widgetWithText(TextButton, 'Хуваалцах');
+      await revealPublish(tester, 'Хуваалцах');
+      final share = publishButton();
       await tester.tap(share);
       await tester.tap(share);
       await tester.pump();
@@ -572,7 +603,7 @@ void main() {
       expect(remove.onPressed, isNull);
       publisher.pendingPublish!.complete();
       await tester.pumpAndSettle();
-      await tester.tap(find.widgetWithText(TextButton, 'Дахин шалгах'));
+      await tapPublish(tester, 'Дахин шалгах');
       await tester.pumpAndSettle();
       expect(publisher.uploads, 1);
       expect(publisher.rows, hasLength(2));
@@ -611,7 +642,7 @@ void main() {
       await tester.pumpAndSettle();
       await pickPost(tester);
       await choosePostVenue(tester, 'Community газар');
-      await tester.tap(find.widgetWithText(TextButton, 'Хуваалцах'));
+      await tapPublish(tester, 'Хуваалцах');
       await tester.pumpAndSettle();
       expect(publisher.rows.single['venue_ref'], other);
       expect(publisher.rows.single['venue_id'], other);
@@ -651,14 +682,13 @@ void main() {
       await tester.tap(find.text('Community газар'));
       await tester.pumpAndSettle();
       expect(find.text('Community газар'), findsNothing);
-      await tester.tap(find.widgetWithText(TextButton, 'Хуваалцах'));
+      await tapPublish(tester, 'Хуваалцах');
       await tester.pumpAndSettle();
       expect(publisher.rows, isEmpty);
       expect(publisher.uploads, 0);
-      await tester.scrollUntilVisible(
-          find.textContaining('Нэвтрэх хаяг өөрчлөгдсөн'), -200,
-          scrollable: find.byType(Scrollable).first);
+      // The error is pinned right above the publish button, where the user is.
       expect(find.textContaining('Нэвтрэх хаяг өөрчлөгдсөн'), findsOneWidget);
+      expectOnScreen(tester, find.textContaining('Нэвтрэх хаяг өөрчлөгдсөн'));
       expect(tester.takeException(), isNull);
     });
 
@@ -696,6 +726,9 @@ void main() {
               publicationService: publisher,
               mediaPicker: ({bool multiple = true}) async => [media]));
       await pickPost(tester);
+      // The caption field sits below the media preview in the lazy form.
+      await tester.scrollUntilVisible(find.byType(TextField), 200,
+          scrollable: find.byType(Scrollable).first);
       await tester.enterText(
           find.byType(TextField).first, 'my original caption');
       await tester.tap(find.byTooltip('Хаах'));
@@ -704,7 +737,8 @@ void main() {
       await tester.tap(find.text('Үргэлжлүүлэх'));
       await tester.pumpAndSettle();
       expect(find.text('my original caption'), findsOneWidget);
-      final share = find.widgetWithText(TextButton, 'Хуваалцах');
+      await revealPublish(tester, 'Хуваалцах');
+      final share = publishButton();
       await tester.tap(share);
       await tester.tap(share);
       await tester.pump();
@@ -714,7 +748,7 @@ void main() {
           isFalse);
       publisher.pendingPublish!.complete();
       await tester.pumpAndSettle();
-      await tester.tap(find.widgetWithText(TextButton, 'Дахин шалгах'));
+      await tapPublish(tester, 'Дахин шалгах');
       await tester.pumpAndSettle();
       expect(publisher.uploads, 1);
       expect(publisher.rows, hasLength(2));
@@ -732,15 +766,79 @@ void main() {
               publicationService: publisher,
               mediaPicker: ({bool multiple = true}) async => [media]));
       await pickPost(tester);
-      await tester.tap(find.widgetWithText(TextButton, 'Хуваалцах'));
+      await tapPublish(tester, 'Хуваалцах');
       await tester.pump();
       publisher.scope.active = false;
       publisher.pendingUpload!.complete('https://fixture.test/media.png');
       await tester.pumpAndSettle();
       expect(publisher.rows, isEmpty);
+      // The error is pinned right above the publish button, where the user is.
       expect(find.textContaining('Нэвтрэх хаяг өөрчлөгдсөн'), findsOneWidget);
+      expectOnScreen(tester, find.textContaining('Нэвтрэх хаяг өөрчлөгдсөн'));
+      expect(
+          tester
+                  .getBottomLeft(
+                      find.textContaining('Нэвтрэх хаяг өөрчлөгдсөн'))
+                  .dy <
+              tester.getTopLeft(publishButton()).dy,
+          isTrue);
       expect(tester.takeException(), isNull);
     });
+
+    // Large text is applied after picking: the empty picker placeholder has
+    // its own fixed-height layout, unrelated to the pinned footer.
+    for (final textScale in [1.0, 2.0]) {
+      testWidgets(
+          'publish button is visible without scrolling on a 320x640 phone (text x$textScale)',
+          (tester) async {
+        tester.view.physicalSize = const Size(320, 640);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        final scale = ValueNotifier<double>(1);
+        addTearDown(scale.dispose);
+        await tester.pumpWidget(ProviderScope(
+            child: MaterialApp(
+                builder: (context, child) => ValueListenableBuilder<double>(
+                    valueListenable: scale,
+                    builder: (context, value, _) => MediaQuery(
+                        data: MediaQuery.of(context)
+                            .copyWith(textScaler: TextScaler.linear(value)),
+                        child: child!)),
+                home: CreatePostScreen(
+                    publicationService: publisher,
+                    mediaPicker: ({bool multiple = true}) async =>
+                        [media, media, media]))));
+        await tester.pumpAndSettle();
+        await pickPost(tester);
+        scale.value = textScale;
+        await tester.pumpAndSettle();
+        await tester.scrollUntilVisible(find.byType(TextField), 200,
+            scrollable: find.byType(Scrollable).first);
+        await tester.enterText(find.byType(TextField).first,
+            'line one\nline two\nline three\nline four');
+        await tester.pumpAndSettle();
+        // The form (preview, thumbnails, caption, location) is taller than
+        // the screen, yet the single publish action needs no scrolling.
+        final form =
+            tester.state<ScrollableState>(find.byType(Scrollable).first);
+        expect(form.position.maxScrollExtent, greaterThan(0));
+        form.position.jumpTo(0);
+        await tester.pumpAndSettle();
+        await revealPublish(tester, 'Хуваалцах (3)');
+        expect(tester.widget<GradientButton>(publishButton()).onPressed,
+            isNotNull);
+        // The last form field can still scroll fully into view above it.
+        final hint = find.textContaining('Байршилтай пост газрын хэмнэлд');
+        await tester.scrollUntilVisible(hint, 200,
+            scrollable: find.byType(Scrollable).first);
+        await tester.pumpAndSettle();
+        expect(tester.getBottomLeft(hint).dy,
+            lessThanOrEqualTo(tester.getTopLeft(publishButton()).dy));
+        expectOnScreen(tester, publishButton());
+        expect(tester.takeException(), isNull);
+      });
+    }
 
     testWidgets(
         'story upload preserves media on error and freezes a single publish attempt',

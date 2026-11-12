@@ -7,6 +7,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/widgets/owl_loading.dart';
 import '../../../core/widgets/app_avatar.dart';
+import '../../../core/widgets/bare_input.dart';
 import '../../../core/widgets/network_video.dart';
 import '../../../core/services/supabase_service.dart';
 import '../../../core/router/app_router.dart' show AppRoutes;
@@ -1141,14 +1142,8 @@ class _CommentTileState extends State<_CommentTile> {
       builder: (_) => SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(20),
+          // Бариулыг theme-ийн showDragHandle зурна (нэг л бариул).
           child: Column(mainAxisSize: MainAxisSize.min, children: [
-            Container(
-                width: 36,
-                height: 4,
-                decoration: BoxDecoration(
-                    color: AppColors.hairline,
-                    borderRadius: BorderRadius.circular(2))),
-            const SizedBox(height: 20),
             Text('Сэтгэгдэл устгах уу?', style: AppTextStyles.labelLg),
             const SizedBox(height: 8),
             Text(
@@ -1258,14 +1253,24 @@ class _CommentInput extends StatelessWidget {
           const SizedBox(width: 10),
           Expanded(
             // Талбарын доод өндөр 48 — хуруугаар оногдоход тухтай
-            child: Container(
-              constraints: const BoxConstraints(minHeight: 48),
-              alignment: Alignment.center,
-              padding: const EdgeInsets.symmetric(horizontal: 14),
-              decoration: BoxDecoration(
-                color: AppColors.bgSurface.withValues(alpha: 0.65),
-                borderRadius: BorderRadius.circular(999),
-                border: Border.all(color: AppColors.hairline),
+            // Focus-ийг pill өөрөө харуулна (SearchField шиг); талбар нь bare.
+            child: ListenableBuilder(
+              listenable: focusNode,
+              builder: (context, field) => Container(
+                constraints: const BoxConstraints(minHeight: 48),
+                alignment: Alignment.center,
+                padding: const EdgeInsets.symmetric(horizontal: 14),
+                decoration: BoxDecoration(
+                  color: AppColors.bgSurface.withValues(alpha: 0.65),
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(
+                    color: focusNode.hasFocus
+                        ? AppColors.neonCyan.withValues(alpha: .65)
+                        : AppColors.hairline,
+                    width: focusNode.hasFocus ? 1.5 : 1,
+                  ),
+                ),
+                child: field,
               ),
               child: TextField(
                 controller: controller,
@@ -1274,14 +1279,11 @@ class _CommentInput extends StatelessWidget {
                 minLines: 1,
                 maxLength: 500,
                 style: AppTextStyles.bodyMd,
-                decoration: InputDecoration(
+                decoration: bareInput(
                   hintText: 'Сэтгэгдэл бичих…',
                   hintStyle: AppTextStyles.bodyMd
                       .copyWith(color: AppColors.textTertiary),
-                  border: InputBorder.none,
-                  counterText: '',
-                  isDense: true,
-                  contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                  hideCounter: true,
                 ),
               ),
             ),

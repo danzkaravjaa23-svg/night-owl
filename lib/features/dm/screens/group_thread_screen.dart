@@ -235,12 +235,10 @@ class _GroupThreadScreenState extends State<_ScopedGroupThread> {
   // Гишүүдийн жагсаалт — нэмэх / гарах үйлдэлтэй
   void _showMembers() {
     if (!_isCurrent || _memberActionBusy) return;
+    // Бариулыг theme (showDragHandle) зурна — энд дахин зурахгүй.
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppColors.bgElevated,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
       builder: (sheetCtx) => StreamBuilder<AuthState>(
           stream: SupabaseService.client.auth.onAuthStateChange,
           builder: (_, __) => !_isCurrent
@@ -252,14 +250,6 @@ class _GroupThreadScreenState extends State<_ScopedGroupThread> {
                   child: Padding(
                   padding: const EdgeInsets.only(bottom: 8),
                   child: Column(mainAxisSize: MainAxisSize.min, children: [
-                    const SizedBox(height: 10),
-                    Container(
-                        width: 40,
-                        height: 4,
-                        decoration: BoxDecoration(
-                            color: AppColors.hairline,
-                            borderRadius: BorderRadius.circular(2))),
-                    const SizedBox(height: 14),
                     Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 20),
                         child: Row(children: [
@@ -327,10 +317,7 @@ class _GroupThreadScreenState extends State<_ScopedGroupThread> {
     final existing = _profiles.keys.toSet();
     final picked = await showModalBottomSheet<List<String>>(
       context: context,
-      backgroundColor: AppColors.bgElevated,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
       builder: (_) => _AddMemberSheet(
           existingIds: existing, ownerId: _myId, isCurrent: () => _isCurrent),
     );
@@ -1129,14 +1116,7 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
                 child: SizedBox(
                   height: MediaQuery.of(context).size.height * 0.72,
                   child: Column(children: [
-                    const SizedBox(height: 12),
-                    Container(
-                        width: 40,
-                        height: 4,
-                        decoration: BoxDecoration(
-                            color: AppColors.hairline2,
-                            borderRadius: BorderRadius.circular(2))),
-                    const SizedBox(height: 14),
+                    // Бариулыг theme (showDragHandle) зурна.
                     Text('Гишүүн нэмэх', style: AppTextStyles.h2),
                     const SizedBox(height: 12),
                     // Хайлт — апп даяарх нэгдсэн шилэн pill талбар (48)

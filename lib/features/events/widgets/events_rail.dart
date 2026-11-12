@@ -436,11 +436,10 @@ class _AttendeeStack extends StatelessWidget {
 /// Event detail-ийг RSVP-тэй sheet-ээр нээх (feed rail + venue detail-аас дуудна)
 void showEventDetailSheet(BuildContext context, EventItem event) {
   showModalBottomSheet(
-    context: context, backgroundColor: AppColors.bgElevated,
-    // Урт тайлбартай эвент overflow хийхгүй — өндөр нь дотроо scroll-тай
+    context: context,
+    // Урт тайлбартай эвент overflow хийхгүй — өндөр нь дотроо scroll-тай.
+    // Өнгө, радиус, бариулыг bottomSheetTheme (showDragHandle) өгнө.
     isScrollControlled: true,
-    shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadii.xl))),
     builder: (_) => _EventDetailSheet(event: event),
   );
 }
@@ -513,21 +512,13 @@ class _EventDetailSheetState extends ConsumerState<_EventDetailSheet> {
     return SafeArea(
         top: false,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
+          padding: const EdgeInsets.fromLTRB(20, 0, 20, 28),
           child: ConstrainedBox(
             constraints: BoxConstraints(maxHeight: maxH),
             child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Center(
-                      child: Container(
-                          width: 40,
-                          height: 4,
-                          decoration: BoxDecoration(
-                              color: AppColors.hairline,
-                              borderRadius: BorderRadius.circular(2)))),
-                  const SizedBox(height: 16),
                   // ── Scroll болох хэсэг (урт тайлбар) — RSVP мөр доор нь тогтмол ──
                   Flexible(
                       child: SingleChildScrollView(

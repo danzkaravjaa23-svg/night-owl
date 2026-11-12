@@ -175,45 +175,50 @@ class _BottomNav extends ConsumerWidget {
             child: ClipRRect(
                 borderRadius: BorderRadius.circular(36),
                 child: SizedBox(
-                  height: 72 +
-                      (MediaQuery.textScalerOf(context).scale(12) - 12)
-                              .clamp(0, 24) *
-                          3,
-                  child: Stack(children: [
-                    Positioned.fill(
-                      child: NavigationSpotlight(selectedIndex: index),
-                    ),
-                    Row(children: [
-                      _NavItem(
-                          icon: Icons.location_on_outlined,
-                          activeIcon: Icons.location_on_rounded,
-                          label: 'Газрууд',
-                          isActive: index == 0,
-                          onTap: () => context.go(AppRoutes.explore)),
-                      _NavItem(
-                          icon: Icons.people_outline_rounded,
-                          activeIcon: Icons.people_rounded,
-                          label: 'Нийтлэл',
-                          isActive: index == 1,
-                          onTap: () => context.go(AppRoutes.feed)),
-                      Expanded(
-                          child: Center(
-                              child: _CreateFab(
-                                  onTap: () => _showCreateSheet(context)))),
-                      _NavItem(
-                          icon: Icons.chat_bubble_outline_rounded,
-                          activeIcon: Icons.chat_bubble_rounded,
-                          label: 'Мессеж',
-                          isActive: index == 3,
-                          onTap: () => context.go(AppRoutes.dmList)),
-                      _NavItem(
-                          icon: Icons.person_outline_rounded,
-                          activeIcon: Icons.person_rounded,
-                          label: 'Профайл',
-                          isActive: index == 4,
-                          onTap: () => context.go(AppRoutes.profile)),
+                  // Labels are one line with text scaling clamped to 1.3x
+                  // (4 + 32 + 2 + 12 * 1.2 * 1.3 + 4 ≈ 61), so the 64 px tap
+                  // target always fits and the dock no longer grows.
+                  height: 72,
+                  // Side inset keeps the first and last labels clear of the dock's
+                  // rounded corners; the spotlight shares it, so it stays aligned.
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 10),
+                    child: Stack(children: [
+                      Positioned.fill(
+                        child: NavigationSpotlight(selectedIndex: index),
+                      ),
+                      Row(children: [
+                        _NavItem(
+                            icon: Icons.location_on_outlined,
+                            activeIcon: Icons.location_on_rounded,
+                            label: 'Газрууд',
+                            isActive: index == 0,
+                            onTap: () => context.go(AppRoutes.explore)),
+                        _NavItem(
+                            icon: Icons.people_outline_rounded,
+                            activeIcon: Icons.people_rounded,
+                            label: 'Нийтлэл',
+                            isActive: index == 1,
+                            onTap: () => context.go(AppRoutes.feed)),
+                        Expanded(
+                            child: Center(
+                                child: _CreateFab(
+                                    onTap: () => _showCreateSheet(context)))),
+                        _NavItem(
+                            icon: Icons.chat_bubble_outline_rounded,
+                            activeIcon: Icons.chat_bubble_rounded,
+                            label: 'Мессеж',
+                            isActive: index == 3,
+                            onTap: () => context.go(AppRoutes.dmList)),
+                        _NavItem(
+                            icon: Icons.person_outline_rounded,
+                            activeIcon: Icons.person_rounded,
+                            label: 'Профайл',
+                            isActive: index == 4,
+                            onTap: () => context.go(AppRoutes.profile)),
+                      ]),
                     ]),
-                  ]),
+                  ),
                 )),
           ),
         ),
@@ -374,14 +379,23 @@ class _NavItem extends StatelessWidget {
                               ),
                             ))),
                         const SizedBox(height: 2),
-                        Text(label,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(
-                                fontSize: 12,
-                                height: 1.2,
-                                fontWeight: FontWeight.w600)),
+                        // One line that never breaks mid-word: grows a little
+                        // with the system font, then shrinks to fit the slot.
+                        MediaQuery.withClampedTextScaling(
+                          maxScaleFactor: 1.3,
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text(label,
+                                maxLines: 1,
+                                softWrap: false,
+                                overflow: TextOverflow.visible,
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(
+                                    fontSize: 12,
+                                    height: 1.2,
+                                    fontWeight: FontWeight.w600)),
+                          ),
+                        ),
                       ]),
                     )))),
       );

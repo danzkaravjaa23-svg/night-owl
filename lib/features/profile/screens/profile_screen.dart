@@ -304,7 +304,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   Future<void> _showActions(UserProfile profile) async {
     await showModalBottomSheet<void>(
       context: context,
-      backgroundColor: AppColors.bgElevated,
       showDragHandle: true,
       builder: (sheetContext) => SafeArea(
           child: SingleChildScrollView(

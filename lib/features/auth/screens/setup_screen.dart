@@ -89,13 +89,29 @@ class _SetupScreenState extends State<SetupScreen> {
   bool get _needsAgreement =>
       !CommunityRules.isAccepted(SupabaseService.currentUser?.userMetadata);
 
+  /// Профайлаа аль хэдийн дуусгасан хэрэглэгч зөвхөн шинэчлэгдсэн
+  /// 18+/дүрмийг зөвшөөрөх шаардлагатай (профайлаас нээгээгүй) — маягтгүй,
+  /// зөвшөөрөл-эхэлсэн горим. initState-д нэг удаа тогтооно: зөвшөөрөл
+  /// хадгалагдсаны дараа эсвэл гарах үед гарчиг/агуулга анивчихгүй.
+  bool _consentOnly = false;
+  bool _signingOut = false;
+
+  bool get _canAgree =>
+      !_loading && !_signingOut && !_profileLoading && !_accountChanged;
+
   @override
   void initState() {
     super.initState();
     _isEditMode = widget.forceEdit;
+    _consentOnly = !widget.forceEdit &&
+        _needsAgreement &&
+        SupabaseService.currentUser?.userMetadata?['setup_complete'] == true;
     _setupUserId = SupabaseService.currentUser?.id;
     // Native Apple name metadata may arrive after signedIn opened this route.
     _authSub = SupabaseService.authStream.listen((state) {
+      // Өөрийн "Гарах" явагдаж байхад signedOut ирнэ — "бүртгэл өөрчлөгдлөө"
+      // гэж харуулахгүй; _signOut өөрөө чиглүүлнэ.
+      if (_signingOut) return;
       if (mounted && !_isSetupUser(state.session?.user)) {
         setState(() {
           _accountChanged = true;
@@ -182,6 +198,9 @@ class _SetupScreenState extends State<SetupScreen> {
         });
       } else {
         setState(() {
+          // Профайлын мөр байхгүй бол зөвхөн зөвшөөрөл хангалтгүй —
+          // шинэ хэрэглэгчийн бүтэн маягт руу шилжинэ.
+          _consentOnly = false;
           _avatarUrl = NightOwlAvatars.defaultPreset.value;
           _avatarChanged = true;
           _profileLoading = false;
@@ -396,6 +415,81 @@ class _SetupScreenState extends State<SetupScreen> {
     }
   }
 
+  /// Зөвхөн-зөвшөөрөл горим: профайлын талбарыг дахин шалгах/бичихгүйгээр
+  /// _save-ийн яг ижил metadata бичлэгээр зөвшөөрлийг хадгална — өнөөгийн
+  /// шалгалтад тэнцэхгүй хуучин профайл хэрэглэгчийг гацаахгүй.
+  Future<void> _agreeOnly() async {
+    final destination = AuthReturn.destination;
+    if (!_canAgree) return;
+    final user = SupabaseService.currentUser;
+    if (!_isSetupUser(user)) {
+      if (mounted) setState(() => _accountChanged = true);
+      return;
+    }
+    final savedUser = user!;
+    if (!_agreedCommunity) {
+      setState(() => _error =
+          '18 нас хүрсэн бөгөөд хамтын орчны дүрмийг зөвшөөрч байгаагаа баталгаажуулна уу.');
+      return;
+    }
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      final applied =
+          await (widget.metadataService ?? AccountMetadataService()).update({
+        'setup_complete': true,
+        ...CommunityRules.acceptance(DateTime.now()),
+      }, ownerId: savedUser.id);
+      if (!applied) {
+        if (mounted) setState(() => _accountChanged = true);
+        return;
+      }
+      if (!mounted || !_isSetupUser(savedUser)) return;
+      final container = ProviderScope.containerOf(context, listen: false);
+      container.invalidate(currentProfileProvider);
+      container.invalidate(feedProvider);
+      container.invalidate(reelsProvider);
+      container.invalidate(storiesProvider);
+      authGate.refresh();
+      if (!mounted || !_isSetupUser(savedUser)) return;
+      context.go(destination);
+    } catch (_) {
+      if (mounted && _isSetupUser(savedUser)) {
+        setState(
+            () => _error = 'Хадгалахад алдаа гарлаа. Сүлжээгээ шалгана уу.');
+      }
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  // Тохиргооны "Гарах"-тай ижил зам — session цэвэрлээд нэвтрэх нүүр рүү.
+  Future<void> _signOut() async {
+    if (_signingOut || _loading) return;
+    setState(() {
+      _signingOut = true;
+      _error = null;
+    });
+    try {
+      await Supabase.instance.client.auth.signOut();
+      if (mounted) context.go(AppRoutes.authLanding);
+    } catch (_) {
+      if (!mounted) return;
+      // Локал session аль хэдийн цэвэрлэгдсэн (зөвхөн сервер рүү илгээх
+      // хэсэг амжаагүй) бол хэрэглэгч гарсан — нэвтрэх нүүр рүү.
+      if (SupabaseService.currentUser == null) {
+        context.go(AppRoutes.authLanding);
+      } else {
+        setState(() =>
+            _error = 'Гарч чадсангүй. Холболтоо шалгаад дахин оролдоорой.');
+      }
+    } finally {
+      if (mounted) setState(() => _signingOut = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -414,7 +508,11 @@ class _SetupScreenState extends State<SetupScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      if (_isEditMode) ...[
+                      // Зөвхөн-зөвшөөрөл: буцах товчгүй (router буцааж
+                      // энд л авчирна) — шалтгааныг шууд хэлнэ.
+                      if (_consentOnly) ...[
+                        Text('Дүрэм шинэчлэгдлээ', style: AppTextStyles.h1),
+                      ] else if (_isEditMode) ...[
                         Row(children: [
                           GlassBack(onTap: _back),
                           const SizedBox(width: 14),
@@ -433,7 +531,10 @@ class _SetupScreenState extends State<SetupScreen> {
                                           const Rect.fromLTWH(0, 0, 200, 40)))),
                       ],
                       const SizedBox(height: 6),
-                      Text('Зураг, хэрэглэгчийн нэр, сонирхлоо нэмээрэй',
+                      Text(
+                          _consentOnly
+                              ? 'Үргэлжлүүлэхийн өмнө 18+ болон хамтын орчны дүрмийг зөвшөөрнө үү.'
+                              : 'Зураг, хэрэглэгчийн нэр, сонирхлоо нэмээрэй',
                           style: AppTextStyles.bodyMd
                               .copyWith(color: AppColors.textSecondary)),
                     ],
@@ -450,7 +551,9 @@ class _SetupScreenState extends State<SetupScreen> {
                           ? const _FormSkeleton()
                           : _accountChanged
                               ? _accountChangedView()
-                              : _formView(),
+                              : _consentOnly
+                                  ? _consentView()
+                                  : _formView(),
                     ),
                   ),
                 ),
@@ -479,6 +582,114 @@ class _SetupScreenState extends State<SetupScreen> {
                   : AppRoutes.profile),
               child: const Text('Буцах')),
         ])),
+      );
+
+  // Профайл ачаалж чадаагүй анхааруулга + retry
+  Widget _loadFailedBanner() => Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: AppColors.amber.withValues(alpha: 0.10),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: AppColors.amber.withValues(alpha: 0.3)),
+        ),
+        child: Row(children: [
+          Icon(Icons.wifi_off_rounded, color: _amberInk, size: 16),
+          const SizedBox(width: 8),
+          Expanded(
+              child: Text('Профайл ачаалж чадсангүй',
+                  style: AppTextStyles.bodySm.copyWith(color: _amberInk))),
+          TapScale(
+            onTap: _loadExistingProfile,
+            child: Text('Дахин оролдох',
+                style: AppTextStyles.labelSm
+                    .copyWith(color: AppColors.neonCyan, letterSpacing: 0)),
+          ),
+        ]),
+      );
+
+  // 18+ / хамтын орчны дүрэм + заавал тэмдэглэх checkbox + бодлогын холбоос
+  Widget _agreementCard({required bool enabled}) => Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+          color: AppColors.bgElevated,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: AppColors.hairline)),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text('18+ · Хүндэтгэлтэй хамтын орчин', style: AppTextStyles.h3),
+        const SizedBox(height: 8),
+        Text(
+            'Night Owl нь насанд хүрсэн хэрэглэгчдэд зориулагдсан. '
+            'Дарамт, үзэн ядалт, бэлгийн ил тод болон хууль бус контент хориотой. '
+            'Асуудалтай контентыг мэдээлж, хэрэглэгчийг блоклож болно.',
+            style: AppTextStyles.bodySm),
+        Material(
+            color: Colors.transparent,
+            child: CheckboxListTile(
+                key: const ValueKey('setup-community-agreement'),
+                contentPadding: EdgeInsets.zero,
+                controlAffinity: ListTileControlAffinity.leading,
+                title: const Text(
+                    'Би 18 нас хүрсэн бөгөөд нөхцөл, нууцлалын бодлого болон эдгээр дүрмийг зөвшөөрч байна.'),
+                value: _agreedCommunity,
+                onChanged: enabled
+                    ? (value) =>
+                        setState(() => _agreedCommunity = value == true)
+                    : null)),
+        const PolicyLinks(),
+      ]));
+
+  /// Хуучин хэрэглэгч — зөвхөн шинэчлэгдсэн дүрмийг зөвшөөрнө. Профайлын
+  /// маягтгүй; гарах болон бүртгэл устгах үргэлж боломжтой (мухардалгүй).
+  Widget _consentView() => SingleChildScrollView(
+        key: const ValueKey('consent'),
+        padding: const EdgeInsets.fromLTRB(20, 24, 20, 20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _agreementCard(enabled: _canAgree),
+            if (_loadFailed) ...[
+              const SizedBox(height: 16),
+              _loadFailedBanner(),
+            ],
+            if (_error != null) ...[
+              const SizedBox(height: 20),
+              AuthErrorBox(_error!),
+            ],
+            const SizedBox(height: 28),
+            GradientButton(
+              key: const ValueKey('setup-save'),
+              label: _loading ? 'Хадгалж байна...' : 'Зөвшөөрч үргэлжлүүлэх',
+              onPressed: _canAgree ? _agreeOnly : null,
+              borderRadius: 999,
+              trailing: _loading ? const BtnSpinner() : null,
+            ),
+            const SizedBox(height: 8),
+            Center(
+              child: TextButton(
+                key: const ValueKey('setup-sign-out'),
+                onPressed: _loading || _signingOut ? null : _signOut,
+                style: TextButton.styleFrom(minimumSize: const Size(88, 44)),
+                child: Text(_signingOut ? 'Гарч байна…' : 'Гарах',
+                    textAlign: TextAlign.center),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Center(
+              child: TextButton(
+                key: const ValueKey('setup-delete-account'),
+                onPressed: _loading || _signingOut || _accountChanged
+                    ? null
+                    : () => context.push(AppRoutes.deleteAccount),
+                style: TextButton.styleFrom(
+                    minimumSize: const Size(88, 44),
+                    foregroundColor: AppColors.textTertiary,
+                    textStyle: AppTextStyles.bodyXs),
+                child: const Text('Бүртгэл устгах',
+                    textAlign: TextAlign.center),
+              ),
+            ),
+          ],
+        ),
       );
 
   Widget _avatarChoices() => Column(
@@ -584,29 +795,7 @@ class _SetupScreenState extends State<SetupScreen> {
             children: [
               // Профайл ачаалж чадаагүй анхааруулга + retry
               if (_loadFailed) ...[
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: AppColors.amber.withValues(alpha: 0.10),
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(
-                        color: AppColors.amber.withValues(alpha: 0.3)),
-                  ),
-                  child: Row(children: [
-                    Icon(Icons.wifi_off_rounded, color: _amberInk, size: 16),
-                    const SizedBox(width: 8),
-                    Expanded(
-                        child: Text('Профайл ачаалж чадсангүй',
-                            style: AppTextStyles.bodySm
-                                .copyWith(color: _amberInk))),
-                    TapScale(
-                      onTap: _loadExistingProfile,
-                      child: Text('Дахин оролдох',
-                          style: AppTextStyles.labelSm.copyWith(
-                              color: AppColors.neonCyan, letterSpacing: 0)),
-                    ),
-                  ]),
-                ),
+                _loadFailedBanner(),
                 const SizedBox(height: 20),
               ],
 
@@ -761,8 +950,10 @@ class _SetupScreenState extends State<SetupScreen> {
                       ),
                       child: Text(tag,
                           style: AppTextStyles.labelSm.copyWith(
+                            // Текстэд зориулсан accent — харанхуй дэвсгэр дээр
+                            // сонгоогүй чипээс бүдэг харагдахгүй (DS-01)
                             color: active
-                                ? AppColors.accentStart
+                                ? AppColors.accentText
                                 : AppColors.textSecondary,
                             letterSpacing: 0.2,
                           )),
@@ -771,42 +962,10 @@ class _SetupScreenState extends State<SetupScreen> {
                 }).toList(),
               ),
 
+              // Шинэ хэрэглэгч: зөвшөөрлийн карт хадгалах товчны шууд дээр
               if (_needsAgreement) ...[
                 const SizedBox(height: 24),
-                Container(
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                        color: AppColors.bgElevated,
-                        borderRadius: BorderRadius.circular(18),
-                        border: Border.all(color: AppColors.hairline)),
-                    child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('18+ · Хүндэтгэлтэй хамтын орчин',
-                              style: AppTextStyles.h3),
-                          const SizedBox(height: 8),
-                          Text(
-                              'Night Owl нь насанд хүрсэн хэрэглэгчдэд зориулагдсан. '
-                              'Дарамт, үзэн ядалт, бэлгийн ил тод болон хууль бус контент хориотой. '
-                              'Асуудалтай контентыг мэдээлж, хэрэглэгчийг блоклож болно.',
-                              style: AppTextStyles.bodySm),
-                          Material(
-                              color: Colors.transparent,
-                              child: CheckboxListTile(
-                                  key: const ValueKey(
-                                      'setup-community-agreement'),
-                                  contentPadding: EdgeInsets.zero,
-                                  controlAffinity:
-                                      ListTileControlAffinity.leading,
-                                  title: const Text(
-                                      'Би 18 нас хүрсэн бөгөөд нөхцөл, нууцлалын бодлого болон эдгээр дүрмийг зөвшөөрч байна.'),
-                                  value: _agreedCommunity,
-                                  onChanged: _canEdit
-                                      ? (value) => setState(() =>
-                                          _agreedCommunity = value == true)
-                                      : null)),
-                          const PolicyLinks(),
-                        ])),
+                _agreementCard(enabled: _canEdit),
               ],
 
               if (_error != null) ...[

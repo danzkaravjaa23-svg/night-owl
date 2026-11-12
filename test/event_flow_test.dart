@@ -5,6 +5,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:image/image.dart' as image;
@@ -65,6 +66,9 @@ class FakeEventService extends EventService {
   String account = owner;
   int generation = 0;
   final rows = <Map<String, dynamic>>[];
+  List<Map<String, dynamic>> venues = [
+    {'id': venueId, 'name': 'Fixture venue'}
+  ];
   int uploads = 0, mutations = 0, loads = 0;
   EventRsvp rsvp = (going: 4, interested: 2, mine: null);
   bool loadFailure = false;
@@ -83,9 +87,7 @@ class FakeEventService extends EventService {
   @override
   Future<List<Map<String, dynamic>>> ownedVenues(
           PublicationSession session, String query) async =>
-      [
-        {'id': venueId, 'name': 'Fixture venue'}
-      ];
+      List.of(venues);
   @override
   Future<Uint8List> prepareStoryImage(Uint8List bytes) async => bytes;
   @override
@@ -334,6 +336,21 @@ void main() {
     await tester.pumpAndSettle();
   }
 
+  // The cover is decoded by the real engine codec; on a busy machine that
+  // can take longer than one short real-time wait, so poll until the form
+  // is editable again (the picker clears its busy state when decoding ends).
+  Future<void> waitForCover(WidgetTester tester) async {
+    for (var i = 0; i < 100; i++) {
+      await tester.runAsync(
+          () async => Future<void>.delayed(const Duration(milliseconds: 50)));
+      await tester.pumpAndSettle();
+      if (tester.widget<TextField>(find.byType(TextField).first).enabled ==
+          true) {
+        return;
+      }
+    }
+  }
+
   Future<void> fillForm(WidgetTester tester) async {
     await tester.enterText(find.byType(TextField).first, 'Original event');
     await tester.tap(find.text('Газар сонгох'));
@@ -378,6 +395,69 @@ void main() {
     expect(find.textContaining('private path'), findsNothing);
     expect(
         tester.widget<TextField>(find.byType(TextField).first).enabled, isTrue);
+  });
+
+  testWidgets(
+      'venue picker without owned venues keeps the business exit and reopens after it',
+      (tester) async {
+    final service = FakeEventService()..venues = [];
+    var businessOpens = 0;
+    await tester.binding.setSurfaceSize(const Size(800, 1200));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final router = GoRouter(initialLocation: '/create', routes: [
+      GoRoute(
+          path: '/create',
+          builder: (_, __) => CreateEventScreen(service: service)),
+      GoRoute(
+          path: '/business',
+          builder: (context, __) {
+            businessOpens++;
+            return Scaffold(
+                body: TextButton(
+                    onPressed: () => context.pop(),
+                    child: const Text('Business destination')));
+          }),
+    ]);
+    addTearDown(router.dispose);
+    await tester.pumpWidget(ProviderScope(overrides: [
+      sessionUserIdProvider.overrideWithValue(owner),
+      eventServiceProvider.overrideWithValue(service),
+    ], child: MaterialApp.router(routerConfig: router)));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField).first, 'Draft event');
+    await tester.tap(find.text('Газар сонгох'));
+    await tester.pumpAndSettle();
+    final exit = find.byKey(const ValueKey('event-open-business'));
+    expect(exit, findsOneWidget);
+    expect(find.textContaining('Танд эзэмшдэг газар алга'), findsOneWidget);
+
+    // Typing a bar name still explains why nothing matches and keeps the exit.
+    await tester.enterText(
+        find.descendant(
+            of: find.byType(BottomSheet), matching: find.byType(TextField)),
+        'Sugar');
+    await tester.pump(const Duration(milliseconds: 350));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Танд эзэмшдэг газар алга'), findsOneWidget);
+    expect(exit, findsOneWidget);
+
+    await tester.tap(exit);
+    await tester.pumpAndSettle();
+    expect(find.text('Business destination'), findsOneWidget);
+    expect(businessOpens, 1);
+
+    // Returning from the dashboard reopens the picker on the same draft.
+    service.venues = [
+      {'id': venueId, 'name': 'Fixture venue'}
+    ];
+    await tester.tap(find.text('Business destination'));
+    await tester.pumpAndSettle();
+    expect(find.text('Fixture venue'), findsOneWidget);
+    await tester.tap(find.text('Fixture venue'));
+    await tester.pumpAndSettle();
+    expect(find.text('Draft event'), findsOneWidget);
+    expect(find.text('Fixture venue'), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('idle account change hides draft and closes owner venue picker',
@@ -426,9 +506,7 @@ void main() {
     final service = FakeEventService()..publishPending = pending;
     await composer(tester, service, picker: () async => png);
     await tester.tap(find.text('Cover зураг'));
-    await tester.runAsync(
-        () async => Future<void>.delayed(const Duration(milliseconds: 50)));
-    await tester.pumpAndSettle();
+    await waitForCover(tester);
     await fillForm(tester);
     await tester.tap(find.text('Эвент нийтлэх'));
     await tester.tap(find.text('Эвент нийтлэх'));
@@ -457,9 +535,7 @@ void main() {
       ..uploadFailure = const PublicationFailure('Зураг илгээгээгүй');
     await composer(tester, service, picker: () async => png);
     await tester.tap(find.text('Cover зураг'));
-    await tester.runAsync(
-        () async => Future<void>.delayed(const Duration(milliseconds: 50)));
-    await tester.pumpAndSettle();
+    await waitForCover(tester);
     await fillForm(tester);
     await tester.tap(find.text('Эвент нийтлэх'));
     await tester.pumpAndSettle();
@@ -478,9 +554,7 @@ void main() {
     final service = FakeEventService()..uploadPending = pending;
     await composer(tester, service, picker: () async => png);
     await tester.tap(find.text('Cover зураг'));
-    await tester.runAsync(
-        () async => Future<void>.delayed(const Duration(milliseconds: 50)));
-    await tester.pumpAndSettle();
+    await waitForCover(tester);
     await fillForm(tester);
     await tester.tap(find.text('Эвент нийтлэх'));
     await tester.pump();

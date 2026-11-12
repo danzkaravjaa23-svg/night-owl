@@ -194,7 +194,10 @@ class _AuthLandingScreenState extends State<AuthLandingScreen> {
                                                       ? 'Түр хүлээнэ үү...'
                                                       : 'Google-ээр үргэлжлүүлэх')),
                                             ])),
-                                    AppleSignInButton(
+                                    // Apple зөвхөн native iOS-д — бусад
+                                    // платформд товч ч, зай ч үгүй.
+                                    if (AppleSignInButton.isAvailable)
+                                      AppleSignInButton(
                                         enabled: !_authBusy,
                                         onBusyChanged: (busy) {
                                           if (mounted) {

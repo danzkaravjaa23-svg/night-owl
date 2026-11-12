@@ -140,11 +140,10 @@ class _VenueDetailScreenState extends ConsumerState<VenueDetailScreen> {
   }
 
   void _openReviews() {
+    // Өнгө, радиус, бариулыг bottomSheetTheme (showDragHandle) өгнө.
     showModalBottomSheet(
-      context: context, backgroundColor: AppColors.bgElevated,
+      context: context,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadii.xl))),
       builder: (_) => _ReviewsSheet(venueId: widget.venueId),
     ).then((_) => _load()); // хаагдахад дундаж шинэчлэх
   }
@@ -737,7 +736,7 @@ class _ReviewsSheetState extends State<_ReviewsSheet> {
       expand: false, initialChildSize: 0.75, maxChildSize: 0.95, minChildSize: 0.5,
       builder: (_, scrollCtrl) => Padding(
         padding: EdgeInsets.only(
-          bottom: MediaQuery.of(context).viewInsets.bottom, left: 16, right: 16, top: 12),
+          bottom: MediaQuery.of(context).viewInsets.bottom, left: 16, right: 16),
         child: _loading
           ? ListView(controller: scrollCtrl, children: const [
               SizedBox(height: 14),
@@ -750,9 +749,7 @@ class _ReviewsSheetState extends State<_ReviewsSheet> {
               _SkelBox(height: 70, radius: AppRadii.lg),
             ])
           : ListView(controller: scrollCtrl, children: [
-              Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(
-                color: AppColors.hairline, borderRadius: BorderRadius.circular(2)))),
-              const SizedBox(height: 14),
+              // Бариулыг theme (showDragHandle) зурна — энд дахин зурахгүй.
               Text('Үнэлгээ ба сэтгэгдэл', style: AppTextStyles.h2),
               const SizedBox(height: 14),
               // Бичих — шилэн карт хэмнэл

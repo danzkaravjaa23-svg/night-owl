@@ -439,15 +439,8 @@ class _ReelsScreenState extends ConsumerState<ReelsScreen>
         builder: (s) => _themedNavBar(
             s,
             SafeArea(
+                // Бариулыг theme (showDragHandle) зурна — энд дахин зурахгүй.
                 child: Column(mainAxisSize: MainAxisSize.min, children: [
-              const SizedBox(height: 10),
-              Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                      color: AppColors.hairline2,
-                      borderRadius: BorderRadius.circular(2))),
-              const SizedBox(height: 6),
               ListTile(
                   leading:
                       Icon(Icons.link_rounded, color: AppColors.textSecondary),

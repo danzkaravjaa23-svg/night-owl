@@ -517,7 +517,13 @@ void main() {
         expect(tester.widget<CheckboxListTile>(checkbox).value, isTrue);
         final before = DateTime.now().toUtc();
         await save(tester);
-        expect(writes.single['id'], me);
+        if (completedBefore) {
+          // Consent-only state records just the agreement: a legacy profile
+          // is neither re-validated nor re-written.
+          expect(writes, isEmpty);
+        } else {
+          expect(writes.single['id'], me);
+        }
         expect(metadataWrites, 1);
         expect(metadataRequests, hasLength(1));
         expect(held, isNotNull);
@@ -582,6 +588,39 @@ void main() {
     final current = Supabase.instance.client.auth.currentUser!;
     expect(current.id, 'another-user');
     expect(current.userMetadata?['setup_complete'], isFalse);
+    expect(CommunityRules.isAccepted(current.userMetadata), isFalse);
+    expect(find.text('Feed destination'), findsNothing);
+    expect(
+        find.text('Нэвтэрсэн бүртгэл өөрчлөгдлөө. Профайлаа дахин нээгээрэй.'),
+        findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets(
+      'late consent-only response cannot replace the next account or navigate',
+      (tester) async {
+    // Existing user who only needs to accept the rules (consent-only state).
+    setupComplete = true;
+    communityAccepted = false;
+    await signIn();
+    final pending = Completer<http.Response>();
+    http.Request? held;
+    metadataReply = (request) {
+      held = request;
+      return pending.future;
+    };
+    await render(tester, edit: false);
+    expect(find.text('Дүрэм шинэчлэгдлээ'), findsOneWidget);
+    await agree(tester);
+    await save(tester);
+    expect(metadataWrites, 1);
+    expect(writes, isEmpty);
+    await signIn('another-user');
+    await tester.pump();
+    pending.complete(metadataResponse(held!));
+    await tester.pumpAndSettle();
+    final current = Supabase.instance.client.auth.currentUser!;
+    expect(current.id, 'another-user');
     expect(CommunityRules.isAccepted(current.userMetadata), isFalse);
     expect(find.text('Feed destination'), findsNothing);
     expect(

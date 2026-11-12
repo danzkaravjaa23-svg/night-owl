@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -147,159 +148,234 @@ void main() {
   Finder google() => find.text('Google-ээр үргэлжлүүлэх');
   Finder agreement() =>
       find.byKey(const ValueKey('register-community-agreement'));
+  Finder apple() => find.byType(AppleSignInButton);
+  Finder googleButton() => find
+      .ancestor(
+          of: google(),
+          matching: find.byWidgetPredicate((w) => w is ButtonStyleButton))
+      .first;
 
-  testWidgets(
-      'registration requires explicit 18+ agreement and sends complete metadata once',
-      (tester) async {
-    await render(tester, '/auth/register');
-    await fill(tester);
-    await tap(tester, submit());
-    await tester.pumpAndSettle();
-    expect(requests, isEmpty);
-    expect(find.text('18+ нас болон үйлчилгээний нөхцөлийг баталгаажуулна уу'),
-        findsOneWidget);
-    await tap(tester, agreement());
-    final pending = Completer<http.Response>();
-    http.Request? held;
-    reply = (request) {
-      held = request;
-      return pending.future;
-    };
-    final before = DateTime.now().toUtc();
-    await tap(tester, submit());
-    final password = tester.widget<TextField>(find.descendant(
-        of: find.byType(TextFormField).last, matching: find.byType(TextField)));
-    password.onSubmitted?.call('fixture-password');
-    await tester.pump();
-    await waitForRequest(tester);
-    expect(requests, hasLength(1));
-    expect(held!.url.path, '/auth/v1/signup');
-    final body = jsonDecode(held!.body) as Map;
-    expect(body['email'], 'fixture@example.test');
-    final metadata = body['data'] as Map<String, dynamic>;
-    expect(metadata['full_name'], 'Fixture Owl');
-    expect(CommunityRules.isAccepted(metadata), isTrue);
-    final accepted =
-        DateTime.parse(metadata['community_rules_accepted_at'] as String);
-    expect(accepted.isUtc, isTrue);
-    expect(accepted.isBefore(before), isFalse);
-    expect(
-        tester
-            .widget<AppleSignInButton>(find.byType(AppleSignInButton))
-            .enabled,
-        isFalse);
-    expect(tester.widget<GradientButton>(submit()).onPressed, isNull);
-    pending.complete(response(held!, registeredUser()));
-    await tester.pumpAndSettle();
-    expect(find.text('И-мэйлээ шалгаарай'), findsOneWidget);
-    expect(find.text('Setup destination'), findsNothing);
-    expect(tester.takeException(), isNull);
-  });
+  // Apple товч зөвхөн native iOS-д байрлана. Платформ солих тест бүр
+  // override-оо биеийн төгсгөлөөс өмнө заавал буцаана.
+  Future<void> onPlatform(
+      TargetPlatform platform, Future<void> Function() body) async {
+    debugDefaultTargetPlatformOverride = platform;
+    try {
+      await body();
+    } finally {
+      debugDefaultTargetPlatformOverride = null;
+    }
+  }
 
-  for (final route in ['/auth/login', '/auth/register']) {
+  Future<void> onIOS(Future<void> Function() body) =>
+      onPlatform(TargetPlatform.iOS, body);
+
+  for (final platform in [TargetPlatform.android, TargetPlatform.iOS]) {
     testWidgets(
-        '$route blocks Apple and Google during an email request and recovers',
+        'registration requires explicit 18+ agreement and sends complete metadata once on ${platform.name}',
         (tester) async {
-      await render(tester, route);
-      await fill(tester, register: route.endsWith('register'));
-      if (route.endsWith('register')) await tap(tester, agreement());
-      final pending = Completer<http.Response>();
-      http.Request? held;
-      reply = (request) {
-        held = request;
-        return pending.future;
-      };
-      await tap(tester, submit());
-      expect(
-          tester
-              .widget<AppleSignInButton>(find.byType(AppleSignInButton))
-              .enabled,
-          isFalse);
-      expect(tester.widget<GradientButton>(submit()).onPressed, isNull);
-      final googleButton =
-          find.ancestor(of: google(), matching: find.byType(TextButton)).first;
-      expect(tester.widget<TextButton>(googleButton).onPressed, isNull);
-      await waitForRequest(tester);
-      expect(requests, hasLength(1));
-      pending
-          .complete(response(held!, {'message': 'invalid credentials'}, 400));
-      await tester.pumpAndSettle();
-      expect(
-          tester
-              .widget<AppleSignInButton>(find.byType(AppleSignInButton))
-              .enabled,
-          isTrue);
-      expect(tester.widget<GradientButton>(submit()).onPressed, isNotNull);
-      expect(tester.takeException(), isNull);
+      await onPlatform(platform, () async {
+        await render(tester, '/auth/register');
+        await fill(tester);
+        await tap(tester, submit());
+        await tester.pumpAndSettle();
+        expect(requests, isEmpty);
+        expect(
+            find.text('18+ нас болон үйлчилгээний нөхцөлийг баталгаажуулна уу'),
+            findsOneWidget);
+        await tap(tester, agreement());
+        final pending = Completer<http.Response>();
+        http.Request? held;
+        reply = (request) {
+          held = request;
+          return pending.future;
+        };
+        final before = DateTime.now().toUtc();
+        await tap(tester, submit());
+        final password = tester.widget<TextField>(find.descendant(
+            of: find.byType(TextFormField).last,
+            matching: find.byType(TextField)));
+        password.onSubmitted?.call('fixture-password');
+        await tester.pump();
+        await waitForRequest(tester);
+        expect(requests, hasLength(1));
+        expect(held!.url.path, '/auth/v1/signup');
+        final body = jsonDecode(held!.body) as Map;
+        expect(body['email'], 'fixture@example.test');
+        final metadata = body['data'] as Map<String, dynamic>;
+        expect(metadata['full_name'], 'Fixture Owl');
+        expect(CommunityRules.isAccepted(metadata), isTrue);
+        final accepted =
+            DateTime.parse(metadata['community_rules_accepted_at'] as String);
+        expect(accepted.isUtc, isTrue);
+        expect(accepted.isBefore(before), isFalse);
+        if (platform == TargetPlatform.iOS) {
+          expect(tester.widget<AppleSignInButton>(apple()).enabled, isFalse);
+        } else {
+          expect(apple(), findsNothing);
+        }
+        expect(tester.widget<GradientButton>(submit()).onPressed, isNull);
+        pending.complete(response(held!, registeredUser()));
+        await tester.pumpAndSettle();
+        expect(find.text('И-мэйлээ шалгаарай'), findsOneWidget);
+        expect(find.text('Setup destination'), findsNothing);
+        expect(tester.takeException(), isNull);
+      });
     });
   }
 
+  for (final route in ['/auth/login', '/auth/register']) {
+    for (final platform in [TargetPlatform.android, TargetPlatform.iOS]) {
+      final ios = platform == TargetPlatform.iOS;
+      testWidgets(
+          '$route blocks ${ios ? 'Apple and ' : ''}Google during an email '
+          'request and recovers on ${platform.name}', (tester) async {
+        await onPlatform(platform, () async {
+          await render(tester, route);
+          expect(apple(), ios ? findsOneWidget : findsNothing);
+          await fill(tester, register: route.endsWith('register'));
+          if (route.endsWith('register')) await tap(tester, agreement());
+          final pending = Completer<http.Response>();
+          http.Request? held;
+          reply = (request) {
+            held = request;
+            return pending.future;
+          };
+          await tap(tester, submit());
+          if (ios) {
+            expect(tester.widget<AppleSignInButton>(apple()).enabled, isFalse);
+          }
+          expect(tester.widget<GradientButton>(submit()).onPressed, isNull);
+          final googleButton = find
+              .ancestor(of: google(), matching: find.byType(TextButton))
+              .first;
+          expect(tester.widget<TextButton>(googleButton).onPressed, isNull);
+          await waitForRequest(tester);
+          expect(requests, hasLength(1));
+          pending.complete(
+              response(held!, {'message': 'invalid credentials'}, 400));
+          await tester.pumpAndSettle();
+          if (ios) {
+            expect(tester.widget<AppleSignInButton>(apple()).enabled, isTrue);
+          }
+          expect(tester.widget<GradientButton>(submit()).onPressed, isNotNull);
+          expect(tester.widget<TextButton>(googleButton).onPressed, isNotNull);
+          expect(tester.takeException(), isNull);
+        });
+      });
+    }
+  }
+
   for (final route in ['/auth', '/auth/login', '/auth/register']) {
-    testWidgets('$route disables email and Apple until Google launch completes',
-        (tester) async {
-      await render(tester, route);
-      final pending = Completer<bool>();
-      launchReply = (_) => pending.future;
-      await tap(tester, google());
-      for (var i = 0; i < 20 && opened.isEmpty; i++) {
-        await tester.runAsync(
-            () => Future<void>.delayed(const Duration(milliseconds: 5)));
-        await tester.pump();
-      }
-      expect(opened, hasLength(1));
-      expect(Uri.parse(opened.single).queryParameters['provider'], 'google');
-      expect(
-          tester
-              .widget<AppleSignInButton>(find.byType(AppleSignInButton))
-              .enabled,
-          isFalse);
-      expect(tester.widget<GradientButton>(submit()).onPressed, isNull);
-      expect(requests, isEmpty);
-      pending.complete(false);
-      await tester.pumpAndSettle();
-      expect(
-          tester
-              .widget<AppleSignInButton>(find.byType(AppleSignInButton))
-              .enabled,
-          isTrue);
-      expect(tester.widget<GradientButton>(submit()).onPressed, isNotNull);
-      expect(tester.takeException(), isNull);
-    });
+    for (final platform in [TargetPlatform.android, TargetPlatform.iOS]) {
+      final ios = platform == TargetPlatform.iOS;
+      testWidgets(
+          '$route disables email${ios ? ' and Apple' : ''} until Google '
+          'launch completes on ${platform.name}', (tester) async {
+        await onPlatform(platform, () async {
+          await render(tester, route);
+          expect(apple(), ios ? findsOneWidget : findsNothing);
+          final pending = Completer<bool>();
+          launchReply = (_) => pending.future;
+          await tap(tester, google());
+          for (var i = 0; i < 20 && opened.isEmpty; i++) {
+            await tester.runAsync(
+                () => Future<void>.delayed(const Duration(milliseconds: 5)));
+            await tester.pump();
+          }
+          expect(opened, hasLength(1));
+          expect(
+              Uri.parse(opened.single).queryParameters['provider'], 'google');
+          if (ios) {
+            expect(tester.widget<AppleSignInButton>(apple()).enabled, isFalse);
+          }
+          expect(tester.widget<GradientButton>(submit()).onPressed, isNull);
+          expect(requests, isEmpty);
+          pending.complete(false);
+          await tester.pumpAndSettle();
+          if (ios) {
+            expect(tester.widget<AppleSignInButton>(apple()).enabled, isTrue);
+          }
+          expect(tester.widget<GradientButton>(submit()).onPressed, isNotNull);
+          expect(tester.takeException(), isNull);
+        });
+      });
+    }
 
     testWidgets(
         '$route coordinates the Apple busy callback with its other entry points',
         (tester) async {
-      await render(tester, route);
-      final apple =
-          tester.widget<AppleSignInButton>(find.byType(AppleSignInButton));
-      expect(apple.onBusyChanged, isNotNull);
-      apple.onBusyChanged!(true);
-      await tester.pump();
-      expect(tester.widget<GradientButton>(submit()).onPressed, isNull);
-      expect(
-          tester
-              .widget<AppleSignInButton>(find.byType(AppleSignInButton))
-              .enabled,
-          isFalse);
-      if (route != '/auth') {
-        final input = tester.widget<TextField>(find.descendant(
-            of: find.byType(TextFormField).last,
-            matching: find.byType(TextField)));
-        input.onSubmitted?.call('fixture-password');
+      await onIOS(() async {
+        await render(tester, route);
+        final appleButton = tester.widget<AppleSignInButton>(apple());
+        expect(appleButton.onBusyChanged, isNotNull);
+        appleButton.onBusyChanged!(true);
         await tester.pump();
-        expect(requests, isEmpty);
-      }
-      apple.onBusyChanged!(false);
-      await tester.pump();
-      expect(tester.widget<GradientButton>(submit()).onPressed, isNotNull);
-      expect(
-          tester
-              .widget<AppleSignInButton>(find.byType(AppleSignInButton))
-              .enabled,
-          isTrue);
-      expect(tester.takeException(), isNull);
+        expect(tester.widget<GradientButton>(submit()).onPressed, isNull);
+        expect(tester.widget<AppleSignInButton>(apple()).enabled, isFalse);
+        if (route != '/auth') {
+          final input = tester.widget<TextField>(find.descendant(
+              of: find.byType(TextFormField).last,
+              matching: find.byType(TextField)));
+          input.onSubmitted?.call('fixture-password');
+          await tester.pump();
+          expect(requests, isEmpty);
+        }
+        appleButton.onBusyChanged!(false);
+        await tester.pump();
+        expect(tester.widget<GradientButton>(submit()).onPressed, isNotNull);
+        expect(tester.widget<AppleSignInButton>(apple()).enabled, isTrue);
+        expect(tester.takeException(), isNull);
+      });
+    });
+
+    testWidgets(
+        '$route lays out no Apple button on Android while email and Google work',
+        (tester) async {
+      await onPlatform(TargetPlatform.android, () async {
+        await render(tester, route);
+        expect(apple(), findsNothing);
+        expect(find.text('Apple-ээр үргэлжлүүлэх'), findsNothing);
+        expect(find.byIcon(Icons.apple), findsNothing);
+        expect(google(), findsOneWidget);
+        expect(tester.widget<ButtonStyleButton>(googleButton()).onPressed,
+            isNotNull);
+        expect(tester.widget<GradientButton>(submit()).onPressed, isNotNull);
+        // "ЭСВЭЛ" нь имэйл ба Google-ийг тусгаарладаг тул хэвээр үлдэнэ.
+        if (route != '/auth') expect(find.text('ЭСВЭЛ'), findsOneWidget);
+        expect(tester.takeException(), isNull);
+      });
+    });
+
+    testWidgets(
+        '$route shows the Apple button on iOS shaped like its Google button',
+        (tester) async {
+      await onIOS(() async {
+        await render(tester, route);
+        expect(apple(), findsOneWidget);
+        expect(find.text('Apple-ээр үргэлжлүүлэх'), findsOneWidget);
+        expect(tester.widget<AppleSignInButton>(apple()).borderRadius,
+            route == '/auth' ? 16 : 999);
+        final appleButton =
+            find.descendant(of: apple(), matching: find.byType(OutlinedButton));
+        expect(tester.getSize(appleButton).height,
+            tester.getSize(googleButton()).height);
+        expect(tester.takeException(), isNull);
+      });
     });
   }
+
+  test('Apple sign-in is offered only on native iOS', () {
+    try {
+      for (final platform in TargetPlatform.values) {
+        debugDefaultTargetPlatformOverride = platform;
+        expect(AppleSignInButton.isAvailable, platform == TargetPlatform.iOS,
+            reason: platform.name);
+      }
+    } finally {
+      debugDefaultTargetPlatformOverride = null;
+    }
+  });
 
   testWidgets(
       'Apple button respects external disable and reports a single pending operation',
@@ -334,36 +410,45 @@ void main() {
 
   for (final dark in [true, false]) {
     for (final route in ['/auth/login', '/auth/register']) {
-      testWidgets(
-          '$route fits 320x480 at 1.5x in ${dark ? 'night' : 'day'} with reachable controls',
-          (tester) async {
-        await render(tester, route,
-            size: const Size(320, 480), scale: 1.5, dark: dark);
-        expect(tester.takeException(), isNull);
-        await tester.ensureVisible(find.byType(AppleSignInButton));
-        await tester.pumpAndSettle();
-        expect(find.byType(AppleSignInButton).hitTestable(), findsOneWidget);
-        if (route.endsWith('register')) {
-          final heading = find.text('Night Owl-д нэгдээрэй');
-          expect(tester.getRect(heading).left, greaterThanOrEqualTo(20));
-          expect(tester.getRect(heading).right, lessThanOrEqualTo(300));
-          expect(tester.widget<Text>(heading).textAlign, TextAlign.center);
-          for (final policy in [AppPolicy.terms, AppPolicy.privacy]) {
-            await tap(tester, find.text(policy.title));
+      for (final platform in [TargetPlatform.android, TargetPlatform.iOS]) {
+        final ios = platform == TargetPlatform.iOS;
+        testWidgets(
+            '$route fits 320x480 at 1.5x in ${dark ? 'night' : 'day'} on '
+            '${platform.name} with reachable controls', (tester) async {
+          await onPlatform(platform, () async {
+            await render(tester, route,
+                size: const Size(320, 480), scale: 1.5, dark: dark);
+            expect(tester.takeException(), isNull);
+            // Хамгийн доод нэвтрэх товч: iOS-д Apple, бусад платформд Google.
+            final lastEntry = ios ? apple() : googleButton();
+            await tester.ensureVisible(lastEntry);
             await tester.pumpAndSettle();
-            expect(opened.last, policy.uri.toString());
-          }
-          final checkbox =
-              find.descendant(of: agreement(), matching: find.byType(Checkbox));
-          await tester.ensureVisible(checkbox);
-          await tester.pumpAndSettle();
-          expect(checkbox.hitTestable(), findsOneWidget);
-          await tester.tap(checkbox);
-          await tester.pump();
-          expect(tester.widget<CheckboxListTile>(agreement()).value, isTrue);
-        }
-        expect(tester.takeException(), isNull);
-      });
+            expect(lastEntry.hitTestable(), findsOneWidget);
+            if (!ios) expect(apple(), findsNothing);
+            if (route.endsWith('register')) {
+              final heading = find.text('Night Owl-д нэгдээрэй');
+              expect(tester.getRect(heading).left, greaterThanOrEqualTo(20));
+              expect(tester.getRect(heading).right, lessThanOrEqualTo(300));
+              expect(tester.widget<Text>(heading).textAlign, TextAlign.center);
+              for (final policy in [AppPolicy.terms, AppPolicy.privacy]) {
+                await tap(tester, find.text(policy.title));
+                await tester.pumpAndSettle();
+                expect(opened.last, policy.uri.toString());
+              }
+              final checkbox = find.descendant(
+                  of: agreement(), matching: find.byType(Checkbox));
+              await tester.ensureVisible(checkbox);
+              await tester.pumpAndSettle();
+              expect(checkbox.hitTestable(), findsOneWidget);
+              await tester.tap(checkbox);
+              await tester.pump();
+              expect(
+                  tester.widget<CheckboxListTile>(agreement()).value, isTrue);
+            }
+            expect(tester.takeException(), isNull);
+          });
+        });
+      }
     }
   }
 }

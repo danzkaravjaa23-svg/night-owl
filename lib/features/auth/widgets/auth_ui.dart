@@ -262,12 +262,29 @@ class AuthAura extends StatelessWidget {
 /// Native iOS uses Apple credentials; other platforms use verified OAuth.
 /// Provider signing keys are configured server-side, never in the app.
 class AppleSignInButton extends StatefulWidget {
+  /// Web болон Android дээр Apple нэвтрэлт Supabase OAuth-оор явдаг бөгөөд
+  /// серверийн Apple provider асаалттай үед л ажиллана. Одоо provider
+  /// унтраалттай (docs/APPLE_SIGN_IN_SETUP.md) тул тэнд товч зөвхөн алдаа
+  /// өгдөг байсан — иймээс нуусан. Provider-ийг асаах release-д үүнийг
+  /// true болгоно: эс бөгөөс iPhone дээр Apple-ээр бүртгүүлсэн хэрэглэгч
+  /// web, Android дээр нэвтэрч чадахгүй.
+  static const bool oauthOffIosEnabled = false;
+
+  /// Apple товч харагдах эсэх. Native iOS апп-д үргэлж (App Store 4.8);
+  /// бусад платформд [oauthOffIosEnabled] үед л. Дуудах газар бүр энэ
+  /// шалгуураар товч болон зөвхөн түүнд хамаарах зайг огт байрлуулахгүй.
+  static bool get isAvailable =>
+      oauthOffIosEnabled ||
+      (!kIsWeb && defaultTargetPlatform == TargetPlatform.iOS);
+
   final Future<void> Function()? onSignIn;
   final bool onDark;
   final bool enabled;
   final ValueChanged<bool>? onBusyChanged;
+  /// Тухайн дэлгэцийн Google товчны булангийн радиустай тааруулна.
+  final double borderRadius;
   const AppleSignInButton({super.key, this.onSignIn, this.onDark = false,
-    this.enabled = true, this.onBusyChanged});
+    this.enabled = true, this.onBusyChanged, this.borderRadius = 16});
   @override
   State<AppleSignInButton> createState() => _AppleSignInButtonState();
 }
@@ -302,7 +319,8 @@ class _AppleSignInButtonState extends State<AppleSignInButton> {
         foregroundColor: widget.onDark ? Colors.white : AppColors.textPrimary,
         minimumSize: const Size.fromHeight(52),
         side: BorderSide(color: widget.onDark ? AppColors.hairline2Dark : AppColors.hairline2),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(widget.borderRadius))),
       icon: const Icon(Icons.apple),
       label: Text(_busy ? 'Түр хүлээнэ үү…' : 'Apple-ээр үргэлжлүүлэх')));
   }

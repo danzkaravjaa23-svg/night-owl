@@ -47,6 +47,11 @@ abstract class AppColors {
   static const Color neonCyanLight =
       Color(0xFF6550AD); // цайвар дэвсгэр дээр AA
   static Color get neonCyan => isDarkMode ? neonCyanDark : neonCyanLight;
+
+  /// Accent for TEXT and ICONS on app surfaces (Night #B6A4FF, Day #6550AD) —
+  /// AA contrast on bgBase/bgSurface/bgElevated in both themes.
+  /// [accentStart] #7654D6 is a FILL colour, meant for white text on top.
+  static Color get accentText => isDarkMode ? neonCyanDark : neonCyanLight;
   static const Color magenta = Color(0xFFA78BFA);
   static const Color limeDark = Color(0xFF6EE7B7);
   static const Color limeLight = Color(0xFF17734F); // цайвар дэвсгэр дээр AA
@@ -65,8 +70,12 @@ abstract class AppColors {
 
   // ─── Үйлдлийн семантик өнгө — апп даяар НЭГ өнгө ───
   // (Өмнө нь feed / reels / story viewer гурав өөр өнгөөр зүрх будаж байсан.)
-  static const Color like = accentEnd; // зүрх — дарсан үе
-  static const Color saved = accentStart; // хадгалсан тэмдэг
+  // Шөнө: харанхуй карт дээр тод лаванда (#B6A4FF); Өдөр: өмнөх утга хэвээр.
+  static const Color likeLight = accentEnd;
+  static const Color savedLight = accentStart;
+  static Color get like => isDarkMode ? neonCyanDark : likeLight; // зүрх — дарсан үе
+  static Color get saved =>
+      isDarkMode ? neonCyanDark : savedLight; // хадгалсан тэмдэг
 
   // Status
   static const Color successDark =

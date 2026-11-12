@@ -14,12 +14,10 @@ import 'search_field.dart';
 /// шууд thread гарчигт харуулахын тулд).
 Future<Map<String, String>?> showCreateGroupSheet(BuildContext context) {
   final session = SupabaseService.client.auth.currentSession;
+  // Өнгө, радиус, бариулыг bottomSheetTheme (showDragHandle) өгнө.
   return showModalBottomSheet<Map<String, String>>(
     context: context,
-    backgroundColor: AppColors.bgElevated,
     isScrollControlled: true,
-    shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
     builder: (_) => _CreateGroupSheet(session: session),
   );
 }
@@ -176,15 +174,6 @@ class _CreateGroupSheetState extends State<_CreateGroupSheet> {
       child: SizedBox(
         height: MediaQuery.of(context).size.height * 0.78,
         child: Column(children: [
-          const SizedBox(height: 12),
-          Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                  color: AppColors.hairline2,
-                  borderRadius: BorderRadius.circular(2))),
-          const SizedBox(height: 18),
-
           // ── Header — gradient групп badge + гарчиг + micro тайлбар ──
           Container(
               width: 48,

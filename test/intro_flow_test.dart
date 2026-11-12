@@ -2,11 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:http/testing.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:night_owl_ub/core/router/app_router.dart';
 import 'package:night_owl_ub/core/theme/app_colors.dart';
 import 'package:night_owl_ub/features/auth/screens/auth_landing_screen.dart';
 import 'package:night_owl_ub/features/onboarding/screens/onboarding_screen.dart';
+import 'package:night_owl_ub/features/onboarding/screens/splash_screen.dart';
 
 void main() {
   setUpAll(() => GoogleFonts.config.allowRuntimeFetching = false);
@@ -66,6 +69,85 @@ void main() {
       expect(tester.takeException(), isNull);
     });
   }
+
+  group('first run (Mongolian only)', () {
+    late MockClient transport;
+    setUp(() async {
+      GoogleFonts.config.allowRuntimeFetching = false;
+      // Supabase.initialize нь PKCE-д SharedPreferences ашигладаг; mock-ийг
+      // эхлээд тавина (тест бүр өөрийн утгаар дахин тавина).
+      SharedPreferences.setMockInitialValues({});
+      // Session байхгүй — splash ямар ч сүлжээний хүсэлт илгээх ёсгүй.
+      transport = MockClient((r) async =>
+          throw StateError('Unexpected fixture request ${r.url}'));
+      await Supabase.initialize(
+        url: 'https://fixture.example.test',
+        anonKey: 'fixture-public-key',
+        debug: false,
+        httpClient: transport,
+        authOptions: const FlutterAuthClientOptions(
+            autoRefreshToken: false,
+            detectSessionInUri: false,
+            authFlowType: AuthFlowType.implicit,
+            localStorage: EmptyLocalStorage()),
+      );
+    });
+    tearDown(() async {
+      await Supabase.instance.dispose();
+      transport.close();
+    });
+
+    GoRouter splashRouter() =>
+        GoRouter(initialLocation: AppRoutes.splash, routes: [
+          GoRoute(
+              path: AppRoutes.splash,
+              builder: (_, __) => const SplashScreen()),
+          GoRoute(
+              path: AppRoutes.langSelect,
+              builder: (_, __) =>
+                  const Scaffold(body: Text('Language destination'))),
+          GoRoute(
+              path: AppRoutes.onboarding,
+              builder: (_, state) => Scaffold(
+                  body: Text(
+                      'Onboarding ${state.uri.queryParameters['slide']}'))),
+          GoRoute(
+              path: AppRoutes.authLanding,
+              builder: (_, __) =>
+                  const Scaffold(body: Text('Auth destination'))),
+        ]);
+
+    testWidgets('new visitor skips language choice and stores Mongolian',
+        (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      await pumpIntro(tester, splashRouter(), Brightness.dark);
+      await tester.pump(const Duration(milliseconds: 1800));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 350));
+      expect(find.text('Language destination'), findsNothing);
+      expect(find.text('Onboarding 1'), findsOneWidget);
+      expect(
+          (await SharedPreferences.getInstance()).getString('locale'), 'mn');
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox());
+    });
+
+    testWidgets('returning visitor with a stored English choice is moved to mn',
+        (tester) async {
+      SharedPreferences.setMockInitialValues(
+          {'locale': 'en', 'onboarded': true});
+      await pumpIntro(tester, splashRouter(), Brightness.light);
+      await tester.pump(const Duration(milliseconds: 1800));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 350));
+      expect(find.text('Language destination'), findsNothing);
+      expect(find.text('Auth destination'), findsOneWidget);
+      expect(
+          (await SharedPreferences.getInstance()).getString('locale'), 'mn');
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox());
+    });
+  });
 
   testWidgets('guest can open public places without creating an account',
       (tester) async {

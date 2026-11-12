@@ -88,11 +88,14 @@ class _SplashScreenState extends State<SplashScreen> {
     // 3) Анхны орох урсгал
     final prefs = await SharedPreferences.getInstance();
     final hasOnboarded = prefs.getBool('onboarded') ?? false;
-    final locale = prefs.getString('locale');
+    // Одоохондоо апп зөвхөн монгол хэлээр гарна: хэл сонгох алхмыг алгасаж
+    // 'mn'-ийг хадгална. Өмнө нь 'en' сонгосон хэрэглэгч ч монгол болно —
+    // хэл солих мөр байхгүй тул хоёр хэл холилдсон onboarding үлдээхгүй.
+    if (prefs.getString('locale') != 'mn') {
+      await prefs.setString('locale', 'mn');
+    }
     if (!mounted) return;
-    if (locale == null) {
-      context.go(AppRoutes.langSelect);
-    } else if (!hasOnboarded) {
+    if (!hasOnboarded) {
       context.go('${AppRoutes.onboarding}?slide=1');
     } else {
       context.go(AppRoutes.authLanding);

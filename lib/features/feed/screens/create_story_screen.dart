@@ -582,52 +582,58 @@ class _CreateStoryScreenState extends ConsumerState<CreateStoryScreen> {
       context: context,
       backgroundColor: AppColors.bgElevated,
       isScrollControlled: true,
+      // useSafeArea нь зөвхөн дээд/хажуу талыг хамгаална; доорх SafeArea
+      // emoji-ийн сүүлийн мөрийг gesture/nav bar-ын дээр гаргана.
+      useSafeArea: true,
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (_) => SingleChildScrollView(
-          child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('🦉 Owl stickers',
-                        style: AppTextStyles.labelMd
-                            .copyWith(color: AppColors.textPrimary)),
-                    const SizedBox(height: 10),
-                    Wrap(spacing: 8, runSpacing: 8, children: [
-                      for (final s in kOwlStickers)
-                        GestureDetector(
-                            onTap: () => Navigator.pop(context, s),
-                            child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 12, vertical: 10),
-                                decoration: BoxDecoration(
-                                    gradient: AppColors.accentGradient,
-                                    borderRadius: BorderRadius.circular(16)),
-                                child: Text(s,
-                                    style: const TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w700)))),
-                    ]),
-                    const SizedBox(height: 18),
-                    Text('Emoji',
-                        style: AppTextStyles.labelMd
-                            .copyWith(color: AppColors.textPrimary)),
-                    const SizedBox(height: 10),
-                    Wrap(
-                        spacing: 12,
-                        runSpacing: 12,
-                        alignment: WrapAlignment.center,
-                        children: _kStoryEmojis
-                            .map((s) => GestureDetector(
+      builder: (_) => SafeArea(
+          top: false,
+          child: SingleChildScrollView(
+              child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('🦉 Owl stickers',
+                            style: AppTextStyles.labelMd
+                                .copyWith(color: AppColors.textPrimary)),
+                        const SizedBox(height: 10),
+                        Wrap(spacing: 8, runSpacing: 8, children: [
+                          for (final s in kOwlStickers)
+                            GestureDetector(
                                 onTap: () => Navigator.pop(context, s),
-                                child: Text(s,
-                                    style: const TextStyle(fontSize: 34))))
-                            .toList()),
-                    const SizedBox(height: 12),
-                  ]))),
+                                child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 12, vertical: 10),
+                                    decoration: BoxDecoration(
+                                        gradient: AppColors.accentGradient,
+                                        borderRadius:
+                                            BorderRadius.circular(16)),
+                                    child: Text(s,
+                                        style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.w700)))),
+                        ]),
+                        const SizedBox(height: 18),
+                        Text('Emoji',
+                            style: AppTextStyles.labelMd
+                                .copyWith(color: AppColors.textPrimary)),
+                        const SizedBox(height: 10),
+                        Wrap(
+                            spacing: 12,
+                            runSpacing: 12,
+                            alignment: WrapAlignment.center,
+                            children: _kStoryEmojis
+                                .map((s) => GestureDetector(
+                                    onTap: () => Navigator.pop(context, s),
+                                    child: Text(s,
+                                        style: const TextStyle(fontSize: 34))))
+                                .toList()),
+                        const SizedBox(height: 12),
+                      ])))),
     );
     if (e != null && mounted && _canEdit) {
       setState(() => _text = isOwlSticker(e) ? e : '$_text$e');
@@ -685,19 +691,12 @@ class _CreateStoryScreenState extends ConsumerState<CreateStoryScreen> {
           borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (_) => SafeArea(
           child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+              // Бариулыг theme (showDragHandle) зурна — энд дахин зурахгүй.
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
               child: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Container(
-                        width: 40,
-                        height: 4,
-                        margin: const EdgeInsets.only(bottom: 14),
-                        alignment: Alignment.center,
-                        decoration: BoxDecoration(
-                            color: AppColors.hairline2,
-                            borderRadius: BorderRadius.circular(2))),
                     Row(children: [
                       const Text('🎵 ', style: TextStyle(fontSize: 18)),
                       Text('Хөгжим',
@@ -1615,16 +1614,9 @@ class _PickerSheetState extends State<_PickerSheet> {
       padding: EdgeInsets.only(
           bottom: MediaQuery.of(context).viewInsets.bottom,
           left: 16,
-          right: 16,
-          top: 16),
+          right: 16),
+      // Бариулыг theme (showDragHandle) зурна — энд дахин зурахгүй.
       child: Column(mainAxisSize: MainAxisSize.min, children: [
-        Container(
-            width: 40,
-            height: 4,
-            decoration: BoxDecoration(
-                color: AppColors.hairline,
-                borderRadius: BorderRadius.circular(2))),
-        const SizedBox(height: 12),
         Text(isVenue ? 'Байршил сонгох' : 'Хүн тэмдэглэх',
             style: AppTextStyles.labelLg),
         const SizedBox(height: 12),

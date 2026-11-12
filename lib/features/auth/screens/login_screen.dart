@@ -339,8 +339,12 @@ class _LoginScreenState extends State<LoginScreen> {
                                         onTap: _authBusy ? null : _googleSignIn,
                                       ),
                                     ),
-                                    AppleSignInButton(
+                                    // Apple зөвхөн native iOS-д; хэлбэр нь
+                                    // дээрх Google pill товчтой ижил.
+                                    if (AppleSignInButton.isAvailable)
+                                      AppleSignInButton(
                                         enabled: !_authBusy,
+                                        borderRadius: 999,
                                         onBusyChanged: (busy) {
                                           if (mounted) {
                                             setState(() => _aLoading = busy);

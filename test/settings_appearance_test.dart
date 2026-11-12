@@ -66,6 +66,31 @@ void main() {
       await tester.pumpWidget(const SizedBox());
     });
   }
+  testWidgets('Settings no longer offers a language choice (Mongolian only)',
+      (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    await tester.pumpWidget(ProviderScope(overrides: [
+      sessionUserIdProvider.overrideWithValue(null),
+      currentProfileProvider.overrideWith((_) async => null),
+    ], child: const _SettingsFixture()));
+    await tester.pumpAndSettle();
+    // Хуучин "Хэл" мөр "Таны бүртгэл" картанд "Нууц үг солих"-ийн хажууд
+    // байсан. Карт бүхэлдээ нэг хүүхэд тул энэ мөр build болмогц шалгана
+    // (2x текстэд дараагийн хэсэг хүртэл гүйлгэвэл карт cache-ээс гардаг).
+    await tester.scrollUntilVisible(find.text('Нууц үг солих'), 120,
+        scrollable: find.byType(Scrollable).first);
+    await tester.pumpAndSettle();
+    expect(find.text('Нууц үг солих'), findsOneWidget);
+    expect(find.text('Хэл'), findsNothing);
+    expect(find.byIcon(Icons.language_outlined), findsNothing);
+    await tester.scrollUntilVisible(find.text('Нууцлал ба мэдэгдэл'), 120,
+        scrollable: find.byType(Scrollable).first);
+    await tester.pumpAndSettle();
+    expect(find.text('Хэл'), findsNothing);
+    expect(find.byIcon(Icons.language_outlined), findsNothing);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox());
+  });
   for (final initial in [ThemeMode.dark, ThemeMode.light]) {
     testWidgets(
         'Settings at 320px in ${initial.name} exposes and saves all modes',

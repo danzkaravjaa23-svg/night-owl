@@ -4,7 +4,7 @@
 
 ## Одоогийн төлөв
 
-Эхлэл, нэвтрэх, бүртгүүлэх дэлгэцийн Apple товч веб, Android, iOS-д харагдана. iOS нь `sign_in_with_apple` 8.2.0-оор native credential авч, SHA-256 nonce болон identity token-ийг Supabase `signInWithIdToken` урсгалаар баталгаажуулна. Web/Android нь Supabase OAuth ашиглана. Provider идэвхтэй эсэхийг public settings-ээс эхлээд шалгаж, идэвхгүй эсвэл сүлжээний алдааг апп дотор харуулна. iOS-ийн Debug/Profile/Release тохиргоонд Sign in with Apple entitlement холбоотой.
+Эхлэл, нэвтрэх, бүртгүүлэх дэлгэцийн Apple товч одоогоор зөвхөн native iOS апп-д харагдана (2026-11-12-оос). Supabase-ийн Apple provider унтраалттай үед веб, Android дээр товч зөвхөн алдаа өгдөг байсан тул нуусан: `lib/features/auth/widgets/auth_ui.dart`-ийн `AppleSignInButton.oauthOffIosEnabled` (одоо `false`). Provider-ийг асаах release-д энэ утгыг `true` болгоно; эс бөгөөс iPhone дээр Apple-ээр бүртгүүлсэн хэрэглэгч веб, Android дээр нэвтэрч чадахгүй. iOS нь `sign_in_with_apple` 8.2.0-оор native credential авч, SHA-256 nonce болон identity token-ийг Supabase `signInWithIdToken` урсгалаар баталгаажуулна. Web/Android нь Supabase OAuth ашиглана. Provider идэвхтэй эсэхийг public settings-ээс эхлээд шалгаж, идэвхгүй эсвэл сүлжээний алдааг апп дотор харуулна. iOS-ийн Debug/Profile/Release тохиргоонд Sign in with Apple entitlement холбоотой.
 
 2026-10-05-нд `GET /auth/v1/settings`-ийг read-only шалгахад `apple=false`, `google=true`, `email=true` байсан. Иймээс Apple-ийн бодит нэвтрэлт одоогоор идэвхгүй. Товч болон урсгалын код байгаа нь серверийн тохиргоо бүрэн, нэвтрэлт амжилттай гэсэн баталгаа биш. Apple account ашигласан бүтэн нэвтрэлт, iOS binary/device туршилт хийгдээгүй.
 
@@ -33,6 +33,7 @@ Apple-ийн Return URL болон Supabase-ийн апп руу буцах URL 
 
 ## Тохиргооны дараах баталгаажуулалт
 
+- `AppleSignInButton.oauthOffIosEnabled`-ийг `true` болгож, веб ба Android дээр Apple товч дахин харагдаж байгааг шалгана.
 - Public settings-ийн `external.apple` үнэхээр `true` болсон эсэхийг шалгана. Энэ нь зөвхөн provider-ийн flag; credential, callback болон session-ийг тусад нь шалгах шаардлагатай.
 - Web дээр Apple зөвшөөрлийн хуудас нээгдэж, апп руу буцан Supabase session үүсэхийг шинэ болон өмнөх хаягаар туршина. Android дээр external browser → native deep link буцах урсгалыг шалгана.
 - Signing/provisioning тохируулсан бодит iOS төхөөрөмж дээр native credential → Supabase session-ийг туршина. [Supabase Dart identity-token урсгал](https://supabase.com/docs/reference/dart/auth-signinwithidtoken).

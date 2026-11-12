@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../discovery/services/discovery_service.dart';
@@ -47,10 +46,6 @@ class _StoryViewerScreenState extends State<StoryViewerScreen>
   bool _userMuted = false;   // хэрэглэгч speaker-ээр өөрөө хаасан
   bool _soundUnlocked = false;
 
-  // Doube-tap лайкийн том зүрх
-  bool _bigHeart = false;
-  Timer? _bigHeartTimer;
-
   // Доош чирж хаах
   double _dragY = 0;
   bool _dragging = false;
@@ -72,7 +67,13 @@ class _StoryViewerScreenState extends State<StoryViewerScreen>
   void initState() {
     super.initState();
     _ringIndex = widget.initialRingIndex;
-    _progressCtrl = AnimationController(vsync: this);
+    // Цаг хэмждэг таймер: системийн "animation унтраах" тохиргоо (0x) үед
+    // Flutter normal controller-ийн хугацааг 5% болгодог тул preserve —
+    // 5 секундийн story жинхэнэ 5 секунд үргэлжилнэ.
+    _progressCtrl = AnimationController(
+      vsync: this,
+      animationBehavior: AnimationBehavior.preserve,
+    );
     // Зөвхөн жинхэнэ дуустал л дараагийн story руу шилжинэ.
     // (stop() дуудахад .then() callback давхар ажиллаж story-г хурдасгадаг
     //  байсныг status listener-ээр зассан.)
@@ -94,7 +95,6 @@ class _StoryViewerScreenState extends State<StoryViewerScreen>
     _musicPlayer.dispose();
     _videoPaused.dispose();
     _videoMuted.dispose();
-    _bigHeartTimer?.cancel();
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     super.dispose();
   }
@@ -222,17 +222,6 @@ class _StoryViewerScreenState extends State<StoryViewerScreen>
     if (!ok && mounted) setState(() => _likedMap[id] = !now);
   }
 
-  // Double-tap → лайк + том зүрхний анимац
-  void _doubleTapLike() {
-    _unlockSound();
-    if (!(_likedMap[_currentStory.id] ?? false)) _toggleLike();
-    _bigHeartTimer?.cancel();
-    setState(() => _bigHeart = true);
-    _bigHeartTimer = Timer(const Duration(milliseconds: 650), () {
-      if (mounted) setState(() => _bigHeart = false);
-    });
-  }
-
   void _nextStory() {
     if (_storyIndex < _totalStories - 1) {
       setState(() => _storyIndex++);
@@ -305,7 +294,8 @@ class _StoryViewerScreenState extends State<StoryViewerScreen>
             }
           }
         },
-        onDoubleTap: _doubleTapLike,
+        // onDoubleTap байхгүй: байвал Flutter товшилт бүрийг ~300 ms
+        // саатуулдаг. Лайк нь доорх зүрх товчоор хийгдэнэ.
         onLongPressStart: (_) { _unlockSound(); _pause(); },
         onLongPressEnd:   (_) => _resume(),
         // Доош чирж хаах
@@ -498,19 +488,6 @@ class _StoryViewerScreenState extends State<StoryViewerScreen>
               ),
             ),
 
-          // ── Double-tap том зүрх ──
-          IgnorePointer(child: Center(child: AnimatedScale(
-            scale: _bigHeart ? 1.0 : 0.4,
-            duration: const Duration(milliseconds: 220),
-            curve: Curves.easeOutBack,
-            child: AnimatedOpacity(
-              opacity: _bigHeart ? 1 : 0,
-              duration: const Duration(milliseconds: 180),
-              child: const Icon(Icons.favorite,
-                color: AppColors.like, size: 96,
-                shadows: [Shadow(color: Colors.black45, blurRadius: 18)]),
-            )))),
-
           // ── Доод хэсэг: venue/mention + caption + reply ──
           Positioned(
             left: 0, right: 0, bottom: 0,
@@ -607,8 +584,13 @@ class _StoryViewerScreenState extends State<StoryViewerScreen>
                             )),
                         ))),
                       const SizedBox(width: 8),
-                      // Зүрх — шилэн дугуй товч, дарахад pop анимац
-                      _Pressable(
+                      // Зүрх — шилэн дугуй товч, дарахад pop анимац.
+                      // Double-tap лайк хасагдсан тул лайкийн цорын ганц зам.
+                      Semantics(
+                        button: true,
+                        toggled: _likedMap[story.id] ?? false,
+                        label: 'Таалагдах',
+                        child: _Pressable(
                         onTap: _toggleLike,
                         child: Container(
                           width: 44, height: 44,
@@ -631,7 +613,7 @@ class _StoryViewerScreenState extends State<StoryViewerScreen>
                               color: (_likedMap[story.id] ?? false)
                                   ? AppColors.like : Colors.white,
                               size: 24)),
-                        )),
+                        ))),
                       const SizedBox(width: 8),
                       // Илгээх — градиент дугуй CTA + glow
                       _Pressable(

@@ -334,210 +334,212 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
               onPressed: (_loading || _picking) ? null : _requestClose,
               icon: const Icon(Icons.close)),
           title: Text('Шинэ пост', style: AppTextStyles.h2),
-          actions: [
-            Padding(
-              padding: const EdgeInsets.only(right: 8),
-              child: TextButton(
-                onPressed: (_loading || _picking || !_hasMedia) ? null : _post,
-                style: TextButton.styleFrom(
-                  backgroundColor:
-                      _hasMedia ? AppColors.accentStart : AppColors.bgSurface,
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10)),
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                ),
-                child: _loading
-                    ? const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(
-                            strokeWidth: 2, color: Colors.white))
-                    : Text(_pendingRow == null ? 'Хуваалцах' : 'Дахин шалгах',
-                        style: AppTextStyles.labelMd.copyWith(
-                            color: _hasMedia
-                                ? Colors.white
-                                : AppColors.textTertiary)),
-              ),
-            ),
-          ],
+          // The single publish action is the primary button pinned under the
+          // form; a second app-bar copy squeezed the title on narrow/large
+          // text.
         ),
-        body: ListView(padding: const EdgeInsets.all(20), children: [
-          if (_picking)
-            const Padding(
-                padding: EdgeInsets.only(bottom: 16),
-                child: Row(children: [
-                  SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2)),
-                  SizedBox(width: 12),
-                  Expanded(child: Text('Медиа сонгож байна…'))
-                ])),
-          if (_error != null)
-            Container(
-              margin: const EdgeInsets.only(bottom: 16),
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: AppColors.error.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(12),
-                border:
-                    Border.all(color: AppColors.error.withValues(alpha: 0.4)),
-              ),
-              child: Row(children: [
-                const Icon(Icons.error_outline,
-                    color: AppColors.error, size: 18),
-                const SizedBox(width: 8),
-                Expanded(
-                    child: Text(_error!,
-                        style: AppTextStyles.bodyXs
-                            .copyWith(color: AppColors.error))),
-              ]),
-            ),
-
-          // ── Media picker / carousel preview ──
-          _hasMedia
-              ? _buildPreview()
-              : _Press(
-                  scale: 0.98,
-                  onTap: _canEdit ? () => _pickMedia() : null,
-                  child: Container(
-                    height: 280,
-                    decoration: BoxDecoration(
-                      color: AppColors.bgSurface,
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: AppColors.hairline),
-                    ),
-                    clipBehavior: Clip.antiAlias,
-                    child: _PickerPlaceholder(),
-                  ),
-                ),
-
-          // ── Thumbnail strip (зургийн пост дээр) ──
-          if (_hasMedia && !_isVideoPost) ...[
-            const SizedBox(height: 12),
-            SizedBox(
-              height: 64,
-              child: ListView(
-                scrollDirection: Axis.horizontal,
+        body: Column(children: [
+          Expanded(
+            child: ListView(
+                padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
                 children: [
-                  for (var i = 0; i < _media.length; i++)
-                    _Thumb(
-                      image: previewImageProvider(_media[i]),
-                      selected: i == _page,
-                      onTap: () {
-                        setState(() => _page = i);
-                        _pageCtrl.animateToPage(i,
-                            duration: const Duration(milliseconds: 250),
-                            curve: Curves.easeOut);
-                      },
-                      onRemove: _canEdit ? () => _removeAt(i) : null,
-                    ),
-                  if (_media.length < _maxImages)
-                    _Press(
-                      onTap: _canEdit ? () => _pickMedia(append: true) : null,
-                      child: Container(
-                        width: 56,
-                        height: 56,
-                        margin: const EdgeInsets.only(right: 8),
-                        decoration: BoxDecoration(
-                          color: AppColors.bgSurface,
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: AppColors.hairline),
+                  if (_picking)
+                    const Padding(
+                        padding: EdgeInsets.only(bottom: 16),
+                        child: Row(children: [
+                          SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2)),
+                          SizedBox(width: 12),
+                          Expanded(child: Text('Медиа сонгож байна…'))
+                        ])),
+                  // ── Media picker / carousel preview ──
+                  _hasMedia
+                      ? _buildPreview()
+                      : _Press(
+                          scale: 0.98,
+                          onTap: _canEdit ? () => _pickMedia() : null,
+                          child: Container(
+                            height: 280,
+                            decoration: BoxDecoration(
+                              color: AppColors.bgSurface,
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(color: AppColors.hairline),
+                            ),
+                            clipBehavior: Clip.antiAlias,
+                            child: _PickerPlaceholder(),
+                          ),
                         ),
-                        child: Icon(Icons.add,
-                            color: AppColors.textSecondary, size: 24),
+
+                  // ── Thumbnail strip (зургийн пост дээр) ──
+                  if (_hasMedia && !_isVideoPost) ...[
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      height: 64,
+                      child: ListView(
+                        scrollDirection: Axis.horizontal,
+                        children: [
+                          for (var i = 0; i < _media.length; i++)
+                            _Thumb(
+                              image: previewImageProvider(_media[i]),
+                              selected: i == _page,
+                              onTap: () {
+                                setState(() => _page = i);
+                                _pageCtrl.animateToPage(i,
+                                    duration: const Duration(milliseconds: 250),
+                                    curve: Curves.easeOut);
+                              },
+                              onRemove: _canEdit ? () => _removeAt(i) : null,
+                            ),
+                          if (_media.length < _maxImages)
+                            _Press(
+                              onTap: _canEdit
+                                  ? () => _pickMedia(append: true)
+                                  : null,
+                              child: Container(
+                                width: 56,
+                                height: 56,
+                                margin: const EdgeInsets.only(right: 8),
+                                decoration: BoxDecoration(
+                                  color: AppColors.bgSurface,
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(color: AppColors.hairline),
+                                ),
+                                child: Icon(Icons.add,
+                                    color: AppColors.textSecondary, size: 24),
+                              ),
+                            ),
+                        ],
                       ),
                     ),
-                ],
-              ),
-            ),
-          ],
+                  ],
 
-          const SizedBox(height: 24),
+                  const SizedBox(height: 24),
 
-          Text('ТАЙЛБАР',
-              style: AppTextStyles.labelSm.copyWith(
-                  color: AppColors.textSecondary, letterSpacing: 0.8)),
-          const SizedBox(height: 8),
-          TextField(
-            controller: _captionCtrl,
-            enabled: _canEdit,
-            maxLines: 4,
-            maxLength: 300,
-            style: AppTextStyles.bodyMd.copyWith(color: AppColors.textPrimary),
-            decoration: InputDecoration(
-                hintText: 'Өнөө шөнө юу болов?...',
-                counterStyle: AppTextStyles.bodyXs
-                    .copyWith(color: AppColors.textTertiary)),
-          ),
-          const SizedBox(height: 20),
+                  Text('ТАЙЛБАР',
+                      style: AppTextStyles.labelSm.copyWith(
+                          color: AppColors.textSecondary, letterSpacing: 0.8)),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: _captionCtrl,
+                    enabled: _canEdit,
+                    maxLines: 4,
+                    maxLength: 300,
+                    style: AppTextStyles.bodyMd
+                        .copyWith(color: AppColors.textPrimary),
+                    decoration: InputDecoration(
+                        hintText: 'Өнөө шөнө юу болов?...',
+                        counterStyle: AppTextStyles.bodyXs
+                            .copyWith(color: AppColors.textTertiary)),
+                  ),
+                  const SizedBox(height: 20),
 
-          Text('БАЙРШИЛ',
-              style: AppTextStyles.labelSm.copyWith(
-                  color: AppColors.textSecondary, letterSpacing: 0.8)),
-          const SizedBox(height: 8),
-          _Press(
-            key: const ValueKey('post-location-picker'),
-            scale: 0.98,
-            onTap: _canEdit && !_choosingVenue ? _showVenuePicker : null,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-              decoration: BoxDecoration(
-                color: AppColors.bgSurface,
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(
-                    color: _venueName != null
-                        ? AppColors.accentStart.withValues(alpha: 0.4)
-                        : AppColors.hairline),
-              ),
-              child: Row(children: [
-                Icon(Icons.location_on_outlined,
-                    color: _venueName != null
-                        ? AppColors.accentStart
-                        : AppColors.textSecondary,
-                    size: 20),
-                const SizedBox(width: 10),
-                Expanded(
-                    child: Text(_venueName ?? 'Байршил нэмэх (сонголтоор)',
-                        style: AppTextStyles.bodyMd.copyWith(
+                  Text('БАЙРШИЛ',
+                      style: AppTextStyles.labelSm.copyWith(
+                          color: AppColors.textSecondary, letterSpacing: 0.8)),
+                  const SizedBox(height: 8),
+                  _Press(
+                    key: const ValueKey('post-location-picker'),
+                    scale: 0.98,
+                    onTap:
+                        _canEdit && !_choosingVenue ? _showVenuePicker : null,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 14),
+                      decoration: BoxDecoration(
+                        color: AppColors.bgSurface,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(
                             color: _venueName != null
-                                ? AppColors.textPrimary
-                                : AppColors.textTertiary))),
-                if (_venueName != null)
-                  IconButton(
-                      tooltip: 'Байршлыг хасах',
-                      onPressed: _canEdit
-                          ? () => setState(() {
-                                _venueName = null;
-                                _venueRef = null;
-                                _venueId = null;
-                              })
-                          : null,
-                      icon: Icon(Icons.close,
-                          color: AppColors.textTertiary, size: 18))
-                else
-                  Icon(Icons.chevron_right, color: AppColors.textTertiary),
-              ]),
+                                ? AppColors.accentStart.withValues(alpha: 0.4)
+                                : AppColors.hairline),
+                      ),
+                      child: Row(children: [
+                        Icon(Icons.location_on_outlined,
+                            color: _venueName != null
+                                ? AppColors.accentStart
+                                : AppColors.textSecondary,
+                            size: 20),
+                        const SizedBox(width: 10),
+                        Expanded(
+                            child: Text(
+                                _venueName ?? 'Байршил нэмэх (сонголтоор)',
+                                style: AppTextStyles.bodyMd.copyWith(
+                                    color: _venueName != null
+                                        ? AppColors.textPrimary
+                                        : AppColors.textTertiary))),
+                        if (_venueName != null)
+                          IconButton(
+                              tooltip: 'Байршлыг хасах',
+                              onPressed: _canEdit
+                                  ? () => setState(() {
+                                        _venueName = null;
+                                        _venueRef = null;
+                                        _venueId = null;
+                                      })
+                                  : null,
+                              icon: Icon(Icons.close,
+                                  color: AppColors.textTertiary, size: 18))
+                        else
+                          Icon(Icons.chevron_right,
+                              color: AppColors.textTertiary),
+                      ]),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Байршилтай пост газрын хэмнэлд 7 хоног тооцогдоно. Пост болон байршил хэвээр үлдэнэ.',
+                    style: AppTextStyles.bodyXs
+                        .copyWith(color: AppColors.textSecondary),
+                  ),
+                ]),
+          ),
+          // Нэг л "Хуваалцах" товч — гүйлгэх хэсгийн гадна, доор нь
+          // бэхлэгдсэн: жижиг дэлгэц, гар нээлттэй үед ч харагдана. Алдааны
+          // мэдэгдэл товчны дээр, хэрэглэгчийн харж буй газарт гарна.
+          SafeArea(
+            top: false,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
+              child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    if (_error != null)
+                      Container(
+                        margin: const EdgeInsets.only(bottom: 8),
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: AppColors.error.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                              color: AppColors.error.withValues(alpha: 0.4)),
+                        ),
+                        child: Row(children: [
+                          const Icon(Icons.error_outline,
+                              color: AppColors.error, size: 18),
+                          const SizedBox(width: 8),
+                          Expanded(
+                              child: Text(_error!,
+                                  style: AppTextStyles.bodyXs
+                                      .copyWith(color: AppColors.error))),
+                        ]),
+                      ),
+                    GradientButton(
+                      key: const ValueKey('post-publish'),
+                      busy: _loading,
+                      label: _pendingRow != null
+                          ? 'Дахин шалгах'
+                          : _media.length > 1
+                              ? 'Хуваалцах (${_media.length})'
+                              : 'Хуваалцах',
+                      onPressed:
+                          (!_hasMedia || _loading || _picking) ? null : _post,
+                    ),
+                  ]),
             ),
           ),
-          const SizedBox(height: 8),
-          Text(
-            'Байршилтай пост газрын хэмнэлд 7 хоног тооцогдоно. Пост болон байршил хэвээр үлдэнэ.',
-            style:
-                AppTextStyles.bodyXs.copyWith(color: AppColors.textSecondary),
-          ),
-          const SizedBox(height: 40),
-
-          GradientButton(
-            label: _pendingRow != null
-                ? 'Дахин шалгах'
-                : _media.length > 1
-                    ? 'Хуваалцах (${_media.length})'
-                    : 'Хуваалцах',
-            onPressed: (!_hasMedia || _loading || _picking) ? null : _post,
-          ),
-          const SizedBox(height: 40),
         ]),
       ));
 

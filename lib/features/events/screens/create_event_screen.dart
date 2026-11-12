@@ -102,6 +102,7 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
       _picking = true;
       _error = null;
     });
+    var openBusiness = false;
     try {
       _session.check();
       final v = await showModalBottomSheet<Map<String, dynamic>>(
@@ -115,7 +116,9 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
       );
       if (!mounted) return;
       _session.check();
-      if (v != null) {
+      if (v?[_VenuePick.openBusinessKey] == true) {
+        openBusiness = true;
+      } else if (v != null) {
         setState(() {
           _venueId = v['id'] as String;
           _venueName = v['name'] as String;
@@ -125,6 +128,12 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
       _showFailure(error, 'Газар сонгож чадсангүй. Дахин оролдоно уу.');
     } finally {
       if (mounted) setState(() => _picking = false);
+    }
+    // Бизнес самбарт газраа нэмээд буцахад энэ ноорог дээрээ сонголт руу
+    // эргэн орно (шинэ "Эвент үүсгэх" дэлгэц давхарлахгүй).
+    if (openBusiness && mounted) {
+      await context.push(AppRoutes.business);
+      if (mounted && _canEdit) await _pickVenue();
     }
   }
 
@@ -493,6 +502,8 @@ class _TapState extends State<_Tap> {
 }
 
 class _VenuePick extends StatefulWidget {
+  /// Sheet-ийн үр дүн: хэрэглэгч "Бизнес самбар нээх"-ийг сонгосон.
+  static const openBusinessKey = 'openBusiness';
   final EventService service;
   final PublicationSession session;
   const _VenuePick({required this.service, required this.session});
@@ -507,6 +518,7 @@ class _VenuePickState extends State<_VenuePick> {
   Timer? _debounce;
   int _ticket = 0; // хожуу ирсэн хуучин хариу шинийг дарж бичихгүй
   String _lastQ = '';
+  bool _ownsNone = false; // хоосон хайлтаар нэг ч газар ирээгүй
   StreamSubscription<void>? _authSubscription;
 
   @override
@@ -538,6 +550,11 @@ class _VenuePickState extends State<_VenuePick> {
     super.dispose();
   }
 
+  // Газаргүй хэрэглэгчийг газраа нэмэх жинхэнэ газар (Бизнес самбар) руу
+  // хөтөлнө. Навигацыг эх дэлгэц хийнэ — буцахад сонголт дахин нээгдэнө.
+  void _openBusiness() =>
+      Navigator.pop(context, const {_VenuePick.openBusinessKey: true});
+
   // Товчлуур бүрт биш — 300ms завсарлагатай хайна
   void _search(String q) {
     _lastQ = q;
@@ -561,6 +578,11 @@ class _VenuePickState extends State<_VenuePick> {
       if (!mounted || my != _ticket) return;
       widget.session.check();
       _r = rows;
+      if (q.trim().isEmpty) {
+        _ownsNone = rows.isEmpty;
+      } else if (rows.isNotEmpty) {
+        _ownsNone = false;
+      }
     } catch (_) {
       if (!mounted || my != _ticket) return;
       _failed = true;
@@ -623,13 +645,34 @@ class _VenuePickState extends State<_VenuePick> {
                               ]))
                         : _r.isEmpty
                             ? Center(
-                                child: Padding(
+                                child: SingleChildScrollView(
                                     padding: const EdgeInsets.all(20),
-                                    child: Text(
-                                        'Танд эзэмшдэг газар алга.\nЭхлээд "Газраа удирдах"-аас venue үүсгэнэ үү.',
-                                        textAlign: TextAlign.center,
-                                        style: AppTextStyles.bodyMd.copyWith(
-                                            color: AppColors.textSecondary))))
+                                    child: Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Text(
+                                              _lastQ.trim().isNotEmpty &&
+                                                      !_ownsNone
+                                                  ? 'Таны газруудаас тохирох газар олдсонгүй.'
+                                                  : 'Танд эзэмшдэг газар алга.\nЭхлээд "Бизнес самбар"-аас газраа нэмнэ үү.',
+                                              textAlign: TextAlign.center,
+                                              style: AppTextStyles.bodyMd
+                                                  .copyWith(
+                                                      color: AppColors
+                                                          .textSecondary)),
+                                          const SizedBox(height: 12),
+                                          OutlinedButton.icon(
+                                              key: const ValueKey(
+                                                  'event-open-business'),
+                                              onPressed: _openBusiness,
+                                              style: OutlinedButton.styleFrom(
+                                                  minimumSize:
+                                                      const Size(44, 48)),
+                                              icon: const Icon(
+                                                  Icons.storefront_outlined),
+                                              label: const Text(
+                                                  'Бизнес самбар нээх')),
+                                        ])))
                             : ListView.builder(
                                 itemCount: _r.length,
                                 itemBuilder: (_, i) => ListTile(

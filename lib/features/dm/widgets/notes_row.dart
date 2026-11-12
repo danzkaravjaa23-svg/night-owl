@@ -173,12 +173,10 @@ class NotesRowState extends State<NotesRow> {
   }
 
   Future<void> _openComposer() async {
+    // Өнгө, радиус, бариулыг bottomSheetTheme (showDragHandle) өгнө.
     final saved = await showModalBottomSheet<bool>(
       context: context,
-      backgroundColor: AppColors.bgElevated,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
       builder: (_) => _NoteComposer(existing: _myNote),
     );
     if (saved == true && mounted) _load();
@@ -187,27 +185,17 @@ class NotesRowState extends State<NotesRow> {
   // Бусдын note-г бүрэн харуулах (текст + venue + Мессеж)
   void _showNoteDetail(Map<String, dynamic> n) {
     final username = (n['username'] as String).replaceAll('@', '');
+    // Бариулыг theme (showDragHandle) зурна — энд дахин зурахгүй.
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppColors.bgElevated,
-      shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
       builder: (sheetCtx) => SafeArea(
           top: false,
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
             child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Center(
-                      child: Container(
-                          width: 40,
-                          height: 4,
-                          decoration: BoxDecoration(
-                              color: AppColors.hairline,
-                              borderRadius: BorderRadius.circular(2)))),
-                  const SizedBox(height: 16),
                   Row(children: [
                     AppAvatar(
                         imageUrl: n['avatar_url'] as String?,
@@ -505,12 +493,10 @@ class _NoteComposerState extends ConsumerState<_NoteComposer> {
 
   Future<void> _pickVenue() async {
     if (_busy || !_session.isCurrent) return;
+    // Өнгө, радиус, бариулыг bottomSheetTheme (showDragHandle) өгнө.
     final v = await showModalBottomSheet<Map<String, dynamic>>(
       context: context,
-      backgroundColor: AppColors.bgElevated,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
       builder: (ctx) {
         _pickerRoute = ModalRoute.of(ctx);
         return const _VenueSearchSheet();
@@ -575,18 +561,10 @@ class _NoteComposerState extends ConsumerState<_NoteComposer> {
       padding: EdgeInsets.only(
           bottom: MediaQuery.of(context).viewInsets.bottom + 16,
           left: 16,
-          right: 16,
-          top: 16),
+          right: 16),
       child: SafeArea(
           top: false,
           child: Column(mainAxisSize: MainAxisSize.min, children: [
-            Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                    color: AppColors.hairline,
-                    borderRadius: BorderRadius.circular(2))),
-            const SizedBox(height: 14),
             Text('Note үлдээх', style: AppTextStyles.labelLg),
             const SizedBox(height: 4),
             Text('Найзууд чинь 24 цаг харна',
@@ -740,18 +718,10 @@ class _VenueSearchSheetState extends State<_VenueSearchSheet> {
       padding: EdgeInsets.only(
           bottom: MediaQuery.of(context).viewInsets.bottom,
           left: 16,
-          right: 16,
-          top: 16),
+          right: 16),
       child: SafeArea(
           top: false,
           child: Column(mainAxisSize: MainAxisSize.min, children: [
-            Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                    color: AppColors.hairline,
-                    borderRadius: BorderRadius.circular(2))),
-            const SizedBox(height: 12),
             Text('Газар сонгох', style: AppTextStyles.labelLg),
             const SizedBox(height: 12),
             TextField(

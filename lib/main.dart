@@ -5,6 +5,7 @@ import 'features/discovery/services/discovery_service.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:device_preview/device_preview.dart';
 
 import 'core/theme/app_theme.dart';
@@ -12,6 +13,7 @@ import 'core/theme/app_fonts.dart';
 import 'core/theme/theme_provider.dart';
 import 'core/router/app_router.dart';
 import 'core/services/supabase_service.dart';
+import 'core/utils/host_badge_inset.dart';
 import 'core/widgets/mobile_frame.dart';
 import 'core/widgets/theme_reveal.dart';
 import 'features/auth/providers/auth_provider.dart';
@@ -51,6 +53,11 @@ Future<void> main() async {
     ),
   );
 }
+
+/// Апп одоохондоо зөвхөн монгол хэлээр гарна (тестүүд ч үүнийг ашиглана).
+const nightOwlLocale = Locale('mn');
+const nightOwlSupportedLocales = <Locale>[nightOwlLocale];
+const nightOwlLocalizationsDelegates = GlobalMaterialLocalizations.delegates;
 
 class NightOwlApp extends ConsumerStatefulWidget {
   const NightOwlApp({super.key});
@@ -117,8 +124,11 @@ class _NightOwlAppState extends ConsumerState<NightOwlApp> with WidgetsBindingOb
       debugShowCheckedModeBanner: false,
       scaffoldMessengerKey: _messengerKey,
 
-      // device_preview — сонгосон утасны хэмжээ/locale-ийг апп-д тусгана
-      locale: DevicePreview.locale(context),
+      // Одоохондоо зөвхөн монгол хэл: огноо/цаг сонгогч, хуулах/буулгах
+      // цэс зэрэг Material/Cupertino системийн текст монголоор гарна.
+      locale: nightOwlLocale,
+      supportedLocales: nightOwlSupportedLocales,
+      localizationsDelegates: nightOwlLocalizationsDelegates,
       // Веб/desktop дээр утасны өргөнөөр голлуулна (MobileFrame).
       // ThemeReveal гадна талд — горим солиход хажуугийн зай ч хамт тэлнэ.
       builder: (context, child) {
@@ -134,7 +144,10 @@ class _NightOwlAppState extends ConsumerState<NightOwlApp> with WidgetsBindingOb
                     AppRoutes.reels,
                     AppRoutes.dmList
                   }.contains(router.routeInformationProvider.value.uri.path),
-                  child: DevicePreview.appBuilder(context, child))),
+                  // Web дээр хостингийн badge аппын баганыг дарвал доор нь
+                  // зай үлдээнэ; badge байхгүй бол зай 0 (модны бүтэц тогтмол).
+                  child: HostBadgeInset(
+                      child: DevicePreview.appBuilder(context, child)))),
         );
         // Веб дээр statusBarColor нь <meta theme-color>-г солидог тул оролцуулахгүй
         if (kIsWeb) return tree;

@@ -171,6 +171,9 @@ class AppTheme {
         space: 1,
       ),
       iconTheme: IconThemeData(color: textPri, size: 24),
+      // Сонгогдсон ListTile (жишээ нь venue picker) бүдэг #7654D6 биш,
+      // текстэд зориулсан accent-аар харагдана.
+      listTileTheme: ListTileThemeData(selectedColor: accentLink),
       snackBarTheme: SnackBarThemeData(
         // Glass dark — хөвөгч, hairline хүрээтэй, радиус 14
         backgroundColor: isDark ? const Color(0xF0121218) : elevated,
