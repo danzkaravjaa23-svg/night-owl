@@ -72,8 +72,8 @@ class _ExploreScreenState extends State<ExploreScreen> {
                     child: Padding(
                       padding: const EdgeInsets.all(16),
                       child: Row(children: [
-                        const Icon(Icons.auto_awesome_outlined,
-                            color: AppColors.accentStart, size: 24),
+                        Icon(Icons.auto_awesome_outlined,
+                            color: AppColors.accentText, size: 24),
                         const SizedBox(width: 12),
                         Expanded(
                             child: Column(

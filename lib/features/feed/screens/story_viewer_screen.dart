@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import '../../../core/widgets/authorized_media.dart';
 import '../../../core/utils/web_audio.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_icons.dart';
 import '../../../core/widgets/app_avatar.dart';
 import '../../../core/widgets/dark_system_ui.dart';
 import '../../../core/widgets/network_video.dart' show isVideoUrl;
@@ -158,15 +159,18 @@ class _StoryViewerScreenState extends State<StoryViewerScreen>
       await DiscoveryService().send(authorId,text,story:_currentStory.id);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Илгээлээ ✓'),
+          content: Text('Илгээлээ'),
           duration: Duration(seconds: 1),
           behavior: SnackBarBehavior.floating));
       }
     } catch (_) {
       if (mounted) {
         _replyCtrl.text = text;
+        // dangerFill дээр цагаан текст (Day-ийн SnackBar текст бараан тул).
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Илгээж чадсангүй'), backgroundColor: AppColors.error));
+          content: Text('Илгээж чадсангүй',
+              style: TextStyle(color: Colors.white)),
+          backgroundColor: AppColors.dangerFill));
       }
     }
     // үргэлжлүүлэх (дуустал нь status listener шилжүүлнэ)
@@ -332,10 +336,11 @@ class _StoryViewerScreenState extends State<StoryViewerScreen>
               imageUrl: story.mediaUrl,
               fit: BoxFit.cover,
               placeholder: (_, __) => const _ShimmerBox(),
+              // Эвдэрсэн зураг — emoji биш icon (DS-09), харанхуй дээр цайвар
               errorWidget: (_, __, ___) => Container(
                 color: const Color(0xFF1a0a2e),
-                child: const Center(child: Text('📸',
-                    style: TextStyle(fontSize: 64))),
+                child: const Center(child: Icon(AppIcons.imageBroken,
+                    color: AppColors.textTertiaryDark, size: 56)),
               ),
             ),
 
@@ -447,7 +452,7 @@ class _StoryViewerScreenState extends State<StoryViewerScreen>
                 onTap: _close,
                 child: const Padding(
                   padding: EdgeInsets.all(8),
-                  child: Icon(Icons.close, color: Colors.white, size: 32)),
+                  child: Icon(AppIcons.close, color: Colors.white, size: 32)),
               ),
             ]),
           ),
@@ -506,7 +511,7 @@ class _StoryViewerScreenState extends State<StoryViewerScreen>
                         alignment: WrapAlignment.center, spacing: 8, runSpacing: 6,
                         children: [
                           if (story.venueName != null)
-                            InkWell(onTap:story.venueRef==null?null:()=>context.push('/place/${Uri.encodeComponent(story.venueRef!)}'),child:_storyPill(Icons.location_on, story.venueName!)),
+                            InkWell(onTap:story.venueRef==null?null:()=>context.push('/place/${Uri.encodeComponent(story.venueRef!)}'),child:_storyPill(AppIcons.venue, story.venueName!)),
                           if (story.mentions.isNotEmpty)
                             _storyPill(Icons.alternate_email_rounded,
                                 '${story.mentions.length} хүн'),
@@ -607,11 +612,12 @@ class _StoryViewerScreenState extends State<StoryViewerScreen>
                             curve: Curves.easeOutBack,
                             builder: (_, s, child) =>
                                 Transform.scale(scale: s, child: child),
+                            // Харанхуй медиа дээр Day горимд ч likeOnMedia
                             child: Icon(
                               (_likedMap[story.id] ?? false)
-                                  ? Icons.favorite : Icons.favorite_border,
+                                  ? AppIcons.likeActive : AppIcons.like,
                               color: (_likedMap[story.id] ?? false)
-                                  ? AppColors.like : Colors.white,
+                                  ? AppColors.likeOnMedia : Colors.white,
                               size: 24)),
                         ))),
                       const SizedBox(width: 8),
@@ -626,7 +632,7 @@ class _StoryViewerScreenState extends State<StoryViewerScreen>
                             boxShadow:
                                 AppColors.glowShadow(AppColors.accentStart)),
                           alignment: Alignment.center,
-                          child: const Icon(Icons.send_rounded,
+                          child: const Icon(AppIcons.send,
                               color: Colors.white, size: 20))),
                     ]),
                 ])),

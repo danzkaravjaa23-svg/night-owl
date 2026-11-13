@@ -209,19 +209,14 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                                         crossAxisAlignment:
                                             CrossAxisAlignment.start,
                                         children: [
-                                          // Слайдын дугаар — mono eyebrow
-                                          // (цайвар горимд уншигдахуйц бараан бэх — accent-ийг textPrimary руу холино)
+                                          // Слайдын дугаар — mono eyebrow.
+                                          // Текстийн accent (DS-01): слайдын
+                                          // гэрлийн өнгө (#7654D6 г.м) харанхуй
+                                          // дэвсгэр дээр бүдэг уншигддаг байв.
                                           Text('0$_slideNumber — 03',
                                               style: AppTextStyles.monoSm.copyWith(
                                                   letterSpacing: 2,
-                                                  color: AppColors.isDarkMode
-                                                      ? data.color.withValues(
-                                                          alpha: 0.85)
-                                                      : Color.lerp(
-                                                          data.color,
-                                                          AppColors
-                                                              .textPrimaryLight,
-                                                          0.35))),
+                                                  color: AppColors.accentText)),
                                           const SizedBox(height: 10),
                                           Text(data.title,
                                               style: AppTextStyles.displayMd
@@ -249,7 +244,6 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                                         ? s.btnStart
                                         : s.btnContinue,
                                     onPressed: _next,
-                                    borderRadius: 999,
                                     trailing: Icon(
                                         _slideNumber == 3
                                             ? Icons.auto_awesome_rounded

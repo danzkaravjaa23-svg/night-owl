@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/widgets/app_sheet.dart';
 import '../../../core/widgets/authorized_media.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/app_radii.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../providers/event_provider.dart';
@@ -334,7 +336,7 @@ class _EventCard extends StatelessWidget {
                                 ])),
                         const SizedBox(height: 5),
                         Row(children: [
-                          const Icon(Icons.location_on,
+                          const Icon(AppIcons.venue,
                               size: 12, color: Colors.white70),
                           const SizedBox(width: 3),
                           Flexible(
@@ -435,11 +437,12 @@ class _AttendeeStack extends StatelessWidget {
 
 /// Event detail-ийг RSVP-тэй sheet-ээр нээх (feed rail + venue detail-аас дуудна)
 void showEventDetailSheet(BuildContext context, EventItem event) {
-  showModalBottomSheet(
+  // Урт тайлбартай эвент overflow хийхгүй — өндөр нь дотроо scroll-тай.
+  // Өнгө, радиус, бариулыг bottomSheetTheme (showDragHandle) өгнө. Root
+  // navigator дээр нээгддэг тул snackbar sheet-ийн ДООР гарна — алдааг
+  // sheet дотор харуулна.
+  showAppSheet<void>(
     context: context,
-    // Урт тайлбартай эвент overflow хийхгүй — өндөр нь дотроо scroll-тай.
-    // Өнгө, радиус, бариулыг bottomSheetTheme (showDragHandle) өгнө.
-    isScrollControlled: true,
     builder: (_) => _EventDetailSheet(event: event),
   );
 }
@@ -456,18 +459,24 @@ class _EventDetailSheetState extends ConsumerState<_EventDetailSheet> {
   bool _busy = false;
   int _ticket = 0;
 
+  /// RSVP-ийн алдаа. Sheet root navigator дээр байх тул SnackBar түүний
+  /// ДООР зурагдана — үйлдлийн дэргэд энд харуулж, дахин оролдоход цэвэрлэнэ.
+  String? _error;
+
   Future<void> _toggle(String status) async {
     final value = ref.read(eventRsvpProvider(widget.event.id));
     if (_busy || value.isLoading || value.hasError || !value.hasValue) return;
     if (ref.read(sessionUserIdProvider) == null) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('Нэвтэрнэ үү')));
+      setState(() => _error = 'Нэвтэрнэ үү');
       return;
     }
     final service = ref.read(eventServiceProvider);
     final session = service.captureSession();
     final ticket = ++_ticket;
-    setState(() => _busy = true);
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
     try {
       await service.setRsvp(session, widget.event.id,
           value.requireValue.mine == status ? null : status);
@@ -476,10 +485,9 @@ class _EventDetailSheetState extends ConsumerState<_EventDetailSheet> {
       ref.invalidate(upcomingEventsProvider);
     } catch (error) {
       if (!mounted || ticket != _ticket) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(error is PublicationFailure
-              ? error.message
-              : 'Оролцооны өөрчлөлтийг баталж чадсангүй. Дахин шалгана уу.')));
+      setState(() => _error = error is PublicationFailure
+          ? error.message
+          : 'Оролцооны өөрчлөлтийг баталж чадсангүй. Дахин шалгана уу.');
     } finally {
       session.close();
       if (mounted && ticket == _ticket) {
@@ -497,6 +505,7 @@ class _EventDetailSheetState extends ConsumerState<_EventDetailSheet> {
         setState(() {
           _ticket++;
           _busy = false;
+          _error = null;
         });
       }
     });
@@ -528,7 +537,7 @@ class _EventDetailSheetState extends ConsumerState<_EventDetailSheet> {
                         children: [
                           Text(e.title, style: AppTextStyles.h2),
                           const SizedBox(height: 8),
-                          _line(Icons.location_on_outlined, e.venueName ?? '—'),
+                          _line(AppIcons.venue, e.venueName ?? '—'),
                           _line(
                               Icons.schedule, _EventCard._dateStr(e.startsAt)),
                           _line(
@@ -571,10 +580,19 @@ class _EventDetailSheetState extends ConsumerState<_EventDetailSheet> {
                             active: ready && current.mine == 'interested',
                             disabled: disabled,
                             icon: Icons.star,
-                            color: AppColors.accentStart,
+                            // Текст/icon/хүрээнд — accentText (DS-01)
+                            color: AppColors.accentText,
                             onTap: () => _toggle('interested'))),
                   ]),
                   const SizedBox(height: 8),
+                  if (_error != null)
+                    Padding(
+                        padding: const EdgeInsets.only(bottom: 6),
+                        child: Semantics(
+                            liveRegion: true,
+                            child: Text(_error!,
+                                style: AppTextStyles.bodyXs
+                                    .copyWith(color: AppColors.danger)))),
                   if (ready)
                     Text(
                         '${current.going} очно · ${current.interested} сонирхож байна',
@@ -638,7 +656,7 @@ class _EventDetailSheetState extends ConsumerState<_EventDetailSheet> {
   Widget _line(IconData i, String t) => Padding(
       padding: const EdgeInsets.only(bottom: 6),
       child: Row(children: [
-        Icon(i, size: 16, color: AppColors.accentStart),
+        Icon(i, size: 16, color: AppColors.accentText),
         const SizedBox(width: 8),
         Expanded(
             child: Text(t,

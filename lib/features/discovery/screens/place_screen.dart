@@ -4,10 +4,18 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_icons.dart';
+import '../../../core/theme/app_spacing.dart';
+import '../../../core/theme/app_text_styles.dart';
+import '../../../core/widgets/app_header.dart';
 import '../../../core/widgets/authorized_media.dart';
+import '../../../core/widgets/empty_state.dart';
+import '../../../core/widgets/glass_icon_button.dart';
+import '../../../core/widgets/gradient_button.dart';
 import '../../../core/widgets/network_video.dart';
+import '../../../core/widgets/owl_loading.dart';
 import '../services/discovery_service.dart';
-import '../widgets/discovery_back_button.dart';
 import 'discovery_screen.dart';
 import '../../profile/utils/app_links.dart';
 import '../../auth/providers/auth_provider.dart';
@@ -67,6 +75,49 @@ class _PlaceScreenState extends ConsumerState<PlaceScreen> {
     }
   }
 
+  Future<void> _copyLink() async {
+    await Clipboard.setData(ClipboardData(
+        text:
+            '${appOrigin()}/#/place/${Uri.encodeComponent(widget.venueRef)}'));
+    if (mounted) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Холбоос хууллаа')));
+    }
+  }
+
+  Future<void> _directions(JsonRow venue) => _open(
+      Uri.https('www.google.com', '/maps/dir/', {
+        'api': '1',
+        'destination': venue['lat'] != null && venue['lng'] != null
+            ? '${venue['lat']},${venue['lng']}'
+            : '${venue['name']}, Улаанбаатар'
+      }),
+      directions: true);
+
+  /// Saves or unsaves the place; [retry] re-reads a failed bookmark list.
+  Future<void> _toggleSaved({required bool retry}) async {
+    if (_service.me == null) {
+      context.push(
+          '/auth?next=${Uri.encodeComponent('/place/${widget.venueRef}')}');
+      return;
+    }
+    if (retry) {
+      ref.invalidate(venueBookmarksProvider);
+      return;
+    }
+    setState(() => _busy = true);
+    try {
+      await ref.read(venueBookmarksProvider.notifier).toggle(widget.venueRef);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(discoveryError(e))));
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final requestKey = (
@@ -78,22 +129,15 @@ class _PlaceScreenState extends ConsumerState<PlaceScreen> {
     final bookmarks = ref.watch(venueBookmarksProvider);
     final saved = bookmarks.valueOrNull?.contains(widget.venueRef) ?? false;
     return Scaffold(
-        appBar: AppBar(
-            leading: const DiscoveryBackButton(),
-            title: const Text('Газрын мэдээлэл'),
+        appBar: AppHeader.title(
+            title: 'Газрын мэдээлэл',
+            compact: true,
+            fallbackLocation: '/discovery',
             actions: [
-              IconButton(
+              GlassIconButton(
+                  icon: AppIcons.share,
                   tooltip: 'Холбоос хуулах',
-                  icon: const Icon(Icons.ios_share),
-                  onPressed: () async {
-                    await Clipboard.setData(ClipboardData(
-                        text:
-                            '${appOrigin()}/#/place/${Uri.encodeComponent(widget.venueRef)}'));
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Холбоос хууллаа')));
-                    }
-                  })
+                  onTap: _copyLink)
             ]),
         body: FutureBuilder<(JsonRow?, List<JsonRow>)>(
             future: _data,
@@ -104,11 +148,12 @@ class _PlaceScreenState extends ConsumerState<PlaceScreen> {
               }
               if (snapshot.connectionState != ConnectionState.done ||
                   !snapshot.hasData) {
-                return const Center(child: CircularProgressIndicator());
+                return const Center(child: OwlLoading());
               }
               final (venue, posts) = snapshot.data!;
               if (venue == null) {
-                return const Center(child: Text('Газар олдсонгүй'));
+                return const EmptyState(
+                    icon: AppIcons.venue, title: 'Газар олдсонгүй');
               }
               return RefreshIndicator(
                   onRefresh: () async {
@@ -122,7 +167,7 @@ class _PlaceScreenState extends ConsumerState<PlaceScreen> {
                     }
                   },
                   child: ListView(
-                      padding: const EdgeInsets.only(bottom: 24),
+                      padding: const EdgeInsets.only(bottom: AppSpacing.x6),
                       children: [
                         if (venue['cover_url'] != null)
                           AspectRatio(
@@ -131,17 +176,18 @@ class _PlaceScreenState extends ConsumerState<PlaceScreen> {
                                   imageUrl: venue['cover_url'] as String,
                                   fit: BoxFit.cover)),
                         Padding(
-                            padding: const EdgeInsets.all(20),
+                            padding: const EdgeInsets.all(AppSpacing.page),
                             child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(venue['name'] as String,
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .headlineSmall),
-                                  const SizedBox(height: 8),
-                                  Text(venue['address'] as String? ??
-                                      'Хаяг нэмэгдээгүй'),
+                                      style: AppTextStyles.h1),
+                                  const SizedBox(height: AppSpacing.x2),
+                                  Text(
+                                      venue['address'] as String? ??
+                                          'Хаяг нэмэгдээгүй',
+                                      style: AppTextStyles.bodyMd.copyWith(
+                                          color: AppColors.textSecondary)),
                                   if (venue['hours'] != null)
                                     ListTile(
                                         contentPadding: EdgeInsets.zero,
@@ -151,7 +197,7 @@ class _PlaceScreenState extends ConsumerState<PlaceScreen> {
                                                 'OpenStreetMap'
                                             ? 'OpenStreetMap-д бүртгэсэн цаг'
                                             : 'Бүртгэсэн ажиллах цаг')),
-                                  const SizedBox(height: 12),
+                                  const SizedBox(height: AppSpacing.x3),
                                   VenueOperatingReview(
                                     venueRefs: [
                                       widget.venueRef,
@@ -166,88 +212,64 @@ class _PlaceScreenState extends ConsumerState<PlaceScreen> {
                                             const Icon(Icons.payments_outlined),
                                         title: Text(
                                             '${venue['price_min']}–${venue['price_max'] ?? venue['price_min']} ₮')),
-                                  Wrap(spacing: 8, children: [
-                                    for (final vibe
-                                        in (venue['vibes'] as List? ?? []))
-                                      Chip(label: Text('$vibe'))
-                                  ]),
-                                  const SizedBox(height: 12),
-                                  Wrap(spacing: 10, runSpacing: 10, children: [
-                                    FilledButton.icon(
-                                        icon: const Icon(
-                                            Icons.directions_outlined),
-                                        label: const Text('Чиглэл авах'),
-                                        onPressed: () => _open(
-                                            Uri.https('www.google.com',
-                                                '/maps/dir/', {
-                                              'api': '1',
-                                              'destination': venue['lat'] !=
-                                                          null &&
-                                                      venue['lng'] != null
-                                                  ? '${venue['lat']},${venue['lng']}'
-                                                  : '${venue['name']}, Улаанбаатар'
-                                            }),
-                                            directions: true)),
-                                    OutlinedButton.icon(
-                                        icon: Icon(bookmarks.hasError
-                                            ? Icons.refresh
-                                            : saved
-                                                ? Icons.bookmark
-                                                : Icons.bookmark_border),
-                                        label: Text(bookmarks.hasError
-                                            ? 'Хадгалалтыг дахин шалгах'
-                                            : saved
-                                                ? 'Хадгалсан'
-                                                : 'Хадгалах'),
-                                        onPressed: _busy || bookmarks.isLoading
-                                            ? null
-                                            : () async {
-                                                if (_service.me == null) {
-                                                  context.push(
-                                                      '/auth?next=${Uri.encodeComponent('/place/${widget.venueRef}')}');
-                                                  return;
-                                                }
-                                                if (bookmarks.hasError) {
-                                                  ref.invalidate(
-                                                      venueBookmarksProvider);
-                                                  return;
-                                                }
-                                                setState(() => _busy = true);
-                                                try {
-                                                  await ref
-                                                      .read(
-                                                          venueBookmarksProvider
-                                                              .notifier)
-                                                      .toggle(widget.venueRef);
-                                                } catch (e) {
-                                                  if (context.mounted) {
-                                                    ScaffoldMessenger.of(
-                                                            context)
-                                                        .showSnackBar(SnackBar(
-                                                            content: Text(
-                                                                discoveryError(
-                                                                    e))));
-                                                  }
-                                                } finally {
-                                                  if (mounted) {
-                                                    setState(
-                                                        () => _busy = false);
-                                                  }
-                                                }
-                                              }),
-                                    if (venue['menu_url'] != null)
-                                      OutlinedButton.icon(
-                                          icon:
-                                              const Icon(Icons.restaurant_menu),
-                                          label: const Text('Меню'),
-                                          onPressed: () => _open(Uri.parse(
-                                              venue['menu_url'] as String))),
-                                    if (venue['venue_id'] != null)
-                                      TextButton(
-                                          onPressed: () => context.push(
-                                              '/venue/reviews/${venue['venue_id']}'),
-                                          child: const Text('Үнэлгээ, эвент')),
-                                  ]),
+                                  Wrap(
+                                      spacing: AppSpacing.x2,
+                                      runSpacing: AppSpacing.x2,
+                                      children: [
+                                        for (final vibe
+                                            in (venue['vibes'] as List? ?? []))
+                                          Chip(label: Text('$vibe'))
+                                      ]),
+                                  const SizedBox(height: AppSpacing.x4),
+                                  Wrap(
+                                      spacing: AppSpacing.x2,
+                                      runSpacing: AppSpacing.x2,
+                                      crossAxisAlignment:
+                                          WrapCrossAlignment.center,
+                                      children: [
+                                        GradientButton(
+                                            size: GradientButtonSize.md,
+                                            fullWidth: false,
+                                            icon: const Icon(
+                                                Icons.directions_outlined),
+                                            label: 'Чиглэл авах',
+                                            onPressed: () =>
+                                                _directions(venue)),
+                                        OutlineButton(
+                                            size: GradientButtonSize.md,
+                                            fullWidth: false,
+                                            icon: Icon(bookmarks.hasError
+                                                ? Icons.refresh_rounded
+                                                : saved
+                                                    ? AppIcons.saveActive
+                                                    : AppIcons.save),
+                                            label: bookmarks.hasError
+                                                ? 'Хадгалалтыг дахин шалгах'
+                                                : saved
+                                                    ? 'Хадгалсан'
+                                                    : 'Хадгалах',
+                                            onPressed: _busy ||
+                                                    bookmarks.isLoading
+                                                ? null
+                                                : () => _toggleSaved(
+                                                    retry: bookmarks.hasError)),
+                                        if (venue['menu_url'] != null)
+                                          OutlineButton(
+                                              size: GradientButtonSize.md,
+                                              fullWidth: false,
+                                              icon: const Icon(
+                                                  Icons.restaurant_menu),
+                                              label: 'Меню',
+                                              onPressed: () => _open(Uri.parse(
+                                                  venue['menu_url']
+                                                      as String))),
+                                        if (venue['venue_id'] != null)
+                                          TextButton(
+                                              onPressed: () => context.push(
+                                                  '/venue/reviews/${venue['venue_id']}'),
+                                              child:
+                                                  const Text('Үнэлгээ, эвент')),
+                                      ]),
                                   if (venue['reviewed_at'] != null)
                                     ListTile(
                                         contentPadding: EdgeInsets.zero,
@@ -271,32 +293,33 @@ class _PlaceScreenState extends ConsumerState<PlaceScreen> {
                                             '/copyright')),
                                         child: const Text(
                                             '© OpenStreetMap contributors · ODbL')),
-                                  const SizedBox(height: 20),
+                                  const SizedBox(height: AppSpacing.page),
                                   Text('Эндээс хуваалцсан',
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .titleLarge),
+                                      style: AppTextStyles.title),
                                 ])),
                         if (posts.isEmpty)
-                          const Padding(
-                              padding: EdgeInsets.all(20),
-                              child:
-                                  Text('Энэ газартай холбоотой нийтлэл алга')),
+                          Padding(
+                              padding: const EdgeInsets.fromLTRB(
+                                  AppSpacing.page,
+                                  0,
+                                  AppSpacing.page,
+                                  AppSpacing.page),
+                              child: Text(
+                                  'Энэ газартай холбоотой нийтлэл алга',
+                                  style: AppTextStyles.bodyMd.copyWith(
+                                      color: AppColors.textSecondary))),
                         for (final post in posts)
                           ListTile(
-                              leading: SizedBox(
-                                  width: 64,
-                                  height: 64,
-                                  child: post['media_url'] == null
-                                      ? const Icon(Icons.image_outlined)
-                                      : isVideoUrl(post['media_url'] as String)
-                                          ? NetworkVideo(
-                                              url: post['media_url'] as String,
-                                              posterOnly: true)
-                                          : AuthorizedImage(
-                                              imageUrl:
-                                                  post['media_url'] as String,
-                                              fit: BoxFit.cover)),
+                              contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: AppSpacing.page,
+                                  vertical: AppSpacing.x1),
+                              leading: DiscoveryThumbnail(
+                                  imageUrl: post['media_url'] as String?,
+                                  placeholder: Icons.image_outlined,
+                                  builder: (url) => isVideoUrl(url)
+                                      ? NetworkVideo(url: url, posterOnly: true)
+                                      : AuthorizedImage(
+                                          imageUrl: url, fit: BoxFit.cover)),
                               title: Text(post['caption'] as String? ?? '',
                                   maxLines: 2, overflow: TextOverflow.ellipsis),
                               subtitle: Text(

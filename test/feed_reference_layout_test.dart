@@ -16,6 +16,7 @@ import 'package:night_owl_ub/features/feed/screens/feed_screen.dart';
 import 'package:night_owl_ub/features/notifications/providers/notification_provider.dart';
 import 'package:night_owl_ub/core/widgets/tonight_card.dart';
 import 'package:night_owl_ub/core/theme/app_colors.dart';
+import 'package:night_owl_ub/core/theme/app_icons.dart';
 import 'package:night_owl_ub/features/feed/providers/feed_provider.dart';
 import 'package:night_owl_ub/models/post.dart';
 
@@ -79,7 +80,8 @@ void main() {
 
   Future<GoRouter> render(WidgetTester tester, double width,
       {Brightness brightness = Brightness.dark,
-      bool emptyFollowing = false}) async {
+      bool emptyFollowing = false,
+      int unread = 0}) async {
     AppColors.isDarkMode = brightness == Brightness.dark;
     addTearDown(() => AppColors.isDarkMode = true);
     tester.view.physicalSize = Size(width, 900);
@@ -104,7 +106,7 @@ void main() {
           followingFeedProvider.overrideWith((_) =>
               emptyFollowing ? _EmptyFollowingFixture() : _FollowingFixture()),
           upcomingEventsProvider.overrideWith((_) async => []),
-          unreadNotifCountProvider.overrideWithValue(0),
+          unreadNotifCountProvider.overrideWithValue(unread),
         ],
         child: MaterialApp.router(
           routerConfig: router,
@@ -185,7 +187,7 @@ void main() {
     expect(find.text('destination /dm'), findsOneWidget);
     router.go('/feed');
     await tester.pumpAndSettle();
-    await tester.tap(find.byIcon(Icons.add));
+    await tester.tap(find.byIcon(AppIcons.add));
     await tester.pumpAndSettle();
     expect(find.text('destination /story/create'), findsOneWidget);
     router.go('/feed');
@@ -195,5 +197,17 @@ void main() {
     expect(find.text('destination /reels'), findsOneWidget);
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('Header bell badge announces unread notifications',
+      (tester) async {
+    final semantics = tester.ensureSemantics();
+    await render(tester, 320, unread: 3);
+    // AppHeader-ийн GlassIconButton: тоо нь шошгонд, tooltip тоогүй хэвээр.
+    expect(find.bySemanticsLabel('Мэдэгдэл, 3 шинэ'), findsOneWidget);
+    expect(find.byTooltip('Мэдэгдэл'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox());
+    semantics.dispose();
   });
 }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_icons.dart';
 import '../../../core/widgets/app_motion.dart';
 import '../../../core/widgets/network_video.dart';
 import '../../../core/widgets/owl_loading.dart';
@@ -86,7 +87,8 @@ class ExploreReelsSection extends ConsumerWidget {
                       borderRadius: BorderRadius.circular(22),
                       border: Border.all(color: AppColors.hairline)),
                   child: Column(children: [
-                    Icon(Icons.video_library_outlined,
+                    // "Богино видео"-ийн НЭГ glyph (DS-09)
+                    Icon(AppIcons.shortVideo,
                         color: AppColors.neonCyan, size: 32),
                     const SizedBox(height: 10),
                     Text('Шинэ бичлэгүүд удахгүй',

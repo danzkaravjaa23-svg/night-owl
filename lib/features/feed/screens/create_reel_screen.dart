@@ -4,10 +4,12 @@ import 'package:flutter/services.dart' show SystemUiOverlayStyle;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/app_radii.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/services/supabase_service.dart';
 import '../../../core/utils/image_uploader.dart';
+import '../../../core/widgets/gradient_button.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../providers/feed_provider.dart';
 import '../widgets/story_video.dart';
@@ -123,32 +125,39 @@ class _CreateReelScreenState extends ConsumerState<CreateReelScreen> {
         // Үргэлж харанхуй — light горимд ч статус бар цайвар дүрстэй
         systemOverlayStyle: SystemUiOverlayStyle.light,
         // Линк/reload-оор нээгдсэн бол pop хийх хуудас байхгүй
-        leading: IconButton(onPressed: () => context.canPop()
+        leading: IconButton(tooltip: 'Хаах', onPressed: () => context.canPop()
             ? context.pop() : context.go('/reels'),
-          icon: const Icon(Icons.close, color: Colors.white)),
-        title: Text('Богино видео', style: AppTextStyles.labelLg.copyWith(color: Colors.white)),
+          icon: const Icon(AppIcons.close, color: Colors.white)),
+        title: Text('Богино видео', style: AppTextStyles.title.copyWith(color: Colors.white)),
       ),
       body: Column(children: [
-        ListTile(leading:const Icon(Icons.place_outlined,color:Colors.white),
-          title:Text(_venue?['name'] as String? ?? 'Газар сонгох',style:const TextStyle(color:Colors.white)),
-          onTap:_busy?null:() async {final venue=await pickDiscoveryVenue(context);if(mounted&&venue!=null)setState(()=>_venue=venue);}),
+        ListTile(
+          leading: Icon(_venue == null ? AppIcons.venue : AppIcons.venueActive,
+              color: Colors.white),
+          title: Text(_venue?['name'] as String? ?? 'Газар сонгох',
+              style: const TextStyle(color: Colors.white)),
+          onTap: _busy ? null : () async {
+            final venue = await pickDiscoveryVenue(context);
+            if (mounted && venue != null) setState(() => _venue = venue);
+          }),
         Expanded(child: Center(child: _bytes == null
-          ? _Pressable(
-              onTap: _pick,
-              child: Column(mainAxisSize: MainAxisSize.min, children: [
-                const Icon(Icons.slow_motion_video_outlined,
-                    color: Colors.white38, size: 72),
-                const SizedBox(height: 16),
-                Text('Видео сонгох', style: AppTextStyles.bodyMd.copyWith(color: Colors.white54)),
-                const SizedBox(height: 20),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 12),
-                  decoration: BoxDecoration(
-                    gradient: AppColors.accentGradient,
-                    borderRadius: BorderRadius.circular(14)),
-                  child: Text('Зургийн сангаас сонгох',
-                    style: AppTextStyles.btn.copyWith(color: Colors.white))),
-              ]))
+          ? Column(mainAxisSize: MainAxisSize.min, children: [
+              _Pressable(
+                onTap: _pick,
+                child: Column(mainAxisSize: MainAxisSize.min, children: [
+                  const Icon(AppIcons.shortVideo,
+                      color: Colors.white38, size: 72),
+                  const SizedBox(height: 16),
+                  Text('Видео сонгох', style: AppTextStyles.bodyMd.copyWith(color: Colors.white54)),
+                ])),
+              const SizedBox(height: 20),
+              // Үндсэн үйлдэл — апп даяарх нэгдсэн primary товч (DS-03)
+              GradientButton(
+                size: GradientButtonSize.md,
+                fullWidth: false,
+                label: 'Зургийн сангаас сонгох',
+                onPressed: _pick),
+            ])
           // Сонгосон клипээ шууд харна — muted/loop preview
           // SizedBox.expand: үгүй бол Stack товчны хэмжээтэй болно
           : SizedBox.expand(child: Stack(alignment: Alignment.bottomCenter, children: [
@@ -205,26 +214,14 @@ class _CreateReelScreenState extends ConsumerState<CreateReelScreen> {
               ),
               if (_error != null) ...[
                 const SizedBox(height: 8),
-                Text(_error!, style: AppTextStyles.bodyXs.copyWith(color: AppColors.error)),
+                // Үргэлж харанхуй самбар — danger-ийн Night утга
+                Text(_error!, style: AppTextStyles.bodyXs.copyWith(color: AppColors.dangerDark)),
               ],
               const SizedBox(height: 10),
-              _Pressable(
-                onTap: _busy ? null : _share,
-                child: AnimatedOpacity(
-                  opacity: _busy ? 0.75 : 1,
-                  duration: const Duration(milliseconds: 150),
-                  child: Container(
-                    height: 50, width: double.infinity,
-                    decoration: BoxDecoration(
-                      gradient: AppColors.accentGradient,
-                      borderRadius: BorderRadius.circular(16)),
-                    alignment: Alignment.center,
-                    child: _busy
-                      ? const SizedBox(width: 22, height: 22, child:
-                          CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                      : Text('Reel хуваалцах',
-                          style: AppTextStyles.btn.copyWith(color: Colors.white)))),
-              ),
+              GradientButton(
+                label: 'Reel хуваалцах',
+                busy: _busy,
+                onPressed: _share),
               const SizedBox(height: 8),
             ]),
           ),

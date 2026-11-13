@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/widgets/owl_loading.dart';
 import '../../../core/widgets/app_avatar.dart';
+import '../../../core/widgets/app_header.dart';
 import '../../../core/widgets/app_motion.dart';
+import '../../../core/widgets/gradient_button.dart';
 import '../../../core/services/supabase_service.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../discovery/services/discovery_service.dart';
@@ -169,20 +172,11 @@ class _FollowListScreenState extends ConsumerState<FollowListScreen> {
     });
     return Scaffold(
       backgroundColor: AppColors.bgBase,
+      // ── Дээд бар — нэгдсэн толгой (DS-06) ──
+      appBar: const AppHeader.title(
+          title: 'Хүмүүс', fallbackLocation: AppRoutes.profile),
       body: SafeArea(
         child: Column(children: [
-          // ── Дээд бар — glass буцах товч + h2 гарчиг ──
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 10, 20, 8),
-            child: Row(children: [
-              _GlassBackBtn(
-                onTap: () =>
-                    context.canPop() ? context.pop() : context.go('/profile'),
-              ),
-              const SizedBox(width: 14),
-              Expanded(child: Text('Хүмүүс', style: AppTextStyles.h2)),
-            ]),
-          ),
           // ── Таб солигч — pill segmented ──
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
@@ -274,12 +268,13 @@ class _FollowListScreenState extends ConsumerState<FollowListScreen> {
                     .copyWith(color: AppColors.textSecondary)),
             const SizedBox(height: 14),
             Center(
-              child: FilledButton(
-                  onPressed: _load,
-                  style: FilledButton.styleFrom(
-                      backgroundColor: AppColors.accentStart,
-                      minimumSize: const Size(0, 48)),
-                  child: const Text('Дахин оролдох')),
+              // Хуудасны primary (DS-03): бусад алдааны төлөвтэй ижил
+              // GradientButton md, агуулгынхаа өргөнөөр.
+              child: GradientButton(
+                  label: 'Дахин оролдох',
+                  size: GradientButtonSize.md,
+                  fullWidth: false,
+                  onPressed: _load),
             ),
           ]),
         ],
@@ -396,25 +391,6 @@ class _FollowListScreenState extends ConsumerState<FollowListScreen> {
   }
 }
 
-// ── Glass дугуй буцах товч ──
-class _GlassBackBtn extends StatelessWidget {
-  final VoidCallback onTap;
-  const _GlassBackBtn({required this.onTap});
-
-  @override
-  Widget build(BuildContext context) => IconButton(
-        tooltip: 'Буцах',
-        onPressed: onTap,
-        style: IconButton.styleFrom(
-          minimumSize: const Size(44, 44),
-          backgroundColor: AppColors.bgElevated.withValues(alpha: 0.72),
-          side: BorderSide(color: AppColors.hairline2),
-        ),
-        icon: Icon(Icons.arrow_back_ios_new,
-            color: AppColors.textPrimary, size: 17),
-      );
-}
-
 // ── Мөрийн skeleton (анхны ачаалалд) — цэвэр мөртэй ижил хэмжээс ──
 class _RowSkeleton extends StatelessWidget {
   const _RowSkeleton();
@@ -499,6 +475,9 @@ class _TabBtn extends StatelessWidget {
       );
 }
 
+/// Мөрийн дагах товч (DS-03): дагаагүй үед primary [GradientButton],
+/// дагасан/хүсэлттэй үед secondary [OutlineButton]. Хоёулаа агуулгынхаа
+/// өргөнтэй 36px pill, 44px хүрэх талбартай.
 class _RowFollowBtn extends StatelessWidget {
   final bool following;
   final bool requested;
@@ -512,42 +491,20 @@ class _RowFollowBtn extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final filled = !following && !requested;
-    final label = requested
-        ? 'Хүсэлттэй'
-        : following
-            ? 'Дагасан'
-            : 'Дагах';
-    return Semantics(
-      label: busy ? 'Хүлээнэ үү' : null,
-      child: AnimatedContainer(
-        duration: AppMotion.duration(context, AppMotion.exit),
-        decoration: BoxDecoration(
-          gradient: filled ? AppColors.accentGradient : null,
-          color: filled ? null : AppColors.bgSurface.withValues(alpha: 0.7),
-          borderRadius: BorderRadius.circular(999),
-          border: filled ? null : Border.all(color: AppColors.hairline2),
-        ),
-        child: TextButton(
-          onPressed: busy ? null : onTap,
-          style: TextButton.styleFrom(
-            minimumSize: const Size(96, 44),
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-            foregroundColor: filled ? Colors.white : AppColors.textSecondary,
-          ),
-          child: busy
-              ? SizedBox(
-                  width: 18,
-                  height: 18,
-                  child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: filled ? Colors.white : AppColors.textSecondary))
-              : Text(label,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                      fontSize: 12.5, fontWeight: FontWeight.w700)),
-        ),
-      ),
-    );
+    if (!following && !requested) {
+      return GradientButton(
+          label: 'Дагах',
+          size: GradientButtonSize.sm,
+          fullWidth: false,
+          busy: busy,
+          onPressed: onTap);
+    }
+    return OutlineButton(
+        label: requested ? 'Хүсэлттэй' : 'Дагасан',
+        size: GradientButtonSize.sm,
+        fullWidth: false,
+        // Хүсэлт явж байхад owl — GradientButton-ий busy төлөвтэй ижил
+        icon: busy ? const OwlLoading(size: 16, compact: true) : null,
+        onPressed: busy ? null : onTap);
   }
 }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/widgets/app_avatar.dart';
 import '../../../core/widgets/app_motion.dart';
@@ -181,8 +182,8 @@ class _MyStoryItem extends StatelessWidget {
                         color: AppColors.accentStart,
                         border: Border.all(color: AppColors.bgBase, width: 2),
                       ),
-                      child:
-                          const Icon(Icons.add, color: Colors.white, size: 15),
+                      child: const Icon(AppIcons.add,
+                          color: Colors.white, size: 15),
                     ),
                   ),
                 )),

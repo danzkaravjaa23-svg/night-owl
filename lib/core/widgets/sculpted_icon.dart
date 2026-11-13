@@ -23,9 +23,11 @@ class SculptedIcon extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final dark = onDark || Theme.of(context).brightness == Brightness.dark;
+    // Active glyphs use the text accent (AA on app surfaces); #7654D6
+    // (accentStart) is a fill colour.
     final face = color ??
         (active
-            ? (dark ? AppColors.silverNeon : AppColors.accentStart)
+            ? (dark ? AppColors.accentTextDark : AppColors.accentTextLight)
             : (dark
                 ? AppColors.textSecondaryDark
                 : AppColors.textSecondaryLight));

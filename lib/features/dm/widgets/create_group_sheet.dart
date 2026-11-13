@@ -2,9 +2,12 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_icons.dart';
 import '../../../core/widgets/sculpted_icon.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/widgets/app_avatar.dart';
+import '../../../core/widgets/app_sheet.dart';
+import '../../../core/widgets/gradient_button.dart';
 import '../../../core/services/supabase_service.dart';
 import '../providers/group_provider.dart';
 import 'search_field.dart';
@@ -14,10 +17,10 @@ import 'search_field.dart';
 /// шууд thread гарчигт харуулахын тулд).
 Future<Map<String, String>?> showCreateGroupSheet(BuildContext context) {
   final session = SupabaseService.client.auth.currentSession;
-  // Өнгө, радиус, бариулыг bottomSheetTheme (showDragHandle) өгнө.
-  return showModalBottomSheet<Map<String, String>>(
+  // showAppSheet (DS-02): root navigator дээр нээгдэж dock-ийг бүрхэнэ;
+  // өнгө, радиус, бариулыг bottomSheetTheme өгнө.
+  return showAppSheet<Map<String, String>>(
     context: context,
-    isScrollControlled: true,
     builder: (_) => _CreateGroupSheet(session: session),
   );
 }
@@ -36,6 +39,11 @@ class _CreateGroupSheetState extends State<_CreateGroupSheet> {
   final Map<String, Map<String, dynamic>> _selected = {};
   bool _busy = false;
   bool _searching = false;
+
+  /// Үүсгэж чадаагүй үеийн алдаа — sheet дотор, товчны дээр харуулна
+  /// (root sheet нээлттэй үед SnackBar sheet-ийн ДООР зурагддаг).
+  /// Дахин оролдоход арилна.
+  String? _error;
   Timer? _debounce;
   int _reqSeq = 0; // stale-response race-ээс сэргийлэх дараалал
 
@@ -62,6 +70,7 @@ class _CreateGroupSheetState extends State<_CreateGroupSheet> {
       _selected.clear();
       _busy = false;
       _searching = false;
+      _error = null;
     });
   }
 
@@ -125,15 +134,18 @@ class _CreateGroupSheetState extends State<_CreateGroupSheet> {
   Future<void> _create() async {
     final name = _nameCtrl.text.trim();
     if (!_active || name.isEmpty || _selected.isEmpty || _busy) return;
-    setState(() => _busy = true);
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
     final gid = await GroupService.createGroup(name, _selected.keys.toList(),
         isCurrent: () => _active);
     if (!mounted || !_active) return;
     if (gid == null) {
-      setState(() => _busy = false);
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Групп үүсгэж чадсангүй'),
-          backgroundColor: AppColors.error));
+      setState(() {
+        _busy = false;
+        _error = 'Групп үүсгэж чадсангүй';
+      });
       return;
     }
     Navigator.of(context).pop({'id': gid, 'name': name});
@@ -174,24 +186,11 @@ class _CreateGroupSheetState extends State<_CreateGroupSheet> {
       child: SizedBox(
         height: MediaQuery.of(context).size.height * 0.78,
         child: Column(children: [
-          // ── Header — gradient групп badge + гарчиг + micro тайлбар ──
-          Container(
-              width: 48,
-              height: 48,
-              decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: AppColors.accentGradient,
-                  boxShadow: AppColors.glowShadow(AppColors.accentStart,
-                      blur: 16, offset: const Offset(0, 4))),
-              child: const SculptedIcon(Icons.groups_rounded,
-                  color: Colors.white, size: 24, onDark: true)),
-          const SizedBox(height: 10),
-          Text('Групп чат үүсгэх', style: AppTextStyles.h2),
-          const SizedBox(height: 3),
-          Text('Найзуудаа нэг чатад цуглуул',
-              style: AppTextStyles.bodyXs
-                  .copyWith(color: AppColors.textSecondary)),
-          const SizedBox(height: 16),
+          // ── Header — sheet-ийн нэгдсэн гарчгийн мөр (DS-02) ──
+          const AppSheetHeader(
+              title: 'Групп чат үүсгэх',
+              subtitle: 'Найзуудаа нэг чатад цуглуул'),
+          const SizedBox(height: 8),
 
           // Группийн нэр — шилэн pill талбар
           Padding(
@@ -234,9 +233,9 @@ class _CreateGroupSheetState extends State<_CreateGroupSheet> {
           // Хэрэглэгчид
           Expanded(
               child: _searching && _results.isEmpty
-                  ? const Center(
+                  ? Center(
                       child: CircularProgressIndicator(
-                          color: AppColors.accentStart, strokeWidth: 2))
+                          color: AppColors.accentText, strokeWidth: 2))
                   : _results.isEmpty
                       ? Center(
                           child: Text('Хэрэглэгч олдсонгүй',
@@ -284,45 +283,30 @@ class _CreateGroupSheetState extends State<_CreateGroupSheet> {
                             );
                           })),
 
-          // Үүсгэх товч
+          // Үүсгэх товч — нэгдсэн primary GradientButton (DS-03). Алдааг
+          // sheet дотор, товчны дээр харуулна; дахин дарахад арилна.
           SafeArea(
               top: false,
               child: Padding(
                   padding: const EdgeInsets.fromLTRB(20, 8, 20, 14),
-                  child: _CreateBtn(
-                    enabled: canCreate,
-                    onTap: canCreate ? _create : null,
-                    // Primary товч — pill 52 + gradient glow
-                    child: Container(
-                        height: 52,
-                        width: double.infinity,
-                        decoration: BoxDecoration(
-                            gradient:
-                                canCreate ? AppColors.accentGradient : null,
-                            color: canCreate ? null : AppColors.bgSurface,
-                            borderRadius: BorderRadius.circular(999),
-                            boxShadow: canCreate
-                                ? AppColors.glowShadow(AppColors.accentStart)
-                                : null),
-                        alignment: Alignment.center,
-                        // _busy үед canCreate=false тул дэвсгэр нь bgSurface —
-                        // spinner сэдвийн текст өнгөтэй (цайвар горимд харагдана)
-                        child: _busy
-                            ? SizedBox(
-                                width: 22,
-                                height: 22,
-                                child: CircularProgressIndicator(
-                                    color: AppColors.textPrimary,
-                                    strokeWidth: 2))
-                            : Text(
-                                _selected.isEmpty
-                                    ? 'Гишүүн сонгоно уу'
-                                    : 'Групп үүсгэх (${_selected.length + 1})',
-                                style: AppTextStyles.btn.copyWith(
-                                    color: canCreate
-                                        ? Colors.white
-                                        : AppColors.textTertiary))),
-                  ))),
+                  child: Column(mainAxisSize: MainAxisSize.min, children: [
+                    if (_error != null)
+                      Padding(
+                          padding: const EdgeInsets.only(bottom: 8),
+                          child: Semantics(
+                              liveRegion: true,
+                              child: Text(_error!,
+                                  textAlign: TextAlign.center,
+                                  style: AppTextStyles.bodySm
+                                      .copyWith(color: AppColors.danger)))),
+                    GradientButton(
+                      label: _selected.isEmpty
+                          ? 'Гишүүн сонгоно уу'
+                          : 'Групп үүсгэх (${_selected.length + 1})',
+                      busy: _busy,
+                      onPressed: canCreate ? _create : null,
+                    ),
+                  ]))),
         ]),
       ),
     );
@@ -389,44 +373,9 @@ class _RemoveBtnState extends State<_RemoveBtn> {
                 width: 44,
                 height: 44,
                 child: Center(
-                    child: SculptedIcon(Icons.close,
+                    child: SculptedIcon(AppIcons.close,
                         size: 14, color: AppColors.textTertiary))),
           ),
         ),
       );
-}
-
-/// Үүсгэх товч — web hover cursor + дарахад агших feedback (локал)
-class _CreateBtn extends StatefulWidget {
-  final Widget child;
-  final bool enabled;
-  final VoidCallback? onTap;
-  const _CreateBtn({required this.child, required this.enabled, this.onTap});
-  @override
-  State<_CreateBtn> createState() => _CreateBtnState();
-}
-
-class _CreateBtnState extends State<_CreateBtn> {
-  bool _down = false;
-  @override
-  Widget build(BuildContext context) {
-    return MouseRegion(
-      cursor:
-          widget.enabled ? SystemMouseCursors.click : SystemMouseCursors.basic,
-      child: GestureDetector(
-        onTap: widget.onTap,
-        onTapDown: widget.enabled ? (_) => setState(() => _down = true) : null,
-        onTapUp: widget.enabled ? (_) => setState(() => _down = false) : null,
-        onTapCancel:
-            widget.enabled ? () => setState(() => _down = false) : null,
-        behavior: HitTestBehavior.opaque,
-        child: AnimatedScale(
-          scale: _down ? 0.96 : 1,
-          duration: const Duration(milliseconds: 120),
-          curve: Curves.easeOut,
-          child: widget.child,
-        ),
-      ),
-    );
-  }
 }

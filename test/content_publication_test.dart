@@ -10,6 +10,7 @@ import 'package:go_router/go_router.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:image/image.dart' as image;
+import 'package:night_owl_ub/core/constants/stickers.dart';
 import 'package:night_owl_ub/core/theme/app_fonts.dart';
 import 'package:night_owl_ub/core/widgets/gradient_button.dart';
 import 'package:night_owl_ub/features/feed/screens/create_story_screen.dart';
@@ -869,6 +870,34 @@ void main() {
       expect(publisher.uploads, 1);
       expect(publisher.rows, hasLength(2));
       expect(publisher.rows[0], publisher.rows[1]);
+      expect(tester.takeException(), isNull);
+    });
+
+    // Sheets open on the ROOT navigator (showAppSheet). The editor sits in a
+    // nested navigator here, like a page under the shell: closing the sheet
+    // with the page's context would pop the editor and leave the sheet open.
+    testWidgets('story sticker sheet closes itself and keeps the editor open',
+        (tester) async {
+      await tester.pumpWidget(ProviderScope(
+          child: MaterialApp(
+              home: Navigator(
+                  onGenerateRoute: (_) => MaterialPageRoute<void>(
+                      builder: (_) => CreateStoryScreen(
+                          publicationService: publisher,
+                          imagePicker: () async => png))))));
+      await tester.pumpAndSettle();
+      await pickStoryImage(tester);
+      await tester.tap(find.byIcon(Icons.emoji_emotions_outlined));
+      await tester.pumpAndSettle();
+      // One title row, without an emoji in the chrome.
+      expect(find.text('Owl stickers'), findsOneWidget);
+      await tester.tap(find.text(kOwlStickers.first));
+      await tester.pumpAndSettle();
+      expect(find.text('Owl stickers'), findsNothing);
+      expect(find.byType(BottomSheet), findsNothing);
+      expect(find.text('Story-д хуваалцах'), findsOneWidget);
+      // The sticker is now the story text on the canvas.
+      expect(find.text(kOwlStickers.first), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
 

@@ -171,19 +171,6 @@ class Venue {
     return hour < 24 && minute < 60 ? hour * 60 + minute : null;
   }
 
-  String get emoji => switch (type) {
-        'bar' => '🍸',
-        'karaoke' => '🎤',
-        'jazz' => '🎷',
-        'pub' => '🍺',
-        'lounge' => '🍸',
-        'nightclub' => '🎧',
-        'restaurant' => '🍽️',
-        'cafe' => '☕',
-        'rooftop' => '🌃',
-        _ => '🎵',
-      };
-
   String get typeLabel => switch (type) {
         'bar' => 'Bar',
         'karaoke' => 'Karaoke',

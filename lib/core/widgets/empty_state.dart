@@ -15,6 +15,11 @@ class EmptyState extends StatelessWidget {
   final IconData? icon;
   final String title;
   final String? subtitle;
+
+  /// [subtitle]-ийн байранд (8 px зайтай) тавих баян дэд мөр, ж: icon
+  /// оруулсан Text.rich. Өгвөл [subtitle]-ийг үл тооно. Анхдагч хэв нь
+  /// [subtitle]-тэй ижил (bodyMd, textSecondary, төвд).
+  final Widget? subtitleWidget;
   final Widget? action;
   final double size;
 
@@ -27,6 +32,7 @@ class EmptyState extends StatelessWidget {
     this.icon,
     required this.title,
     this.subtitle,
+    this.subtitleWidget,
     this.action,
     this.size = 96,
     this.glow,
@@ -95,7 +101,14 @@ class EmptyState extends StatelessWidget {
                               .copyWith(fontSize: 17, height: 1.35),
                           textAlign: TextAlign.center),
                     ),
-                    if (subtitle != null) ...[
+                    if (subtitleWidget != null) ...[
+                      const SizedBox(height: 8),
+                      DefaultTextStyle.merge(
+                          style: AppTextStyles.bodyMd.copyWith(
+                              color: AppColors.dynTextSecondary, height: 1.5),
+                          textAlign: TextAlign.center,
+                          child: subtitleWidget!),
+                    ] else if (subtitle != null) ...[
                       const SizedBox(height: 8),
                       Text(subtitle!,
                           style: AppTextStyles.bodyMd.copyWith(

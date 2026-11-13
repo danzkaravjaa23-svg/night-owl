@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
+import '../theme/app_text_styles.dart';
 
 /// The owl chosen in the approved design reference.
 class NightOwlMark extends StatelessWidget {
@@ -30,6 +31,9 @@ class NightOwlBrand extends StatelessWidget {
           const SizedBox(width: 8),
           Text('night owl',
               style: TextStyle(
+                // The bundled Inter family: w700 renders Inter-Bold, also
+                // where no app theme sets the font (DS-04).
+                fontFamily: AppTextStyles.fontFamily,
                 fontSize: size * .78,
                 fontWeight: FontWeight.w700,
                 letterSpacing: -.65,

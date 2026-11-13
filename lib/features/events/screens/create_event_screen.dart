@@ -5,10 +5,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/app_radii.dart';
+import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/utils/image_uploader.dart';
+import '../../../core/widgets/app_sheet.dart';
 import '../../../core/widgets/gradient_button.dart';
 import '../providers/event_provider.dart';
 import '../../post/services/content_publication.dart';
@@ -105,13 +108,10 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
     var openBusiness = false;
     try {
       _session.check();
-      final v = await showModalBottomSheet<Map<String, dynamic>>(
+      // Өнгө, радиус, бариулыг bottomSheetTheme өгнө; sheet нь өөрийн
+      // context-оор хаагдана (_VenuePick).
+      final v = await showAppSheet<Map<String, dynamic>>(
         context: context,
-        backgroundColor: AppColors.bgElevated,
-        isScrollControlled: true,
-        shape: const RoundedRectangleBorder(
-            borderRadius:
-                BorderRadius.vertical(top: Radius.circular(AppRadii.xl))),
         builder: (_) => _VenuePick(service: _service, session: _session),
       );
       if (!mounted) return;
@@ -257,7 +257,7 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
       _session.check();
       ref.invalidate(upcomingEventsProvider);
       ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('Эвент нийтлэгдлээ 🎉')));
+          .showSnackBar(const SnackBar(content: Text('Эвент нийтлэгдлээ')));
       setState(() => _allowExit = true);
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted && !_invalidated && _session.isCurrent) _close();
@@ -291,7 +291,11 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
                   TextButton(
                       onPressed: () => Navigator.pop(ctx, false),
                       child: const Text('Үргэлжлүүлэх')),
-                  TextButton(
+                  // Ноорог хаях баталгаа — dangerFill дээр цагаан (DS-03)
+                  FilledButton(
+                      style: FilledButton.styleFrom(
+                          backgroundColor: AppColors.dangerFill,
+                          foregroundColor: Colors.white),
                       onPressed: () => Navigator.pop(ctx, true),
                       child: const Text('Гарах'))
                 ],
@@ -346,8 +350,8 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
             leading: IconButton(
                 tooltip: 'Хаах',
                 onPressed: (_busy || _picking) ? null : _requestClose,
-                icon: Icon(Icons.close, color: AppColors.textPrimary)),
-            title: Text('Эвент нэмэх', style: AppTextStyles.h2),
+                icon: Icon(AppIcons.close, color: AppColors.textPrimary)),
+            title: Text('Эвент нэмэх', style: AppTextStyles.title),
           ),
           body: _invalidated
               ? const Center(
@@ -396,8 +400,12 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
                       const SizedBox(height: 16),
                       _field(_titleCtrl, 'Эвентийн нэр', maxLength: 120),
                       const SizedBox(height: 12),
-                      _tile(Icons.location_on_outlined,
-                          _venueName ?? 'Газар сонгох', _pickVenue),
+                      _tile(
+                          _venueName == null
+                              ? AppIcons.venue
+                              : AppIcons.venueActive,
+                          _venueName ?? 'Газар сонгох',
+                          _pickVenue),
                       const SizedBox(height: 12),
                       _tile(Icons.schedule, whenStr, _pickDateTime),
                       const SizedBox(height: 12),
@@ -414,7 +422,7 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
                         const SizedBox(height: 12),
                         Text(_error!,
                             style: AppTextStyles.bodyXs
-                                .copyWith(color: AppColors.error)),
+                                .copyWith(color: AppColors.danger)),
                       ],
                       const SizedBox(height: 20),
                       if (_status != null)
@@ -466,7 +474,7 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
                 child: Text(label,
                     style: AppTextStyles.bodyMd
                         .copyWith(color: AppColors.textPrimary))),
-            Icon(Icons.chevron_right, color: AppColors.textTertiary, size: 18),
+            Icon(AppIcons.forward, color: AppColors.textTertiary, size: 18),
           ])));
 }
 
@@ -592,106 +600,115 @@ class _VenuePickState extends State<_VenuePick> {
 
   @override
   Widget build(BuildContext context) => Padding(
-      padding: EdgeInsets.only(
-          bottom: MediaQuery.of(context).viewInsets.bottom,
-          left: 16,
-          right: 16,
-          top: 16),
+      padding:
+          EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
       child: SafeArea(
           top: false,
           child: Column(mainAxisSize: MainAxisSize.min, children: [
-            Text('Газар сонгох', style: AppTextStyles.labelLg),
-            const SizedBox(height: 12),
-            TextField(
-                autofocus: true,
-                onChanged: _search,
-                style:
-                    AppTextStyles.bodyMd.copyWith(color: AppColors.textPrimary),
-                decoration: InputDecoration(
-                    hintText: 'Хайх...',
-                    prefixIcon:
-                        Icon(Icons.search, color: AppColors.textTertiary),
-                    filled: true,
-                    fillColor: AppColors.bgSurface,
-                    isDense: true,
-                    border: OutlineInputBorder(
-                        borderRadius: AppRadii.mdR,
-                        borderSide: BorderSide.none))),
-            const SizedBox(height: 8),
-            SizedBox(
-                height: (MediaQuery.sizeOf(context).height -
-                        MediaQuery.viewInsetsOf(context).bottom -
-                        200)
-                    .clamp(100.0, 320.0),
-                child: _loading
-                    ? const Center(
-                        child: CircularProgressIndicator(
-                            color: AppColors.accentStart, strokeWidth: 2))
-                    : _failed
-                        ? Center(
-                            child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                Icon(Icons.wifi_off_outlined,
-                                    color: AppColors.textTertiary, size: 36),
-                                const SizedBox(height: 10),
-                                Text('Алдаа гарлаа — дахин оролдоно уу',
-                                    style: AppTextStyles.bodyMd.copyWith(
-                                        color: AppColors.textSecondary)),
-                                const SizedBox(height: 12),
-                                ElevatedButton(
-                                    onPressed: () => _run(_lastQ),
-                                    child: const Text('Дахин оролдох')),
-                              ]))
-                        : _r.isEmpty
+            // Бариулыг theme (showDragHandle) зурна — толгой шууд доор нь.
+            const AppSheetHeader(title: 'Газар сонгох'),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.page, 0, AppSpacing.page, AppSpacing.x3),
+              child: Column(mainAxisSize: MainAxisSize.min, children: [
+                TextField(
+                    autofocus: true,
+                    onChanged: _search,
+                    style: AppTextStyles.bodyMd
+                        .copyWith(color: AppColors.textPrimary),
+                    decoration: InputDecoration(
+                        hintText: 'Хайх...',
+                        prefixIcon: Icon(AppIcons.search,
+                            color: AppColors.textTertiary),
+                        filled: true,
+                        fillColor: AppColors.bgSurface,
+                        isDense: true,
+                        border: OutlineInputBorder(
+                            borderRadius: AppRadii.mdR,
+                            borderSide: BorderSide.none))),
+                const SizedBox(height: 8),
+                SizedBox(
+                    height: (MediaQuery.sizeOf(context).height -
+                            MediaQuery.viewInsetsOf(context).bottom -
+                            200)
+                        .clamp(100.0, 320.0),
+                    child: _loading
+                        // Sheet-ийн progressIndicatorTheme (accentText).
+                        ? const Center(
+                            child: CircularProgressIndicator(strokeWidth: 2))
+                        : _failed
                             ? Center(
-                                child: SingleChildScrollView(
-                                    padding: const EdgeInsets.all(20),
-                                    child: Column(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Text(
-                                              _lastQ.trim().isNotEmpty &&
-                                                      !_ownsNone
-                                                  ? 'Таны газруудаас тохирох газар олдсонгүй.'
-                                                  : 'Танд эзэмшдэг газар алга.\nЭхлээд "Бизнес самбар"-аас газраа нэмнэ үү.',
-                                              textAlign: TextAlign.center,
-                                              style: AppTextStyles.bodyMd
-                                                  .copyWith(
-                                                      color: AppColors
-                                                          .textSecondary)),
-                                          const SizedBox(height: 12),
-                                          OutlinedButton.icon(
-                                              key: const ValueKey(
-                                                  'event-open-business'),
-                                              onPressed: _openBusiness,
-                                              style: OutlinedButton.styleFrom(
-                                                  minimumSize:
-                                                      const Size(44, 48)),
-                                              icon: const Icon(
-                                                  Icons.storefront_outlined),
-                                              label: const Text(
-                                                  'Бизнес самбар нээх')),
-                                        ])))
-                            : ListView.builder(
-                                itemCount: _r.length,
-                                itemBuilder: (_, i) => ListTile(
-                                    leading: const Icon(Icons.location_on,
-                                        color: AppColors.accentStart),
-                                    mouseCursor: SystemMouseCursors.click,
-                                    title: Text(_r[i]['name'] as String? ?? '',
+                                child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                    Icon(Icons.wifi_off_outlined,
+                                        color: AppColors.textTertiary,
+                                        size: 36),
+                                    const SizedBox(height: 10),
+                                    Text('Алдаа гарлаа — дахин оролдоно уу',
                                         style: AppTextStyles.bodyMd.copyWith(
-                                            color: AppColors.textPrimary)),
-                                    onTap: () {
-                                      if (widget.session.isCurrent) {
-                                        Navigator.pop(context, _r[i]);
-                                      } else {
-                                        setState(() {
-                                          _failed = true;
-                                          _r = [];
-                                        });
-                                      }
-                                    }))),
-            const SizedBox(height: 12),
+                                            color: AppColors.textSecondary)),
+                                    const SizedBox(height: 12),
+                                    // Энэ төлөвийн цорын ганц үйлдэл — primary
+                                    GradientButton(
+                                        size: GradientButtonSize.md,
+                                        fullWidth: false,
+                                        label: 'Дахин оролдох',
+                                        onPressed: () => _run(_lastQ)),
+                                  ]))
+                            : _r.isEmpty
+                                ? Center(
+                                    child: SingleChildScrollView(
+                                        padding: const EdgeInsets.all(20),
+                                        child: Column(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Text(
+                                                  _lastQ.trim().isNotEmpty &&
+                                                          !_ownsNone
+                                                      ? 'Таны газруудаас тохирох газар олдсонгүй.'
+                                                      : 'Танд эзэмшдэг газар алга.\nЭхлээд "Бизнес самбар"-аас газраа нэмнэ үү.',
+                                                  textAlign: TextAlign.center,
+                                                  style: AppTextStyles.bodyMd
+                                                      .copyWith(
+                                                          color: AppColors
+                                                              .textSecondary)),
+                                              const SizedBox(height: 12),
+                                              // Secondary (DS-03) — агуулгынхаа
+                                              // өргөнтэй pill
+                                              OutlineButton(
+                                                  key: const ValueKey(
+                                                      'event-open-business'),
+                                                  size: GradientButtonSize.md,
+                                                  fullWidth: false,
+                                                  onPressed: _openBusiness,
+                                                  icon: const Icon(Icons
+                                                      .storefront_outlined),
+                                                  label: 'Бизнес самбар нээх'),
+                                            ])))
+                                : ListView.builder(
+                                    itemCount: _r.length,
+                                    itemBuilder: (_, i) => ListTile(
+                                        leading: Icon(AppIcons.venue,
+                                            color: AppColors.accentText),
+                                        mouseCursor: SystemMouseCursors.click,
+                                        title: Text(
+                                            _r[i]['name'] as String? ?? '',
+                                            style: AppTextStyles.bodyMd
+                                                .copyWith(
+                                                    color:
+                                                        AppColors.textPrimary)),
+                                        onTap: () {
+                                          if (widget.session.isCurrent) {
+                                            Navigator.pop(context, _r[i]);
+                                          } else {
+                                            setState(() {
+                                              _failed = true;
+                                              _r = [];
+                                            });
+                                          }
+                                        }))),
+              ]),
+            ),
           ])));
 }

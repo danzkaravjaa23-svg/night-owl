@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/app_text_styles.dart';
 
 /// Shared search input with a visible focus ring and an accessible clear action.
@@ -16,7 +17,7 @@ class SearchField extends StatefulWidget {
     super.key,
     required this.controller,
     required this.hint,
-    this.icon = Icons.search_rounded,
+    this.icon = AppIcons.search,
     this.onChanged,
     this.autofocus = false,
     this.showClear = true,

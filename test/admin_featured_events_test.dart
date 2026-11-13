@@ -7,6 +7,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:night_owl_ub/core/widgets/gradient_button.dart';
 import 'package:night_owl_ub/features/admin/screens/admin_featured_events_screen.dart';
 import 'package:night_owl_ub/features/auth/providers/auth_provider.dart';
 import 'package:night_owl_ub/features/events/providers/event_provider.dart';
@@ -113,18 +114,23 @@ void main() {
     await tester.pump();
     expect(find.text('Хадгалж байна…'), findsOneWidget);
     expect(service.selected, isEmpty, reason: 'No optimistic selection.');
-    expect(tester.widget<FilledButton>(first).onPressed, isNull);
-    expect(tester.widget<FilledButton>(second).onPressed, isNull);
+    // "Онцлох" is the card's primary action (DS-03).
+    expect(tester.widget<GradientButton>(first).onPressed, isNull);
+    expect(tester.widget<GradientButton>(first).busy, isTrue);
+    expect(tester.widget<GradientButton>(second).onPressed, isNull);
     expect(service.mutations, hasLength(1));
     service.pending!.complete();
     await tester.pumpAndSettle();
     expect(find.text('Онцлохоос хасах'), findsOneWidget);
     expect(service.selected, {'first'});
+    // Removing a featured event is the secondary action.
+    expect(tester.widget<OutlineButton>(first).onPressed, isNotNull);
 
     service.pending = Completer<void>();
     await tester.tap(first);
     await tester.pump();
     expect(service.selected, {'first'}, reason: 'No optimistic removal.');
+    expect(tester.widget<OutlineButton>(first).onPressed, isNull);
     service.pending!.complete();
     await tester.pumpAndSettle();
     expect(service.selected, isEmpty);
@@ -150,7 +156,7 @@ void main() {
         find.textContaining('Өөрчлөлтийг хадгалж чадсангүй.'), findsOneWidget);
     expect(service.selected, isEmpty);
     expect(find.text('Онцлохоос хасах'), findsNothing);
-    expect(tester.widget<FilledButton>(first).onPressed, isNotNull);
+    expect(tester.widget<GradientButton>(first).onPressed, isNotNull);
     service.pending = null;
     await tester.tap(first);
     await tester.pumpAndSettle();

@@ -5,9 +5,13 @@ import '../../auth/providers/auth_provider.dart';
 import '../../discovery/services/discovery_service.dart';
 import '../../../core/widgets/authorized_media.dart';
 import 'package:shimmer/shimmer.dart';
+import '../../../core/router/app_router.dart' show AppRoutes;
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../core/widgets/app_header.dart';
 import '../../../core/widgets/empty_state.dart';
+import '../../../core/widgets/gradient_button.dart';
 import '../../../core/widgets/network_video.dart';
 import '../../../core/services/supabase_service.dart';
 
@@ -114,33 +118,14 @@ class _SavedPostsScreenState extends ConsumerState<SavedPostsScreen> {
       body: SafeArea(
           child:
               Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        // ── Header — glass back + h1 гарчиг + тоо micro ──
-        Padding(
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
-          child: Row(children: [
-            MouseRegion(
-                cursor: SystemMouseCursors.click,
-                child: GestureDetector(
-                    behavior: HitTestBehavior.opaque,
-                    onTap: () => context.pop(),
-                    child: Container(
-                        width: 40,
-                        height: 40,
-                        decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: AppColors.bgElevated.withValues(alpha: 0.72),
-                            border: Border.all(color: AppColors.hairline)),
-                        child: Icon(Icons.arrow_back_ios_new,
-                            size: 16, color: AppColors.textPrimary)))),
-            const SizedBox(width: 14),
-            Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text('Хадгалсан', style: AppTextStyles.h1),
-              if (!_loading && !_error && _posts.isNotEmpty)
-                Text('${_posts.length} пост',
-                    style: AppTextStyles.bodyXs
-                        .copyWith(color: AppColors.textTertiary)),
-            ]),
-          ]),
+        // ── Header — AppHeader.title: буцах + гарчиг + постын тоо (DS-06).
+        // Pop хийх хуудасгүй (deep link) үед профайл руу буцна.
+        AppHeader.title(
+          title: 'Хадгалсан',
+          subtitle: !_loading && !_error && _posts.isNotEmpty
+              ? '${_posts.length} пост'
+              : null,
+          fallbackLocation: AppRoutes.profile,
         ),
 
         Expanded(
@@ -158,19 +143,20 @@ class _SavedPostsScreenState extends ConsumerState<SavedPostsScreen> {
                           style: AppTextStyles.bodyMd
                               .copyWith(color: AppColors.textSecondary)),
                       const SizedBox(height: 18),
-                      OutlinedButton(
+                      // Алдааны төлвийн primary CTA — мэдэгдэл, хайлтын
+                      // дэлгэцтэй ижил GradientButton (md) (DS-03)
+                      GradientButton(
+                        label: 'Дахин оролдох',
+                        size: GradientButtonSize.md,
+                        fullWidth: false,
                         onPressed: () {
                           setState(() => _loading = true);
                           _load();
                         },
-                        style: OutlinedButton.styleFrom(
-                            side: BorderSide(color: AppColors.hairline),
-                            foregroundColor: AppColors.accentStart),
-                        child: const Text('Дахин оролдох'),
                       ),
                     ]))
                   : RefreshIndicator(
-                      color: AppColors.accentStart,
+                      color: AppColors.accentText,
                       backgroundColor: AppColors.bgElevated,
                       onRefresh: _load,
                       child: _posts.isEmpty
@@ -183,9 +169,9 @@ class _SavedPostsScreenState extends ConsumerState<SavedPostsScreen> {
                                     height: MediaQuery.of(context).size.height *
                                         0.14),
                                 const EmptyState(
-                                  icon: Icons.bookmark_border_rounded,
+                                  icon: AppIcons.save,
                                   title: 'Хадгалсан пост алга',
-                                  subtitle: 'Постын 🔖 товч дарж хадгална',
+                                  subtitleWidget: _SaveHint(),
                                 ),
                               ],
                             )
@@ -247,7 +233,7 @@ class _SavedPostsScreenState extends ConsumerState<SavedPostsScreen> {
                           Container(color: AppColors.bgSurface),
                       errorWidget: (_, __, ___) => Container(
                           color: AppColors.bgSurface,
-                          child: Icon(Icons.image_not_supported_outlined,
+                          child: Icon(AppIcons.imageBroken,
                               color: AppColors.textTertiary)))
                 else if (isVideo && url != null)
                   // Видеоны эхний кадрыг cover болгож харуулна (+ play icon)
@@ -268,6 +254,31 @@ class _SavedPostsScreenState extends ConsumerState<SavedPostsScreen> {
       ),
     );
   }
+}
+
+// ─── Хоосон төлвийн тайлбар: "Постын [хадгалах icon] товч дарж хадгална" ───
+// Emoji-гийн оронд постын хадгалах товчны жинхэнэ icon (DS-09); EmptyState-ийн
+// дэд текстийн хэвтэй ижил. Дэлгэц уншигч icon-ыг "хадгалах" гэж уншина.
+class _SaveHint extends StatelessWidget {
+  const _SaveHint();
+
+  @override
+  Widget build(BuildContext context) => Text.rich(
+        TextSpan(children: [
+          const TextSpan(text: 'Постын '),
+          WidgetSpan(
+            alignment: PlaceholderAlignment.middle,
+            child: Icon(AppIcons.save,
+                size: 18,
+                color: AppColors.textSecondary,
+                semanticLabel: 'хадгалах'),
+          ),
+          const TextSpan(text: ' товч дарж хадгална'),
+        ]),
+        textAlign: TextAlign.center,
+        style: AppTextStyles.bodyMd
+            .copyWith(color: AppColors.textSecondary, height: 1.5),
+      );
 }
 
 // ─── Ачаалах skeleton — masonry хэвтэй ижил хэмнэл ───

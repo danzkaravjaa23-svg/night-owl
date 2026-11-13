@@ -6,9 +6,13 @@ import '../services/note_service.dart';
 import '../../post/services/content_publication.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_icons.dart';
+import '../../../core/theme/app_spacing.dart';
 import '../../../core/widgets/sculpted_icon.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/widgets/app_avatar.dart';
+import '../../../core/widgets/app_sheet.dart';
+import '../../../core/widgets/gradient_button.dart';
 import '../../../core/services/supabase_service.dart';
 
 /// Note үүссэн хугацааг "Xм/Xц/Xө өмнө" болгож харуулна
@@ -173,10 +177,10 @@ class NotesRowState extends State<NotesRow> {
   }
 
   Future<void> _openComposer() async {
-    // Өнгө, радиус, бариулыг bottomSheetTheme (showDragHandle) өгнө.
-    final saved = await showModalBottomSheet<bool>(
+    // showAppSheet (DS-02): root navigator дээр нээгдэж dock-ийг бүрхэнэ;
+    // өнгө, радиус, бариулыг bottomSheetTheme өгнө.
+    final saved = await showAppSheet<bool>(
       context: context,
-      isScrollControlled: true,
       builder: (_) => _NoteComposer(existing: _myNote),
     );
     if (saved == true && mounted) _load();
@@ -185,8 +189,10 @@ class NotesRowState extends State<NotesRow> {
   // Бусдын note-г бүрэн харуулах (текст + venue + Мессеж)
   void _showNoteDetail(Map<String, dynamic> n) {
     final username = (n['username'] as String).replaceAll('@', '');
-    // Бариулыг theme (showDragHandle) зурна — энд дахин зурахгүй.
-    showModalBottomSheet(
+    final ago = _noteTimeAgo(n['created_at'] as String?);
+    // Бариулыг theme зурна. Sheet-ийг зөвхөн sheetCtx-ээр хааж, дараа нь
+    // мөрийн context-оор чат руу шилжинэ.
+    showAppSheet<void>(
       context: context,
       builder: (sheetCtx) => SafeArea(
           top: false,
@@ -204,17 +210,13 @@ class NotesRowState extends State<NotesRow> {
                             : '?',
                         size: 40),
                     const SizedBox(width: 10),
+                    // Sheet-ийн гарчиг: зохиогч + хугацаа (AppSheetHeader-ийн
+                    // title/caption token, header semantics).
                     Expanded(
-                        child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                          Text('@$username', style: AppTextStyles.labelLg),
-                          if (_noteTimeAgo(n['created_at'] as String?)
-                              .isNotEmpty)
-                            Text(_noteTimeAgo(n['created_at'] as String?),
-                                style: AppTextStyles.bodyXs
-                                    .copyWith(color: AppColors.textTertiary)),
-                        ])),
+                        child: AppSheetHeader(
+                            title: '@$username',
+                            subtitle: ago.isEmpty ? null : ago,
+                            padding: EdgeInsets.zero)),
                   ]),
                   const SizedBox(height: 14),
                   // Бүрэн текст
@@ -231,8 +233,8 @@ class NotesRowState extends State<NotesRow> {
                   if (n['venue_name'] != null) ...[
                     const SizedBox(height: 10),
                     Row(children: [
-                      const SculptedIcon(Icons.location_on,
-                          size: 16, color: AppColors.amber),
+                      SculptedIcon(AppIcons.venue,
+                          size: 16, color: AppColors.warning),
                       const SizedBox(width: 6),
                       Expanded(
                           child: Text(n['venue_name'] as String,
@@ -241,28 +243,17 @@ class NotesRowState extends State<NotesRow> {
                     ]),
                   ],
                   const SizedBox(height: 18),
-                  _Pressable(
-                    onTap: () {
-                      Navigator.pop(sheetCtx);
+                  // Primary товч — нэгдсэн GradientButton (DS-03)
+                  GradientButton(
+                    label: 'Note-д хариулах',
+                    onPressed: () {
+                      Navigator.of(sheetCtx).pop();
                       final note = (n['text'] as String? ?? '').trim();
                       final q = note.isEmpty
                           ? ''
                           : '?note=${Uri.encodeComponent(note)}';
                       context.push('/dm/${n['user_id']}$q');
                     },
-                    // Primary товч — pill 52 + gradient glow
-                    child: Container(
-                        height: 52,
-                        width: double.infinity,
-                        decoration: BoxDecoration(
-                            gradient: AppColors.accentGradient,
-                            borderRadius: BorderRadius.circular(999),
-                            boxShadow:
-                                AppColors.glowShadow(AppColors.accentStart)),
-                        alignment: Alignment.center,
-                        child: Text('Note-д хариулах',
-                            style: AppTextStyles.btn
-                                .copyWith(color: Colors.white))),
                   ),
                 ]),
           )),
@@ -364,17 +355,20 @@ class _NoteBubble extends StatelessWidget {
                               : AppColors.textTertiary,
                           height: 1.15)),
                   if (venueName != null)
-                    Text('📍${venueName!}',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        // Шар өнгө цайвар бөмбөлөг дээр уншигдахгүй тул гэрэл горимд
-                        // бараан алтан; 9px → 11px (уншигдах доод хэмжээ).
-                        style: AppTextStyles.bodyXs.copyWith(
-                            color: AppColors.isDarkMode
-                                ? AppColors.amber
-                                : const Color(0xFF8A5A00),
-                            fontSize: 11,
-                            height: 1.2)),
+                    // Газрын тэмдэг — emoji биш AppIcons.venue (DS-09).
+                    // AppColors.warning: Night шар, Day бараан алтан (AA).
+                    Row(mainAxisSize: MainAxisSize.min, children: [
+                      Icon(AppIcons.venue, size: 12, color: AppColors.warning),
+                      const SizedBox(width: 2),
+                      Flexible(
+                          child: Text(venueName!,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: AppTextStyles.bodyXs.copyWith(
+                                  color: AppColors.warning,
+                                  fontSize: 11,
+                                  height: 1.2))),
+                    ]),
                 ]),
               ),
               const SizedBox(height: 2),
@@ -418,7 +412,7 @@ class _NoteBubble extends StatelessWidget {
                                     blurRadius: 10,
                                     spreadRadius: -1),
                               ]),
-                          child: const SculptedIcon(Icons.add,
+                          child: const SculptedIcon(AppIcons.add,
                               color: Colors.white, size: 12, onDark: true))),
               ]),
               const SizedBox(height: 2),
@@ -459,6 +453,11 @@ class _NoteComposerState extends ConsumerState<_NoteComposer> {
   String? _venueName;
   bool _busy = false;
   bool _stale = false;
+
+  /// Хадгалж/устгаж чадаагүй үеийн алдаа — sheet дотор, товчны дээр
+  /// харуулна (root sheet нээлттэй үед SnackBar sheet-ийн ДООР зурагддаг).
+  /// Дахин оролдоход арилна.
+  String? _error;
   late final NoteService _service;
   late final PublicationSession _session;
   StreamSubscription<void>? _auth;
@@ -493,10 +492,10 @@ class _NoteComposerState extends ConsumerState<_NoteComposer> {
 
   Future<void> _pickVenue() async {
     if (_busy || !_session.isCurrent) return;
-    // Өнгө, радиус, бариулыг bottomSheetTheme (showDragHandle) өгнө.
-    final v = await showModalBottomSheet<Map<String, dynamic>>(
+    // showAppSheet: composer-ийн дээр root navigator-т давхарлана; өнгө,
+    // радиус, бариулыг bottomSheetTheme өгнө.
+    final v = await showAppSheet<Map<String, dynamic>>(
       context: context,
-      isScrollControlled: true,
       builder: (ctx) {
         _pickerRoute = ModalRoute.of(ctx);
         return const _VenueSearchSheet();
@@ -519,20 +518,21 @@ class _NoteComposerState extends ConsumerState<_NoteComposer> {
     final text = _ctrl.text.trim();
     if (!deleting && text.isEmpty) return;
     final venue = _venueId;
-    setState(() => _busy = true);
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
     try {
       if (deleting) {
         await _service.delete(_session);
       } else {
         await _service.save(_session, text, venue);
       }
-      if (mounted && _session.isCurrent) Navigator.pop(context, true);
+      if (mounted && _session.isCurrent) Navigator.of(context).pop(true);
     } catch (_) {
       if (mounted && _session.isCurrent) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content:
-                Text('Өөрчлөлтийг баталгаажуулж чадсангүй. Дахин оролдоно уу.'),
-            backgroundColor: AppColors.error));
+        setState(() => _error =
+            'Өөрчлөлтийг баталгаажуулж чадсангүй. Дахин оролдоно уу.');
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -560,17 +560,22 @@ class _NoteComposerState extends ConsumerState<_NoteComposer> {
     return Padding(
       padding: EdgeInsets.only(
           bottom: MediaQuery.of(context).viewInsets.bottom + 16,
-          left: 16,
-          right: 16),
+          left: AppSpacing.page,
+          right: AppSpacing.page),
       child: SafeArea(
           top: false,
-          child: Column(mainAxisSize: MainAxisSize.min, children: [
-            Text('Note үлдээх', style: AppTextStyles.labelLg),
-            const SizedBox(height: 4),
-            Text('Найзууд чинь 24 цаг харна',
-                style: AppTextStyles.bodyXs
-                    .copyWith(color: AppColors.textSecondary)),
-            const SizedBox(height: 14),
+          // Багтахгүй үед (жижиг дэлгэц + гар + том фонт) агуулга гүйлгэгдэнэ;
+          // reverse тул алдаа ба "Хуваалцах" гарын яг дээр харагдсаар байна.
+          // Багтвал sheet агуулгынхаа өндөртэй хэвээр.
+          child: SingleChildScrollView(
+              reverse: true,
+              child: Column(mainAxisSize: MainAxisSize.min, children: [
+            // Sheet-ийн гарчгийн мөр (DS-02): гарчиг, талбар, товч бүгд
+            // хуудасны 20px gutter дээр.
+            const AppSheetHeader(
+                title: 'Note үлдээх',
+                subtitle: 'Найзууд чинь 24 цаг харна',
+                padding: EdgeInsetsDirectional.only(bottom: AppSpacing.x3)),
             TextField(
               controller: _ctrl,
               readOnly: _busy,
@@ -602,13 +607,13 @@ class _NoteComposerState extends ConsumerState<_NoteComposer> {
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
                         color: _venueName != null
-                            ? AppColors.accentStart
+                            ? AppColors.accentText
                             : AppColors.hairline)),
                 child: Row(children: [
-                  SculptedIcon(Icons.location_on_outlined,
+                  SculptedIcon(AppIcons.venue,
                       size: 18,
                       color: _venueName != null
-                          ? AppColors.accentStart
+                          ? AppColors.accentText
                           : AppColors.textSecondary),
                   const SizedBox(width: 8),
                   Expanded(
@@ -625,12 +630,21 @@ class _NoteComposerState extends ConsumerState<_NoteComposer> {
                                   _venueId = null;
                                   _venueName = null;
                                 }),
-                        child: SculptedIcon(Icons.close,
+                        child: SculptedIcon(AppIcons.close,
                             size: 16, color: AppColors.textTertiary)),
                 ]),
               ),
             ),
             const SizedBox(height: 16),
+            if (_error != null)
+              Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Semantics(
+                      liveRegion: true,
+                      child: Text(_error!,
+                          textAlign: TextAlign.center,
+                          style: AppTextStyles.bodySm
+                              .copyWith(color: AppColors.danger)))),
             Row(children: [
               if (editing)
                 Padding(
@@ -645,31 +659,15 @@ class _NoteComposerState extends ConsumerState<_NoteComposer> {
                                 borderRadius: BorderRadius.circular(999),
                                 border: Border.all(color: AppColors.hairline2)),
                             alignment: Alignment.center,
-                            child: const SculptedIcon(Icons.delete_outline,
-                                color: AppColors.error)))),
-              // Primary товч — pill 52 + gradient glow
+                            child: SculptedIcon(Icons.delete_outline,
+                                color: AppColors.danger)))),
+              // Primary товч — нэгдсэн GradientButton (DS-03); хүлээх үед
+              // owl + нэр хэвээр, давхар дарахыг өөрөө хаана.
               Expanded(
-                  child: _Pressable(
-                      onTap: _busy ? null : _save,
-                      child: Container(
-                          height: 52,
-                          decoration: BoxDecoration(
-                              gradient: AppColors.accentGradient,
-                              borderRadius: BorderRadius.circular(999),
-                              boxShadow:
-                                  AppColors.glowShadow(AppColors.accentStart)),
-                          alignment: Alignment.center,
-                          child: _busy
-                              ? const SizedBox(
-                                  width: 20,
-                                  height: 20,
-                                  child: CircularProgressIndicator(
-                                      color: Colors.white, strokeWidth: 2))
-                              : Text('Хуваалцах',
-                                  style: AppTextStyles.btn
-                                      .copyWith(color: Colors.white))))),
+                  child: GradientButton(
+                      label: 'Хуваалцах', busy: _busy, onPressed: _save)),
             ]),
-          ])),
+          ]))),
     );
   }
 }
@@ -717,13 +715,16 @@ class _VenueSearchSheetState extends State<_VenueSearchSheet> {
     return Padding(
       padding: EdgeInsets.only(
           bottom: MediaQuery.of(context).viewInsets.bottom,
-          left: 16,
-          right: 16),
+          left: AppSpacing.page,
+          right: AppSpacing.page),
       child: SafeArea(
           top: false,
           child: Column(mainAxisSize: MainAxisSize.min, children: [
-            Text('Газар сонгох', style: AppTextStyles.labelLg),
-            const SizedBox(height: 12),
+            // Sheet-ийн гарчгийн мөр (DS-02): гарчиг ба талбар хуудасны
+            // 20px gutter дээр.
+            const AppSheetHeader(
+                title: 'Газар сонгох',
+                padding: EdgeInsetsDirectional.only(bottom: AppSpacing.x3)),
             TextField(
               autofocus: true,
               onChanged: _search,
@@ -731,8 +732,8 @@ class _VenueSearchSheetState extends State<_VenueSearchSheet> {
                   AppTextStyles.bodyMd.copyWith(color: AppColors.textPrimary),
               decoration: InputDecoration(
                   hintText: 'Газар хайх...',
-                  prefixIcon:
-                      SculptedIcon(Icons.search, color: AppColors.textTertiary),
+                  prefixIcon: SculptedIcon(AppIcons.search,
+                      color: AppColors.textTertiary),
                   filled: true,
                   fillColor: AppColors.bgSurface,
                   isDense: true,
@@ -741,35 +742,40 @@ class _VenueSearchSheetState extends State<_VenueSearchSheet> {
                       borderSide: BorderSide.none)),
             ),
             const SizedBox(height: 8),
-            SizedBox(
-                height: 320,
-                child: _loading
-                    ? const Center(
-                        child: CircularProgressIndicator(
-                            color: AppColors.accentStart, strokeWidth: 2))
-                    : _results.isEmpty
+            // Зай байвал 320; жижиг дэлгэц дээр гар нээлттэй үед overflow
+            // болохын оронд жагсаалт намсна.
+            Flexible(
+                child: SizedBox(
+                    height: 320,
+                    child: _loading
                         ? Center(
-                            child: Text('Газар олдсонгүй',
-                                style: AppTextStyles.bodyMd
-                                    .copyWith(color: AppColors.textSecondary)))
-                        : ListView.builder(
-                            itemCount: _results.length,
-                            itemBuilder: (_, i) {
-                              final r = _results[i];
-                              return ListTile(
-                                leading: const SculptedIcon(Icons.location_on,
-                                    color: AppColors.accentStart),
-                                title: Text(r['name'] as String? ?? '',
+                            child: CircularProgressIndicator(
+                                color: AppColors.accentText, strokeWidth: 2))
+                        : _results.isEmpty
+                            ? Center(
+                                child: Text('Газар олдсонгүй',
                                     style: AppTextStyles.bodyMd.copyWith(
-                                        color: AppColors.textPrimary)),
-                                subtitle: r['district'] != null
-                                    ? Text(r['district'] as String,
-                                        style: AppTextStyles.bodyXs.copyWith(
-                                            color: AppColors.textSecondary))
-                                    : null,
-                                onTap: () => Navigator.pop(context, r),
-                              );
-                            })),
+                                        color: AppColors.textSecondary)))
+                            : ListView.builder(
+                                itemCount: _results.length,
+                                itemBuilder: (_, i) {
+                                  final r = _results[i];
+                                  return ListTile(
+                                    leading: SculptedIcon(AppIcons.venue,
+                                        color: AppColors.accentText),
+                                    title: Text(r['name'] as String? ?? '',
+                                        style: AppTextStyles.bodyMd.copyWith(
+                                            color: AppColors.textPrimary)),
+                                    subtitle: r['district'] != null
+                                        ? Text(r['district'] as String,
+                                            style: AppTextStyles.bodyXs
+                                                .copyWith(
+                                                    color: AppColors
+                                                        .textSecondary))
+                                        : null,
+                                    onTap: () => Navigator.of(context).pop(r),
+                                  );
+                                }))),
             const SizedBox(height: 12),
           ])),
     );

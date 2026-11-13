@@ -153,8 +153,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
             child: Column(
               children: [
                 // ── Дээд hero (~30%) — back chip + glyph + гарчиг ──
+                // GlassBack-ийн 44px хүрэх талбар дотор 40px диск — 18/8
+                // зайгаар диск хуучин байрандаа (20px gutter) үлдэнэ.
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 10, 20, 0),
+                  padding: const EdgeInsets.fromLTRB(18, 8, 18, 0),
                   child: Row(children: [
                     GlassBack(onTap: _back),
                     const Spacer(),
@@ -162,7 +164,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         style: AppTextStyles.monoSm.copyWith(
                             letterSpacing: 3, color: AppColors.textTertiary)),
                     const Spacer(),
-                    const SizedBox(width: 40),
+                    const SizedBox(width: 44),
                   ]),
                 ),
                 const SizedBox(height: 14),
@@ -275,7 +277,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
               const SizedBox(height: 36),
               GradientButton(
                 label: 'Нэвтрэх рүү очих',
-                borderRadius: 999,
                 onPressed: _toLogin,
               ),
             ],
@@ -409,7 +410,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 child: GradientButton(
                   label: _loading ? 'Бүртгэж байна...' : 'Бүртгэл үүсгэх',
                   onPressed: _authBusy ? null : _register,
-                  borderRadius: 999,
                   trailing: _loading
                       ? const BtnSpinner()
                       : const Icon(Icons.arrow_forward_rounded,
@@ -433,7 +433,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
               if (AppleSignInButton.isAvailable)
                 AppleSignInButton(
                   enabled: !_authBusy,
-                  borderRadius: 999,
                   onBusyChanged: (busy) {
                     if (mounted) setState(() => _aLoading = busy);
                   }),
@@ -503,10 +502,9 @@ class _GhostBtn extends StatelessWidget {
           ),
           child: TextButton(
             onPressed: onTap,
+            // Pill долгионыг theme өгнө (DS-03)
             style: TextButton.styleFrom(
               foregroundColor: AppColors.textPrimary,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(999)),
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,

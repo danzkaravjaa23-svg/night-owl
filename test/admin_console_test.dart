@@ -205,6 +205,33 @@ void main() {
         isNull);
     expect(service.actions, hasLength(1));
   });
+  testWidgets(
+      'records title shows once and destructive actions use danger colours',
+      (tester) async {
+    await render(tester, const AdminReportsScreen());
+    await tester.pumpAndSettle();
+    // DS-06: the header carries the page title; the intro does not repeat it.
+    expect(find.text('Мэдээллүүд'), findsOneWidget);
+    expect(find.byTooltip('Буцах'), findsOneWidget);
+    await tester.tap(find.byTooltip('Удирдах үйлдлүүд').first);
+    await tester.pumpAndSettle();
+    expect(tester.widget<Text>(find.text('Нийтлэлийг устгах')).style?.color,
+        AppColors.danger);
+    await tester.tap(find.text('Нийтлэлийг устгах'));
+    await tester.pumpAndSettle();
+    // DS-03: a destructive confirmation is white on the danger fill.
+    final style = tester
+        .widget<FilledButton>(
+            find.widgetWithText(FilledButton, 'Баталгаажуулах'))
+        .style;
+    expect(style?.backgroundColor?.resolve(<WidgetState>{}),
+        AppColors.dangerFill);
+    expect(style?.foregroundColor?.resolve(<WidgetState>{}), Colors.white);
+    await tester.tap(find.text('Болих'));
+    await tester.pumpAndSettle();
+    expect(find.byType(AlertDialog), findsNothing);
+    expect(service.actions, isEmpty);
+  });
   for (final dark in [true, false]) {
     for (final entry in const [
       ('dashboard', AdminPanelScreen()),

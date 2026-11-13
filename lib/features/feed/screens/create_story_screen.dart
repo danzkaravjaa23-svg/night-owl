@@ -11,9 +11,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_icons.dart';
+import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/services/supabase_service.dart';
 import '../../../core/widgets/app_avatar.dart';
+import '../../../core/widgets/app_sheet.dart';
+import '../../../core/widgets/glass_icon_button.dart';
+import '../../../core/widgets/gradient_button.dart';
 import '../../../core/utils/image_uploader.dart';
 import '../../../core/constants/stickers.dart';
 import '../../../core/constants/story_music.dart';
@@ -371,7 +376,11 @@ class _CreateStoryScreenState extends ConsumerState<CreateStoryScreen> {
                   TextButton(
                       onPressed: () => Navigator.pop(ctx, false),
                       child: const Text('Үргэлжлүүлэх')),
-                  TextButton(
+                  // Ноорог хаях баталгаа — dangerFill дээр цагаан (DS-03)
+                  FilledButton(
+                      style: FilledButton.styleFrom(
+                          backgroundColor: AppColors.dangerFill,
+                          foregroundColor: Colors.white),
                       onPressed: () => Navigator.pop(ctx, true),
                       child: const Text('Гарах'))
                 ],
@@ -551,9 +560,11 @@ class _CreateStoryScreenState extends ConsumerState<CreateStoryScreen> {
     // (зөвхөн story канвас өөрөө үргэлж харанхуй)
     final res = await showDialog<String>(
       context: context,
-      builder: (_) => AlertDialog(
+      // Диалогийг өөрийнх нь context-оор хаана — хуудасны context нь
+      // хуудсыг өөрийг нь pop хийж болзошгүй.
+      builder: (dialogContext) => AlertDialog(
         backgroundColor: AppColors.bgElevated,
-        title: Text('Текст', style: AppTextStyles.labelLg),
+        title: const Text('Текст'),
         content: TextField(
           controller: ctrl,
           autofocus: true,
@@ -565,10 +576,10 @@ class _CreateStoryScreenState extends ConsumerState<CreateStoryScreen> {
         ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(context),
+              onPressed: () => Navigator.of(dialogContext).pop(),
               child: const Text('Болих')),
           TextButton(
-              onPressed: () => Navigator.pop(context, ctrl.text),
+              onPressed: () => Navigator.of(dialogContext).pop(ctrl.text),
               child: const Text('Болсон')),
         ],
       ),
@@ -576,64 +587,70 @@ class _CreateStoryScreenState extends ConsumerState<CreateStoryScreen> {
     if (res != null && mounted && _canEdit) setState(() => _text = res);
   }
 
+  // Story-гийн sheet-үүд дээрх диалог шиг theme-ийг дагана. Агуулгын өнгийг
+  // sheet-ийн Theme-ээс авдаг тул `showAppSheet(dark: true)` болгоход ч зөв
+  // уншигдана. Хаахдаа ЗӨВХӨН sheet-ийн context-ийг хэрэглэнэ.
   Future<void> _pickSticker() async {
     if (!_canEdit) return;
-    final e = await showModalBottomSheet<String>(
+    final e = await showAppSheet<String>(
       context: context,
-      backgroundColor: AppColors.bgElevated,
-      isScrollControlled: true,
-      // useSafeArea нь зөвхөн дээд/хажуу талыг хамгаална; доорх SafeArea
-      // emoji-ийн сүүлийн мөрийг gesture/nav bar-ын дээр гаргана.
-      useSafeArea: true,
-      shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (_) => SafeArea(
+      // Доорх SafeArea emoji-ийн сүүлийн мөрийг gesture/nav bar-ын дээр
+      // гаргана (дээд талыг showAppSheet-ийн useSafeArea хамгаална).
+      builder: (sheetContext) => SafeArea(
           top: false,
           child: SingleChildScrollView(
-              child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('🦉 Owl stickers',
-                            style: AppTextStyles.labelMd
-                                .copyWith(color: AppColors.textPrimary)),
-                        const SizedBox(height: 10),
-                        Wrap(spacing: 8, runSpacing: 8, children: [
-                          for (final s in kOwlStickers)
-                            GestureDetector(
-                                onTap: () => Navigator.pop(context, s),
-                                child: Container(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 12, vertical: 10),
-                                    decoration: BoxDecoration(
-                                        gradient: AppColors.accentGradient,
-                                        borderRadius:
-                                            BorderRadius.circular(16)),
-                                    child: Text(s,
-                                        style: const TextStyle(
-                                            color: Colors.white,
-                                            fontSize: 14,
-                                            fontWeight: FontWeight.w700)))),
-                        ]),
-                        const SizedBox(height: 18),
-                        Text('Emoji',
-                            style: AppTextStyles.labelMd
-                                .copyWith(color: AppColors.textPrimary)),
-                        const SizedBox(height: 10),
-                        Wrap(
-                            spacing: 12,
-                            runSpacing: 12,
-                            alignment: WrapAlignment.center,
-                            children: _kStoryEmojis
-                                .map((s) => GestureDetector(
-                                    onTap: () => Navigator.pop(context, s),
-                                    child: Text(s,
-                                        style: const TextStyle(fontSize: 34))))
-                                .toList()),
-                        const SizedBox(height: 12),
-                      ])))),
+              child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                const AppSheetHeader(title: 'Owl stickers'),
+                Padding(
+                    padding: const EdgeInsets.fromLTRB(
+                        AppSpacing.page, 0, AppSpacing.page, AppSpacing.x4),
+                    child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Wrap(spacing: 8, runSpacing: 8, children: [
+                            for (final s in kOwlStickers)
+                              GestureDetector(
+                                  onTap: () =>
+                                      Navigator.of(sheetContext).pop(s),
+                                  child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 12, vertical: 10),
+                                      decoration: BoxDecoration(
+                                          gradient: AppColors.accentGradient,
+                                          borderRadius:
+                                              BorderRadius.circular(16)),
+                                      child: Text(s,
+                                          style: const TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.w700)))),
+                          ]),
+                          const SizedBox(height: 18),
+                          Text('Emoji',
+                              style: AppTextStyles.labelMd.copyWith(
+                                  color: Theme.of(sheetContext)
+                                      .colorScheme
+                                      .onSurface)),
+                          const SizedBox(height: 10),
+                          Wrap(
+                              spacing: 12,
+                              runSpacing: 12,
+                              alignment: WrapAlignment.center,
+                              children: _kStoryEmojis
+                                  .map((s) => GestureDetector(
+                                      onTap: () =>
+                                          Navigator.of(sheetContext).pop(s),
+                                      child: Text(s,
+                                          style:
+                                              const TextStyle(fontSize: 34))))
+                                  .toList()),
+                          const SizedBox(height: 12),
+                        ])),
+              ]))),
     );
     if (e != null && mounted && _canEdit) {
       setState(() => _text = isOwlSticker(e) ? e : '$_text$e');
@@ -664,12 +681,8 @@ class _CreateStoryScreenState extends ConsumerState<CreateStoryScreen> {
 
   Future<void> _pickMentions() async {
     if (!_canEdit) return;
-    final u = await showModalBottomSheet<Map<String, dynamic>>(
+    final u = await showAppSheet<Map<String, dynamic>>(
       context: context,
-      backgroundColor: AppColors.bgElevated,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (_) => const _PickerSheet(mode: _PickerMode.user),
     );
     if (u != null &&
@@ -683,37 +696,33 @@ class _CreateStoryScreenState extends ConsumerState<CreateStoryScreen> {
   // Хөгжмийн цуглуулга — дуу сонгох
   Future<void> _musicSheet() async {
     if (!_canEdit) return;
-    final picked = await showModalBottomSheet<int>(
+    final picked = await showAppSheet<int>(
       context: context,
-      backgroundColor: AppColors.bgElevated,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (_) => SafeArea(
-          child: Padding(
-              // Бариулыг theme (showDragHandle) зурна — энд дахин зурахгүй.
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-              child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(children: [
-                      const Text('🎵 ', style: TextStyle(fontSize: 18)),
-                      Text('Хөгжим',
-                          style: AppTextStyles.labelLg
-                              .copyWith(color: AppColors.textPrimary)),
-                      const Spacer(),
-                      if (_songTitle != null)
-                        GestureDetector(
-                            onTap: () => Navigator.pop(context, -1),
-                            child: Text('Хасах',
-                                style: AppTextStyles.bodySm
-                                    .copyWith(color: AppColors.error))),
-                    ]),
-                    const SizedBox(height: 8),
-                    ConstrainedBox(
+      builder: (sheetContext) {
+        final scheme = Theme.of(sheetContext).colorScheme;
+        return SafeArea(
+            top: false,
+            child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  AppSheetHeader(
+                      title: 'Хөгжим',
+                      trailing: _songTitle == null
+                          ? null
+                          : TextButton(
+                              style: TextButton.styleFrom(
+                                  foregroundColor: scheme.error),
+                              onPressed: () =>
+                                  Navigator.of(sheetContext).pop(-1),
+                              child: const Text('Хасах'))),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(
+                        AppSpacing.page, 0, AppSpacing.page, AppSpacing.x4),
+                    child: ConstrainedBox(
                       constraints: BoxConstraints(
-                          maxHeight: MediaQuery.of(context).size.height * 0.5),
+                          maxHeight:
+                              MediaQuery.sizeOf(sheetContext).height * 0.5),
                       child: ListView.separated(
                         shrinkWrap: true,
                         itemCount: kStorySongs.length,
@@ -724,7 +733,8 @@ class _CreateStoryScreenState extends ConsumerState<CreateStoryScreen> {
                           return GestureDetector(
                             onTap: () {
                               _previewSong(s); // даруй сонсгоно
-                              Navigator.pop(context, i); // сонгоод хаана
+                              // сонгоод хаана
+                              Navigator.of(sheetContext).pop(i);
                             },
                             child: Container(
                               padding: const EdgeInsets.symmetric(
@@ -733,12 +743,12 @@ class _CreateStoryScreenState extends ConsumerState<CreateStoryScreen> {
                                   color: sel
                                       ? AppColors.accentStart
                                           .withValues(alpha: 0.18)
-                                      : AppColors.bgSurface,
+                                      : scheme.surface,
                                   borderRadius: BorderRadius.circular(12),
                                   border: Border.all(
                                       color: sel
                                           ? AppColors.accentStart
-                                          : AppColors.hairline)),
+                                          : scheme.outlineVariant)),
                               child: Row(children: [
                                 Container(
                                     width: 38,
@@ -758,24 +768,27 @@ class _CreateStoryScreenState extends ConsumerState<CreateStoryScreen> {
                                           maxLines: 1,
                                           overflow: TextOverflow.ellipsis,
                                           style: AppTextStyles.bodyMd.copyWith(
-                                              color: AppColors.textPrimary,
+                                              color: scheme.onSurface,
                                               fontWeight: FontWeight.w600)),
                                       Text(s.artist,
                                           maxLines: 1,
                                           overflow: TextOverflow.ellipsis,
                                           style: AppTextStyles.bodyXs.copyWith(
-                                              color: AppColors.textSecondary)),
+                                              color: scheme.onSurfaceVariant)),
                                     ])),
                                 if (sel)
-                                  const Icon(Icons.check_circle,
-                                      color: AppColors.accentStart, size: 20),
+                                  // primary = текст/icon-ы accent (accentText)
+                                  Icon(Icons.check_circle,
+                                      color: scheme.primary, size: 20),
                               ]),
                             ),
                           );
                         },
                       ),
                     ),
-                  ]))),
+                  ),
+                ]));
+      },
     );
     if (picked == null || !mounted || !_canEdit) return;
     if (picked < 0) {
@@ -1107,8 +1120,12 @@ class _CreateStoryScreenState extends ConsumerState<CreateStoryScreen> {
             child: Align(
                 alignment: Alignment.topLeft,
                 child: Padding(
-                    padding: const EdgeInsets.all(8),
-                    child: _circleBtn(Icons.close, _requestClose)))),
+                    padding: const EdgeInsets.all(6),
+                    child: GlassIconButton(
+                        icon: AppIcons.close,
+                        onMedia: true,
+                        tooltip: 'Хаах',
+                        onTap: _requestClose)))),
 
         // Баруун toolbar
         SafeArea(
@@ -1152,7 +1169,11 @@ class _CreateStoryScreenState extends ConsumerState<CreateStoryScreen> {
                         message: _venueRef == null
                             ? 'Байршил нэмэх'
                             : 'Байршил солих',
-                        child: _toolBtn(Icons.location_on_outlined, _pickVenue,
+                        child: _toolBtn(
+                            _venueRef == null
+                                ? AppIcons.venue
+                                : AppIcons.venueActive,
+                            _pickVenue,
                             active: _venueRef != null)),
                   ]),
                 ))),
@@ -1308,7 +1329,7 @@ class _CreateStoryScreenState extends ConsumerState<CreateStoryScreen> {
                                   icon: Icon(
                                       _venueRef == null
                                           ? Icons.add_location_alt_outlined
-                                          : Icons.location_on_rounded,
+                                          : AppIcons.venueActive,
                                       size: 20),
                                   label: Text(
                                       _venueName ??
@@ -1325,7 +1346,7 @@ class _CreateStoryScreenState extends ConsumerState<CreateStoryScreen> {
                                           _venueRef = null;
                                           _venueName = null;
                                         }),
-                                icon: const Icon(Icons.close_rounded,
+                                icon: const Icon(AppIcons.close,
                                     color: Colors.white)),
                         ])),
                     if (_venueRef != null)
@@ -1359,40 +1380,19 @@ class _CreateStoryScreenState extends ConsumerState<CreateStoryScreen> {
                     if (_error != null)
                       Padding(
                           padding: const EdgeInsets.only(bottom: 8),
+                          // Үргэлж харанхуй канвас — danger-ийн Night утга
                           child: Text(_error!,
                               style: AppTextStyles.bodyXs
-                                  .copyWith(color: AppColors.error))),
-                    _Pressable(
-                      onTap: _busy ? null : _share,
-                      child: AnimatedOpacity(
-                          opacity: _busy ? 0.75 : 1,
-                          duration: const Duration(milliseconds: 150),
-                          child: Container(
-                              height: 50,
-                              width: double.infinity,
-                              decoration: BoxDecoration(
-                                  gradient: AppColors.accentGradient,
-                                  borderRadius: BorderRadius.circular(16)),
-                              alignment: Alignment.center,
-                              child: _busy
-                                  ? const SizedBox(
-                                      width: 22,
-                                      height: 22,
-                                      child: CircularProgressIndicator(
-                                          color: Colors.white, strokeWidth: 2))
-                                  : Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                          Text(
-                                              _pendingRow == null
-                                                  ? 'Story-д хуваалцах'
-                                                  : 'Дахин шалгах',
-                                              style: AppTextStyles.btn.copyWith(
-                                                  color: Colors.white)),
-                                          const SizedBox(width: 8),
-                                          const Icon(Icons.send_rounded,
-                                              color: Colors.white, size: 18),
-                                        ]))),
+                                  .copyWith(color: AppColors.dangerDark))),
+                    // Үндсэн үйлдэл — апп даяарх нэгдсэн primary товч (DS-03)
+                    GradientButton(
+                      label: _pendingRow == null
+                          ? 'Story-д хуваалцах'
+                          : 'Дахин шалгах',
+                      busy: _busy,
+                      onPressed: _share,
+                      trailing: const Icon(Icons.send_rounded,
+                          color: Colors.white, size: 18),
                     ),
                     const SizedBox(height: 6),
                     Text('24 цагийн дараа харагдахаа болино',
@@ -1411,10 +1411,11 @@ class _CreateStoryScreenState extends ConsumerState<CreateStoryScreen> {
           // Үргэлж харанхуй — light горимд ч статус бар цайвар дүрстэй
           systemOverlayStyle: SystemUiOverlayStyle.light,
           leading: IconButton(
+              tooltip: 'Хаах',
               onPressed: _requestClose,
-              icon: const Icon(Icons.close, color: Colors.white)),
+              icon: const Icon(AppIcons.close, color: Colors.white)),
           title: Text('Шинэ story',
-              style: AppTextStyles.labelLg.copyWith(color: Colors.white)),
+              style: AppTextStyles.title.copyWith(color: Colors.white)),
         ),
         body: Center(
             child: Column(mainAxisSize: MainAxisSize.min, children: [
@@ -1455,15 +1456,6 @@ class _CreateStoryScreenState extends ConsumerState<CreateStoryScreen> {
                     style: AppTextStyles.bodyXs.copyWith(color: Colors.white)),
               ])));
 
-  Widget _circleBtn(IconData icon, VoidCallback onTap) => _Pressable(
-      onTap: onTap,
-      child: Container(
-          width: 38,
-          height: 38,
-          decoration: const BoxDecoration(
-              shape: BoxShape.circle, color: Colors.black38),
-          child: Icon(icon, color: Colors.white, size: 22)));
-
   Widget _toolBtn(IconData icon, VoidCallback onTap, {bool active = false}) =>
       _toolBtnChild(Icon(icon, color: Colors.white, size: 22), onTap,
           active: active);
@@ -1499,7 +1491,8 @@ class _CreateStoryScreenState extends ConsumerState<CreateStoryScreen> {
                 onTap: _canEdit ? onClear : null,
                 child: const Padding(
                     padding: EdgeInsets.all(3),
-                    child: Icon(Icons.close, color: Colors.white60, size: 14))),
+                    child:
+                        Icon(AppIcons.close, color: Colors.white60, size: 14))),
           ]));
 }
 
@@ -1610,82 +1603,95 @@ class _PickerSheetState extends State<_PickerSheet> {
   @override
   Widget build(BuildContext context) {
     final isVenue = widget.mode == _PickerMode.venue;
+    // Өнгийг sheet-ийн Theme-ээс авна — dark sheet-д ч зөв уншигдана
+    // (primary = текст/icon-ы accent).
+    final scheme = Theme.of(context).colorScheme;
     return Padding(
-      padding: EdgeInsets.only(
-          bottom: MediaQuery.of(context).viewInsets.bottom,
-          left: 16,
-          right: 16),
+      padding:
+          EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
       // Бариулыг theme (showDragHandle) зурна — энд дахин зурахгүй.
-      child: Column(mainAxisSize: MainAxisSize.min, children: [
-        Text(isVenue ? 'Байршил сонгох' : 'Хүн тэмдэглэх',
-            style: AppTextStyles.labelLg),
-        const SizedBox(height: 12),
-        TextField(
-          controller: _searchCtrl, autofocus: true,
-          style: AppTextStyles.bodyMd.copyWith(color: AppColors.textPrimary),
-          // Keystroke бүрт биш — 300мс debounce-тэй хайна
-          onChanged: _onQueryChanged,
-          decoration: InputDecoration(
-              hintText: isVenue ? 'Газар хайх...' : '@ хэрэглэгч хайх...',
-              prefixIcon: Icon(Icons.search, color: AppColors.textTertiary),
-              filled: true,
-              fillColor: AppColors.bgSurface,
-              isDense: true,
-              border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none)),
-        ),
-        const SizedBox(height: 8),
-        SizedBox(
-          height: 340,
-          child: _loading
-              ? const Center(
-                  child: CircularProgressIndicator(
-                      color: AppColors.accentStart, strokeWidth: 2))
-              : _results.isEmpty
-                  ? Center(
-                      child: Text(
-                          _failed
-                              ? 'Сүлжээний алдаа. Дахин оролдоно уу.'
-                              : isVenue
-                                  ? 'Газар олдсонгүй'
-                                  : 'Хэрэглэгч олдсонгүй',
-                          textAlign: TextAlign.center,
-                          style: AppTextStyles.bodyMd
-                              .copyWith(color: AppColors.textSecondary)))
-                  : ListView.builder(
-                      itemCount: _results.length,
-                      itemBuilder: (_, i) {
-                        final r = _results[i];
-                        if (isVenue) {
-                          return ListTile(
-                            leading: const Icon(Icons.location_on,
-                                color: AppColors.accentStart),
-                            title: Text(r['name'] as String? ?? '',
-                                style: AppTextStyles.bodyMd
-                                    .copyWith(color: AppColors.textPrimary)),
-                            subtitle: r['district'] != null
-                                ? Text(r['district'] as String,
-                                    style: AppTextStyles.bodyXs.copyWith(
-                                        color: AppColors.textSecondary))
-                                : null,
-                            onTap: () => Navigator.pop(context, r),
-                          );
-                        }
-                        final uname = (r['username'] as String? ?? 'User')
-                            .replaceAll('@', '');
-                        return ListTile(
-                          leading: AppAvatar(
-                              imageUrl: r['avatar_url'] as String?, size: 40),
-                          title: Text('@$uname',
-                              style: AppTextStyles.bodyMd
-                                  .copyWith(color: AppColors.textPrimary)),
-                          onTap: () => Navigator.pop(context, r),
-                        );
-                      }),
-        ),
-        const SizedBox(height: 12),
-      ]),
+      child: SafeArea(
+        top: false,
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          AppSheetHeader(title: isVenue ? 'Байршил сонгох' : 'Хүн тэмдэглэх'),
+          // Зай байвал жагсаалт 340; жижиг дэлгэц дээр гар нээлттэй үед
+          // overflow болохын оронд намсна.
+          Flexible(
+              child: Padding(
+            padding: const EdgeInsets.fromLTRB(
+                AppSpacing.page, 0, AppSpacing.page, AppSpacing.x3),
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              TextField(
+                controller: _searchCtrl, autofocus: true,
+                style: AppTextStyles.bodyMd.copyWith(color: scheme.onSurface),
+                // Keystroke бүрт биш — 300мс debounce-тэй хайна
+                onChanged: _onQueryChanged,
+                decoration: InputDecoration(
+                    hintText: isVenue ? 'Газар хайх...' : '@ хэрэглэгч хайх...',
+                    prefixIcon: Icon(AppIcons.search, color: scheme.outline),
+                    filled: true,
+                    fillColor: scheme.surface,
+                    isDense: true,
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none)),
+              ),
+              const SizedBox(height: 8),
+              Flexible(
+                  child: SizedBox(
+                height: 340,
+                child: _loading
+                    // Sheet-ийн progressIndicatorTheme (accentText).
+                    ? const Center(
+                        child: CircularProgressIndicator(strokeWidth: 2))
+                    : _results.isEmpty
+                        ? Center(
+                            child: Text(
+                                _failed
+                                    ? 'Сүлжээний алдаа. Дахин оролдоно уу.'
+                                    : isVenue
+                                        ? 'Газар олдсонгүй'
+                                        : 'Хэрэглэгч олдсонгүй',
+                                textAlign: TextAlign.center,
+                                style: AppTextStyles.bodyMd.copyWith(
+                                    color: scheme.onSurfaceVariant)))
+                        : ListView.builder(
+                            itemCount: _results.length,
+                            itemBuilder: (_, i) {
+                              final r = _results[i];
+                              if (isVenue) {
+                                return ListTile(
+                                  leading: Icon(AppIcons.venue,
+                                      color: scheme.primary),
+                                  title: Text(r['name'] as String? ?? '',
+                                      style: AppTextStyles.bodyMd
+                                          .copyWith(color: scheme.onSurface)),
+                                  subtitle: r['district'] != null
+                                      ? Text(r['district'] as String,
+                                          style: AppTextStyles.bodyXs.copyWith(
+                                              color: scheme.onSurfaceVariant))
+                                      : null,
+                                  onTap: () => Navigator.of(context).pop(r),
+                                );
+                              }
+                              final uname =
+                                  (r['username'] as String? ?? 'User')
+                                      .replaceAll('@', '');
+                              return ListTile(
+                                leading: AppAvatar(
+                                    imageUrl: r['avatar_url'] as String?,
+                                    size: 40),
+                                title: Text('@$uname',
+                                    style: AppTextStyles.bodyMd
+                                        .copyWith(color: scheme.onSurface)),
+                                onTap: () => Navigator.of(context).pop(r),
+                              );
+                            }),
+              )),
+            ]),
+          )),
+        ]),
+      ),
     );
   }
 }

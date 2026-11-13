@@ -723,6 +723,14 @@ void main() {
     await tester.tap(find.text('Групп үүсгэх (2)'));
     await tester.pumpAndSettle();
     expect(find.text('Групп үүсгэж чадсангүй'), findsOneWidget);
+    // The sheet stays open on the root navigator, where a SnackBar would be
+    // painted under it: the failure is shown inside the sheet instead.
+    expect(
+        find.descendant(
+            of: find.byType(BottomSheet),
+            matching: find.text('Групп үүсгэж чадсангүй')),
+        findsOneWidget);
+    expect(find.byType(SnackBar), findsNothing);
     expect(find.text('Destination'), findsNothing);
     expect(
         requests.where((r) =>

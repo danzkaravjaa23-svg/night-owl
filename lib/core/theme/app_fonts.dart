@@ -3,6 +3,10 @@ import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 /// The fonts used by the app and story editor ship with every build.
+///
+/// Inter is a pubspec font family (five real weights) that the engine
+/// registers at launch. google_fonts only serves JetBrains Mono and the story
+/// fonts, from the same bundled assets and never from the network.
 abstract final class AppFonts {
   static bool _licensesRegistered = false;
 

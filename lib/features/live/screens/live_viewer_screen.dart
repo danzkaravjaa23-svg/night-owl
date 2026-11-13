@@ -6,9 +6,12 @@ import 'package:flutter/services.dart' show SystemUiOverlayStyle;
 import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_avatar.dart';
+import '../../../core/widgets/glass_icon_button.dart';
+import '../../../core/widgets/gradient_button.dart';
 import '../../../core/services/supabase_service.dart';
 import '../utils/live_unload.dart';
 import '../widgets/tap_scale.dart';
@@ -239,8 +242,11 @@ class _LiveViewerScreenState extends State<LiveViewerScreen> {
     } catch (_) {
       if (mounted) {
         _ctrl.text = text;
+        // dangerFill дээр цагаан текст (Day-ийн SnackBar текст бараан тул).
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Илгээж чадсангүй'), backgroundColor: AppColors.error));
+          content: Text('Илгээж чадсангүй',
+              style: TextStyle(color: Colors.white)),
+          backgroundColor: AppColors.dangerFill));
       }
     }
   }
@@ -304,17 +310,12 @@ class _LiveViewerScreenState extends State<LiveViewerScreen> {
                       style: AppTextStyles.bodyMd.copyWith(
                         color: AppColors.textSecondaryDark)),
                     const SizedBox(height: 14),
-                    TapScale(
-                      onTap: _load,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 20, vertical: 10),
-                        decoration: BoxDecoration(
-                          gradient: AppColors.accentGradient,
-                          borderRadius: BorderRadius.circular(22)),
-                        child: Text('Дахин оролдох',
-                          style: AppTextStyles.btnSm.copyWith(
-                            color: Colors.white)))),
+                    // Primary товч (DS-03) — гараар хийсэн gradient pill-ийн оронд
+                    GradientButton(
+                      label: 'Дахин оролдох',
+                      size: GradientButtonSize.md,
+                      fullWidth: false,
+                      onPressed: _load),
                   ])
                 : Column(key: const ValueKey('info'),
                     mainAxisSize: MainAxisSize.min, children: [
@@ -328,8 +329,18 @@ class _LiveViewerScreenState extends State<LiveViewerScreen> {
                     else ...[
                       Text(username.replaceAll('@', ''), style: AppTextStyles.h2.onDark),
                       const SizedBox(height: 6),
-                      Text('🔴 Шууд дамжуулж байна',
-                        style: AppTextStyles.bodyMd.copyWith(color: AppColors.textSecondaryDark)),
+                      // Шууд дамжуулалтын шошго — emoji биш жижиг улаан цэг (DS-09)
+                      Row(mainAxisSize: MainAxisSize.min, children: [
+                        Container(
+                          width: 8, height: 8,
+                          decoration: const BoxDecoration(
+                            color: AppColors.dangerFill,
+                            shape: BoxShape.circle)),
+                        const SizedBox(width: 6),
+                        Flexible(child: Text('Шууд дамжуулж байна',
+                          style: AppTextStyles.bodyMd.copyWith(
+                            color: AppColors.textSecondaryDark))),
+                      ]),
                       const SizedBox(height: 6),
                       // Видео дамжуулалт (WebRTC) хараахан залгагдаагүй тул
                       // хэрэглэгчид чат горимд байгааг илэн далангүй мэдэгдэнэ
@@ -348,19 +359,16 @@ class _LiveViewerScreenState extends State<LiveViewerScreen> {
         SafeArea(child: Padding(
           padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
           child: Row(children: [
-            // Буцах — шилэн дугуй товч
-            TapScale(
-              onTap: _back,
-              child: Container(
-                width: 40, height: 40,
-                margin: const EdgeInsets.only(right: 8),
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: AppColors.bgElevatedDark.withValues(alpha: 0.72),
-                  border: Border.all(color: AppColors.hairline2Dark)),
-                alignment: Alignment.center,
-                child: const Icon(Icons.arrow_back_ios_new,
-                  color: Colors.white, size: 18))),
+            // Буцах — апп-ын нэгдсэн шилэн товч (DS-06), видео дээр onMedia.
+            // 44px хүрэх талбар нь 40px дискийг 2px-ээр тойрно → дараагийн
+            // элемент хүртэл диск хооронд 8px хэвээр.
+            GlassIconButton(
+              icon: AppIcons.back,
+              iconSize: 24,
+              onMedia: true,
+              tooltip: 'Буцах',
+              onTap: _back),
+            const SizedBox(width: 6),
             if (_loading) ...[
               // Skeleton — profile ирэхээс өмнө '?' аватар анивчихгүй
               const _BarSkeleton(width: 34, height: 34, radius: 17),
@@ -502,7 +510,7 @@ class _LiveViewerScreenState extends State<LiveViewerScreen> {
                         shape: BoxShape.circle,
                         gradient: AppColors.accentGradient,
                         boxShadow: AppColors.glowShadow(AppColors.accentStart)),
-                      child: const Icon(Icons.send_rounded,
+                      child: const Icon(AppIcons.send,
                         color: Colors.white, size: 18))),
                 ])),
             ]),
@@ -558,15 +566,16 @@ class _LivePillState extends State<_LivePill>
           color: Colors.white24,
           borderRadius: BorderRadius.circular(999)),
         child: const Text('ДУУССАН', style: TextStyle(
-          color: Colors.white, fontSize: 11, fontWeight: FontWeight.w900,
+          color: Colors.white, fontSize: 11, fontWeight: FontWeight.w800,
           letterSpacing: 0.6)));
     }
+    // Цагаан текстийн ард dangerFill (4.96:1; хуучин #FF3B30 нь 3.5:1 байв)
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: const Color(0xFFFF3B30),
+        color: AppColors.dangerFill,
         borderRadius: BorderRadius.circular(999),
-        boxShadow: AppColors.glowShadow(const Color(0xFFFF3B30),
+        boxShadow: AppColors.glowShadow(AppColors.dangerFill,
             alpha: 0.5, blur: 14, offset: Offset.zero)),
       child: Row(mainAxisSize: MainAxisSize.min, children: [
         FadeTransition(
@@ -577,7 +586,7 @@ class _LivePillState extends State<_LivePill>
               color: Colors.white, shape: BoxShape.circle))),
         const SizedBox(width: 5),
         const Text('LIVE', style: TextStyle(
-          color: Colors.white, fontSize: 11, fontWeight: FontWeight.w900,
+          color: Colors.white, fontSize: 11, fontWeight: FontWeight.w800,
           letterSpacing: 0.8)),
       ]));
   }
@@ -616,7 +625,7 @@ class _PulseAvatarState extends State<_PulseAvatar>
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               border: Border.all(
-                color: const Color(0xFFFF3B30).withValues(alpha: (1 - t) * 0.6),
+                color: AppColors.dangerFill.withValues(alpha: (1 - t) * 0.6),
                 width: 2)));
         }),
       AppAvatar(imageUrl: widget.avatarUrl, initial: widget.initial,

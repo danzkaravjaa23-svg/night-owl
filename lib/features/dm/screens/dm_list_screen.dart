@@ -3,14 +3,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../auth/providers/auth_provider.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_icons.dart';
 import '../../../core/widgets/sculpted_icon.dart';
 import '../../../core/widgets/theme_toggle_button.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/widgets/app_avatar.dart';
+import '../../../core/widgets/app_header.dart';
+import '../../../core/widgets/app_sheet.dart';
 import '../../../core/widgets/glass_icon_button.dart';
 import '../../../core/widgets/owl_loading.dart';
 import '../../../core/widgets/skeleton.dart';
-import '../../../core/widgets/premium_surface.dart';
 import '../../../core/widgets/empty_state.dart' as states;
 import '../../../core/services/supabase_service.dart';
 import '../../../core/services/legacy_rpc_fallback.dart';
@@ -292,53 +294,32 @@ class _DmListScreenState extends State<_AccountDmList> {
 
     return Scaffold(
       backgroundColor: AppColors.bgBase,
+      // ── Header — апп даяарх нэгдсэн AppHeader (DS-06): гарчиг + шинэ
+      // мессежийн тоо, гэрэл нь status bar-ын доогуур үргэлжилнэ. Tab ч,
+      // feed-ээс push хийсэн ч болдог тул буцах товч зөвхөн доор нь хуудас
+      // байвал (AppBar-ийн дүрэм; root дээрх sheet тооцогдохгүй).
+      appBar: AppHeader.title(
+        title: 'Мессеж',
+        subtitle:
+            unreadCount > 0 ? '$unreadCount шинэ' : 'Яриагаа үргэлжлүүлээрэй',
+        subtitleColor: AppColors.accentText,
+        showBack: ModalRoute.canPopOf(context) ?? false,
+        atmosphere: true,
+        actions: [
+          const ThemeToggleButton(),
+          GlassIconButton(
+              icon: Icons.group_add_outlined,
+              iconSize: 21,
+              tooltip: 'Групп чат үүсгэх',
+              onTap: _newGroup),
+        ],
+      ),
       body: SafeArea(
+          top: false,
           child: Column(children: [
-        // ── Header — том "Чат" гарчиг + шилэн дугуй үйлдлүүд ──
-        NightOwlAtmosphere(
-            child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 18, 20, 14),
-          child: Row(children: [
-            if (context.canPop()) ...[
-              GlassIconButton(
-                  icon: Icons.chevron_left_rounded,
-                  iconSize: 24,
-                  tooltip: 'Буцах',
-                  onTap: () => context.pop()),
-              const SizedBox(width: 8),
-            ],
-            Expanded(
-                child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text('Мессеж',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: AppTextStyles.h1),
-                Text(
-                    unreadCount > 0
-                        ? '$unreadCount шинэ'
-                        : 'Яриагаа үргэлжлүүлээрэй',
-                    style: AppTextStyles.bodySm.copyWith(
-                        color: AppColors.neonCyan,
-                        fontWeight: FontWeight.w500,
-                        fontSize: 12)),
-              ],
-            )),
-            const ThemeToggleButton(),
-            const SizedBox(width: 4),
-            GlassIconButton(
-                icon: Icons.group_add_outlined,
-                iconSize: 21,
-                tooltip: 'Групп чат үүсгэх',
-                onTap: _newGroup),
-          ]),
-        )),
-
         // ── Search — апп даяарх нэгдсэн шилэн pill талбар (48) ──
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
+          padding: const EdgeInsets.fromLTRB(20, 4, 20, 0),
           child: SearchField(
               controller: _searchCtrl,
               onChanged: (v) => setState(() => _search = v.trim()),
@@ -349,7 +330,7 @@ class _DmListScreenState extends State<_AccountDmList> {
         // ── Бүх контент НЭГ scroll дотор — notes rail + шилэн section картууд ──
         Expanded(
             child: RefreshIndicator(
-          color: AppColors.accentStart,
+          color: AppColors.accentText,
           backgroundColor: AppColors.bgElevated,
           onRefresh: _load,
           child: ListView(
@@ -500,8 +481,9 @@ class _ConvoTileState extends State<_ConvoTile> {
     } catch (_) {
       if (context.mounted && _active) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text('Амжилтгүй боллоо. Дахин оролдоно уу.'),
-            backgroundColor: AppColors.error));
+            content: Text('Амжилтгүй боллоо. Дахин оролдоно уу.',
+                style: TextStyle(color: Colors.white)),
+            backgroundColor: AppColors.dangerFill));
       }
     } finally {
       if (_active) setState(() => _readInFlight = false);
@@ -511,19 +493,13 @@ class _ConvoTileState extends State<_ConvoTile> {
   void _showOptions(
       BuildContext context, String partnerId, String username, bool isRead) {
     if (!_active || _readInFlight) return;
-    // Бариулыг theme (showDragHandle) зурна — энд дахин зурахгүй.
-    showModalBottomSheet(
+    // Root navigator дээр нээгдэж dock-ийг бүрхэнэ (DS-02). Sheet-ийг зөвхөн
+    // өөрийнх нь sheetCtx-ээр хаана; дараагийн үйлдэл нь мөрийн context-оор.
+    showAppSheet<void>(
       context: context,
       builder: (sheetCtx) => SafeArea(
           child: Column(mainAxisSize: MainAxisSize.min, children: [
-        Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Row(children: [
-              Expanded(
-                  child: Text(username.replaceAll('@', ''),
-                      style: AppTextStyles.labelLg)),
-            ])),
-        const SizedBox(height: 8),
+        AppSheetHeader(title: username.replaceAll('@', '')),
         if (!isRead)
           _OptTile(
               icon: Icons.mark_chat_read_outlined,
@@ -543,7 +519,7 @@ class _ConvoTileState extends State<_ConvoTile> {
                 if (context.mounted && _active) onChanged();
               }),
         _OptTile(
-            icon: Icons.chat_bubble_outline,
+            icon: AppIcons.message,
             label: 'Чат нээх',
             onTap: () {
               Navigator.pop(sheetCtx);
@@ -552,7 +528,7 @@ class _ConvoTileState extends State<_ConvoTile> {
               }
             }),
         _OptTile(
-            icon: Icons.person_outline,
+            icon: AppIcons.profile,
             label: 'Профайл харах',
             onTap: () {
               Navigator.pop(sheetCtx);
@@ -659,7 +635,7 @@ class _ConvoTileState extends State<_ConvoTile> {
                             fontSize: 12,
                             color: isRead
                                 ? AppColors.textSecondary
-                                : AppColors.accentStart,
+                                : AppColors.accentText,
                             fontWeight:
                                 isRead ? FontWeight.w400 : FontWeight.w600)),
                     const SizedBox(height: 5),
@@ -725,9 +701,7 @@ class _EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => states.EmptyState(
-        icon: isSearching
-            ? Icons.search_off_rounded
-            : Icons.chat_bubble_outline_rounded,
+        icon: isSearching ? Icons.search_off_rounded : AppIcons.message,
         title: isSearching ? 'Тохирох мессеж олдсонгүй' : 'Мессеж алга байна',
         subtitle: isSearching
             ? 'Хэрэглэгчийн нэр эсвэл мессежийн өөр үгээр хайгаарай.'
@@ -735,8 +709,7 @@ class _EmptyState extends StatelessWidget {
         action: TextButton.icon(
           onPressed:
               isSearching ? onClearSearch : () => context.push('/search'),
-          icon: Icon(isSearching ? Icons.close_rounded : Icons.search_rounded,
-              size: 20),
+          icon: Icon(isSearching ? AppIcons.close : AppIcons.search, size: 20),
           label: Text(isSearching ? 'Хайлтыг цэвэрлэх' : 'Хүн хайх'),
         ),
       );
@@ -790,7 +763,7 @@ class _RefreshError extends StatelessWidget {
                       onPressed: onRetry,
                       child: Text('Дахин оролдох',
                           style: AppTextStyles.btnSm
-                              .copyWith(color: AppColors.accentStart))),
+                              .copyWith(color: AppColors.accentText))),
                 ])),
           ]),
         ),
@@ -916,7 +889,7 @@ class _GroupTile extends StatelessWidget {
                         .copyWith(color: AppColors.textSecondary)),
               ])),
           const SizedBox(width: 10),
-          SculptedIcon(Icons.chevron_right,
+          SculptedIcon(AppIcons.forward,
               color: AppColors.textTertiary, size: 20),
         ]),
       ),

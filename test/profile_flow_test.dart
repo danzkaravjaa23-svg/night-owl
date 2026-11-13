@@ -12,6 +12,7 @@ import 'package:image/image.dart' as image;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:night_owl_ub/core/theme/app_colors.dart';
+import 'package:night_owl_ub/core/theme/app_icons.dart';
 import 'package:night_owl_ub/features/feed/providers/stories_provider.dart';
 import 'package:night_owl_ub/features/profile/screens/profile_screen.dart';
 
@@ -369,6 +370,34 @@ void main() {
     expect(find.text('Устгагдлаа'), findsNothing);
     expect(requests.where((r) => r.url.path.startsWith('/storage/')), isEmpty);
     expect(tiles(), findsNothing);
+  });
+
+  testWidgets(
+      'profile actions sheet uses shared icons and closes with its own context',
+      (tester) async {
+    await render(tester);
+    await tester.tap(find.byTooltip('Профайлын үйлдлүүд'));
+    await tester.pumpAndSettle();
+    final sheet = find.byType(BottomSheet);
+    expect(sheet, findsOneWidget);
+    for (final icon in [AppIcons.share, AppIcons.message, AppIcons.save]) {
+      expect(find.descendant(of: sheet, matching: find.byIcon(icon)),
+          findsOneWidget);
+    }
+    // The action pops only the sheet; the invite sheet then opens from the
+    // profile page (DS-02 root sheets).
+    await tester.tap(find.text('Найзаа урих'));
+    await tester.pumpAndSettle();
+    expect(find.byType(BottomSheet), findsOneWidget);
+    expect(find.text('Профайл хуваалцах'), findsNothing);
+    expect(
+        find.text('Урилгын холбоосоо найзууддаа илгээгээрэй'), findsOneWidget);
+    // Dismissing the invite sheet leaves the profile page in place.
+    await tester.tapAt(const Offset(8, 8));
+    await tester.pumpAndSettle();
+    expect(find.byType(BottomSheet), findsNothing);
+    expect(find.byTooltip('Профайлын үйлдлүүд'), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 
   for (final dark in [true, false]) {

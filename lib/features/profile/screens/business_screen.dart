@@ -3,7 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' show CountOption;
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../core/widgets/app_header.dart';
+import '../../../core/widgets/gradient_button.dart';
 import '../../../core/widgets/owl_loading.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/services/supabase_service.dart';
@@ -61,9 +64,9 @@ class _BusinessScreenState extends ConsumerState<BusinessScreen> {
   Widget build(BuildContext context) {
     final profile = ref.watch(currentProfileProvider);
     return Scaffold(backgroundColor: AppColors.bgBase,
-      appBar: AppBar(title: const Text('Бизнес самбар'), leading: IconButton(
-        tooltip: 'Буцах', icon: const Icon(Icons.arrow_back),
-        onPressed: () => context.canPop() ? context.pop() : context.go(AppRoutes.profile))),
+      // Нэгдсэн толгой (DS-06): pop хийх хуудасгүй бол Профайл руу
+      appBar: const AppHeader.title(
+          title: 'Бизнес самбар', fallbackLocation: AppRoutes.profile),
       body: ref.watch(_businessDataProvider).when(
         loading: () => const Center(
           child: OwlLoading(message: 'Бизнесийн мэдээлэл ачаалж байна')),
@@ -77,25 +80,33 @@ class _BusinessScreenState extends ConsumerState<BusinessScreen> {
               Text('Өөрийн газрын мэдээлэл, зураг, ажиллах цаг болон эвентээ нэг дор удирдаарай.',
                 style: AppTextStyles.bodyMd.copyWith(color: AppColors.textSecondary)),
               const SizedBox(height: 20),
+              // Бизнес хаяг идэвхжүүлэх — энэ хэсгийн primary (busy үед owl +
+              // "түр хүлээнэ үү" дэлгэц уншигчид)
               if (profile.hasValue && profile.value != null && !profile.value!.isBusiness)
-                FilledButton.icon(onPressed: _busy ? null : _becomeBusiness,
-                  icon: const Icon(Icons.business_center_outlined), label: Text(_busy ? 'Түр хүлээнэ үү' : 'Бизнес хаяг идэвхжүүлэх')),
+                GradientButton(label: 'Бизнес хаяг идэвхжүүлэх',
+                  icon: const Icon(Icons.business_center_outlined),
+                  busy: _busy, onPressed: _becomeBusiness),
               const SizedBox(height: 12),
               Wrap(spacing: 12, runSpacing: 12, children: [
                 _stat('Газрууд', data.venues.length), _stat('Пост', data.posts),
                 _stat('Удахгүй болох эвент', data.events), _stat('Идэвхтэй check-in', data.checkins),
               ]),
               const SizedBox(height: 24),
-              FilledButton.icon(onPressed: () async {
-                await context.push(AppRoutes.createEvent);
-                if (mounted) ref.invalidate(_businessDataProvider);
-              }, icon: const Icon(Icons.event_outlined), label: const Text('Эвент нэмэх')),
+              // Үйлдлүүд: primary + secondary (DS-03)
+              GradientButton(label: 'Эвент нэмэх',
+                icon: const Icon(Icons.event_outlined),
+                onPressed: () async {
+                  await context.push(AppRoutes.createEvent);
+                  if (mounted) ref.invalidate(_businessDataProvider);
+                }),
               const SizedBox(height: 12),
-              OutlinedButton.icon(onPressed: () => _editVenue(),
-                icon: const Icon(Icons.storefront_outlined), label: Text(data.venues.isEmpty ? 'Газраа бүртгэх' : 'Газрын мэдээлэл засах')),
+              OutlineButton(label: data.venues.isEmpty ? 'Газраа бүртгэх' : 'Газрын мэдээлэл засах',
+                icon: const Icon(Icons.storefront_outlined),
+                onPressed: () => _editVenue()),
               const SizedBox(height: 24),
               for (final venue in data.venues) Card(child: ListTile(
-                leading: Text(venue.emoji, style: const TextStyle(fontSize: 26)),
+                // Газрын төрөл — emoji биш icon (DS-09)
+                leading: Icon(AppIcons.venueType(venue.type)),
                 title: Text(venue.name), subtitle: Text(venue.hasLocation
                   ? venue.district ?? venue.typeLabel : 'Байршлаа бүртгэнэ үү'),
                 trailing: const Icon(Icons.edit_outlined), onTap: () => _editVenue(venue.id))),

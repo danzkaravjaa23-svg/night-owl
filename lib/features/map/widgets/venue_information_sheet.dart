@@ -2,9 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_icons.dart';
+import '../../../core/widgets/app_sheet.dart';
+import '../../../core/widgets/gradient_button.dart';
 import '../../../core/widgets/night_owl_brand.dart';
-import '../../../core/widgets/app_motion.dart';
-import '../../../core/widgets/owl_loading.dart';
 import '../../../models/venue.dart';
 import 'venue_operating_review.dart';
 
@@ -118,21 +119,13 @@ class _VenueInformationSheetState extends State<VenueInformationSheet> {
     final source = venueWebsiteUrl(venue.sourceUrl ?? venue.locationSourceUrl);
     final ownedHours = venueRecordedHours(venue);
     final hours = ownedHours ?? venue.sourceOpeningHours?.trim();
+    // Shown with showAppSheet: the theme draws the one drag handle above this
+    // content, so the sheet starts directly with its title row (DS-02).
     return SafeArea(
       top: false,
       child: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
+        padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Center(
-            child: Container(
-              width: 36,
-              height: 4,
-              decoration: BoxDecoration(
-                  color: muted.withValues(alpha: .3),
-                  borderRadius: BorderRadius.circular(8)),
-            ),
-          ),
-          const SizedBox(height: 20),
           Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Container(
               padding: const EdgeInsets.all(12),
@@ -141,28 +134,18 @@ class _VenueInformationSheetState extends State<VenueInformationSheet> {
               child: const NightOwlMark(size: 40),
             ),
             const SizedBox(width: 14),
+            // Title, type and the "Хаах" button that pops this sheet.
             Expanded(
-              child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(venue.name,
-                        style: TextStyle(
-                            color: foreground,
-                            fontSize: 22,
-                            fontWeight: FontWeight.w700)),
-                    const SizedBox(height: 5),
-                    Text(venue.typeLabel,
-                        style: TextStyle(color: muted, fontSize: 13)),
-                  ]),
+              child: AppSheetHeader(
+                  title: venue.name,
+                  subtitle: venue.typeLabel,
+                  showClose: true,
+                  padding: EdgeInsets.zero),
             ),
-            IconButton(
-                tooltip: 'Хаах',
-                onPressed: () => Navigator.of(context).pop(),
-                icon: const Icon(Icons.close_rounded)),
           ]),
           const SizedBox(height: 24),
           _info(
-              Icons.location_on_outlined,
+              AppIcons.venue,
               'Хаяг',
               venue.address?.trim().isNotEmpty == true
                   ? venue.address!
@@ -194,22 +177,14 @@ class _VenueInformationSheetState extends State<VenueInformationSheet> {
             openUri: widget.openUri,
           ),
           const SizedBox(height: 20),
-          SizedBox(
-            width: double.infinity,
-            child: PressFeedback(
-                enabled: !_opening,
-                child: FilledButton.icon(
-                  onPressed:
-                      _opening ? null : () => _open(venueGoogleMapsUrl(venue)),
-                  icon: _opening
-                      ? const OwlLoading(size: 20, compact: true)
-                      : const Icon(Icons.map_outlined, size: 20),
-                  label: const Text('Google Maps-д харах'),
-                  style: FilledButton.styleFrom(
-                      backgroundColor: const Color(0xFF7654D6),
-                      foregroundColor: Colors.white,
-                      minimumSize: const Size(0, 48)),
-                )),
+          // The sheet's one primary action (DS-03); the owl shows while any
+          // link of this sheet is opening.
+          GradientButton(
+            label: 'Google Maps-д харах',
+            size: GradientButtonSize.md,
+            busy: _opening,
+            icon: const Icon(Icons.map_outlined, size: 20),
+            onPressed: () => _open(venueGoogleMapsUrl(venue)),
           ),
           TextButton.icon(
               icon: const Icon(Icons.photo_library_outlined),
@@ -220,23 +195,31 @@ class _VenueInformationSheetState extends State<VenueInformationSheet> {
               }),
           if (website != null || phone != null) ...[
             const SizedBox(height: 10),
+            // Secondary links (DS-03): md pills as wide as their label, like
+            // place_screen, so they never outgrow the md primary above.
             Wrap(spacing: 10, runSpacing: 8, children: [
               if (phone != null)
-                OutlinedButton.icon(
-                    onPressed: _opening ? null : () => _open(phone),
+                OutlineButton(
+                    label: 'Залгах',
+                    size: GradientButtonSize.md,
+                    fullWidth: false,
                     icon: const Icon(Icons.call_outlined, size: 18),
-                    label: const Text('Залгах')),
+                    onPressed: _opening ? null : () => _open(phone)),
               if (website != null)
-                OutlinedButton.icon(
-                    onPressed: _opening ? null : () => _open(website),
+                OutlineButton(
+                    label: 'Вэбсайт нээх',
+                    size: GradientButtonSize.md,
+                    fullWidth: false,
                     icon: const Icon(Icons.language_rounded, size: 18),
-                    label: const Text('Вэбсайт нээх')),
+                    onPressed: _opening ? null : () => _open(website)),
             ]),
           ],
           if (_error != null) ...[
             const SizedBox(height: 12),
             Text(_error!,
-                style: const TextStyle(color: AppColors.error, fontSize: 13),
+                style: TextStyle(
+                    color: dark ? AppColors.dangerDark : AppColors.dangerLight,
+                    fontSize: 13),
                 semanticsLabel: _error),
           ],
           if (source != null) ...[

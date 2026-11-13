@@ -10,6 +10,8 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_icons.dart';
+import '../../../core/theme/app_text_styles.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/services/supabase_service.dart';
 import '../../../core/widgets/app_avatar.dart';
@@ -283,16 +285,18 @@ class _GoLiveScreenState extends ConsumerState<GoLiveScreen> {
       builder: (ctx) => Theme(data: _alwaysDarkTheme, child: AlertDialog(
         backgroundColor: AppColors.bgSurfaceDark,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Live дуусгах уу?',
-          style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.w700)),
+        title: Text('Live дуусгах уу?', style: AppTextStyles.title.onDark),
         content: const Text('Бичлэг тань feed дээр replay болж хадгалагдана.',
           style: TextStyle(color: Colors.white70, fontSize: 14)),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx, false),
             child: const Text('Үгүй', style: TextStyle(color: Colors.white54))),
-          TextButton(onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Дуусгах',
-              style: TextStyle(color: AppColors.error, fontWeight: FontWeight.w700))),
+          // Буцаалтгүй үйлдлийн баталгаажуулалт — dangerFill дээр цагаан (DS-03)
+          FilledButton(onPressed: () => Navigator.pop(ctx, true),
+            style: FilledButton.styleFrom(
+              backgroundColor: AppColors.dangerFill,
+              foregroundColor: Colors.white),
+            child: const Text('Дуусгах')),
         ])));
     if (ok == true && mounted) _endLive();
   }
@@ -410,7 +414,9 @@ class _GoLiveScreenState extends ConsumerState<GoLiveScreen> {
       if (mounted) {
         _chatCtrl.text = text;
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Илгээж чадсангүй'), backgroundColor: AppColors.error));
+          content: Text('Илгээж чадсангүй',
+              style: TextStyle(color: Colors.white)),
+          backgroundColor: AppColors.dangerFill));
       }
     }
   }
@@ -502,7 +508,7 @@ class _GoLiveScreenState extends ConsumerState<GoLiveScreen> {
                 padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
                 child: Row(children: [
                   _CircleBtn(
-                    icon: Icons.close,
+                    icon: AppIcons.close,
                     onTap: _isLive ? _confirmEnd : _close),
                   const SizedBox(width: 10),
                   if (_isLive) ...[
@@ -747,7 +753,7 @@ class _ChatPanel extends StatelessWidget {
         const SizedBox(width: 8),
         TapScale(onTap: onSend, child: Container(width: 44, height: 44,
           decoration: const BoxDecoration(shape: BoxShape.circle, gradient: AppColors.accentGradient),
-          child: const Icon(Icons.send_rounded, color: Colors.white, size: 20))),
+          child: const Icon(AppIcons.send, color: Colors.white, size: 20))),
         const SizedBox(width: 8),
         TapScale(onTap: (saving || saved) ? null : onEnd,
           child: AnimatedContainer(

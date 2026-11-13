@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/widgets/app_avatar.dart';
 import '../../../core/widgets/authorized_media.dart';
@@ -104,7 +105,8 @@ class _AdminRecordsScreenState extends ConsumerState<AdminRecordsScreen> {
               padding: const EdgeInsets.all(20),
               physics: const AlwaysScrollableScrollPhysics(),
               children: [
-                AdminIntro(title: _title, subtitle: _description),
+                // The header already shows _title (DS-06: no second copy).
+                AdminIntro(subtitle: _description),
                 if (widget.kind == 'users' || _content) ...[
                   TextField(
                       controller: _search,
@@ -117,7 +119,7 @@ class _AdminRecordsScreenState extends ConsumerState<AdminRecordsScreen> {
                       },
                       decoration: InputDecoration(
                           counterText: '',
-                          prefixIcon: const Icon(Icons.search_rounded),
+                          prefixIcon: const Icon(AppIcons.search),
                           hintText: widget.kind == 'users'
                               ? 'Нэр эсвэл @username'
                               : 'Контентоос хайх',
@@ -244,7 +246,7 @@ class _AdminRecordsScreenState extends ConsumerState<AdminRecordsScreen> {
       const SizedBox(height: 6),
       TextButton.icon(
           onPressed: () => context.push('/creator/$id'),
-          icon: const Icon(Icons.person_outline, size: 18),
+          icon: const Icon(AppIcons.profile, size: 18),
           label: const Text('Профайл үзэх')),
     ]);
   }
@@ -400,16 +402,15 @@ class _AdminRecordsScreenState extends ConsumerState<AdminRecordsScreen> {
           tooltip: 'Удирдах үйлдлүүд',
           enabled: !_actionOpen && !_records.loading,
           onSelected: onSelected,
-          icon: Icon(Icons.more_horiz_rounded, color: AppColors.textSecondary),
+          icon: Icon(AppIcons.more, color: AppColors.textSecondary),
           itemBuilder: (_) => [
                 for (final action in actions)
                   PopupMenuItem(
                       value: action,
                       child: Text(adminActionLabel(action),
                           style: AppTextStyles.bodyMd.copyWith(
-                              color: action.startsWith('delete_') ||
-                                      action == 'ban_user'
-                                  ? AppColors.error
+                              color: adminActionDestructive(action)
+                                  ? AppColors.danger
                                   : AppColors.textPrimary)))
               ]);
 }

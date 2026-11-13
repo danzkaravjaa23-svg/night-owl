@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import '../theme/app_colors.dart';
+import '../theme/app_text_styles.dart';
 
 /// Gradient shimmer text — matches .ns-grad-text CSS class
 class GradientText extends StatelessWidget {
@@ -54,7 +54,8 @@ class NightOwlLogoText extends StatelessWidget {
               text: 'owl',
               style: TextStyle(color: dark ? first : AppColors.accentStart)),
         ]),
-        style: GoogleFonts.inter(
+        style: TextStyle(
+            fontFamily: AppTextStyles.fontFamily,
             fontSize: fontSize,
             fontWeight: FontWeight.w700,
             letterSpacing: -.7));

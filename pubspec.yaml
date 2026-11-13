@@ -84,3 +84,18 @@ flutter:
     - assets/images/avatars/
     - assets/icons/
     - assets/animations/
+
+  # Inter нь 5 жинтэй НЭГ family: w500-w800 бүр өөрийн файлаар (жинхэнэ тод)
+  # зурагдана. Файлууд assets/fonts/manifest.json-той яг ижил байна.
+  fonts:
+    - family: Inter
+      fonts:
+        - asset: assets/fonts/Inter-Regular.ttf
+        - asset: assets/fonts/Inter-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/Inter-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/Inter-Bold.ttf
+          weight: 700
+        - asset: assets/fonts/Inter-ExtraBold.ttf
+          weight: 800

@@ -9,9 +9,11 @@ import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' show AuthState;
 import '../../../core/widgets/authorized_media.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/widgets/app_avatar.dart';
+import '../../../core/widgets/app_sheet.dart';
 import '../../../core/widgets/gradient_button.dart';
 import '../../../core/widgets/network_video.dart';
 import '../../../core/widgets/owl_loading.dart';
@@ -30,6 +32,12 @@ import '../../../core/utils/web_media_picker.dart';
 import '../widgets/invite_sheet.dart';
 import '../widgets/profile_header.dart';
 import '../utils/app_links.dart';
+
+/// Алдааны snackbar: [AppColors.dangerFill] дээр цагаан текст (DS-01).
+/// Theme-ийн snackbar текст Day горимд бараан тул өнгийг энд тогтооно.
+SnackBar _errorSnackBar(String message) => SnackBar(
+    content: Text(message, style: const TextStyle(color: Colors.white)),
+    backgroundColor: AppColors.dangerFill);
 
 class ProfileScreen extends ConsumerStatefulWidget {
   final Future<Uint8List?> Function()? coverPicker;
@@ -107,9 +115,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       ]);
     } catch (_) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text('Шинэчилж чадсангүй'),
-            backgroundColor: AppColors.error));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(_errorSnackBar('Шинэчилж чадсангүй'));
       }
     }
   }
@@ -144,9 +151,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       ref.invalidate(currentProfileProvider);
     } catch (_) {
       if (mounted && isCurrent()) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text('Нүүр зураг хадгалж чадсангүй'),
-            backgroundColor: AppColors.error));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(_errorSnackBar('Нүүр зураг хадгалж чадсангүй'));
       }
     } finally {
       if (isCurrent()) setState(() => _coverBusy = false);
@@ -187,17 +193,19 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             final loggedIn = SupabaseService.currentUser != null;
             return Center(
               child: Column(mainAxisSize: MainAxisSize.min, children: [
-                SculptedIcon(Icons.person_outline_rounded,
+                SculptedIcon(AppIcons.profile,
                     color: AppColors.textTertiary, size: 48),
                 const SizedBox(height: 16),
                 Text(loggedIn ? 'Профайл олдсонгүй' : 'Нэвтрээгүй байна',
                     style: AppTextStyles.h2),
                 const SizedBox(height: 12),
-                ElevatedButton(
+                GradientButton(
+                  label: loggedIn ? 'Профайл үүсгэх' : 'Нэвтрэх',
+                  size: GradientButtonSize.md,
+                  fullWidth: false,
                   onPressed: loggedIn
                       ? _openEditProfile
                       : () => context.go(AppRoutes.authLanding),
-                  child: Text(loggedIn ? 'Профайл үүсгэх' : 'Нэвтрэх'),
                 ),
               ]),
             );
@@ -218,7 +226,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 760),
                   child: RefreshIndicator(
-                    color: AppColors.accentStart,
+                    color: AppColors.accentText,
                     backgroundColor: AppColors.bgElevated,
                     onRefresh: _onRefresh,
                     child: ScrollConfiguration(
@@ -292,7 +300,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     await Clipboard.setData(ClipboardData(text: link));
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Профайл холбоос хуулагдлаа 🔗 $link')));
+          SnackBar(content: Text('Профайл холбоос хуулагдлаа — $link')));
     }
   }
 
@@ -301,47 +309,49 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     if (mounted) ref.invalidate(currentProfileProvider);
   }
 
+  // Root navigator дээрх sheet (DS-02) — dock-ийг бүрхэж бүдгэрүүлнэ. Sheet-ийг
+  // зөвхөн өөрийн sheetContext-оор хаана; дараагийн навигаци/snackbar нь
+  // хуудасны context-оор (sheet хаагдсаны дараа).
   Future<void> _showActions(UserProfile profile) async {
-    await showModalBottomSheet<void>(
+    await showAppSheet<void>(
       context: context,
-      showDragHandle: true,
       builder: (sheetContext) => SafeArea(
           child: SingleChildScrollView(
               padding: const EdgeInsets.only(bottom: 12),
               child: Column(mainAxisSize: MainAxisSize.min, children: [
                 ListTile(
-                    leading: const SculptedIcon(Icons.ios_share),
+                    leading: SculptedIcon(AppIcons.share),
                     title: const Text('Профайл хуваалцах'),
                     onTap: () {
-                      Navigator.pop(sheetContext);
+                      Navigator.of(sheetContext).pop();
                       _shareProfile(context, profile);
                     }),
                 ListTile(
                     leading: const SculptedIcon(Icons.person_add_outlined),
                     title: const Text('Найзаа урих'),
                     onTap: () {
-                      Navigator.pop(sheetContext);
+                      Navigator.of(sheetContext).pop();
                       showInviteSheet(context);
                     }),
                 ListTile(
-                    leading: const SculptedIcon(Icons.chat_bubble_outline),
+                    leading: const SculptedIcon(AppIcons.message),
                     title: const Text('Мессежүүд'),
                     onTap: () {
-                      Navigator.pop(sheetContext);
+                      Navigator.of(sheetContext).pop();
                       context.push(AppRoutes.dmList);
                     }),
                 ListTile(
-                    leading: const SculptedIcon(Icons.bookmark_border),
+                    leading: const SculptedIcon(AppIcons.save),
                     title: const Text('Хадгалсан постууд'),
                     onTap: () {
-                      Navigator.pop(sheetContext);
+                      Navigator.of(sheetContext).pop();
                       context.push(AppRoutes.saved);
                     }),
                 ListTile(
                     leading: const SculptedIcon(Icons.storefront_outlined),
                     title: const Text('Бизнес самбар'),
                     onTap: () {
-                      Navigator.pop(sheetContext);
+                      Navigator.of(sheetContext).pop();
                       context.push(AppRoutes.business);
                     }),
                 if (profile.canModerate(ref.read(sessionUserIdProvider)))
@@ -349,7 +359,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       leading: const SculptedIcon(Icons.shield_outlined),
                       title: const Text('Админ панел'),
                       onTap: () {
-                        Navigator.pop(sheetContext);
+                        Navigator.of(sheetContext).pop();
                         if (profile
                             .canModerate(ref.read(sessionUserIdProvider))) {
                           context.push(AppRoutes.adminPanel);
@@ -459,7 +469,7 @@ class _PostsGridState extends State<_PostsGrid> {
         context: context,
         builder: (d) => AlertDialog(
           backgroundColor: AppColors.bgElevated,
-          title: Text('Устгах уу?', style: AppTextStyles.h3),
+          title: const Text('Устгах уу?'),
           content: Text('Энэ пост/бичлэгийг бүрмөсөн устгана.',
               style: AppTextStyles.bodySm
                   .copyWith(color: AppColors.textSecondary)),
@@ -469,11 +479,13 @@ class _PostsGridState extends State<_PostsGrid> {
                 child: Text('Болих',
                     style: AppTextStyles.bodyMd
                         .copyWith(color: AppColors.textSecondary))),
-            TextButton(
+            // Устгах баталгаа — dangerFill дээр цагаан (DS-03)
+            FilledButton(
                 onPressed: () => Navigator.pop(d, true),
-                child: Text('Устгах',
-                    style: AppTextStyles.bodyMd.copyWith(
-                        color: AppColors.error, fontWeight: FontWeight.w600))),
+                style: FilledButton.styleFrom(
+                    backgroundColor: AppColors.dangerFill,
+                    foregroundColor: Colors.white),
+                child: const Text('Устгах')),
           ],
         ),
       );
@@ -497,9 +509,8 @@ class _PostsGridState extends State<_PostsGrid> {
       }
     } catch (_) {
       if (mounted && isCurrent()) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text('Устгаж чадсангүй'),
-            backgroundColor: AppColors.error));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(_errorSnackBar('Устгаж чадсангүй'));
       }
     } finally {
       if (mounted && widget.userId == owner) _deleting.remove(id);
@@ -828,7 +839,7 @@ class _PostsGridState extends State<_PostsGrid> {
                 errorWidget: (_, __, ___) => Container(
                     color: AppColors.bgSurface,
                     child: Center(
-                        child: SculptedIcon(Icons.image_not_supported_outlined,
+                        child: SculptedIcon(AppIcons.imageBroken,
                             color: AppColors.textTertiary))),
               )
             else if (isVideo)
@@ -867,7 +878,7 @@ class _PostsGridState extends State<_PostsGrid> {
                 bottom: 6,
                 left: 6,
                 child: Row(children: [
-                  const SculptedIcon(Icons.favorite,
+                  const SculptedIcon(AppIcons.likeActive,
                       color: Colors.white, size: 12, onDark: true),
                   const SizedBox(width: 3),
                   Text('$likes',
@@ -916,7 +927,7 @@ class _ProfileLibraryLink extends StatelessWidget {
                           style: AppTextStyles.bodySm),
                     ])),
                 const SizedBox(width: 8),
-                Icon(Icons.chevron_right_rounded,
+                Icon(AppIcons.forward,
                     color: AppColors.textTertiary, size: 22),
               ]))));
 }
@@ -1044,7 +1055,7 @@ class _ProfileStoryAvatar extends ConsumerWidget {
                           border:
                               Border.all(color: AppColors.bgBase, width: 2)),
                       child: const Center(
-                          child: SculptedIcon(Icons.add,
+                          child: SculptedIcon(AppIcons.add,
                               color: Colors.white, size: 17, onDark: true))))),
         ]));
   }

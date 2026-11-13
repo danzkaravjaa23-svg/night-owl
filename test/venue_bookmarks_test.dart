@@ -10,6 +10,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:night_owl_ub/core/theme/app_colors.dart';
 import 'package:night_owl_ub/core/theme/app_theme.dart';
+import 'package:night_owl_ub/core/widgets/app_header.dart';
 import 'package:night_owl_ub/core/widgets/sculpted_icon.dart';
 import 'package:night_owl_ub/features/auth/providers/auth_provider.dart';
 import 'package:night_owl_ub/features/discovery/services/discovery_service.dart';
@@ -302,6 +303,16 @@ void main() {
       const natural = ColorFilter.mode(Colors.transparent, BlendMode.dst);
       expect(filter, dark ? isNot(equals(natural)) : equals(natural));
       expect(find.byType(SculptedIcon), findsWidgets);
+      // DS-06: Explore's actions sit in the shared brand header (Feed's).
+      for (final action in [
+        'Хүмүүс, шалгасан газрууд',
+        'Бүх газрыг жагсаалтаар харах'
+      ]) {
+        expect(
+            find.ancestor(
+                of: find.byTooltip(action), matching: find.byType(AppHeader)),
+            findsOneWidget);
+      }
       expect(find.text('Эдгээр газрын байршил хараахан бүртгэгдээгүй.'),
           findsOneWidget);
       expect(

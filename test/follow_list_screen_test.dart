@@ -9,6 +9,7 @@ import 'package:http/testing.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:night_owl_ub/core/theme/app_colors.dart';
+import 'package:night_owl_ub/core/widgets/gradient_button.dart';
 import 'package:night_owl_ub/features/discovery/services/discovery_service.dart';
 import 'package:night_owl_ub/features/profile/screens/follow_list_screen.dart';
 
@@ -331,8 +332,11 @@ void main() {
       final handle = tester.ensureSemantics();
       await render(tester, scale: 2, brightness: brightness);
       expect(tester.takeException(), isNull);
-      final follow = find.widgetWithText(TextButton, 'Хүсэлттэй');
+      // The row action is a 36 px pill inside a 44 px tap target
+      // (OutlineButton sm, DS-03): measure the target, not the painted pill.
+      final follow = find.widgetWithText(OutlineButton, 'Хүсэлттэй');
       expect(tester.getSize(follow).height, greaterThanOrEqualTo(44));
+      expect(tester.getSize(follow).width, greaterThanOrEqualTo(44));
       expect(tester.getSize(find.byTooltip('Буцах')).height,
           greaterThanOrEqualTo(44));
       expect(

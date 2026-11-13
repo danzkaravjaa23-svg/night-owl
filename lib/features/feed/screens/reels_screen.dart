@@ -7,9 +7,13 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_radii.dart';
+import '../../../core/theme/app_icons.dart';
+import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/widgets/app_avatar.dart';
+import '../../../core/widgets/app_header.dart';
+import '../../../core/widgets/app_sheet.dart';
+import '../../../core/widgets/glass_icon_button.dart';
 import '../../../core/widgets/gradient_button.dart';
 import '../../../core/widgets/app_motion.dart';
 import '../../../core/services/supabase_service.dart';
@@ -360,8 +364,10 @@ class _ReelsScreenState extends ConsumerState<ReelsScreen>
         setState(() {
           was ? _savedIds.add(id) : _savedIds.remove(id);
         });
-        ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(error), backgroundColor: AppColors.error));
+        // dangerFill дээр цагаан текст (Day-ийн SnackBar текст бараан тул).
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(error, style: const TextStyle(color: Colors.white)),
+            backgroundColor: AppColors.dangerFill));
         return;
       }
       wrote = true;
@@ -386,8 +392,9 @@ class _ReelsScreenState extends ConsumerState<ReelsScreen>
           account == _myId &&
           ref.read(sessionUserIdProvider) == account) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text(wrote ? savedPostRefreshError : savedPostReadError),
-            backgroundColor: AppColors.error));
+            content: Text(wrote ? savedPostRefreshError : savedPostReadError,
+                style: const TextStyle(color: Colors.white)),
+            backgroundColor: AppColors.dangerFill));
       }
     } finally {
       _saving.remove(id);
@@ -409,8 +416,9 @@ class _ReelsScreenState extends ConsumerState<ReelsScreen>
       if (mounted) {
         setState(() => _followingIds.remove(userId));
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text('Дагаж чадсангүй'),
-            backgroundColor: AppColors.error));
+            content: Text('Дагаж чадсангүй',
+                style: TextStyle(color: Colors.white)),
+            backgroundColor: AppColors.dangerFill));
       }
     }
   }
@@ -431,11 +439,11 @@ class _ReelsScreenState extends ConsumerState<ReelsScreen>
   Future<void> _moreSheet(Map<String, dynamic> reel) async {
     setState(() => _covered = true);
     try {
-      final action = await showModalBottomSheet<String>(
+      // showAppSheet: root navigator дээр нээгдэж dock-ийг бүрхэнэ; дэвсгэр,
+      // булан, бариулыг theme өгнө. Sheet-ийг зөвхөн өөрийнх нь context (s)-ээр
+      // хаана — хуудасны context-оор pop хийвэл reels хуудас өөрөө хаагдана.
+      final action = await showAppSheet<String>(
         context: context,
-        backgroundColor: AppColors.bgElevated,
-        shape: const RoundedRectangleBorder(
-            borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
         builder: (s) => _themedNavBar(
             s,
             SafeArea(
@@ -448,17 +456,16 @@ class _ReelsScreenState extends ConsumerState<ReelsScreen>
                       style: AppTextStyles.bodyMd
                           .copyWith(color: AppColors.textPrimary)),
                   onTap: () {
-                    Navigator.pop(s);
+                    Navigator.of(s).pop();
                     _shareReel(reel);
                   }),
               ListTile(
-                  leading:
-                      const Icon(Icons.flag_outlined, color: AppColors.error),
+                  leading: Icon(Icons.flag_outlined, color: AppColors.danger),
                   title: Text('Мэдэгдэх',
                       style: AppTextStyles.bodyMd
-                          .copyWith(color: AppColors.error)),
+                          .copyWith(color: AppColors.danger)),
                   onTap: () {
-                    Navigator.pop(s, 'report');
+                    Navigator.of(s).pop('report');
                   }),
               const SizedBox(height: 8),
             ]))),
@@ -493,7 +500,7 @@ class _ReelsScreenState extends ConsumerState<ReelsScreen>
       context: context,
       builder: (d) => AlertDialog(
         backgroundColor: AppColors.bgElevated,
-        title: Text('Бичлэг устгах уу?', style: AppTextStyles.h3),
+        title: const Text('Бичлэг устгах уу?'),
         content: Text('Энэ live/reel бичлэгийг бүрмөсөн устгана.',
             style:
                 AppTextStyles.bodySm.copyWith(color: AppColors.textSecondary)),
@@ -503,11 +510,13 @@ class _ReelsScreenState extends ConsumerState<ReelsScreen>
               child: Text('Болих',
                   style: AppTextStyles.bodyMd
                       .copyWith(color: AppColors.textSecondary))),
-          TextButton(
+          // Устгах баталгаажуулалт — dangerFill дээр цагаан (DS-03)
+          FilledButton(
               onPressed: () => Navigator.pop(d, true),
-              child: Text('Устгах',
-                  style: AppTextStyles.bodyMd.copyWith(
-                      color: AppColors.error, fontWeight: FontWeight.w600))),
+              style: FilledButton.styleFrom(
+                  backgroundColor: AppColors.dangerFill,
+                  foregroundColor: Colors.white),
+              child: const Text('Устгах')),
         ],
       ),
     );
@@ -546,8 +555,9 @@ class _ReelsScreenState extends ConsumerState<ReelsScreen>
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text('Устгаж чадсангүй'),
-            backgroundColor: AppColors.error));
+            content: Text('Устгаж чадсангүй',
+                style: TextStyle(color: Colors.white)),
+            backgroundColor: AppColors.dangerFill));
       }
     }
   }
@@ -657,37 +667,49 @@ class _ReelsScreenState extends ConsumerState<ReelsScreen>
           final compact =
               constraints.maxWidth < (_metadataFailed ? 440 : 340) ||
                   MediaQuery.textScalerOf(context).scale(15) > 18;
+          // Апп-ын нэгдсэн шилэн товч (DS-06), видео дээр тул onMedia.
+          // Tooltip нь дэлгэц уншигчийн нэр болно.
           final leading = context.canPop()
-              ? _GlassIconButton(
-                  icon: Icons.arrow_back_rounded,
-                  label: 'Буцах',
-                  onTap: () => context.pop())
+              ? GlassIconButton(
+                  icon: AppIcons.back,
+                  iconSize: 24,
+                  onMedia: true,
+                  tooltip: 'Буцах',
+                  onTap: () => AppHeader.goBack(context))
               : _canCreate
-                  ? _GlassIconButton(
-                      icon: Icons.add_box_outlined,
-                      label: 'Бичлэг нэмэх',
+                  ? GlassIconButton(
+                      icon: AppIcons.add,
+                      onMedia: true,
+                      tooltip: 'Бичлэг нэмэх',
                       onTap: () => _pushCovered('/reels/create'))
                   : const SizedBox(width: 44, height: 44);
           final tabs = _SegmentedTabs(forYou: _forYou, onChanged: _switchTab);
+          // Discs 8 px apart like AppHeader: 2 + 4 + 2 (each 40 px disc
+          // sits in a 44 px target).
           final actions = [
-            if (_metadataFailed)
-              _GlassIconButton(
+            if (_metadataFailed) ...[
+              GlassIconButton(
                 icon: Icons.sync_problem,
-                label: 'Үйлдлүүдийг дахин ачаалах',
+                onMedia: true,
+                tooltip: 'Үйлдлүүдийг дахин ачаалах',
                 onTap: _retryMetadata,
               ),
+              const SizedBox(width: AppSpacing.x1),
+            ],
             ValueListenableBuilder<bool>(
                 valueListenable: _muted,
-                builder: (_, muted, __) => _GlassIconButton(
+                builder: (_, muted, __) => GlassIconButton(
                     icon: muted
                         ? Icons.volume_off_rounded
                         : Icons.volume_up_rounded,
-                    label: muted ? 'Дуу асаах' : 'Дуу хаах',
+                    onMedia: true,
+                    tooltip: muted ? 'Дуу асаах' : 'Дуу хаах',
                     onTap: () => _muted.value = !muted)),
-            const SizedBox(width: 8),
-            _GlassIconButton(
-                icon: Icons.search,
-                label: 'Хайх',
+            const SizedBox(width: AppSpacing.x1),
+            GlassIconButton(
+                icon: AppIcons.search,
+                onMedia: true,
+                tooltip: 'Хайх',
                 onTap: () => _pushCovered('/search')),
           ];
           if (compact) {
@@ -731,19 +753,14 @@ class _ReelsScreenState extends ConsumerState<ReelsScreen>
             style: AppTextStyles.bodyMd.copyWith(color: Colors.white70)),
         const SizedBox(height: 20),
         GradientButton(
-            label: 'Дахин оролдох',
-            fullWidth: false,
-            borderRadius: AppRadii.pill,
-            onPressed: _retry),
+            label: 'Дахин оролдох', fullWidth: false, onPressed: _retry),
       ]);
 
   Widget _empty(BuildContext context) {
     final followingEmpty = !_forYou;
     return _stateContent([
       Icon(
-          followingEmpty
-              ? Icons.person_search_outlined
-              : Icons.explore_outlined,
+          followingEmpty ? Icons.person_search_outlined : AppIcons.shortVideo,
           color: Colors.white38,
           size: 72),
       const SizedBox(height: 16),
@@ -764,7 +781,6 @@ class _ReelsScreenState extends ConsumerState<ReelsScreen>
         GradientButton(
             label: 'Бичлэг нэмэх',
             fullWidth: false,
-            borderRadius: AppRadii.pill,
             onPressed: () => _pushCovered('/reels/create')),
       ],
       const SizedBox(height: 14),
@@ -807,27 +823,6 @@ class _Pressable extends StatelessWidget {
         ),
         child: ExcludeSemantics(excluding: semanticLabel != null, child: child),
       ));
-}
-
-/// Дугуй шилэн товч (хайлт / нэмэх) — neon hairline glass
-class _GlassIconButton extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-  const _GlassIconButton(
-      {required this.icon, required this.label, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) => IconButton(
-        tooltip: label,
-        onPressed: onTap,
-        style: IconButton.styleFrom(
-          minimumSize: const Size(44, 44),
-          backgroundColor: AppColors.bgElevatedDark.withValues(alpha: 0.72),
-          side: const BorderSide(color: AppColors.hairline2Dark),
-        ),
-        icon: Icon(icon, color: Colors.white, size: 20),
-      );
 }
 
 /// Text tabs retain their underline and wrap at accessibility text sizes.
@@ -1155,11 +1150,12 @@ class _ReelPageState extends State<_ReelPage>
             ),
             const SizedBox(height: 18),
 
-            // (2) LIKE 30 + шахсан тоолуур — magenta glow when liked
+            // (2) LIKE 30 + шахсан тоолуур — дарсан үед lavender glow.
+            // Канвас үргэлж харанхуй тул Day горимд ч likeOnMedia.
             _RailButton(
-              icon: liked ? Icons.favorite : Icons.favorite_border,
-              iconColor: liked ? AppColors.like : Colors.white,
-              glow: liked ? AppColors.like : null,
+              icon: liked ? AppIcons.likeActive : AppIcons.like,
+              iconColor: liked ? AppColors.likeOnMedia : Colors.white,
+              glow: liked ? AppColors.likeOnMedia : null,
               label: _fmtCount(likes),
               semanticLabel: 'Таалагдах, $likes',
               toggled: liked,
@@ -1169,7 +1165,7 @@ class _ReelPageState extends State<_ReelPage>
 
             // (3) COMMENT 30 → /post/:id (reel-ийн дуу зогсоно)
             _RailButton(
-              icon: Icons.mode_comment_outlined,
+              icon: AppIcons.comment,
               label: _fmtCount(comments),
               semanticLabel: 'Сэтгэгдэл, $comments',
               onTap: () => widget.onNavigate('/post/${reel['id']}'),
@@ -1178,17 +1174,19 @@ class _ReelPageState extends State<_ReelPage>
 
             // (4) SHARE 30 — линк хуулна
             _RailButton(
-              icon: Icons.send_outlined,
+              icon: AppIcons.share,
               label: 'Хуваалцах',
               onTap: widget.onShare,
             ),
             const SizedBox(height: 18),
 
             // (5) BOOKMARK — saved_posts руу хадгална
+            // Зүрхтэй адил: харанхуй канвас дээр Day горимд ч lavender
+            // (adaptive `saved` нь Day-д #7654D6 болж видеон дээр бүдгэрдэг).
             _RailButton(
-              icon: widget.saved ? Icons.bookmark : Icons.bookmark_border,
-              iconColor: widget.saved ? AppColors.saved : Colors.white,
-              glow: widget.saved ? AppColors.saved : null,
+              icon: widget.saved ? AppIcons.saveActive : AppIcons.save,
+              iconColor: widget.saved ? AppColors.savedOnMedia : Colors.white,
+              glow: widget.saved ? AppColors.savedOnMedia : null,
               label: 'Хадгалах',
               semanticLabel: widget.saved ? 'Хадгалснаас хасах' : 'Хадгалах',
               toggled: widget.saved,
@@ -1198,7 +1196,7 @@ class _ReelPageState extends State<_ReelPage>
 
             // (6) MORE — линк хуулах / мэдэгдэх
             _RailButton(
-                icon: Icons.more_horiz,
+                icon: AppIcons.more,
                 semanticLabel: 'Бусад үйлдэл',
                 size: 26,
                 onTap: widget.onMore),
@@ -1209,7 +1207,8 @@ class _ReelPageState extends State<_ReelPage>
               _RailButton(
                 icon: Icons.delete_outline,
                 semanticLabel: 'Бичлэг устгах',
-                iconColor: AppColors.error,
+                // Харанхуй канвас — горимоос үл хамааран Night-ийн danger
+                iconColor: AppColors.dangerDark,
                 size: 26,
                 onTap: widget.onDelete,
               ),
@@ -1270,7 +1269,8 @@ class _ReelPageState extends State<_ReelPage>
                         shadows: [Shadow(color: Colors.black, blurRadius: 6)])),
               )),
               const SizedBox(width: 10),
-              // "Дагах" pill — primary градиент CTA → жинхэнэ follow (follows table)
+              // "Дагах" — primary товч (DS-03: 36px pill, 44px хүрэх талбар)
+              // → жинхэнэ follow (follows table). "Дагасан" нь төлөвийн чип.
               if (!widget.isOwn)
                 widget.following
                     ? Container(
@@ -1286,24 +1286,11 @@ class _ReelPageState extends State<_ReelPage>
                             style: AppTextStyles.labelMd.copyWith(
                                 color: Colors.white70,
                                 fontWeight: FontWeight.w700)))
-                    : _Pressable(
-                        onTap: widget.onFollow,
-                        child: Container(
-                          height: 32,
-                          padding: const EdgeInsets.symmetric(horizontal: 18),
-                          alignment: Alignment.center,
-                          decoration: BoxDecoration(
-                            gradient: AppColors.accentGradient,
-                            borderRadius: BorderRadius.circular(999),
-                            boxShadow:
-                                AppColors.glowShadow(AppColors.accentStart),
-                          ),
-                          child: Text('Дагах',
-                              style: AppTextStyles.labelMd.copyWith(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.w800)),
-                        ),
-                      ),
+                    : GradientButton(
+                        label: 'Дагах',
+                        size: GradientButtonSize.sm,
+                        fullWidth: false,
+                        onPressed: widget.onFollow),
             ]),
             if (caption.isNotEmpty) ...[
               const SizedBox(height: 10),
@@ -1324,8 +1311,7 @@ class _ReelPageState extends State<_ReelPage>
                 child: Padding(
                   padding: const EdgeInsets.symmetric(vertical: 6),
                   child: Row(mainAxisSize: MainAxisSize.min, children: [
-                    const Icon(Icons.place_outlined,
-                        color: Colors.white, size: 18),
+                    const Icon(AppIcons.venue, color: Colors.white, size: 18),
                     const SizedBox(width: 6),
                     Flexible(
                       child: Text(

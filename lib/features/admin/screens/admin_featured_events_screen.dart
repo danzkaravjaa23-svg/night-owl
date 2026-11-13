@@ -1,14 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import '../../../core/router/app_router.dart';
+import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_spacing.dart';
+import '../../../core/theme/app_text_styles.dart';
+import '../../../core/widgets/app_header.dart';
+import '../../../core/widgets/empty_state.dart';
+import '../../../core/widgets/glass_icon_button.dart';
+import '../../../core/widgets/gradient_button.dart';
 import '../../../core/widgets/owl_loading.dart';
+import '../../../core/widgets/settings_rows.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../events/providers/event_provider.dart';
 import '../../events/providers/featured_events_provider.dart';
 import '../../events/widgets/events_rail.dart';
 import '../providers/admin_console_provider.dart';
 import '../services/admin_console_service.dart';
+import '../widgets/admin_widgets.dart';
 
 final _scopedSelectionsProvider =
     FutureProvider.autoDispose<List<FeaturedEventSelection>>((ref) async {
@@ -104,20 +112,17 @@ class _AdminFeaturedEventsState
     final admin = access?.session.isCurrent == true ||
         profile.asData?.value?.isAdmin == true;
     return Scaffold(
-        appBar: AppBar(
-            title: const Text('Онцгой эвентүүд'),
-            leading: IconButton(
-                tooltip: 'Буцах',
-                onPressed: () => context.canPop()
-                    ? context.pop()
-                    : context.go(AppRoutes.explore),
-                icon: const Icon(Icons.arrow_back_rounded)),
+        backgroundColor: AppColors.bgBase,
+        appBar: AppHeader.title(
+            title: 'Онцгой эвентүүд',
+            compact: true,
+            fallbackLocation: AppRoutes.explore,
             actions: [
               if (admin)
-                IconButton(
+                GlassIconButton(
+                    icon: Icons.refresh_rounded,
                     tooltip: 'Шинэчлэх',
-                    onPressed: _saving == null ? _refresh : null,
-                    icon: const Icon(Icons.refresh_rounded)),
+                    onTap: _saving == null ? _refresh : null),
             ]),
         body: access == null && profile.isLoading
             ? Center(
@@ -130,20 +135,17 @@ class _AdminFeaturedEventsState
                         child: const Text(
                             'Эрхийг шалгаж чадсангүй. Дахин оролдох')))
                 : !admin
-                    ? const Center(
-                        child: Padding(
-                            padding: EdgeInsets.all(24),
-                            child: Text(
-                                'Энэ хэсэг зөвхөн Night Owl-ийн админд нээлттэй.',
-                                textAlign: TextAlign.center)))
+                    ? const EmptyState(
+                        icon: Icons.lock_outline_rounded,
+                        title:
+                            'Энэ хэсэг зөвхөн Night Owl-ийн админд нээлттэй.')
                     : _content(context));
   }
 
   Widget _content(BuildContext context) {
     final candidates = ref.watch(upcomingEventsProvider);
     final selections = ref.watch(_scopedSelectionsProvider);
-    final theme = Theme.of(context);
-    final dark = theme.brightness == Brightness.dark;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     if ((candidates.isLoading && !candidates.hasValue) ||
         (selections.isLoading && !selections.hasValue)) {
       return Center(
@@ -153,16 +155,15 @@ class _AdminFeaturedEventsState
     if (candidates.hasError || selections.hasError) {
       return Center(
           child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(mainAxisSize: MainAxisSize.min, children: [
-                Text(
-                    selections.error is FeatureEventsUnavailableException
-                        ? 'Эвент сонгох үйлчилгээ хараахан бэлэн болоогүй байна.'
-                        : 'Эвентүүдийг ачаалж чадсангүй.',
-                    textAlign: TextAlign.center),
-                TextButton(
-                    onPressed: _refresh, child: const Text('Дахин оролдох')),
-              ])));
+              padding: const EdgeInsets.all(AppSpacing.x6),
+              child: OwlLoading(
+                  state: OwlLoadingState.error,
+                  onDark: dark,
+                  message: selections.error
+                          is FeatureEventsUnavailableException
+                      ? 'Эвент сонгох үйлчилгээ хараахан бэлэн болоогүй байна.'
+                      : 'Эвентүүдийг ачаалж чадсангүй.',
+                  onRetry: _refresh)));
     }
     final events = candidates.requireValue;
     final selected =
@@ -170,72 +171,106 @@ class _AdminFeaturedEventsState
     final unseen = selected.difference(events.map((event) => event.id).toSet());
     final disabled =
         _saving != null || candidates.isLoading || selections.isLoading;
-    return ListView(padding: const EdgeInsets.all(20), children: [
-      Text('Night Owl-ийн багийн сонголт', style: theme.textTheme.titleLarge),
-      const SizedBox(height: 8),
-      const Text(
-          'Онцолсон эвентүүд Газрууд хэсэгт бүх хэрэглэгчид харагдана. Дууссан эвентүүд автоматаар харагдахаа болино.'),
-      const SizedBox(height: 16),
+    return ListView(padding: const EdgeInsets.all(AppSpacing.page), children: [
+      const AdminIntro(
+          title: 'Night Owl-ийн багийн сонголт',
+          subtitle:
+              'Онцолсон эвентүүд Газрууд хэсэгт бүх хэрэглэгчид харагдана. Дууссан эвентүүд автоматаар харагдахаа болино.'),
       if (_error != null)
         Padding(
-            padding: const EdgeInsets.only(bottom: 12),
+            padding: const EdgeInsets.only(bottom: AppSpacing.x3),
             child: Text(_error!,
-                style: TextStyle(color: theme.colorScheme.error))),
+                style: AppTextStyles.bodySm.copyWith(color: AppColors.danger))),
       if (events.isEmpty)
-        const Padding(
-            padding: EdgeInsets.symmetric(vertical: 28),
-            child: Text('Удахгүй болох эвент одоогоор алга.')),
+        const EmptyState(
+            icon: Icons.event_busy_outlined,
+            title: 'Удахгүй болох эвент одоогоор алга.'),
       for (final event in events)
-        Card(
-            margin: const EdgeInsets.only(bottom: 12),
-            child: Padding(
-                padding: const EdgeInsets.all(14),
-                child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(event.title, style: theme.textTheme.titleMedium),
-                      const SizedBox(height: 6),
-                      Text(
-                          '${event.venueName ?? "Газар тодорхойгүй"} · ${_date(event.startsAt)}',
-                          style: theme.textTheme.bodySmall),
-                      const SizedBox(height: 10),
-                      Wrap(spacing: 8, runSpacing: 6, children: [
-                        TextButton(
-                            onPressed: () =>
-                                showEventDetailSheet(context, event),
-                            child: const Text('Дэлгэрэнгүй')),
-                        FilledButton.tonalIcon(
-                            key: ValueKey('feature-event-${event.id}'),
-                            onPressed: disabled
-                                ? null
-                                : () => _setFeatured(
-                                    event.id, !selected.contains(event.id)),
-                            icon: Icon(selected.contains(event.id)
-                                ? Icons.star_rounded
-                                : Icons.star_outline_rounded),
-                            label: Text(_saving == event.id
-                                ? 'Хадгалж байна…'
-                                : selected.contains(event.id)
-                                    ? 'Онцлохоос хасах'
-                                    : 'Онцлох')),
-                      ]),
-                    ]))),
+        Padding(
+            padding: const EdgeInsets.only(bottom: AppSpacing.x3),
+            child: Card(
+                child: Padding(
+                    padding: const EdgeInsets.all(AppSpacing.x4),
+                    child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(event.title, style: AppTextStyles.title),
+                          const SizedBox(height: 6),
+                          Text(
+                              '${event.venueName ?? "Газар тодорхойгүй"} · ${_date(event.startsAt)}',
+                              style: AppTextStyles.caption),
+                          const SizedBox(height: AppSpacing.x3),
+                          Wrap(
+                              spacing: AppSpacing.x2,
+                              runSpacing: AppSpacing.x2,
+                              crossAxisAlignment: WrapCrossAlignment.center,
+                              children: [
+                                TextButton(
+                                    onPressed: () =>
+                                        showEventDetailSheet(context, event),
+                                    child: const Text('Дэлгэрэнгүй')),
+                                _featureButton(event.id,
+                                    featured: selected.contains(event.id),
+                                    disabled: disabled),
+                              ]),
+                        ])))),
       if (unseen.isNotEmpty) ...[
-        const SizedBox(height: 12),
-        Text('Өмнөх сонголтууд', style: theme.textTheme.titleMedium),
-        const Text(
-            'Жагсаалтад байхгүй өмнөх эвентүүдийн сонголтыг эндээс цэвэрлэж болно.'),
-        for (final id in unseen)
-          ListTile(
-              contentPadding: EdgeInsets.zero,
-              title: const Text('Өмнө сонгосон эвент'),
-              trailing: TextButton(
-                  key: ValueKey('feature-event-$id'),
-                  onPressed: disabled ? null : () => _setFeatured(id, false),
-                  child: Text(
-                      _saving == id ? 'Хадгалж байна…' : 'Сонголтоос хасах'))),
+        const SizedBox(height: AppSpacing.x4),
+        const SettingsSectionLabel('Өмнөх сонголтууд'),
+        const SizedBox(height: AppSpacing.x1),
+        Padding(
+            padding: const EdgeInsets.only(left: 6),
+            child: Text(
+                'Жагсаалтад байхгүй өмнөх эвентүүдийн сонголтыг эндээс цэвэрлэж болно.',
+                style: AppTextStyles.caption)),
+        const SizedBox(height: AppSpacing.x3),
+        SettingsCard(children: [
+          for (final id in unseen) ...[
+            if (id != unseen.first) const SettingsDivider(),
+            // The text button gets its own line: as a row trailing it never
+            // wraps, so large text pushed the title to zero width.
+            const SettingsRow(
+                icon: Icons.event_outlined, title: 'Өмнө сонгосон эвент'),
+            Align(
+                alignment: AlignmentDirectional.centerEnd,
+                child: TextButton(
+                    key: ValueKey('feature-event-$id'),
+                    onPressed: disabled ? null : () => _setFeatured(id, false),
+                    child: Text(_saving == id
+                        ? 'Хадгалж байна…'
+                        : 'Сонголтоос хасах'))),
+          ],
+        ]),
       ],
     ]);
+  }
+
+  /// Row action of an event card (DS-03, sm pill with a 44 px target):
+  /// "Онцлох" is the card's primary action; "Онцлохоос хасах" on an already
+  /// featured event is secondary.
+  Widget _featureButton(String id,
+      {required bool featured, required bool disabled}) {
+    final key = ValueKey('feature-event-$id');
+    final saving = _saving == id;
+    final VoidCallback? onPressed =
+        disabled ? null : () => _setFeatured(id, !featured);
+    if (featured) {
+      return OutlineButton(
+          key: key,
+          size: GradientButtonSize.sm,
+          fullWidth: false,
+          icon: const Icon(Icons.star_rounded),
+          label: saving ? 'Хадгалж байна…' : 'Онцлохоос хасах',
+          onPressed: onPressed);
+    }
+    return GradientButton(
+        key: key,
+        size: GradientButtonSize.sm,
+        fullWidth: false,
+        icon: const Icon(Icons.star_outline_rounded),
+        label: saving ? 'Хадгалж байна…' : 'Онцлох',
+        busy: saving,
+        onPressed: onPressed);
   }
 
   String _date(DateTime date) {

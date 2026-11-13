@@ -225,4 +225,73 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Story-гийн байршил'), findsNothing);
   });
+
+  testWidgets(
+      'root sheet closes itself, never the nested page that opened it (DS-02)',
+      (tester) async {
+    JsonRow? picked;
+    final nested = GlobalKey<NavigatorState>();
+    await tester.pumpWidget(MaterialApp(
+        home: Navigator(
+            key: nested,
+            onGenerateRoute: (_) => MaterialPageRoute<void>(
+                builder: (_) => const Scaffold(body: Text('Эхний хуудас'))))));
+    nested.currentState!.push(MaterialPageRoute<void>(
+        builder: (context) => Scaffold(
+            body: TextButton(
+                onPressed: () async {
+                  picked = await pickDiscoveryVenue(context,
+                      loader: (
+                              {required query,
+                              required offset,
+                              required limit}) async =>
+                          [venue('nested', 'Дотоод газар')]);
+                },
+                child: const Text('Нээх')))));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Нээх'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Дотоод газар'));
+    await tester.pumpAndSettle();
+    expect(picked?['ref'], 'nested');
+    expect(find.text('Дотоод газар'), findsNothing);
+    expect(find.text('Нээх'), findsOneWidget,
+        reason: 'Selecting must not pop the page under the root sheet.');
+
+    picked = null;
+    await tester.tap(find.text('Нээх'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Хаах'));
+    await tester.pumpAndSettle();
+    expect(picked, isNull);
+    expect(find.text('Дотоод газар'), findsNothing);
+    expect(find.text('Нээх'), findsOneWidget,
+        reason: '"Хаах" must not pop the page under the root sheet.');
+  });
+
+  testWidgets('dark picker stays dark over a Day page', (tester) async {
+    await tester.pumpWidget(MaterialApp(
+        theme: ThemeData(brightness: Brightness.light),
+        home: Scaffold(
+            body: Builder(
+                builder: (context) => TextButton(
+                    onPressed: () => pickDiscoveryVenue(context,
+                        dark: true,
+                        loader: (
+                                {required query,
+                                required offset,
+                                required limit}) async =>
+                            [venue('dark', 'Харанхуй газар')]),
+                    child: const Text('Нээх'))))));
+    await tester.tap(find.text('Нээх'));
+    await tester.pumpAndSettle();
+    expect(Theme.of(tester.element(find.text('Харанхуй газар'))).brightness,
+        Brightness.dark);
+    expect(Theme.of(tester.element(find.text('Газар сонгох'))).brightness,
+        Brightness.dark);
+    expect(Theme.of(tester.element(find.text('Нээх'))).brightness,
+        Brightness.light);
+    expect(tester.takeException(), isNull);
+  });
 }

@@ -12,6 +12,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:night_owl_ub/core/constants/community_rules.dart';
 import 'package:night_owl_ub/core/theme/app_colors.dart';
+import 'package:night_owl_ub/core/theme/app_radii.dart';
 import 'package:night_owl_ub/core/widgets/gradient_button.dart';
 import 'package:night_owl_ub/core/widgets/policy_links.dart';
 import 'package:night_owl_ub/features/auth/screens/auth_landing_screen.dart';
@@ -354,8 +355,16 @@ void main() {
         await render(tester, route);
         expect(apple(), findsOneWidget);
         expect(find.text('Apple-ээр үргэлжлүүлэх'), findsOneWidget);
+        // Бүх товч pill (DS-03): landing дээрх Google ба Apple товч ч 16px
+        // булантай байхаа больсон.
         expect(tester.widget<AppleSignInButton>(apple()).borderRadius,
-            route == '/auth' ? 16 : 999);
+            AppRadii.pill);
+        final googleShape = tester
+            .widget<Material>(find
+                .descendant(of: googleButton(), matching: find.byType(Material))
+                .first)
+            .shape;
+        expect(googleShape, isA<StadiumBorder>());
         final appleButton =
             find.descendant(of: apple(), matching: find.byType(OutlinedButton));
         expect(tester.getSize(appleButton).height,
@@ -407,6 +416,24 @@ void main() {
     expect(tester.widget<OutlinedButton>(find.byType(OutlinedButton)).onPressed,
         isNotNull);
   });
+
+  // DS-01: auth-ийн алдааны хайрцаг горимын danger өнгөтэй — Day-д хуучин
+  // #FF4566 нь 2.9:1 байсан.
+  for (final dark in [true, false]) {
+    testWidgets(
+        'auth error box uses the ${dark ? 'night' : 'day'} danger colour',
+        (tester) async {
+      AppColors.isDarkMode = dark;
+      await tester.pumpWidget(const MaterialApp(
+          home: Scaffold(body: AuthErrorBox('Fixture алдаа'))));
+      final danger = dark ? AppColors.dangerDark : AppColors.dangerLight;
+      expect(tester.widget<Text>(find.text('Fixture алдаа')).style?.color,
+          danger);
+      expect(tester.widget<Icon>(find.byIcon(Icons.error_outline)).color,
+          danger);
+      expect(tester.takeException(), isNull);
+    });
+  }
 
   for (final dark in [true, false]) {
     for (final route in ['/auth/login', '/auth/register']) {

@@ -4,10 +4,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/widgets/authorized_media.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/widgets/owl_loading.dart';
 import '../../../core/widgets/app_avatar.dart';
+import '../../../core/widgets/app_header.dart';
+import '../../../core/widgets/app_sheet.dart';
 import '../../../core/widgets/bare_input.dart';
+import '../../../core/widgets/glass_icon_button.dart';
+import '../../../core/widgets/gradient_button.dart';
 import '../../../core/widgets/network_video.dart';
 import '../../../core/services/supabase_service.dart';
 import '../../../core/router/app_router.dart' show AppRoutes;
@@ -36,6 +41,13 @@ final _myMiniProfileProvider =
     return null;
   }
 });
+
+/// Алдааны snackbar (DS-01): [AppColors.dangerFill] дээр цагаан бичиг —
+/// хоёр горимд ≈5:1. Theme-ийн snackbar бичиг Day горимд бараан тул
+/// өнгийг энд тодорхой өгнө.
+SnackBar _errorSnack(String message) => SnackBar(
+    content: Text(message, style: const TextStyle(color: Colors.white)),
+    backgroundColor: AppColors.dangerFill);
 
 class PostDetailScreen extends ConsumerStatefulWidget {
   final String postId;
@@ -196,9 +208,8 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
           likesCount: post.likesCount,
         );
       });
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Лайк илгээж чадсангүй'),
-          backgroundColor: AppColors.error));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(_errorSnack('Лайк илгээж чадсангүй'));
     }
   }
 
@@ -225,8 +236,7 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
     });
 
     if (err != null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(err), backgroundColor: AppColors.error));
+      ScaffoldMessenger.of(context).showSnackBar(_errorSnack(err));
       return;
     }
 
@@ -263,8 +273,7 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
     final request = _postRequest;
     final err = await CommentService.deleteComment(c.id);
     if (err != null && mounted && _isCurrent(request)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(err), backgroundColor: AppColors.error));
+      ScaffoldMessenger.of(context).showSnackBar(_errorSnack(err));
     }
   }
 
@@ -434,8 +443,8 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
                               padding: const EdgeInsets.symmetric(
                                   vertical: 32, horizontal: 24),
                               child: Column(children: [
-                                const Text('💬',
-                                    style: TextStyle(fontSize: 36)),
+                                Icon(AppIcons.comment,
+                                    size: 36, color: AppColors.textTertiary),
                                 const SizedBox(height: 12),
                                 Text('Эхний сэтгэгдлийг үлдээгээрэй',
                                     style: AppTextStyles.bodyMd.copyWith(
@@ -458,9 +467,11 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
               top: false,
               child: Padding(
                 padding: const EdgeInsets.all(16),
-                child: FilledButton.icon(
+                // Зочны үндсэн CTA — primary товч (DS-03)
+                child: GradientButton(
+                  label: 'Нэвтэрч оролцох',
                   icon: const Icon(Icons.login),
-                  label: const Text('Нэвтэрч оролцох'),
+                  fullWidth: false,
                   onPressed: _requireAccount,
                 ),
               ),
@@ -483,26 +494,27 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
             ),
         ]),
 
-        // ── Хөвөгч glass удирдлага — медиа дээгүүр давхарлана ──
-        SafeArea(
-            child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-          child: Row(children: [
-            _GlassCircleButton(
-              icon: Icons.arrow_back_ios_new,
-              // Линк/reload-оор нээгдсэн бол pop хийх хуудас байхгүй
-              onTap: () =>
-                  context.canPop() ? context.pop() : context.go(AppRoutes.feed),
-            ),
-            const Spacer(),
-            // Өөрийн пост (live бичлэг ч мөн адил)-ыг засах/устгах
-            if (_post != null && _post!.userId == me)
-              _GlassCircleButton(
-                icon: Icons.more_horiz,
-                onTap: _openOwnOptions,
-              ),
-          ]),
-        )),
+        // ── Хөвөгч толгой (DS-06) — медиа дээгүүр давхарлана ──
+        // Status bar-ын зайг AppHeader өөрөө авна.
+        Positioned(
+          top: 0,
+          left: 0,
+          right: 0,
+          child: AppHeader.media(
+            // Линк/reload-оор нээгдсэн бол pop хийх хуудас байхгүй
+            fallbackLocation: AppRoutes.feed,
+            actions: [
+              // Өөрийн пост (live бичлэг ч мөн адил)-ыг засах/устгах
+              if (_post != null && _post!.userId == me)
+                GlassIconButton(
+                  icon: AppIcons.more,
+                  onMedia: true,
+                  tooltip: 'Постын үйлдлүүд',
+                  onTap: _openOwnOptions,
+                ),
+            ],
+          ),
+        ),
       ]),
     );
   }
@@ -557,31 +569,6 @@ class _TapTarget extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 8),
           // widthFactor/heightFactor — мөрийг сунгахгүй, контентоороо багтана
           child: Center(widthFactor: 1, heightFactor: 1, child: child),
-        ),
-      );
-}
-
-// ─── Хөвөгч glass дугуй товч (back / more) ────────────────────────────────────
-class _GlassCircleButton extends StatelessWidget {
-  final IconData icon;
-  final VoidCallback onTap;
-  const _GlassCircleButton({required this.icon, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) => _Press(
-        scale: 0.9,
-        onTap: onTap,
-        child: Container(
-          width: 40,
-          height: 40,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: Colors.black.withValues(alpha: 0.45),
-            // Медиа дээгүүр хөвдөг тул горимоос үл хамааран харанхуй glass хүрээ
-            border: Border.all(color: AppColors.hairline2Dark),
-            boxShadow: AppColors.shadowCard,
-          ),
-          child: Icon(icon, size: 17, color: Colors.white),
         ),
       );
 }
@@ -656,12 +643,12 @@ class _PostErrorBox extends StatelessWidget {
                 style: AppTextStyles.bodySm
                     .copyWith(color: AppColors.textTertiary)),
             const SizedBox(height: 16),
-            OutlinedButton(
+            // Алдааны төлөвийн цорын ганц үйлдэл — primary (creator-тай ижил)
+            GradientButton(
+              label: 'Дахин оролдох',
+              size: GradientButtonSize.md,
+              fullWidth: false,
               onPressed: onRetry,
-              style: OutlinedButton.styleFrom(
-                  side: BorderSide(color: AppColors.hairline),
-                  foregroundColor: AppColors.accentStart),
-              child: const Text('Дахин оролдох'),
             ),
           ]),
         ),
@@ -756,8 +743,7 @@ class _PostHeaderState extends ConsumerState<_PostHeader> {
       }
       if (err != null) {
         setState(() => _savedOverride = was);
-        ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(err), backgroundColor: AppColors.error));
+        ScaffoldMessenger.of(context).showSnackBar(_errorSnack(err));
         return;
       }
       wrote = true;
@@ -774,9 +760,8 @@ class _PostHeaderState extends ConsumerState<_PostHeader> {
           SupabaseService.currentUser?.id == owner &&
           ref.read(sessionUserIdProvider) == owner &&
           widget.post.id == postId) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text(wrote ? savedPostRefreshError : savedPostReadError),
-            backgroundColor: AppColors.error));
+        ScaffoldMessenger.of(context).showSnackBar(_errorSnack(
+            wrote ? savedPostRefreshError : savedPostReadError));
       }
     } finally {
       _saving = false;
@@ -788,7 +773,7 @@ class _PostHeaderState extends ConsumerState<_PostHeader> {
     await Clipboard.setData(ClipboardData(text: link));
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Холбоос хуулагдлаа 🔗'),
+          content: Text('Холбоос хуулагдлаа'),
           duration: Duration(seconds: 2)));
     }
   }
@@ -812,7 +797,9 @@ class _PostHeaderState extends ConsumerState<_PostHeader> {
       errorWidget: (_, __, ___) => Container(
         height: 300,
         color: AppColors.bgSurface,
-        child: const Center(child: Text('📸', style: TextStyle(fontSize: 48))),
+        child: Center(
+            child: Icon(AppIcons.imageBroken,
+                size: 34, color: AppColors.textTertiary)),
       ),
     );
   }
@@ -875,8 +862,8 @@ class _PostHeaderState extends ConsumerState<_PostHeader> {
                     Text(author?.username ?? '—', style: AppTextStyles.labelLg),
                     if (author?.isVerified == true) ...[
                       const SizedBox(width: 4),
-                      const Icon(Icons.verified,
-                          color: AppColors.accentStart, size: 14),
+                      Icon(Icons.verified,
+                          color: AppColors.accentText, size: 14),
                     ],
                   ]),
                   if (post.venueName != null)
@@ -886,8 +873,8 @@ class _PostHeaderState extends ConsumerState<_PostHeader> {
                             : () => context.push(
                                 '/place/${Uri.encodeComponent(post.venueRef!)}'),
                         child: Row(children: [
-                          const Icon(Icons.location_on,
-                              size: 10, color: AppColors.accentStart),
+                          Icon(AppIcons.venue,
+                              size: 10, color: AppColors.accentText),
                           const SizedBox(width: 2),
                           Text(post.venueName!,
                               style: AppTextStyles.bodyXs
@@ -926,7 +913,7 @@ class _PostHeaderState extends ConsumerState<_PostHeader> {
             onTap: widget.onLike,
             child: Row(children: [
               Icon(
-                post.isLikedByMe ? Icons.favorite : Icons.favorite_border,
+                post.isLikedByMe ? AppIcons.likeActive : AppIcons.like,
                 color:
                     post.isLikedByMe ? AppColors.like : AppColors.textSecondary,
                 size: 24,
@@ -942,7 +929,7 @@ class _PostHeaderState extends ConsumerState<_PostHeader> {
             scale: 0.88,
             onTap: widget.onComment,
             child: Row(children: [
-              Icon(Icons.chat_bubble_outline,
+              Icon(AppIcons.comment,
                   color: AppColors.textSecondary, size: 24),
               const SizedBox(width: 6),
               Text(_fmt(widget.commentCount ?? post.commentsCount),
@@ -954,14 +941,14 @@ class _PostHeaderState extends ConsumerState<_PostHeader> {
           _Press(
             scale: 0.85,
             onTap: _share,
-            child: Icon(Icons.send_outlined,
+            child: Icon(AppIcons.share,
                 color: AppColors.textSecondary, size: 24),
           ),
           const SizedBox(width: 18),
           _Press(
             scale: 0.85,
             onTap: _toggleSave,
-            child: Icon(_saved ? Icons.bookmark : Icons.bookmark_border,
+            child: Icon(_saved ? AppIcons.saveActive : AppIcons.save,
                 color: _saved ? AppColors.saved : AppColors.textSecondary,
                 size: 24),
           ),
@@ -1117,7 +1104,7 @@ class _CommentTileState extends State<_CommentTile> {
             height: 44,
             child:
                 Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-              Icon(_liked ? Icons.favorite : Icons.favorite_border,
+              Icon(_liked ? AppIcons.likeActive : AppIcons.like,
                   color: _liked ? AppColors.like : AppColors.textTertiary,
                   size: 16),
               if (_likes > 0) ...[
@@ -1134,48 +1121,48 @@ class _CommentTileState extends State<_CommentTile> {
   }
 
   void _confirmDelete(BuildContext ctx) {
-    showModalBottomSheet(
+    final body = widget.comment.body;
+    // Sheet root navigator дээр нээгдэнэ: ӨӨРИЙН context-оор (sheetContext)
+    // хаана — хуудасны ctx-оор pop хийвэл sheet биш хуудас хаагдана.
+    // Дэвсгэр, булан, ганц бариулыг theme өгнө.
+    showAppSheet<void>(
       context: ctx,
-      backgroundColor: AppColors.bgElevated,
-      shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
-      builder: (_) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          // Бариулыг theme-ийн showDragHandle зурна (нэг л бариул).
-          child: Column(mainAxisSize: MainAxisSize.min, children: [
-            Text('Сэтгэгдэл устгах уу?', style: AppTextStyles.labelLg),
-            const SizedBox(height: 8),
-            Text(
-                '"${widget.comment.body.length > 60 ? '${widget.comment.body.substring(0, 60)}…' : widget.comment.body}"',
-                style: AppTextStyles.bodyMd
-                    .copyWith(color: AppColors.textSecondary),
-                textAlign: TextAlign.center),
-            const SizedBox(height: 20),
-            Row(children: [
+      builder: (sheetContext) => SafeArea(
+        top: false,
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          AppSheetHeader(
+            title: 'Сэтгэгдэл устгах уу?',
+            subtitle:
+                '"${body.length > 60 ? '${body.substring(0, 60)}…' : body}"',
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+            child: Row(children: [
               Expanded(
-                child: OutlinedButton(
-                  onPressed: () => Navigator.pop(ctx),
-                  style: OutlinedButton.styleFrom(
-                      side: BorderSide(color: AppColors.hairline)),
-                  child: const Text('Болих'),
+                child: OutlineButton(
+                  label: 'Болих',
+                  onPressed: () => Navigator.of(sheetContext).pop(),
                 ),
               ),
               const SizedBox(width: 12),
               Expanded(
-                child: ElevatedButton(
+                // Устгах баталгаажуулалт: dangerFill дээр цагаан бичиг,
+                // хажуугийн OutlineButton-той ижил 52px өндөр.
+                child: FilledButton(
                   onPressed: () {
-                    Navigator.pop(ctx);
+                    Navigator.of(sheetContext).pop();
                     widget.onDelete();
                   },
-                  style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.error),
+                  style: FilledButton.styleFrom(
+                      backgroundColor: AppColors.dangerFill,
+                      foregroundColor: Colors.white,
+                      minimumSize: const Size.fromHeight(52)),
                   child: const Text('Устгах'),
                 ),
               ),
             ]),
-          ]),
-        ),
+          ),
+        ]),
       ),
     );
   }
@@ -1240,7 +1227,7 @@ class _CommentInput extends StatelessWidget {
                           .copyWith(color: AppColors.textSecondary))),
               _Press(
                   onTap: onCancelReply,
-                  child: Icon(Icons.close,
+                  child: Icon(AppIcons.close,
                       size: 16, color: AppColors.textTertiary)),
             ]),
           ),
@@ -1311,11 +1298,11 @@ class _CommentInput extends StatelessWidget {
                       ],
               ),
               child: sending
-                  ? const Padding(
-                      padding: EdgeInsets.all(13),
+                  ? Padding(
+                      padding: const EdgeInsets.all(13),
                       child: CircularProgressIndicator(
-                          color: AppColors.accentStart, strokeWidth: 2))
-                  : const Icon(Icons.send_rounded,
+                          color: AppColors.accentText, strokeWidth: 2))
+                  : const Icon(AppIcons.send,
                       color: Colors.white, size: 20),
             ),
           ),
@@ -1339,7 +1326,7 @@ class _CountBadge extends StatelessWidget {
         ),
         child: Text('$count',
             style: AppTextStyles.bodyXs.copyWith(
-                color: AppColors.accentStart, fontWeight: FontWeight.w700)),
+                color: AppColors.accentText, fontWeight: FontWeight.w700)),
       );
 }
 
@@ -1382,8 +1369,9 @@ class _DetailCarouselState extends State<_DetailCarousel> {
               placeholder: (_, __) => Container(color: AppColors.bgSurface),
               errorWidget: (_, __, ___) => Container(
                 color: AppColors.bgSurface,
-                child: const Center(
-                    child: Text('📸', style: TextStyle(fontSize: 48))),
+                child: Center(
+                    child: Icon(AppIcons.imageBroken,
+                        size: 34, color: AppColors.textTertiary)),
               ),
             );
           },

@@ -1,6 +1,8 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import '../../../core/theme/app_spacing.dart';
 import '../../../core/widgets/app_motion.dart';
+import '../../../core/widgets/app_sheet.dart';
 import '../../../models/venue_story_activity.dart';
 
 /// Paint-only toy emotions. Map pins share one active animation clock, keeping
@@ -460,21 +462,16 @@ class _VenueStoryLegendState extends State<VenueStoryLegend>
     super.dispose();
   }
 
+  // Opened with showAppSheet: the theme's drag handle sits above, so the
+  // title row starts at the top. The header keeps the body's 24 px inset.
   @override
   Widget build(BuildContext context) => SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(24, 12, 24, 28),
+        padding: const EdgeInsets.fromLTRB(24, 0, 24, 28),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Row(children: [
-            const Expanded(
-                child: Text('Газрын хэмнэл',
-                    style:
-                        TextStyle(fontSize: 21, fontWeight: FontWeight.w800))),
-            IconButton(
-                tooltip: 'Хаах',
-                onPressed: () => Navigator.pop(context),
-                icon: const Icon(Icons.close_rounded)),
-          ]),
-          const SizedBox(height: 8),
+          const AppSheetHeader(
+              title: 'Газрын хэмнэл',
+              showClose: true,
+              padding: EdgeInsets.only(bottom: AppSpacing.x2)),
           const Text(
               'Энэ газрыг тэмдэглэсэн, танд харагдах нэг story эсвэл post нь 1 идэвх. '
               'Story — Улаанбаатарын цагаар өнөөдрийн идэвхтэй story. '

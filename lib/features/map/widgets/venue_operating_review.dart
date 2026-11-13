@@ -166,7 +166,6 @@ class _VenueOperatingReviewState extends State<VenueOperatingReview> {
                   }),
                   icon: const Icon(Icons.refresh_rounded, size: 18),
                   label: const Text('Дахин унших'),
-                  style: TextButton.styleFrom(foregroundColor: accent),
                 ),
               if (review != null) ...[
                 const SizedBox(height: 8),
@@ -207,7 +206,6 @@ class _VenueOperatingReviewState extends State<VenueOperatingReview> {
                     child: TextButton(
                       onPressed: _opening ? null : () => _open(source.url),
                       style: TextButton.styleFrom(
-                        foregroundColor: accent,
                         alignment: Alignment.centerLeft,
                         padding: const EdgeInsets.symmetric(vertical: 8),
                         minimumSize: const Size(0, 44),
@@ -230,7 +228,9 @@ class _VenueOperatingReviewState extends State<VenueOperatingReview> {
               if (_linkError != null)
                 Text(_linkError!,
                     style: TextStyle(
-                        color: dark ? AppColors.error : const Color(0xFFB81F40),
+                        color: dark
+                            ? AppColors.dangerDark
+                            : AppColors.dangerLight,
                         fontSize: 12,
                         height: 1.5)),
             ],

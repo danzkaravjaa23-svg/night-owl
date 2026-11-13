@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/utils/image_uploader.dart';
+import '../../../core/widgets/app_header.dart';
 import '../../../core/widgets/gradient_button.dart';
 import '../../../core/router/app_router.dart';
 import '../../map/providers/venue_provider.dart';
@@ -214,7 +215,7 @@ class _VenueEditScreenState extends ConsumerState<VenueEditScreen> {
       if (!mounted || !_active) return;
       ref.read(refreshVenueCatalogProvider)();
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Хадгалагдлаа ✓'),
+          content: Text('Хадгалагдлаа'),
           behavior: SnackBarBehavior.floating));
       // Reload/deep link үед stack хоосон байж болно — бизнес самбар руу fallback
       if (context.canPop()) {
@@ -254,17 +255,10 @@ class _VenueEditScreenState extends ConsumerState<VenueEditScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.bgBase,
-      appBar: AppBar(
-        backgroundColor: AppColors.bgBase,
-        elevation: 0,
-        leading: IconButton(
-            onPressed: () => context.canPop()
-                ? context.pop()
-                : context.go(AppRoutes.business),
-            icon: const Icon(Icons.arrow_back_ios_new, size: 20)),
-        title: Text(_venueId != null ? 'Газар засах' : 'Газар үүсгэх',
-            style: AppTextStyles.h2),
-      ),
+      // Нэгдсэн толгой (DS-06): pop хийх хуудасгүй бол Бизнес самбар руу
+      appBar: AppHeader.title(
+          title: _venueId != null ? 'Газар засах' : 'Газар үүсгэх',
+          fallbackLocation: AppRoutes.business),
       body: _invalidated
           ? Center(
               child: Padding(
@@ -279,9 +273,9 @@ class _VenueEditScreenState extends ConsumerState<VenueEditScreen> {
                         child: const Text('Бизнес самбар руу буцах')),
                   ])))
           : _loading
-              ? const Center(
+              ? Center(
                   child: CircularProgressIndicator(
-                      color: AppColors.accentStart, strokeWidth: 2))
+                      color: AppColors.accentText, strokeWidth: 2))
               : _loadFailed
                   ? _loadError()
                   : ListView(
@@ -396,7 +390,7 @@ class _VenueEditScreenState extends ConsumerState<VenueEditScreen> {
                             const SizedBox(height: 12),
                             Text(_error!,
                                 style: AppTextStyles.bodyXs
-                                    .copyWith(color: AppColors.error)),
+                                    .copyWith(color: AppColors.danger)),
                           ],
                           const SizedBox(height: 22),
                           GradientButton(
@@ -420,21 +414,12 @@ class _VenueEditScreenState extends ConsumerState<VenueEditScreen> {
               style:
                   AppTextStyles.bodySm.copyWith(color: AppColors.textTertiary)),
           const SizedBox(height: 18),
-          GestureDetector(
-            onTap: _load,
-            child: MouseRegion(
-              cursor: SystemMouseCursors.click,
-              child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 22, vertical: 11),
-                decoration: BoxDecoration(
-                    gradient: AppColors.accentGradient,
-                    borderRadius: BorderRadius.circular(12)),
-                child: Text('Дахин оролдох',
-                    style: AppTextStyles.btn.copyWith(color: Colors.white)),
-              ),
-            ),
-          ),
+          // Гараар хийсэн gradient Container биш — primary pill (DS-03)
+          GradientButton(
+              label: 'Дахин оролдох',
+              size: GradientButtonSize.md,
+              fullWidth: false,
+              onPressed: _load),
         ]),
       );
 

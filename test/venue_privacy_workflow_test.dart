@@ -11,6 +11,7 @@ import 'package:http/testing.dart';
 import 'package:image/image.dart' as image;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:night_owl_ub/core/widgets/settings_rows.dart';
 import 'package:night_owl_ub/features/auth/providers/auth_provider.dart';
 import 'package:night_owl_ub/features/discovery/screens/privacy_screen.dart';
 import 'package:night_owl_ub/features/map/providers/venue_provider.dart';
@@ -165,7 +166,7 @@ void main() {
       expect(patch.url.queryParameters['owner_id'], 'eq.$first');
       expect(patch.headers['prefer'], 'return=representation');
       expect(find.text('BUSINESS DESTINATION'), findsNothing);
-      expect(find.text('Хадгалагдлаа ✓'), findsNothing);
+      expect(find.text('Хадгалагдлаа'), findsNothing);
       expect(find.text('Хадгалж чадсангүй. Дахин оролдоно уу'), findsOneWidget);
       expect(
           tester
@@ -178,7 +179,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(venueWrites(), hasLength(2));
       expect(find.text('BUSINESS DESTINATION'), findsOneWidget);
-      expect(find.text('Хадгалагдлаа ✓'), findsOneWidget);
+      expect(find.text('Хадгалагдлаа'), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
   }
@@ -221,7 +222,7 @@ void main() {
       expect(find.byType(TextField), findsNothing);
       expect(find.text('FIRST ACCOUNT DRAFT'), findsNothing);
       expect(find.textContaining('Нэвтрэх хаяг өөрчлөгдсөн'), findsOneWidget);
-      expect(find.text('Хадгалагдлаа ✓'), findsNothing);
+      expect(find.text('Хадгалагдлаа'), findsNothing);
       expect(tester.takeException(), isNull);
     });
   }
@@ -417,6 +418,45 @@ void main() {
             .widget<DropdownButton<String>>(find.byType(DropdownButton<String>))
             .value,
         policy);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('private profile toggles from its switch and from its row',
+      (tester) async {
+    var private = false;
+    final patches = <Map<String, dynamic>>[];
+    respond = (r) async {
+      if (r.url.path == '/rest/v1/profiles') {
+        if (r.method == 'PATCH') {
+          final body = Map<String, dynamic>.from(jsonDecode(r.body) as Map);
+          patches.add(body);
+          private = body['is_private'] == true;
+          return json(r, {'id': first});
+        }
+        return json(r, {'is_private': private, 'dm_policy': 'everyone'});
+      }
+      return json(r, []);
+    };
+    await tester.pumpWidget(ProviderScope(
+        overrides: [sessionUserIdProvider.overrideWithValue(first)],
+        child: const MaterialApp(home: PrivacyScreen())));
+    await tester.pumpAndSettle();
+    SettingsSwitch toggle() =>
+        tester.widget<SettingsSwitch>(find.byType(SettingsSwitch));
+    expect(toggle().value, isFalse);
+
+    // The settings-kit switch (DS-05) saves the new value with the policy.
+    await tester.tap(find.byType(SettingsSwitch));
+    await tester.pumpAndSettle();
+    expect(patches.single, {'is_private': true, 'dm_policy': 'everyone'});
+    expect(toggle().value, isTrue);
+
+    // Like Settings, tapping the row text flips the same setting.
+    await tester.tap(find.text('Хувийн профайл'));
+    await tester.pumpAndSettle();
+    expect(patches, hasLength(2));
+    expect(patches.last['is_private'], isFalse);
+    expect(toggle().value, isFalse);
     expect(tester.takeException(), isNull);
   });
 }

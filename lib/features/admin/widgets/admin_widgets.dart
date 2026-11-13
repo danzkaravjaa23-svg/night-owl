@@ -1,10 +1,16 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 
+import '../../../core/router/app_router.dart' show AppRoutes;
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_radii.dart';
+import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../core/widgets/app_header.dart';
+import '../../../core/widgets/glass_icon_button.dart';
+import '../../../core/widgets/gradient_button.dart';
+import '../../../core/widgets/owl_loading.dart';
 import '../providers/admin_console_provider.dart';
 import '../services/admin_console_service.dart';
 
@@ -15,32 +21,21 @@ class AdminScaffold extends StatelessWidget {
   const AdminScaffold(
       {super.key, required this.title, required this.child, this.onRefresh});
 
+  /// The one app header (DS-06): back ("Буцах"; no page underneath → profile),
+  /// compact title, and "Шинэчлэх" when the page can refresh.
   @override
   Widget build(BuildContext context) => Scaffold(
       backgroundColor: AppColors.bgBase,
-      appBar: AppBar(
-          backgroundColor: AppColors.bgBase,
-          toolbarHeight: MediaQuery.textScalerOf(context).scale(20) > 25
-              ? MediaQuery.textScalerOf(context).scale(24) * 2.3 + 12
-              : 64,
-          leading: IconButton(
-              tooltip: 'Буцах',
-              icon: const Icon(Icons.arrow_back_rounded),
-              onPressed: () {
-                if (Navigator.of(context).canPop()) {
-                  Navigator.of(context).pop();
-                } else {
-                  context.go('/profile');
-                }
-              }),
-          title: Text(title,
-              maxLines: 2, style: AppTextStyles.h2.copyWith(height: 1.15)),
+      appBar: AppHeader.title(
+          title: title,
+          compact: true,
+          fallbackLocation: AppRoutes.profile,
           actions: [
             if (onRefresh != null)
-              IconButton(
+              GlassIconButton(
+                  icon: Icons.refresh_rounded,
                   tooltip: 'Шинэчлэх',
-                  onPressed: onRefresh,
-                  icon: const Icon(Icons.refresh_rounded))
+                  onTap: onRefresh)
           ]),
       body: SafeArea(
           top: false,
@@ -51,17 +46,23 @@ class AdminScaffold extends StatelessWidget {
 }
 
 class AdminIntro extends StatelessWidget {
-  final String title;
+  /// Lead line of the page. Leave it out when it would only repeat the
+  /// header title (DS-06: admin printed its title twice).
+  final String? title;
   final String subtitle;
-  const AdminIntro({super.key, required this.title, required this.subtitle});
+  const AdminIntro({super.key, this.title, required this.subtitle});
   @override
-  Widget build(BuildContext context) =>
-      Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+  Widget build(BuildContext context) {
+    final title = this.title;
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      if (title != null) ...[
         Text(title, style: AppTextStyles.h1),
-        const SizedBox(height: 8),
-        Text(subtitle, style: AppTextStyles.bodyMd.copyWith(height: 1.5)),
-        const SizedBox(height: 24)
-      ]);
+        const SizedBox(height: AppSpacing.x2),
+      ],
+      Text(subtitle, style: AppTextStyles.bodyMd.copyWith(height: 1.5)),
+      const SizedBox(height: AppSpacing.x6)
+    ]);
+  }
 }
 
 class AdminCard extends StatelessWidget {
@@ -72,7 +73,7 @@ class AdminCard extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-          color: AppColors.bgElevated, borderRadius: BorderRadius.circular(20)),
+          color: AppColors.bgElevated, borderRadius: AppRadii.lgR),
       child: child);
 }
 
@@ -81,15 +82,7 @@ class AdminLoading extends StatelessWidget {
   const AdminLoading({super.key, this.message = 'Мэдээллийг уншиж байна…'});
   @override
   Widget build(BuildContext context) => Padding(
-      padding: const EdgeInsets.all(28),
-      child: Column(mainAxisSize: MainAxisSize.min, children: [
-        const SizedBox(
-            width: 24,
-            height: 24,
-            child: CircularProgressIndicator(strokeWidth: 2)),
-        const SizedBox(height: 16),
-        Text(message, style: AppTextStyles.bodyMd, textAlign: TextAlign.center)
-      ]));
+      padding: const EdgeInsets.all(28), child: OwlLoading(message: message));
 }
 
 class AdminMessage extends StatelessWidget {
@@ -105,21 +98,24 @@ class AdminMessage extends StatelessWidget {
       this.onRetry});
   @override
   Widget build(BuildContext context) => SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(AppSpacing.x6),
       child: Column(mainAxisSize: MainAxisSize.min, children: [
         Icon(icon, size: 36, color: AppColors.silver),
-        const SizedBox(height: 16),
+        const SizedBox(height: AppSpacing.x4),
         Text(title, textAlign: TextAlign.center, style: AppTextStyles.h2),
         const SizedBox(height: 10),
         Text(message,
             textAlign: TextAlign.center,
             style: AppTextStyles.bodyMd.copyWith(height: 1.5)),
         if (onRetry != null) ...[
-          const SizedBox(height: 20),
-          FilledButton.tonalIcon(
-              onPressed: onRetry,
-              icon: const Icon(Icons.refresh),
-              label: const Text('Дахин оролдох'))
+          const SizedBox(height: AppSpacing.x5),
+          // The one recovery action of this state: primary, md (DS-03).
+          GradientButton(
+              size: GradientButtonSize.md,
+              fullWidth: false,
+              icon: const Icon(Icons.refresh_rounded),
+              label: 'Дахин оролдох',
+              onPressed: onRetry)
         ]
       ]));
 }
@@ -129,16 +125,20 @@ class AdminTag extends StatelessWidget {
   final bool warning;
   const AdminTag(this.label, {super.key, this.warning = false});
   @override
-  Widget build(BuildContext context) => Container(
-      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
-      decoration: BoxDecoration(
-          color: (warning ? AppColors.error : AppColors.silver)
-              .withValues(alpha: .1),
-          borderRadius: BorderRadius.circular(8)),
-      child: Text(label,
-          style: AppTextStyles.labelMd
-              .copyWith(color: warning ? AppColors.error : AppColors.silver)));
+  Widget build(BuildContext context) {
+    final color = warning ? AppColors.danger : AppColors.silver;
+    return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+        decoration: BoxDecoration(
+            color: color.withValues(alpha: .1), borderRadius: AppRadii.smR),
+        child: Text(label, style: AppTextStyles.labelMd.copyWith(color: color)));
+  }
 }
+
+/// Actions that remove content or lock an account. Their menu item is drawn
+/// in [AppColors.danger] and their confirmation on [AppColors.dangerFill].
+bool adminActionDestructive(String action) =>
+    action.startsWith('delete_') || action == 'ban_user';
 
 String adminText(Map<String, dynamic> row, String field,
         [String fallback = '']) =>
@@ -259,7 +259,7 @@ class _AdminActionDialogState extends State<_AdminActionDialog> {
   Widget build(BuildContext context) => PopScope(
       canPop: !_busy,
       child: AlertDialog(
-          title: Text(adminActionLabel(widget.action), style: AppTextStyles.h2),
+          title: Text(adminActionLabel(widget.action)),
           content: SizedBox(
               width: 420,
               child: SingleChildScrollView(
@@ -275,11 +275,11 @@ class _AdminActionDialogState extends State<_AdminActionDialog> {
                             : 'Үйлдэл болон шалтгаан аудитын түүхэнд бүртгэгдэнэ.',
                         style: AppTextStyles.bodyMd.copyWith(height: 1.45)),
                     if (widget.reportId != null) ...[
-                      const SizedBox(height: 8),
+                      const SizedBox(height: AppSpacing.x2),
                       Text('Холбоотой мэдээллийг хамт шийдвэрлэнэ.',
                           style: AppTextStyles.bodySm)
                     ],
-                    const SizedBox(height: 20),
+                    const SizedBox(height: AppSpacing.x5),
                     TextField(
                         controller: _reason,
                         enabled: !_busy,
@@ -294,7 +294,7 @@ class _AdminActionDialogState extends State<_AdminActionDialog> {
                           padding: const EdgeInsets.only(top: 10),
                           child: Text(_error!,
                               style: AppTextStyles.bodySm
-                                  .copyWith(color: AppColors.error)))
+                                  .copyWith(color: AppColors.danger)))
                   ]))),
           actions: [
             TextButton(
@@ -302,6 +302,12 @@ class _AdminActionDialogState extends State<_AdminActionDialog> {
                     _busy ? null : () => Navigator.of(context).pop(false),
                 child: const Text('Болих')),
             FilledButton(
+                // Destructive confirmation (DS-03): white on dangerFill.
+                style: adminActionDestructive(widget.action)
+                    ? FilledButton.styleFrom(
+                        backgroundColor: AppColors.dangerFill,
+                        foregroundColor: Colors.white)
+                    : null,
                 onPressed: _busy || _uncertain ? null : _submit,
                 child: Text(_busy ? 'Хадгалж байна…' : 'Баталгаажуулах'))
           ]));

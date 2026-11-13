@@ -7,6 +7,8 @@ import 'package:latlong2/latlong.dart' show LatLng;
 import 'package:url_launcher/url_launcher.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_icons.dart';
+import '../../../core/widgets/app_sheet.dart';
 import '../../../core/widgets/night_owl_brand.dart';
 import '../../../core/widgets/sculpted_icon.dart';
 import '../../../core/widgets/app_motion.dart';
@@ -386,77 +388,60 @@ class _VenueMapState extends State<GoogleMapView> {
 
   void _showGroupMembers(VenueMarkerGroup group) {
     ModalRoute<dynamic>? openedRoute;
-    showModalBottomSheet<void>(
+    // Root sheet (DS-02). `_dismissGroupSheet` removes this route from the
+    // root navigator, so it still closes when the private counts change.
+    showAppSheet<void>(
       context: context,
-      backgroundColor: Theme.of(context).colorScheme.surface,
-      isScrollControlled: true,
-      useSafeArea: true,
-      sheetAnimationStyle: AppMotion.reduced(context)
-          ? AnimationStyle.noAnimation
-          : const AnimationStyle(
-              duration: AppMotion.enter, reverseDuration: AppMotion.exit),
-      shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
       builder: (sheetContext) {
         openedRoute = ModalRoute.of(sheetContext);
         _groupSheetRoute = openedRoute;
-        return SizedBox(
-          height: math.min(560, MediaQuery.sizeOf(sheetContext).height * .72),
-          child: Column(children: [
-            Padding(
-                padding: const EdgeInsets.fromLTRB(20, 12, 12, 8),
-                child: Row(children: [
-                  Expanded(
-                      child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                        Text('${group.members.length} ойролцоох газар',
-                            style: const TextStyle(
-                                fontSize: 17, fontWeight: FontWeight.w700)),
-                        if (widget.activityCounts != null)
-                          Text(
-                              _mapActivity(
-                                      group.members.map((v) => v.id),
-                                      widget.activityCounts,
-                                      widget.activityPostCounts)!
-                                  .breakdownLabel,
-                              style: const TextStyle(fontSize: 12)),
-                      ])),
-                  IconButton(
-                      tooltip: 'Хаах',
-                      onPressed: () => Navigator.pop(sheetContext),
-                      icon: const Icon(Icons.close_rounded)),
-                ])),
-            Expanded(
-                child: ListView.builder(
-              padding: const EdgeInsets.only(bottom: 20),
-              itemCount: group.members.length,
-              itemBuilder: (_, index) {
-                final venue = group.members[index];
-                return ListTile(
-                  key: ValueKey('venue-group-member-${venue.id}'),
-                  leading: Container(
-                      width: 40,
-                      height: 40,
-                      padding: const EdgeInsets.all(7),
-                      decoration: const BoxDecoration(
-                          shape: BoxShape.circle, color: Color(0xFF211737)),
-                      child: const NightOwlMark(size: 26)),
-                  title: Text(venue.name.isEmpty ? 'Нэргүй газар' : venue.name),
-                  subtitle: Text(widget.activityCounts == null
-                      ? 'Газрын дэлгэрэнгүйг нээх'
-                      : _mapActivity([venue.id], widget.activityCounts,
-                              widget.activityPostCounts)!
-                          .breakdownLabel),
-                  trailing: const Icon(Icons.chevron_right_rounded),
-                  onTap: () {
-                    Navigator.pop(sheetContext);
-                    if (mounted) widget.onVenueTap?.call(venue.id);
-                  },
-                );
-              },
-            )),
-          ]),
+        // The content takes the bottom inset itself (showAppSheet contract).
+        return SafeArea(
+          top: false,
+          child: SizedBox(
+            height:
+                math.min(560, MediaQuery.sizeOf(sheetContext).height * .72),
+            child: Column(children: [
+              AppSheetHeader(
+                  title: '${group.members.length} ойролцоох газар',
+                  subtitle: widget.activityCounts == null
+                      ? null
+                      : _mapActivity(group.members.map((v) => v.id),
+                              widget.activityCounts, widget.activityPostCounts)!
+                          .breakdownLabel,
+                  showClose: true),
+              Expanded(
+                  child: ListView.builder(
+                padding: const EdgeInsets.only(bottom: 20),
+                itemCount: group.members.length,
+                itemBuilder: (_, index) {
+                  final venue = group.members[index];
+                  return ListTile(
+                    key: ValueKey('venue-group-member-${venue.id}'),
+                    leading: Container(
+                        width: 40,
+                        height: 40,
+                        padding: const EdgeInsets.all(7),
+                        decoration: const BoxDecoration(
+                            shape: BoxShape.circle, color: Color(0xFF211737)),
+                        child: const NightOwlMark(size: 26)),
+                    title:
+                        Text(venue.name.isEmpty ? 'Нэргүй газар' : venue.name),
+                    subtitle: Text(widget.activityCounts == null
+                        ? 'Газрын дэлгэрэнгүйг нээх'
+                        : _mapActivity([venue.id], widget.activityCounts,
+                                widget.activityPostCounts)!
+                            .breakdownLabel),
+                    trailing: const Icon(AppIcons.forward),
+                    onTap: () {
+                      Navigator.pop(sheetContext);
+                      if (mounted) widget.onVenueTap?.call(venue.id);
+                    },
+                  );
+                },
+              )),
+            ]),
+          ),
         );
       },
     ).whenComplete(() {

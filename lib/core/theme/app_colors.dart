@@ -51,7 +51,13 @@ abstract class AppColors {
   /// Accent for TEXT and ICONS on app surfaces (Night #B6A4FF, Day #6550AD) —
   /// AA contrast on bgBase/bgSurface/bgElevated in both themes.
   /// [accentStart] #7654D6 is a FILL colour, meant for white text on top.
-  static Color get accentText => isDarkMode ? neonCyanDark : neonCyanLight;
+  static Color get accentText => isDarkMode ? accentTextDark : accentTextLight;
+
+  /// [accentText]-ийн горим бүрийн утга — theme зэрэг горимоос хамааралгүй
+  /// газарт (AppTheme) шууд хэрэглэнэ.
+  static const Color accentTextDark = neonCyanDark;
+  static const Color accentTextLight = neonCyanLight;
+
   static const Color magenta = Color(0xFFA78BFA);
   static const Color limeDark = Color(0xFF6EE7B7);
   static const Color limeLight = Color(0xFF17734F); // цайвар дэвсгэр дээр AA
@@ -82,8 +88,40 @@ abstract class AppColors {
       Color(0xFF6EE7B7); // glowing lime (live/active)
   static const Color successLight = Color(0xFF17734F); // цайвар дэвсгэр дээр AA
   static Color get success => isDarkMode ? successDark : successLight;
+
+  /// Хуучин нэр (Night-ийн [danger]-тай ижил) — хуучин кодыг эвдэхгүйн тулд
+  /// үлдээв. Шинэ код [danger] (текст/icon) эсвэл [dangerFill]-ийг хэрэглэнэ.
   static const Color error = Color(0xFFFF4566);
-  static const Color warning = Color(0xFFFFB020); // amber
+
+  // ─── Үүрэгт суурилсан төлөвийн өнгө (DS-01) ───
+  // Getter нь горимд дасна; *Dark/*Light const-ыг AppTheme шиг горимоо
+  // өөрөө мэддэг газар хэрэглэнэ.
+
+  /// Алдаа, устгах үйлдлийн ТЕКСТ ба ICON (Night #FF4566, Day #C81E3A) —
+  /// bgBase/bgSurface/bgElevated дээр AA (4.5:1).
+  static Color get danger => isDarkMode ? dangerDark : dangerLight;
+  static const Color dangerDark = error;
+  static const Color dangerLight = Color(0xFFC81E3A);
+
+  /// ЦАГААН текстийн ард тавих улаан fill (badge, устгах товч) — 4.5:1+.
+  static const Color dangerFill = Color(0xFFD7263D);
+
+  /// Анхааруулгын текст ба icon (Night #FFB020, Day #8A5A00) — AA.
+  static Color get warning => isDarkMode ? warningDark : warningLight;
+  static const Color warningDark = amber;
+  static const Color warningLight = Color(0xFF8A5A00);
+
+  /// Үнэлгээний од (Night #FFB020, Day #B7791F) — graphics 3:1+.
+  static Color get rating => isDarkMode ? ratingDark : ratingLight;
+  static const Color ratingDark = amber;
+  static const Color ratingLight = Color(0xFFB7791F);
+
+  /// Үргэлж харанхуй медиа (reels, story, видео) дээрх дарсан зүрх —
+  /// Day горимд ч тод лаванда хэвээр.
+  static const Color likeOnMedia = neonCyanDark;
+
+  /// Хадгалсан тэмдэг үргэлж харанхуй медиа дээр (Day-д ч #B6A4FF).
+  static const Color savedOnMedia = neonCyanDark;
 
   // ─── Light theme ───
   static const Color bgBaseLight = Color(0xFFF5F4FA);
@@ -132,15 +170,14 @@ abstract class AppColors {
     textTertiaryLight: textTertiaryDark,
     neonCyanLight: neonCyanDark,
     limeLight: limeDark,
+    dangerLight: dangerDark,
+    warningLight: warningDark,
+    ratingLight: ratingDark,
   };
 
-  // ─── Primary action gradient — magenta → purple → pink ───
-  static const LinearGradient accentGradient = LinearGradient(
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
-    colors: [Color(0xFF7654D6), Color(0xFF6944C6), Color(0xFF6745C1)],
-    stops: [0.0, 0.55, 1.0],
-  );
+  // ─── Primary action gradient ───
+  /// [AppGradients.primary]-ийн хуучин нэр — бүх дуудлага нэг gradient-тай.
+  static const LinearGradient accentGradient = AppGradients.primary;
 
   static const LinearGradient accentGradientSoft = LinearGradient(
     begin: Alignment.topLeft,
@@ -220,4 +257,15 @@ abstract class AppColors {
             blurRadius: 8,
             offset: const Offset(0, 3)),
       ];
+}
+
+/// Брэндийн gradient-ууд. Primary үйлдэл апп даяар НЭГ gradient-тай (DS-03).
+abstract final class AppGradients {
+  /// Primary товч ба брэндийн fill (GradientButton-ийн өнгө) — дээр нь
+  /// ЦАГААН текст тавина.
+  static const LinearGradient primary = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [Color(0xFF8661DC), Color(0xFF7654D6), Color(0xFF5D3AAB)],
+  );
 }

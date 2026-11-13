@@ -1,15 +1,41 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:night_owl_ub/core/theme/app_theme.dart';
 import 'package:night_owl_ub/features/auth/providers/auth_provider.dart';
 import 'package:night_owl_ub/features/map/providers/venue_provider.dart';
 import 'package:night_owl_ub/features/map/screens/explore_screen.dart';
 import 'package:night_owl_ub/features/map/screens/map_screen.dart';
+import 'package:night_owl_ub/features/map/screens/venue_reviews_screen.dart';
 import 'package:night_owl_ub/features/map/widgets/venue_information_sheet.dart';
 import 'package:night_owl_ub/models/venue.dart';
+
+/// Drag-handle shaped boxes inside the open sheet: 4 px tall, 30-48 px wide,
+/// rounded. The theme's handle (36×4) counts, and so would a hand-drawn one
+/// (DS-02: a sheet must show exactly one).
+int sheetHandleCount(WidgetTester tester) => find
+        .descendant(
+            of: find.byType(BottomSheet),
+            matching: find.byWidgetPredicate((widget) =>
+                widget is DecoratedBox &&
+                widget.decoration is BoxDecoration &&
+                (widget.decoration as BoxDecoration).borderRadius != null))
+        .evaluate()
+        .where((element) {
+      final box = element.renderObject;
+      return box is RenderBox &&
+          box.hasSize &&
+          box.size.height == 4 &&
+          box.size.width >= 30 &&
+          box.size.width <= 48;
+    }).length;
 
 Venue catalogVenue(
         {String name = 'Бодит кафе',
@@ -175,6 +201,8 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.byType(VenueInformationSheet), findsOneWidget);
       expect(find.text('Google Maps-д харах'), findsOneWidget);
+      // showAppSheet: the theme's handle only, no hand-drawn second one.
+      expect(sheetHandleCount(tester), 1);
       expect(tester.takeException(), isNull);
       await tester.pumpWidget(const SizedBox());
     });
@@ -217,5 +245,151 @@ void main() {
     expect(retried, 1);
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox());
+  });
+
+  // The venue page's reviews sheet is a root sheet (showAppSheet). A SnackBar
+  // shown while it is open would be painted UNDER it, so errors stay inside
+  // the sheet and a successful send closes the sheet before confirming.
+  group('venue reviews sheet', () {
+    const account = '10000000-0000-4000-8000-000000000003';
+    const venueId = '20000000-0000-4000-8000-000000000003';
+    late http.Client transport;
+    final writes = <http.Request>[];
+
+    http.Response json(http.Request request, Object? body) => http.Response(
+        jsonEncode(body), 200,
+        request: request, headers: {'content-type': 'application/json'});
+
+    Future<void> connect({required bool signedIn}) async {
+      writes.clear();
+      transport = MockClient((request) async {
+        if (request.url.path == '/auth/v1/token') {
+          final payload = base64Url
+              .encode(utf8.encode(jsonEncode({
+                'sub': account,
+                'exp': DateTime.now().millisecondsSinceEpoch ~/ 1000 + 3600,
+              })))
+              .replaceAll('=', '');
+          return json(request, {
+            'access_token': 'fixture.$payload.fixture',
+            'refresh_token': 'fixture-refresh',
+            'token_type': 'bearer',
+            'expires_in': 3600,
+            'user': {
+              'id': account,
+              'aud': 'authenticated',
+              'created_at': '2026-11-03T00:00:00Z',
+            },
+          });
+        }
+        if (request.method != 'GET') {
+          writes.add(request);
+          return http.Response('', 201, request: request);
+        }
+        if (request.url.path.endsWith('/venues')) {
+          return json(request, [
+            {
+              'id': venueId,
+              'name': 'Fixture lounge',
+              'venue_type': 'lounge',
+              'district': 'Сүхбаатар',
+              'rating': 0,
+              'review_count': 0,
+            }
+          ]);
+        }
+        return json(request, []);
+      });
+      await Supabase.initialize(
+          url: 'https://venue-reviews.example.test',
+          anonKey: 'fixture-public-key',
+          debug: false,
+          authOptions: const FlutterAuthClientOptions(
+              autoRefreshToken: false,
+              detectSessionInUri: false,
+              localStorage: EmptyLocalStorage()),
+          httpClient: transport);
+      if (signedIn) {
+        await Supabase.instance.client.auth.signInWithPassword(
+            email: 'fixture@example.test', password: 'fixture-password');
+      }
+    }
+
+    tearDown(() async {
+      await Supabase.instance.dispose();
+      transport.close();
+    });
+
+    /// Opens "Үнэлгээ", picks one star and presses "Илгээх".
+    Future<void> rateOneStar(WidgetTester tester,
+        {required bool signedIn}) async {
+      await tester.pumpWidget(ProviderScope(
+          overrides: [
+            sessionUserIdProvider.overrideWithValue(signedIn ? account : null),
+          ],
+          child: MaterialApp(
+              theme: AppTheme.dark,
+              builder: (context, child) => MediaQuery(
+                  data:
+                      MediaQuery.of(context).copyWith(disableAnimations: true),
+                  child: child!),
+              home: const VenueDetailScreen(venueId: venueId))));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.text('Үнэлгээ'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Үнэлгээ'));
+      await tester.pumpAndSettle();
+      expect(find.byType(BottomSheet), findsOneWidget);
+      expect(sheetHandleCount(tester), 1);
+      await tester.tap(find
+          .descendant(
+              of: find.byType(BottomSheet),
+              matching: find.byIcon(Icons.star_border_rounded))
+          .first);
+      await tester.pump();
+      await tester.ensureVisible(find.text('Илгээх'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Илгээх'));
+      await tester.pumpAndSettle();
+    }
+
+    group('signed out', () {
+      setUp(() => connect(signedIn: false));
+
+      testWidgets('the error is shown inside the open sheet, not under it',
+          (tester) async {
+        await rateOneStar(tester, signedIn: false);
+        expect(find.byType(BottomSheet), findsOneWidget);
+        expect(
+            find.descendant(
+                of: find.byType(BottomSheet),
+                matching: find.text('Нэвтэрнэ үү')),
+            findsOneWidget);
+        expect(find.byType(SnackBar), findsNothing);
+        expect(writes, isEmpty);
+        expect(tester.takeException(), isNull);
+        await tester.pumpWidget(const SizedBox());
+      });
+    });
+
+    group('signed in', () {
+      setUp(() => connect(signedIn: true));
+
+      testWidgets('a sent review closes the sheet, then the page confirms',
+          (tester) async {
+        await rateOneStar(tester, signedIn: true);
+        expect(find.byType(BottomSheet), findsNothing);
+        expect(find.text('Үнэлгээ илгээгдлээ'), findsOneWidget);
+        final review = writes
+            .where((request) => request.url.path.endsWith('/venue_reviews'))
+            .single;
+        expect(review.body, contains('"rating":1'));
+        // Let the confirmation time out before the tree is removed.
+        await tester.pump(const Duration(seconds: 4));
+        await tester.pumpAndSettle();
+        expect(tester.takeException(), isNull);
+        await tester.pumpWidget(const SizedBox());
+      });
+    });
   });
 }

@@ -7,12 +7,15 @@ import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../core/constants/app_constants.dart';
-import '../../../core/router/app_router.dart';
 import '../../../core/services/supabase_service.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/widgets/night_owl_brand.dart';
+import '../../../core/widgets/app_header.dart';
 import '../../../core/widgets/app_motion.dart';
+import '../../../core/widgets/app_sheet.dart';
+import '../../../core/widgets/glass_icon_button.dart';
 import '../../../core/widgets/premium_surface.dart';
 import '../../../core/widgets/gradient_button.dart';
 import '../../../core/widgets/owl_loading.dart';
@@ -185,19 +188,10 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     context.push('/place/${Uri.encodeComponent(venue.id)}');
   }
 
+  // Root sheet (DS-02): covers the dock; the theme draws the one drag handle.
   void _showInformation(Venue venue) {
-    showModalBottomSheet<void>(
+    showAppSheet<void>(
       context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      showDragHandle: false,
-      sheetAnimationStyle: AppMotion.reduced(context)
-          ? AnimationStyle.noAnimation
-          : const AnimationStyle(
-              duration: AppMotion.enter, reverseDuration: AppMotion.exit),
-      backgroundColor: _background,
-      shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
       builder: (_) => ConstrainedBox(
         constraints:
             BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * .85),
@@ -408,70 +402,51 @@ class _MapScreenState extends ConsumerState<MapScreen> {
             ])));
   }
 
+  // DS-06: the same AppHeader.brand as Feed (one gutter, one logo position,
+  // glass discs). The intro below is page content, so it shares the glow but
+  // is not part of the header.
   Widget _header() => NightOwlAtmosphere(
-      child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 8, 12, 12),
-          child:
-              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Row(children: [
-              if (!widget.embedded)
-                IconButton(
-                    tooltip: 'Буцах',
-                    color: _foreground,
-                    onPressed: () => context.canPop()
-                        ? context.pop()
-                        : context.go(AppRoutes.explore),
-                    icon: SculptedIcon(Icons.arrow_back_rounded,
-                        color: _foreground, onDark: _dark)),
-              Expanded(
-                  child: Align(
-                      alignment: Alignment.centerLeft,
-                      child: FittedBox(
-                          fit: BoxFit.scaleDown,
-                          child: NightOwlBrand(size: 28, onDark: _dark)))),
-              IconButton(
-                  tooltip: 'Хүмүүс, шалгасан газрууд',
-                  onPressed: () => context.push('/discovery'),
-                  icon: const Icon(Icons.travel_explore)),
-              IconButton(
-                  tooltip: _showList
-                      ? 'Газрын зураг харах'
-                      : 'Бүх газрыг жагсаалтаар харах',
-                  color: _muted,
-                  onPressed: () => setState(() => _showList = !_showList),
-                  icon: SculptedIcon(
-                      _showList
-                          ? Icons.map_outlined
-                          : Icons.format_list_bulleted_rounded,
-                      color: _muted,
-                      onDark: _dark)),
-            ]),
-            const SizedBox(height: 8),
-            Text('Шинэ газар нээе',
-                style: AppTextStyles.h1.copyWith(
-                    color: _foreground,
-                    fontSize: 28,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: -.6)),
-            const SizedBox(height: 4),
-            Text('Газраа сонгоод, хэмнэлийг нь хараарай.',
-                style: AppTextStyles.bodySm.copyWith(color: _muted)),
-          ])));
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        AppHeader.brand(atmosphere: false, actions: [
+          GlassIconButton(
+              icon: Icons.travel_explore,
+              tooltip: 'Хүмүүс, шалгасан газрууд',
+              onTap: () => context.push('/discovery')),
+          GlassIconButton(
+              icon: _showList
+                  ? Icons.map_outlined
+                  : Icons.format_list_bulleted_rounded,
+              tooltip: _showList
+                  ? 'Газрын зураг харах'
+                  : 'Бүх газрыг жагсаалтаар харах',
+              onTap: () => setState(() => _showList = !_showList)),
+        ]),
+        Padding(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+            child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Шинэ газар нээе',
+                      style: AppTextStyles.h1.copyWith(
+                          color: _foreground,
+                          fontSize: 28,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: -.6)),
+                  const SizedBox(height: 4),
+                  Text('Газраа сонгоод, хэмнэлийг нь хараарай.',
+                      style: AppTextStyles.bodySm.copyWith(color: _muted)),
+                ])),
+      ]));
 
-  void _showStoryLevels() => showModalBottomSheet<void>(
+  // A root sheet: its content takes the bottom inset itself (showAppSheet).
+  void _showStoryLevels() => showAppSheet<void>(
       context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      backgroundColor: _background,
-      showDragHandle: true,
-      sheetAnimationStyle: AppMotion.reduced(context)
-          ? AnimationStyle.noAnimation
-          : const AnimationStyle(
-              duration: AppMotion.enter, reverseDuration: AppMotion.exit),
-      builder: (_) => ConstrainedBox(
-          constraints: BoxConstraints(
-              maxHeight: MediaQuery.sizeOf(context).height * .88),
-          child: const VenueStoryLegend()));
+      builder: (_) => SafeArea(
+          top: false,
+          child: ConstrainedBox(
+              constraints: BoxConstraints(
+                  maxHeight: MediaQuery.sizeOf(context).height * .88),
+              child: const VenueStoryLegend())));
 
   Widget _storyActivityControl({required bool loading, required bool error}) =>
       Material(
@@ -572,13 +547,13 @@ class _MapScreenState extends ConsumerState<MapScreen> {
           decoration: InputDecoration(
             hintText: 'Газар, дүүрэг, хаяг хайх…',
             hintStyle: AppTextStyles.bodyMd.copyWith(color: _muted),
-            prefixIcon: SculptedIcon(Icons.search_rounded,
+            prefixIcon: SculptedIcon(AppIcons.search,
                 color: _muted, size: 22, onDark: _dark),
             suffixIcon: _query.isEmpty
                 ? null
                 : IconButton(
                     tooltip: 'Хайлт цэвэрлэх',
-                    icon: SculptedIcon(Icons.close,
+                    icon: SculptedIcon(AppIcons.close,
                         color: _muted, size: 18, onDark: _dark),
                     onPressed: () {
                       _search.clear();
@@ -631,7 +606,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                       _expandedVenueId = null;
                       _dismissedSelection = false;
                     }),
-                icon: Icons.bookmark_border_rounded),
+                icon: _onlySaved ? AppIcons.saveActive : AppIcons.save),
           ]));
   Widget _pill(String label, bool selected, VoidCallback onTap,
           {IconData? icon}) =>
@@ -809,8 +784,8 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                                         _saving ? null : () => _save(venue),
                                     icon: SculptedIcon(
                                         bookmarks.contains(venue.id)
-                                            ? Icons.bookmark_rounded
-                                            : Icons.bookmark_border_rounded,
+                                            ? AppIcons.saveActive
+                                            : AppIcons.save,
                                         color: _accent,
                                         active: bookmarks.contains(venue.id),
                                         onDark: _dark,
@@ -915,14 +890,11 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                                                         maxLines: 2,
                                                         overflow: TextOverflow
                                                             .ellipsis,
-                                                        style: AppTextStyles.h3
+                                                        style: AppTextStyles
+                                                            .title
                                                             .copyWith(
                                                                 color:
-                                                                    _foreground,
-                                                                fontSize: 17,
-                                                                fontWeight:
-                                                                    FontWeight
-                                                                        .w700)),
+                                                                    _foreground)),
                                                     const SizedBox(height: 3),
                                                     Text(
                                                         [
@@ -958,7 +930,11 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                                                                 Icons
                                                                     .star_rounded,
                                                                 size: 15,
-                                                                color: _accent),
+                                                                color: _dark
+                                                                    ? AppColors
+                                                                        .ratingDark
+                                                                    : AppColors
+                                                                        .ratingLight),
                                                             Text(
                                                                 venue.rating
                                                                     .toStringAsFixed(
@@ -997,7 +973,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                                           _expandedVenueId = null;
                                           _dismissedSelection = true;
                                         }),
-                                    icon: Icon(Icons.close_rounded,
+                                    icon: Icon(AppIcons.close,
                                         size: 19, color: secondary)),
                               ]),
                           _venueStoryStatus(venue),
@@ -1009,7 +985,6 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                                     label: 'Чиглэл авах',
                                     height: 44,
                                     size: GradientButtonSize.md,
-                                    borderRadius: 16,
                                     icon: const Icon(Icons.directions_outlined,
                                         size: 20),
                                     onPressed: () => _directions(venue))),
@@ -1032,8 +1007,8 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                                             OwlLoading(size: 18, compact: true))
                                     : Icon(
                                         saved
-                                            ? Icons.bookmark_rounded
-                                            : Icons.bookmark_border_rounded,
+                                            ? AppIcons.saveActive
+                                            : AppIcons.save,
                                         size: 23,
                                         color: saved ? _accent : _foreground)),
                           ]),
@@ -1046,7 +1021,6 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                                       _expandedVenueId =
                                           expanded ? null : venue.id),
                                   style: TextButton.styleFrom(
-                                      foregroundColor: _accent,
                                       minimumSize: const Size(0, 44),
                                       padding: const EdgeInsets.symmetric(
                                           horizontal: 4)),
@@ -1071,8 +1045,6 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                             const SizedBox(height: 8),
                             TextButton.icon(
                                 onPressed: () => _showInformation(venue),
-                                style: TextButton.styleFrom(
-                                    foregroundColor: _accent),
                                 icon: const Icon(Icons.info_outline_rounded,
                                     size: 17),
                                 label: const Text(
@@ -1080,16 +1052,12 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                             if (website != null)
                               TextButton.icon(
                                   onPressed: () => _openExternal(website),
-                                  style: TextButton.styleFrom(
-                                      foregroundColor: _accent),
                                   icon: const Icon(Icons.language_rounded,
                                       size: 17),
                                   label: const Text('Вэбсайт нээх')),
                             if (source != null)
                               TextButton.icon(
                                   onPressed: () => _openExternal(source),
-                                  style: TextButton.styleFrom(
-                                      foregroundColor: _accent),
                                   icon: const Icon(Icons.open_in_new_rounded,
                                       size: 15),
                                   label: const Text('Байршлын эх сурвалж')),

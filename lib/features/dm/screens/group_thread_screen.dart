@@ -3,10 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_icons.dart';
 import '../../../core/widgets/sculpted_icon.dart';
 import '../../../core/widgets/theme_toggle_button.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/widgets/app_avatar.dart';
+import '../../../core/widgets/app_sheet.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/glass_icon_button.dart';
 import '../../../core/widgets/gradient_button.dart';
@@ -224,10 +226,12 @@ class _GroupThreadScreenState extends State<_ScopedGroupThread> {
       _ctrl.clear();
     } else {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(ok == null
-              ? 'Илгээсэн эсэхийг баталж чадсангүй. Давтан илгээхээс өмнө яриагаа шалгаарай.'
-              : 'Илгээж чадсангүй. Дахин оролдоно уу.'),
-          backgroundColor: AppColors.error));
+          content: Text(
+              ok == null
+                  ? 'Илгээсэн эсэхийг баталж чадсангүй. Давтан илгээхээс өмнө яриагаа шалгаарай.'
+                  : 'Илгээж чадсангүй. Дахин оролдоно уу.',
+              style: const TextStyle(color: Colors.white)),
+          backgroundColor: AppColors.dangerFill));
     }
     setState(() => _sending = false);
   }
@@ -235,10 +239,10 @@ class _GroupThreadScreenState extends State<_ScopedGroupThread> {
   // Гишүүдийн жагсаалт — нэмэх / гарах үйлдэлтэй
   void _showMembers() {
     if (!_isCurrent || _memberActionBusy) return;
-    // Бариулыг theme (showDragHandle) зурна — энд дахин зурахгүй.
-    showModalBottomSheet(
+    // showAppSheet (DS-02): root navigator, бариул/дэвсгэрийг theme өгнө.
+    // Sheet-ийг зөвхөн sheetCtx-ээр хаана; дараагийн үйлдэл хуудасны context-оор.
+    showAppSheet<void>(
       context: context,
-      isScrollControlled: true,
       builder: (sheetCtx) => StreamBuilder<AuthState>(
           stream: SupabaseService.client.auth.onAuthStateChange,
           builder: (_, __) => !_isCurrent
@@ -250,13 +254,7 @@ class _GroupThreadScreenState extends State<_ScopedGroupThread> {
                   child: Padding(
                   padding: const EdgeInsets.only(bottom: 8),
                   child: Column(mainAxisSize: MainAxisSize.min, children: [
-                    Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 20),
-                        child: Row(children: [
-                          Text('Гишүүд (${_profiles.length})',
-                              style: AppTextStyles.labelLg),
-                        ])),
-                    const SizedBox(height: 8),
+                    AppSheetHeader(title: 'Гишүүд (${_profiles.length})'),
                     ConstrainedBox(
                         constraints: BoxConstraints(
                             maxHeight:
@@ -266,10 +264,8 @@ class _GroupThreadScreenState extends State<_ScopedGroupThread> {
                         ])),
                     Divider(height: 1, color: AppColors.hairline),
                     ListTile(
-                        leading: const SculptedIcon(
-                            Icons.person_add_alt_1_outlined,
-                            color: AppColors.accentStart,
-                            size: 22),
+                        leading: SculptedIcon(Icons.person_add_alt_1_outlined,
+                            color: AppColors.accentText, size: 22),
                         title: Text('Гишүүн нэмэх',
                             style: AppTextStyles.bodyMd
                                 .copyWith(color: AppColors.textPrimary)),
@@ -278,11 +274,11 @@ class _GroupThreadScreenState extends State<_ScopedGroupThread> {
                           _addMembers();
                         }),
                     ListTile(
-                        leading: const SculptedIcon(Icons.logout_rounded,
-                            color: AppColors.error, size: 22),
+                        leading: SculptedIcon(Icons.logout_rounded,
+                            color: AppColors.danger, size: 22),
                         title: Text('Группээс гарах',
                             style: AppTextStyles.bodyMd
-                                .copyWith(color: AppColors.error)),
+                                .copyWith(color: AppColors.danger)),
                         onTap: () {
                           Navigator.pop(sheetCtx);
                           _leaveGroup();
@@ -315,9 +311,8 @@ class _GroupThreadScreenState extends State<_ScopedGroupThread> {
     if (!_isCurrent || _memberActionBusy) return;
     setState(() => _memberActionBusy = true);
     final existing = _profiles.keys.toSet();
-    final picked = await showModalBottomSheet<List<String>>(
+    final picked = await showAppSheet<List<String>>(
       context: context,
-      isScrollControlled: true,
       builder: (_) => _AddMemberSheet(
           existingIds: existing, ownerId: _myId, isCurrent: () => _isCurrent),
     );
@@ -338,10 +333,12 @@ class _GroupThreadScreenState extends State<_ScopedGroupThread> {
           backgroundColor: AppColors.bgElevated));
     } else {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(ok == null
-              ? 'Нэмэгдсэн эсэхийг баталж чадсангүй. Гишүүдийн жагсаалтаа дахин шалгаарай.'
-              : 'Нэмж чадсангүй. Дахин оролдоно уу.'),
-          backgroundColor: AppColors.error));
+          content: Text(
+              ok == null
+                  ? 'Нэмэгдсэн эсэхийг баталж чадсангүй. Гишүүдийн жагсаалтаа дахин шалгаарай.'
+                  : 'Нэмж чадсангүй. Дахин оролдоно уу.',
+              style: const TextStyle(color: Colors.white)),
+          backgroundColor: AppColors.dangerFill));
     }
   }
 
@@ -352,7 +349,7 @@ class _GroupThreadScreenState extends State<_ScopedGroupThread> {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.bgElevated,
-        title: Text('Группээс гарах уу?', style: AppTextStyles.labelLg),
+        title: const Text('Группээс гарах уу?'),
         content: Text('Та энэ группээс гарна.',
             style:
                 AppTextStyles.bodyMd.copyWith(color: AppColors.textSecondary)),
@@ -362,10 +359,13 @@ class _GroupThreadScreenState extends State<_ScopedGroupThread> {
               child: Text('Болих',
                   style: AppTextStyles.btn
                       .copyWith(color: AppColors.textSecondary))),
-          TextButton(
+          // Устгах төрлийн баталгаажуулалт — dangerFill дээр цагаан (DS-03).
+          FilledButton(
+              style: FilledButton.styleFrom(
+                  backgroundColor: AppColors.dangerFill,
+                  foregroundColor: Colors.white),
               onPressed: () => Navigator.pop(ctx, true),
-              child: Text('Гарах',
-                  style: AppTextStyles.btn.copyWith(color: AppColors.error))),
+              child: const Text('Гарах')),
         ],
       ),
     );
@@ -383,10 +383,12 @@ class _GroupThreadScreenState extends State<_ScopedGroupThread> {
       _back();
     } else {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(ok == null
-              ? 'Группээс гарсан эсэхийг баталж чадсангүй. Жагсаалтаа дахин нээгээрэй.'
-              : 'Гарч чадсангүй. Дахин оролдоно уу.'),
-          backgroundColor: AppColors.error));
+          content: Text(
+              ok == null
+                  ? 'Группээс гарсан эсэхийг баталж чадсангүй. Жагсаалтаа дахин нээгээрэй.'
+                  : 'Гарч чадсангүй. Дахин оролдоно уу.',
+              style: const TextStyle(color: Colors.white)),
+          backgroundColor: AppColors.dangerFill));
     }
   }
 
@@ -605,7 +607,7 @@ class _GroupThreadScreenState extends State<_ScopedGroupThread> {
                                                     ? const Padding(
                                                         padding: EdgeInsets.all(12),
                                                         child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                                                    : SculptedIcon(Icons.send_rounded, color: lit ? Colors.white : AppColors.textTertiary, size: 19, active: lit, onDark: lit)),
+                                                    : SculptedIcon(AppIcons.send, color: lit ? Colors.white : AppColors.textTertiary, size: 19, active: lit, onDark: lit)),
                                           )));
                                 }),
                           ])))),
@@ -682,13 +684,14 @@ class _GroupBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Минийх — accent gradient (зөөлөн ~0.9) + glow; тэднийх — glass surface
+    // Минийх — тунгалаг биш purpleGradient (цагаан текст 5.2:1+) + glow;
+    // тэднийх — glass surface
     final bubble = Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       constraints: BoxConstraints(
           maxWidth: MediaQuery.of(context).size.width * kBubbleMaxWidthFactor),
       decoration: BoxDecoration(
-          gradient: isMe ? AppColors.accentGradient.scale(0.9) : null,
+          gradient: isMe ? AppColors.purpleGradient : null,
           color: isMe ? null : AppColors.bgElevated.withValues(alpha: 0.8),
           border: isMe ? null : Border.all(color: AppColors.hairline),
           boxShadow: isMe
@@ -799,7 +802,7 @@ class _GroupGlassAppBar extends StatelessWidget implements PreferredSizeWidget {
           child: Row(children: [
             // Буцах — апп даяар нэг л хэлбэр (GlassIconButton)
             GlassIconButton(
-                icon: Icons.chevron_left_rounded,
+                icon: AppIcons.back,
                 iconSize: 24,
                 tooltip: 'Буцах',
                 onTap: onBack),
@@ -1117,8 +1120,7 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
                   height: MediaQuery.of(context).size.height * 0.72,
                   child: Column(children: [
                     // Бариулыг theme (showDragHandle) зурна.
-                    Text('Гишүүн нэмэх', style: AppTextStyles.h2),
-                    const SizedBox(height: 12),
+                    const AppSheetHeader(title: 'Гишүүн нэмэх'),
                     // Хайлт — апп даяарх нэгдсэн шилэн pill талбар (48)
                     Padding(
                         padding: const EdgeInsets.fromLTRB(20, 4, 20, 4),
@@ -1128,9 +1130,9 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
                             hint: 'Хэрэглэгч хайх...')),
                     Expanded(
                         child: _loading && _results.isEmpty
-                            ? const Center(
+                            ? Center(
                                 child: CircularProgressIndicator(
-                                    color: AppColors.accentStart,
+                                    color: AppColors.accentText,
                                     strokeWidth: 2))
                             : _failed
                                 ? Center(
@@ -1203,41 +1205,20 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
                         top: false,
                         child: Padding(
                             padding: const EdgeInsets.fromLTRB(20, 8, 20, 14),
-                            child: _ScaleTap(
-                                onTap: _selected.isEmpty
+                            // Primary товч — нэгдсэн GradientButton (DS-03).
+                            // Sheet-ийг өөрийнх нь context-оор хаана.
+                            child: GradientButton(
+                                label: _selected.isEmpty
+                                    ? 'Хэрэглэгч сонгоно уу'
+                                    : 'Нэмэх (${_selected.length})',
+                                onPressed: _selected.isEmpty
                                     ? null
                                     : () {
                                         if (_active) {
-                                          Navigator.pop(
-                                              context, _selected.keys.toList());
+                                          Navigator.of(context)
+                                              .pop(_selected.keys.toList());
                                         }
-                                      },
-                                // Primary товч — pill 52 + gradient glow
-                                child: Container(
-                                    height: 52,
-                                    width: double.infinity,
-                                    decoration: BoxDecoration(
-                                        gradient: _selected.isEmpty
-                                            ? null
-                                            : AppColors.accentGradient,
-                                        color: _selected.isEmpty
-                                            ? AppColors.bgSurface
-                                            : null,
-                                        borderRadius:
-                                            BorderRadius.circular(999),
-                                        boxShadow: _selected.isEmpty
-                                            ? null
-                                            : AppColors.glowShadow(
-                                                AppColors.accentStart)),
-                                    alignment: Alignment.center,
-                                    child: Text(
-                                        _selected.isEmpty
-                                            ? 'Хэрэглэгч сонгоно уу'
-                                            : 'Нэмэх (${_selected.length})',
-                                        style: AppTextStyles.btn.copyWith(
-                                            color: _selected.isEmpty
-                                                ? AppColors.textTertiary
-                                                : Colors.white)))))),
+                                      }))),
                   ]),
                 ),
               ));

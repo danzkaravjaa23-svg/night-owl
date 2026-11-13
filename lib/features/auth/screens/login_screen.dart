@@ -149,8 +149,10 @@ class _LoginScreenState extends State<LoginScreen> {
             child: Column(
               children: [
                 // ── Дээд hero (~30%) — back chip + owl mini + мэндчилгээ ──
+                // GlassBack-ийн 44px хүрэх талбар дотор 40px диск — 18/8
+                // зайгаар диск хуучин байрандаа (20px gutter) үлдэнэ.
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 10, 20, 0),
+                  padding: const EdgeInsets.fromLTRB(18, 8, 18, 0),
                   child: Row(children: [
                     GlassBack(onTap: _back),
                     const Spacer(),
@@ -158,7 +160,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         style: AppTextStyles.monoSm.copyWith(
                             letterSpacing: 3, color: AppColors.textTertiary)),
                     const Spacer(),
-                    const SizedBox(width: 40),
+                    const SizedBox(width: 44),
                   ]),
                 ),
                 const SizedBox(height: 16),
@@ -314,7 +316,6 @@ class _LoginScreenState extends State<LoginScreen> {
                                             ? 'Нэвтрэж байна...'
                                             : 'Нэвтрэх',
                                         onPressed: _authBusy ? null : _signIn,
-                                        borderRadius: 999,
                                         trailing: _loading
                                             ? const BtnSpinner()
                                             : const Icon(
@@ -344,7 +345,6 @@ class _LoginScreenState extends State<LoginScreen> {
                                     if (AppleSignInButton.isAvailable)
                                       AppleSignInButton(
                                         enabled: !_authBusy,
-                                        borderRadius: 999,
                                         onBusyChanged: (busy) {
                                           if (mounted) {
                                             setState(() => _aLoading = busy);
@@ -450,10 +450,9 @@ class _GhostBtn extends StatelessWidget {
           ),
           child: TextButton(
             onPressed: onTap,
+            // Pill долгионыг theme өгнө (DS-03)
             style: TextButton.styleFrom(
               foregroundColor: AppColors.textPrimary,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(999)),
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,

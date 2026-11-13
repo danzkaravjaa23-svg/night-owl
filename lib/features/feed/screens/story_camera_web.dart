@@ -4,6 +4,7 @@ import 'dart:html' as html;
 import 'dart:typed_data';
 import 'dart:ui_web' as ui_web;
 import 'package:flutter/material.dart';
+import '../../../core/theme/app_icons.dart';
 
 int _camCounter = 0;
 
@@ -163,8 +164,9 @@ class _WebCameraScreenState extends State<_WebCameraScreen> {
         SafeArea(child: Align(alignment: Alignment.topLeft, child: Padding(
           padding: const EdgeInsets.all(8),
           child: IconButton(
+            tooltip: 'Хаах',
             onPressed: () { _stop(); Navigator.of(context).pop(); },
-            icon: const Icon(Icons.close, color: Colors.white, size: 26))))),
+            icon: const Icon(AppIcons.close, color: Colors.white, size: 26))))),
 
         // Доод: shutter + flip
         if (_error == null)

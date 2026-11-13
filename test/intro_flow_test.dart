@@ -196,6 +196,9 @@ void main() {
     final router = onboardingRouter(1);
     await pumpIntro(tester, router, Brightness.dark);
     expect(find.text('Оройн газраа ол'), findsOneWidget);
+    // DS-01: слайдын дугаар текстийн accent-аар (#7654D6 fill биш).
+    expect(tester.widget<Text>(find.text('01 — 03')).style?.color,
+        AppColors.accentText);
     await tester.ensureVisible(find.text('Үргэлжлүүлэх'));
     await tester.tap(find.text('Үргэлжлүүлэх'));
     await tester.pump(const Duration(milliseconds: 350));

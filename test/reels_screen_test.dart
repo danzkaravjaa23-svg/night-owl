@@ -11,6 +11,7 @@ import 'package:http/testing.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:night_owl_ub/core/theme/app_colors.dart';
+import 'package:night_owl_ub/core/theme/app_icons.dart';
 import 'package:night_owl_ub/features/feed/providers/reels_provider.dart';
 import 'package:night_owl_ub/features/feed/providers/saved_provider.dart';
 import 'package:night_owl_ub/features/feed/screens/reels_screen.dart';
@@ -178,14 +179,14 @@ void main() {
       for (var i = 0;
           i < 30 &&
               !Focus.of(tester
-                      .element(find.byIcon(Icons.more_horiz).hitTestable()))
+                      .element(find.byIcon(AppIcons.more).hitTestable()))
                   .hasFocus;
           i++) {
         await tester.sendKeyEvent(LogicalKeyboardKey.tab);
         await tester.pump();
       }
       expect(
-          Focus.of(tester.element(find.byIcon(Icons.more_horiz).hitTestable()))
+          Focus.of(tester.element(find.byIcon(AppIcons.more).hitTestable()))
               .hasFocus,
           isTrue);
       await tester.sendKeyEvent(activation);
@@ -221,7 +222,7 @@ void main() {
       await render(tester);
       final container =
           ProviderScope.containerOf(tester.element(find.byType(ReelsScreen)));
-      await tester.tap(find.byIcon(Icons.favorite_border).hitTestable());
+      await tester.tap(find.byIcon(AppIcons.like).hitTestable());
       await tester.pump();
       expect(writes, 1);
       account = 'account-b';
@@ -231,7 +232,7 @@ void main() {
         await tester.pump(const Duration(milliseconds: 100));
       }
       expect(container.read(sessionUserIdProvider), 'account-b');
-      await tester.tap(find.byIcon(Icons.favorite_border).hitTestable());
+      await tester.tap(find.byIcon(AppIcons.like).hitTestable());
       for (var i = 0; i < 4; i++) {
         await tester.pump();
       }
@@ -244,7 +245,7 @@ void main() {
       for (var i = 0; i < 4; i++) {
         await tester.pump();
       }
-      expect(find.byIcon(Icons.favorite).hitTestable(), findsOneWidget);
+      expect(find.byIcon(AppIcons.likeActive).hitTestable(), findsOneWidget);
       expect(find.text('4').hitTestable(), findsOneWidget);
       await tester.pumpWidget(const SizedBox());
       await tester.pump();
@@ -294,7 +295,7 @@ void main() {
       await tester.tap(find.byIcon(Icons.volume_off_rounded));
       await tester.pump();
       expect(find.byIcon(Icons.volume_up_rounded), findsOneWidget);
-      await tester.tap(find.byIcon(Icons.search));
+      await tester.tap(find.byIcon(AppIcons.search));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 400));
       expect(find.text('Covered screen'), findsOneWidget);
@@ -390,7 +391,7 @@ void main() {
                       },
                       child: const Text('Fixture privacy change')),
                 )));
-    await tester.tap(find.byIcon(Icons.search));
+    await tester.tap(find.byIcon(AppIcons.search));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
     await tester.tap(find.text('Fixture privacy change'));
@@ -429,7 +430,7 @@ void main() {
       await Supabase.instance.client.auth.signInWithPassword(
           email: 'fixture@example.test', password: 'fixture-password');
       await render(tester);
-      await tester.tap(find.byIcon(Icons.more_horiz).hitTestable());
+      await tester.tap(find.byIcon(AppIcons.more).hitTestable());
       for (var frame = 0; frame < 5; frame++) {
         await tester.pump(const Duration(milliseconds: 100));
       }
@@ -508,13 +509,13 @@ void main() {
             email: 'fixture@example.test', password: 'fixture-password');
         await render(tester, saved: saved);
         await tester.tap(find
-            .byIcon(initiallySaved ? Icons.bookmark : Icons.bookmark_border)
+            .byIcon(initiallySaved ? AppIcons.saveActive : AppIcons.save)
             .hitTestable());
         for (var frame = 0; frame < 5; frame++) {
           await tester.pump(const Duration(milliseconds: 100));
         }
         await tester.tap(find
-            .byIcon(initiallySaved ? Icons.bookmark_border : Icons.bookmark)
+            .byIcon(initiallySaved ? AppIcons.save : AppIcons.saveActive)
             .hitTestable());
         await tester.pump();
         expect(writes, 1);
@@ -539,7 +540,7 @@ void main() {
         final expectedSaved = denied ? initiallySaved : !initiallySaved;
         expect(
             find
-                .byIcon(expectedSaved ? Icons.bookmark : Icons.bookmark_border)
+                .byIcon(expectedSaved ? AppIcons.saveActive : AppIcons.save)
                 .hitTestable(),
             findsOneWidget);
         if (denied) {
@@ -593,7 +594,7 @@ void main() {
 
     // This invokes the viewer's own navigation, including its immediate pause
     // before the route transition has finished.
-    await tester.tap(find.byIcon(Icons.search));
+    await tester.tap(find.byIcon(AppIcons.search));
     await tester.pump();
     expect(players(tester), isNotEmpty);
     expect(players(tester).every((video) => !video.active), isTrue);
@@ -674,7 +675,7 @@ void main() {
     final router = await render(tester);
     expect(players(tester).where((video) => video.active).single.url,
         'https://media.test/clip-2.mp4');
-    await tester.tap(find.byIcon(Icons.add_box_outlined));
+    await tester.tap(find.byIcon(AppIcons.add));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
     expect(find.text('Create screen'), findsOneWidget);

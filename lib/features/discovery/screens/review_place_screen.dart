@@ -2,10 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../admin/providers/admin_console_provider.dart';
 import '../../admin/services/admin_venue_media.dart';
+import '../../../core/theme/app_icons.dart';
+import '../../../core/theme/app_radii.dart';
+import '../../../core/theme/app_spacing.dart';
+import '../../../core/theme/app_text_styles.dart';
 import '../../../core/utils/image_uploader.dart';
+import '../../../core/widgets/app_header.dart';
 import '../../../core/widgets/authorized_media.dart';
+import '../../../core/widgets/empty_state.dart';
+import '../../../core/widgets/gradient_button.dart';
+import '../../../core/widgets/owl_loading.dart';
 import '../services/discovery_service.dart';
-import '../widgets/discovery_back_button.dart';
 import 'discovery_screen.dart';
 
 class ReviewPlaceScreen extends ConsumerStatefulWidget {
@@ -133,9 +140,10 @@ class _ReviewPlaceScreenState extends ConsumerState<ReviewPlaceScreen> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-      appBar: AppBar(
-          leading: const DiscoveryBackButton(fallback: '/admin/pilot'),
-          title: const Text('Газрын мэдээлэл засах')),
+      appBar: const AppHeader.title(
+          title: 'Газрын мэдээлэл засах',
+          compact: true,
+          fallbackLocation: '/admin/pilot'),
       body: FutureBuilder<JsonRow?>(
           future: _data,
           builder: (context, snapshot) {
@@ -145,49 +153,63 @@ class _ReviewPlaceScreenState extends ConsumerState<ReviewPlaceScreen> {
                   retry: () => setState(() => _data = _load()));
             }
             if (snapshot.connectionState != ConnectionState.done) {
-              return const Center(child: CircularProgressIndicator());
+              return const Center(child: OwlLoading());
             }
             if (snapshot.data == null) {
-              return const Center(child: Text('Газар олдсонгүй'));
+              return const EmptyState(
+                  icon: AppIcons.venue, title: 'Газар олдсонгүй');
             }
-            return ListView(padding: const EdgeInsets.all(20), children: [
+            const gap = SizedBox(height: AppSpacing.x3);
+            return ListView(
+                padding: const EdgeInsets.all(AppSpacing.page),
+                children: [
               Text(snapshot.data!['name'] as String,
-                  style: Theme.of(context).textTheme.titleLarge),
-              const SizedBox(height: 16),
-              if (_cover != null)
-                AspectRatio(
-                    aspectRatio: 16 / 10,
-                    child:
-                        AuthorizedImage(imageUrl: _cover!, fit: BoxFit.cover)),
-              OutlinedButton.icon(
-                  onPressed: _busy ? null : _photo,
+                  style: AppTextStyles.title),
+              const SizedBox(height: AppSpacing.x4),
+              if (_cover != null) ...[
+                ClipRRect(
+                    borderRadius: AppRadii.lgR,
+                    child: AspectRatio(
+                        aspectRatio: 16 / 10,
+                        child: AuthorizedImage(
+                            imageUrl: _cover!, fit: BoxFit.cover))),
+                gap,
+              ],
+              OutlineButton(
+                  size: GradientButtonSize.md,
                   icon: const Icon(Icons.add_photo_alternate_outlined),
-                  label: const Text('Бодит зураг оруулах')),
+                  label: 'Бодит зураг оруулах',
+                  onPressed: _busy ? null : _photo),
+              const SizedBox(height: AppSpacing.x4),
               TextField(
                   controller: _address,
                   decoration: const InputDecoration(labelText: 'Хаяг'),
                   maxLines: 2),
+              gap,
               TextField(
                   controller: _hours,
                   decoration: const InputDecoration(labelText: 'Ажиллах цаг'),
                   maxLines: 3),
+              gap,
               TextField(
                   controller: _min,
                   keyboardType: TextInputType.number,
                   decoration: const InputDecoration(
                       labelText: 'Нэг хүний төсөв · доод (₮)')),
+              gap,
               TextField(
                   controller: _max,
                   keyboardType: TextInputType.number,
                   decoration: const InputDecoration(
                       labelText: 'Нэг хүний төсөв · дээд (₮)')),
+              gap,
               TextField(
                   controller: _menu,
                   keyboardType: TextInputType.url,
                   decoration:
                       const InputDecoration(labelText: 'Меню · HTTPS холбоос')),
-              const SizedBox(height: 16),
-              Wrap(spacing: 8, children: [
+              const SizedBox(height: AppSpacing.x4),
+              Wrap(spacing: AppSpacing.x2, runSpacing: AppSpacing.x2, children: [
                 for (final vibe in [
                   'Болзоо',
                   'Найзууд',
@@ -209,11 +231,14 @@ class _ReviewPlaceScreenState extends ConsumerState<ReviewPlaceScreen> {
                                 }
                               }))
               ]),
-              const SizedBox(height: 20),
-              FilledButton.icon(
-                  onPressed: _busy ? null : _save,
+              const SizedBox(height: AppSpacing.page),
+              // Primary action (DS-03); busy keeps the action name with the
+              // owl, the convention of every GradientButton.
+              GradientButton(
                   icon: const Icon(Icons.save_outlined),
-                  label: Text(_busy ? 'Хадгалж байна' : 'Хадгалах')),
+                  label: 'Хадгалах',
+                  busy: _busy,
+                  onPressed: _save),
             ]);
           }));
 }

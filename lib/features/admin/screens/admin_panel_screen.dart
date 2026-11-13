@@ -2,7 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_icons.dart';
+import '../../../core/theme/app_radii.dart';
+import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../core/widgets/settings_rows.dart';
 import '../providers/admin_console_provider.dart';
 import '../services/admin_console_service.dart';
 import '../widgets/admin_gate.dart';
@@ -60,7 +64,7 @@ class _DashboardState extends ConsumerState<_Dashboard> {
       child: RefreshIndicator(
           onRefresh: _refresh,
           child: ListView(
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.all(AppSpacing.page),
               physics: const AlwaysScrollableScrollPhysics(),
               children: [
                 const AdminIntro(
@@ -74,27 +78,28 @@ class _DashboardState extends ConsumerState<_Dashboard> {
                       title: 'Шинэчилж чадсангүй',
                       message: _error!.message,
                       onRetry: _refresh),
-                _navigation(
-                    Icons.flag_outlined,
-                    'Шалгах мэдээлэл',
-                    '${_summary.counts['pending_reports']} мэдээлэл шийдвэр хүлээж байна',
-                    '/admin/reports',
-                    prominent: true),
-                const SizedBox(height: 20),
-                Text('Удирдлага', style: AppTextStyles.h3),
-                const SizedBox(height: 12),
-                _navigation(Icons.people_outline, 'Хэрэглэгчид',
-                    'Хайх, баталгаажуулах, хориг удирдах', '/admin/users'),
-                _navigation(Icons.article_outlined, 'Контент',
-                    'Нийтлэл болон сэтгэгдлийг шалгах', '/admin/content'),
-                _navigation(
-                    Icons.history_rounded,
-                    'Үйлдлийн түүх',
-                    'Хэн, хэзээ, ямар үндэслэлээр өөрчилснийг харах',
-                    '/admin/audit'),
-                const SizedBox(height: 24),
-                Text('Аппын тойм', style: AppTextStyles.h3),
-                const SizedBox(height: 12),
+                _pendingReports(),
+                // Settings rhythm (settings_rows kit): 28 between sections,
+                // 12 from a label to its card.
+                const SizedBox(height: 28),
+                const SettingsSectionLabel('Удирдлага'),
+                const SizedBox(height: AppSpacing.x3),
+                SettingsCard(children: [
+                  _navigation(Icons.people_outline, 'Хэрэглэгчид',
+                      'Хайх, баталгаажуулах, хориг удирдах', '/admin/users'),
+                  const SettingsDivider(),
+                  _navigation(Icons.article_outlined, 'Контент',
+                      'Нийтлэл болон сэтгэгдлийг шалгах', '/admin/content'),
+                  const SettingsDivider(),
+                  _navigation(
+                      Icons.history_rounded,
+                      'Үйлдлийн түүх',
+                      'Хэн, хэзээ, ямар үндэслэлээр өөрчилснийг харах',
+                      '/admin/audit'),
+                ]),
+                const SizedBox(height: 28),
+                const SettingsSectionLabel('Аппын тойм'),
+                const SizedBox(height: AppSpacing.x3),
                 LayoutBuilder(builder: (context, constraints) {
                   final columns = constraints.maxWidth > 650
                       ? 3
@@ -107,8 +112,8 @@ class _DashboardState extends ConsumerState<_Dashboard> {
                     for (final item in const [
                       ('users', 'Хэрэглэгч', Icons.people_outline),
                       ('posts', 'Нийтлэл', Icons.grid_view_rounded),
-                      ('comments', 'Сэтгэгдэл', Icons.chat_bubble_outline),
-                      ('venues', 'Газар', Icons.place_outlined),
+                      ('comments', 'Сэтгэгдэл', AppIcons.comment),
+                      ('venues', 'Газар', AppIcons.venue),
                       ('events', 'Эвент', Icons.event_outlined),
                       ('banned_users', 'Хориглосон', Icons.block_rounded),
                     ])
@@ -123,50 +128,46 @@ class _DashboardState extends ConsumerState<_Dashboard> {
                                 const SizedBox(height: 14),
                                 Text('${_summary.counts[item.$1]}',
                                     style: AppTextStyles.h1),
-                                const SizedBox(height: 4),
+                                const SizedBox(height: AppSpacing.x1),
                                 Text(item.$2, style: AppTextStyles.bodyMd)
                               ])))
                   ]);
                 }),
                 const SizedBox(height: 28),
-                Text('Хөтөлбөрүүд', style: AppTextStyles.h3),
-                const SizedBox(height: 12),
-                _navigation(Icons.auto_awesome_outlined, 'Онцгой эвентүүд',
-                    'Онцлох эвентүүдийг сонгох', '/admin/featured-events'),
-                _navigation(Icons.insights_outlined, 'Эхний туршилт',
-                    'Creator, газар, контент ба үр дүн', '/admin/pilot'),
-                const SizedBox(height: 16),
+                const SettingsSectionLabel('Хөтөлбөрүүд'),
+                const SizedBox(height: AppSpacing.x3),
+                SettingsCard(children: [
+                  _navigation(Icons.auto_awesome_outlined, 'Онцгой эвентүүд',
+                      'Онцлох эвентүүдийг сонгох', '/admin/featured-events'),
+                  const SettingsDivider(),
+                  _navigation(Icons.insights_outlined, 'Эхний туршилт',
+                      'Creator, газар, контент ба үр дүн', '/admin/pilot'),
+                ]),
+                const SizedBox(height: AppSpacing.x4),
               ])));
 
-  Widget _navigation(IconData icon, String title, String subtitle, String route,
-          {bool prominent = false}) =>
-      Padding(
-          padding: const EdgeInsets.only(bottom: 10),
-          child: Material(
-              color: prominent
-                  ? AppColors.silver.withValues(alpha: .1)
-                  : AppColors.bgElevated,
-              borderRadius: BorderRadius.circular(18),
-              clipBehavior: Clip.antiAlias,
-              child: InkWell(
-                  onTap: () => context.push(route),
-                  child: Padding(
-                      padding: const EdgeInsets.all(18),
-                      child: Row(children: [
-                        Icon(icon, color: AppColors.silver, size: 24),
-                        const SizedBox(width: 14),
-                        Expanded(
-                            child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                              Text(title, style: AppTextStyles.labelLg),
-                              const SizedBox(height: 5),
-                              Text(subtitle,
-                                  style: AppTextStyles.bodySm
-                                      .copyWith(height: 1.4))
-                            ])),
-                        const SizedBox(width: 8),
-                        Icon(Icons.chevron_right_rounded,
-                            color: AppColors.textTertiary)
-                      ])))));
+  Widget _navigation(
+          IconData icon, String title, String subtitle, String route) =>
+      SettingsRow(
+          icon: icon,
+          title: title,
+          subtitle: subtitle,
+          onTap: () => context.push(route));
+
+  /// Reports waiting for a decision: a tinted card above the grouped rows.
+  /// It holds one kit row behind the same 6 px inset as [SettingsCard], so
+  /// its icon tile, text and chevron line up with the rows below at every
+  /// width (the tile hides with theirs on narrow screens with large text).
+  Widget _pendingReports() => Material(
+      color: AppColors.silver.withValues(alpha: .1),
+      borderRadius: AppRadii.lgR,
+      clipBehavior: Clip.antiAlias,
+      child: Padding(
+          padding: const EdgeInsets.all(6),
+          child: SettingsRow(
+              icon: Icons.flag_outlined,
+              title: 'Шалгах мэдээлэл',
+              subtitle:
+                  '${_summary.counts['pending_reports']} мэдээлэл шийдвэр хүлээж байна',
+              onTap: () => context.push('/admin/reports'))));
 }

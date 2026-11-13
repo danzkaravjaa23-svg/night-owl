@@ -1,5 +1,9 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import '../../../core/theme/app_icons.dart';
+import '../../../core/theme/app_spacing.dart';
+import '../../../core/widgets/app_sheet.dart';
+import '../../../core/widgets/owl_loading.dart';
 import '../services/discovery_service.dart';
 
 typedef VenueCatalogLoader = Future<List<JsonRow>> Function({
@@ -8,17 +12,22 @@ typedef VenueCatalogLoader = Future<List<JsonRow>> Function({
   required int limit,
 });
 
+/// Opens [DiscoveryVenuePicker] as an app sheet (DS-02). [dark] is only for a
+/// sheet whose old background was forced dark (docs/DESIGN_SYSTEM.md §4). The
+/// story and reel composers keep this picker theme-following on purpose. The
+/// picker draws with the sheet's Theme only, so it also reads correctly when
+/// dark is set.
 Future<JsonRow?> pickDiscoveryVenue(
   BuildContext context, {
   String? selectedRef,
   String title = 'Газар сонгох',
   String? helperText,
   VenueCatalogLoader? loader,
+  bool dark = false,
 }) =>
-    showModalBottomSheet<JsonRow>(
+    showAppSheet<JsonRow>(
         context: context,
-        isScrollControlled: true,
-        useSafeArea: true,
+        dark: dark,
         builder: (_) => DiscoveryVenuePicker(
             selectedRef: selectedRef,
             title: title,
@@ -139,10 +148,10 @@ class _DiscoveryVenuePickerState extends State<DiscoveryVenuePicker> {
   }
 
   Widget _retry({bool more = false}) => Padding(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(AppSpacing.x4),
       child: Column(mainAxisSize: MainAxisSize.min, children: [
         Text(discoveryError(_error!), textAlign: TextAlign.center),
-        const SizedBox(height: 8),
+        const SizedBox(height: AppSpacing.x2),
         TextButton.icon(
             onPressed: () => _loadPage(more: more),
             icon: const Icon(Icons.refresh_rounded),
@@ -151,13 +160,14 @@ class _DiscoveryVenuePickerState extends State<DiscoveryVenuePicker> {
 
   Widget _results() {
     if (_loading) {
-      return const Center(child: CircularProgressIndicator());
+      // Compact owl: image only, so it reads in a dark sheet over Day too.
+      return const Center(child: OwlLoading(compact: true, size: 40));
     }
     if (_rows.isEmpty) {
       if (_error != null) return Center(child: _retry());
       return const Center(
           child: Padding(
-              padding: EdgeInsets.all(24),
+              padding: EdgeInsets.all(AppSpacing.x6),
               child: Text('Газар олдсонгүй. Өөр нэрээр хайгаарай.',
                   textAlign: TextAlign.center)));
     }
@@ -168,9 +178,9 @@ class _DiscoveryVenuePickerState extends State<DiscoveryVenuePicker> {
           if (index == _rows.length) {
             if (_error != null) return _retry(more: true);
             return Padding(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.all(AppSpacing.x3),
                 child: _loadingMore
-                    ? const Center(child: CircularProgressIndicator())
+                    ? const Center(child: OwlLoading(compact: true, size: 32))
                     : TextButton.icon(
                         onPressed: () => _loadPage(more: true),
                         icon: const Icon(Icons.expand_more_rounded),
@@ -186,9 +196,8 @@ class _DiscoveryVenuePickerState extends State<DiscoveryVenuePicker> {
                   '';
           return ListTile(
               selected: selected,
-              leading: Icon(selected
-                  ? Icons.check_circle_rounded
-                  : Icons.location_on_outlined),
+              leading: Icon(
+                  selected ? Icons.check_circle_rounded : AppIcons.venue),
               title: Text(row['name'] as String,
                   maxLines: 2, overflow: TextOverflow.ellipsis),
               subtitle: !selected && description.isEmpty
@@ -204,7 +213,9 @@ class _DiscoveryVenuePickerState extends State<DiscoveryVenuePicker> {
                             Text(description,
                                 maxLines: 2, overflow: TextOverflow.ellipsis),
                         ]),
-              onTap: () => Navigator.pop(context, row));
+              // The sheet sits on the root navigator: pop with this (sheet)
+              // context, never with the page that opened it.
+              onTap: () => Navigator.of(context).pop(row));
         });
   }
 
@@ -214,20 +225,20 @@ class _DiscoveryVenuePickerState extends State<DiscoveryVenuePicker> {
       child: SizedBox(
           height: MediaQuery.sizeOf(context).height * .75,
           child: Column(children: [
-            ListTile(
-                title: Text(widget.title),
-                trailing: IconButton(
-                    tooltip: 'Хаах',
-                    icon: const Icon(Icons.close),
-                    onPressed: () => Navigator.pop(context))),
+            // Title row + "Хаах" (pops with the sheet's own context).
+            AppSheetHeader(title: widget.title, showClose: true),
             if (widget.helperText != null &&
                 MediaQuery.viewInsetsOf(context).bottom == 0)
               Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Text(widget.helperText!,
-                      style: Theme.of(context).textTheme.bodySmall)),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: AppSpacing.page),
+                  child: Align(
+                      alignment: AlignmentDirectional.centerStart,
+                      child: Text(widget.helperText!,
+                          style: Theme.of(context).textTheme.bodySmall))),
             Padding(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.fromLTRB(AppSpacing.page,
+                    AppSpacing.x3, AppSpacing.page, AppSpacing.x3),
                 child: TextField(
                     controller: _searchController,
                     onChanged: _search,
@@ -235,7 +246,7 @@ class _DiscoveryVenuePickerState extends State<DiscoveryVenuePicker> {
                     decoration: InputDecoration(
                         labelText: 'Газар хайх',
                         hintText: 'Газрын нэрээр хайх',
-                        prefixIcon: const Icon(Icons.search),
+                        prefixIcon: const Icon(AppIcons.search),
                         suffixIcon: _searchController.text.isEmpty
                             ? null
                             : IconButton(
@@ -244,7 +255,7 @@ class _DiscoveryVenuePickerState extends State<DiscoveryVenuePicker> {
                                   _searchController.clear();
                                   _search('');
                                 },
-                                icon: const Icon(Icons.close_rounded))))),
+                                icon: const Icon(AppIcons.close))))),
             Expanded(child: _results()),
           ])));
 }

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../core/widgets/app_header.dart';
 import '../../../core/widgets/gradient_button.dart';
 import '../widgets/invite_sheet.dart';
 
@@ -13,12 +13,9 @@ class InviteScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Scaffold(
     backgroundColor: AppColors.bgBase,
-    appBar: AppBar(
-      title: const Text('Найзаа урих'),
-      leading: IconButton(tooltip: 'Буцах',
-        icon: const Icon(Icons.arrow_back),
-        onPressed: () => context.canPop() ? context.pop() : context.go(AppRoutes.settings)),
-    ),
+    // Нэгдсэн толгой (DS-06): pop хийх хуудасгүй бол Тохиргоо руу
+    appBar: const AppHeader.title(
+        title: 'Найзаа урих', fallbackLocation: AppRoutes.settings),
     body: Center(child: SingleChildScrollView(child: Padding(
       padding: const EdgeInsets.all(28),
       child: Column(mainAxisSize: MainAxisSize.min, children: [

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:video_player/video_player.dart';
 
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/widgets/gradient_button.dart';
 import '../../../core/router/app_router.dart' show AppRoutes;
@@ -90,7 +91,11 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                   TextButton(
                       onPressed: () => Navigator.pop(ctx, false),
                       child: const Text('Үргэлжлүүлэх')),
-                  TextButton(
+                  // Ноорог хаях баталгаа — dangerFill дээр цагаан (DS-03)
+                  FilledButton(
+                      style: FilledButton.styleFrom(
+                          backgroundColor: AppColors.dangerFill,
+                          foregroundColor: Colors.white),
                       onPressed: () => Navigator.pop(ctx, true),
                       child: const Text('Гарах'))
                 ],
@@ -332,8 +337,8 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
           leading: IconButton(
               tooltip: 'Хаах',
               onPressed: (_loading || _picking) ? null : _requestClose,
-              icon: const Icon(Icons.close)),
-          title: Text('Шинэ пост', style: AppTextStyles.h2),
+              icon: const Icon(AppIcons.close)),
+          title: Text('Шинэ пост', style: AppTextStyles.title),
           // The single publish action is the primary button pinned under the
           // form; a second app-bar copy squeezed the title on narrow/large
           // text.
@@ -406,7 +411,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                                   borderRadius: BorderRadius.circular(10),
                                   border: Border.all(color: AppColors.hairline),
                                 ),
-                                child: Icon(Icons.add,
+                                child: Icon(AppIcons.add,
                                     color: AppColors.textSecondary, size: 24),
                               ),
                             ),
@@ -456,9 +461,12 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                                 : AppColors.hairline),
                       ),
                       child: Row(children: [
-                        Icon(Icons.location_on_outlined,
+                        Icon(
+                            _venueName != null
+                                ? AppIcons.venueActive
+                                : AppIcons.venue,
                             color: _venueName != null
-                                ? AppColors.accentStart
+                                ? AppColors.accentText
                                 : AppColors.textSecondary,
                             size: 20),
                         const SizedBox(width: 10),
@@ -479,10 +487,10 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                                         _venueId = null;
                                       })
                                   : null,
-                              icon: Icon(Icons.close,
+                              icon: Icon(AppIcons.close,
                                   color: AppColors.textTertiary, size: 18))
                         else
-                          Icon(Icons.chevron_right,
+                          Icon(AppIcons.forward,
                               color: AppColors.textTertiary),
                       ]),
                     ),
@@ -511,19 +519,21 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                         margin: const EdgeInsets.only(bottom: 8),
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: AppColors.error.withValues(alpha: 0.1),
+                          // 6% tint: 11 px danger text stays AA on bgBase
+                          // (Day 4.72:1, Night 5.54:1).
+                          color: AppColors.danger.withValues(alpha: 0.06),
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(
-                              color: AppColors.error.withValues(alpha: 0.4)),
+                              color: AppColors.danger.withValues(alpha: 0.4)),
                         ),
                         child: Row(children: [
-                          const Icon(Icons.error_outline,
-                              color: AppColors.error, size: 18),
+                          Icon(Icons.error_outline,
+                              color: AppColors.danger, size: 18),
                           const SizedBox(width: 8),
                           Expanded(
                               child: Text(_error!,
                                   style: AppTextStyles.bodyXs
-                                      .copyWith(color: AppColors.error))),
+                                      .copyWith(color: AppColors.danger))),
                         ]),
                       ),
                     GradientButton(
@@ -626,8 +636,8 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                     padding: const EdgeInsets.all(6),
                     decoration: const BoxDecoration(
                         color: Colors.black54, shape: BoxShape.circle),
-                    child:
-                        const Icon(Icons.close, color: Colors.white, size: 16),
+                    child: const Icon(AppIcons.close,
+                        color: Colors.white, size: 16),
                   ),
                 )),
 
@@ -789,7 +799,7 @@ class _Thumb extends StatelessWidget {
                       padding: const EdgeInsets.all(2),
                       decoration: const BoxDecoration(
                           color: Colors.black54, shape: BoxShape.circle),
-                      child: const Icon(Icons.close,
+                      child: const Icon(AppIcons.close,
                           color: Colors.white, size: 12),
                     ),
                   )),
@@ -811,8 +821,9 @@ class _PickerPlaceholder extends StatelessWidget {
               shape: BoxShape.circle,
               gradient: AppColors.accentGradientSoft,
             ),
-            child: const Icon(Icons.perm_media_outlined,
-                color: AppColors.accentStart, size: 38),
+            // Icon = текстийн accent (accentStart нь зөвхөн fill-д, DS-01)
+            child: Icon(Icons.perm_media_outlined,
+                color: AppColors.accentText, size: 38),
           ),
           const SizedBox(height: 16),
           Text('Зураг (10 хүртэл) эсвэл видео сонгох',

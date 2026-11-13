@@ -4,11 +4,16 @@ import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../core/widgets/authorized_media.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/app_radii.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/widgets/app_avatar.dart';
+import '../../../core/widgets/app_header.dart';
+import '../../../core/widgets/app_sheet.dart';
 import '../../../core/widgets/glass_icon_button.dart';
+import '../../../core/widgets/gradient_button.dart';
+import '../../../core/widgets/owl_loading.dart';
 import '../../../core/services/supabase_service.dart';
 import '../../events/providers/event_provider.dart' show EventItem;
 import '../../events/widgets/events_rail.dart' show showEventDetailSheet;
@@ -17,11 +22,6 @@ import '../../../models/venue.dart';
 
 const _kMonths = ['', '1-р сар','2-р сар','3-р сар','4-р сар','5-р сар','6-р сар',
   '7-р сар','8-р сар','9-р сар','10-р сар','11-р сар','12-р сар'];
-
-String _venueEmoji(String? t) => switch (t) {
-  'pub' => '🍺', 'lounge' => '🍸', 'nightclub' => '🎧',
-  'rooftop' => '🌃', 'karaoke' => '🎤', 'jazz' => '🎷', 'bar' => '🍻', _ => '🎵',
-};
 
 // Мянгатын таслалтай үнэ (₮12,000)
 String _fmtPrice(int n) {
@@ -34,13 +34,14 @@ String _fmtPrice(int n) {
   return '₮$b';
 }
 
-// Amber одод — дүүргэсэн од зөөлөн glow-той (info card + review картад хамт)
+// Үнэлгээний одод (AppColors.rating) — дүүргэсэн од зөөлөн glow-той
+// (info card + review картад хамт)
 Widget _starsRow(int n, {double size = 14}) => Row(mainAxisSize: MainAxisSize.min,
   children: [for (int i = 1; i <= 5; i++)
     Icon(i <= n ? Icons.star_rounded : Icons.star_border_rounded,
-      color: AppColors.amber, size: size,
+      color: AppColors.rating, size: size,
       shadows: i <= n
-        ? [Shadow(color: AppColors.amber.withValues(alpha: 0.5), blurRadius: 8)]
+        ? [Shadow(color: AppColors.rating.withValues(alpha: 0.5), blurRadius: 8)]
         : null)]);
 
 class VenueDetailScreen extends ConsumerStatefulWidget {
@@ -119,8 +120,8 @@ class _VenueDetailScreenState extends ConsumerState<VenueDetailScreen> {
     }
   }
 
-  void _goBack() => context.canPop()
-      ? context.pop() : context.go(AppRoutes.explore);
+  void _goBack() =>
+      AppHeader.goBack(context, fallbackLocation: AppRoutes.explore);
 
   Future<void> _openDirections() async {
     if (_venue == null) return; // өгөгдөлгүй үед хоосон maps tab нээхгүй
@@ -141,11 +142,19 @@ class _VenueDetailScreenState extends ConsumerState<VenueDetailScreen> {
 
   void _openReviews() {
     // Өнгө, радиус, бариулыг bottomSheetTheme (showDragHandle) өгнө.
-    showModalBottomSheet(
+    // Sheet амжилттай илгээвэл `true`-гээр хаагдана — мэдэгдлийг энд, хуудсан
+    // дээр харуулна (нээлттэй sheet-ийн доор SnackBar нуугддаг).
+    showAppSheet<bool>(
       context: context,
-      isScrollControlled: true,
       builder: (_) => _ReviewsSheet(venueId: widget.venueId),
-    ).then((_) => _load()); // хаагдахад дундаж шинэчлэх
+    ).then((submitted) {
+      if (!mounted) return;
+      if (submitted == true) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Үнэлгээ илгээгдлээ')));
+      }
+      _load(); // хаагдахад дундаж шинэчлэх
+    });
   }
 
   // ── Check-in / check-out toggle ──
@@ -167,7 +176,7 @@ class _VenueDetailScreenState extends ConsumerState<VenueDetailScreen> {
       ref.read(refreshVenueCatalogProvider)();
       messenger.showSnackBar(SnackBar(content: Text(checkedIn
           ? 'Та энэ газраас гарлаа'
-          : 'Ирснээ мэдэгдлээ! 🎉 (4 цаг хүчинтэй)')));
+          : 'Ирснээ мэдэгдлээ! (4 цаг хүчинтэй)')));
     }
   }
 
@@ -188,7 +197,7 @@ class _VenueDetailScreenState extends ConsumerState<VenueDetailScreen> {
     return Scaffold(
       backgroundColor: AppColors.bgBase,
       body: RefreshIndicator(
-        color: AppColors.accentStart,
+        color: AppColors.accentText,
         backgroundColor: AppColors.bgElevated,
         onRefresh: _load,
         child: CustomScrollView(
@@ -226,19 +235,15 @@ class _VenueDetailScreenState extends ConsumerState<VenueDetailScreen> {
                     const SizedBox(height: 40),
                   ]),
               ),
-              // ── Дээд шилэн товчнууд — буцах + чиглэл ──
+              // ── Дээд толгой (DS-06) — зураг дээрх буцах + чиглэл ──
               Positioned(top: 0, left: 0, right: 0,
-                child: SafeArea(bottom: false, child: Padding(
-                  padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
-                  child: Row(children: [
-                    // Нэгдсэн шилэн icon товч — зураг дээр бараан дүүргэлттэй
-                    GlassIconButton(icon: Icons.chevron_left_rounded,
-                      onMedia: true, tooltip: 'Буцах', onTap: _goBack),
-                    const Spacer(),
+                child: AppHeader.media(
+                  fallbackLocation: AppRoutes.explore,
+                  actions: [
                     GlassIconButton(icon: Icons.directions_rounded,
                       onMedia: true, tooltip: 'Чиглэл',
                       onTap: _openDirections),
-                  ])))),
+                  ])),
             ])),
           ]),
       ),
@@ -249,7 +254,7 @@ class _VenueDetailScreenState extends ConsumerState<VenueDetailScreen> {
   Widget _infoCard(String name, String? type, String? district,
       double avg, int count, bool checkedIn) {
     final micro = [
-      if (type != null) '${_venueEmoji(type)} $type',
+      if (type != null) type,
       if (district != null) district,
     ].join(' · ');
     return Container(
@@ -265,12 +270,21 @@ class _VenueDetailScreenState extends ConsumerState<VenueDetailScreen> {
           style: AppTextStyles.h2),
         if (micro.isNotEmpty) ...[
           const SizedBox(height: 4),
-          Text(micro, maxLines: 1, overflow: TextOverflow.ellipsis,
-            style: AppTextStyles.labelSm.copyWith(
-              color: AppColors.textTertiary, letterSpacing: 0.3)),
+          // Газрын төрөл — emoji биш, AppIcons.venueType (DS-09)
+          Row(children: [
+            if (type != null) ...[
+              Icon(AppIcons.venueType(type), size: 14,
+                color: AppColors.textTertiary),
+              const SizedBox(width: 4),
+            ],
+            Expanded(child: Text(micro, maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: AppTextStyles.labelSm.copyWith(
+                color: AppColors.textTertiary, letterSpacing: 0.3))),
+          ]),
         ],
         const SizedBox(height: 10),
-        // ⭐ Дундаж үнэлгээ — одод + тоо
+        // Дундаж үнэлгээ — одод + тоо
         Row(children: [
           _starsRow(avg.round(), size: 18),
           const SizedBox(width: 8),
@@ -294,25 +308,26 @@ class _VenueDetailScreenState extends ConsumerState<VenueDetailScreen> {
           _Tap(
             onTap: () => launchUrl(Uri.parse('tel:${_venue!['phone']}')),
             child: Row(mainAxisSize: MainAxisSize.min, children: [
-              const Icon(Icons.phone, size: 15, color: AppColors.accentStart),
+              Icon(Icons.phone, size: 15, color: AppColors.accentText),
               const SizedBox(width: 6),
               Text(_venue!['phone'] as String, style: AppTextStyles.bodySm.copyWith(
-                color: AppColors.accentStart, fontWeight: FontWeight.w600)),
+                color: AppColors.accentText, fontWeight: FontWeight.w600)),
             ]),
           ),
         ],
         const SizedBox(height: 16),
-        // ── Үйлдлийн мөр: Check-in gradient pill + Үнэлгээ glass pill ──
-        Row(children: [
-          Expanded(child: _checkInPill(checkedIn)),
-          const SizedBox(width: 10),
-          Expanded(child: _glassPill(Icons.star_outline_rounded, 'Үнэлгээ',
-            _openReviews)),
-        ]),
+        // ── Үйлдлүүд (DS-03): Check-in товч, доор нь Үнэлгээ (secondary) ──
+        // Бүтэн өргөнтэй: хагас өргөнд шошгууд тасардаг байсан.
+        _checkInButton(checkedIn),
+        const SizedBox(height: 10),
+        OutlineButton(label: 'Үнэлгээ',
+          icon: const Icon(Icons.star_outline_rounded, size: 18),
+          onPressed: _openReviews),
         if (_ownerId != null && _ownerId != _myId) ...[
           const SizedBox(height: 10),
-          _glassPill(Icons.chat_bubble_outline_rounded, 'Эзэнтэй чатлах',
-            () => context.push('/dm/$_ownerId')),
+          OutlineButton(label: 'Эзэнтэй чатлах',
+            icon: const Icon(AppIcons.message, size: 18),
+            onPressed: () => context.push('/dm/$_ownerId')),
         ],
       ]),
     );
@@ -347,8 +362,7 @@ class _VenueDetailScreenState extends ConsumerState<VenueDetailScreen> {
               Expanded(child: Text('Сэтгэгдэл байхгүй — анхных нь бай!',
                 style: AppTextStyles.bodySm.copyWith(
                   color: AppColors.textSecondary))),
-              Icon(Icons.arrow_forward_ios_rounded,
-                color: AppColors.neonCyan, size: 14),
+              Icon(AppIcons.forward, color: AppColors.neonCyan, size: 18),
             ]),
           ),
         ))
@@ -415,88 +429,55 @@ class _VenueDetailScreenState extends ConsumerState<VenueDetailScreen> {
   // ── Алдаа / олдсонгүй байдал — чимээгүй хоосон дэлгэцийн оронд ──
   Widget _problemView() => Scaffold(
     backgroundColor: AppColors.bgBase,
-    body: SafeArea(child: Stack(children: [
-      Positioned(top: 8, left: 12, child: GlassIconButton(
-        icon: Icons.chevron_left_rounded, tooltip: 'Буцах', onTap: _goBack)),
-      Center(child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
-          Icon(_notFound ? Icons.location_off_outlined : Icons.wifi_off_outlined,
-            color: AppColors.textTertiary, size: 48),
-          const SizedBox(height: 16),
-          Text(_notFound ? 'Газар олдсонгүй' : 'Ачаалж чадсангүй',
-            style: AppTextStyles.h2),
-          const SizedBox(height: 8),
-          Text(_notFound
-              ? 'Энэ газар устсан эсвэл холбоос хуучирсан байна'
-              : 'Сүлжээгээ шалгаад дахин оролдоно уу',
-            textAlign: TextAlign.center,
-            style: AppTextStyles.bodyMd.copyWith(color: AppColors.textSecondary)),
-          const SizedBox(height: 20),
-          if (_notFound)
-            ElevatedButton(onPressed: _goBack, child: const Text('Буцах'))
-          else
-            ElevatedButton(onPressed: _load, child: const Text('Дахин оролдох')),
-        ]),
-      )),
-    ])),
+    // Зөвхөн буцах товчтой толгой (DS-06)
+    appBar: const AppHeader.title(title: '', fallbackLocation: AppRoutes.explore),
+    body: SafeArea(child: Center(child: Padding(
+      padding: const EdgeInsets.all(32),
+      child: Column(mainAxisSize: MainAxisSize.min, children: [
+        Icon(_notFound ? Icons.location_off_outlined : Icons.wifi_off_outlined,
+          color: AppColors.textTertiary, size: 48),
+        const SizedBox(height: 16),
+        Text(_notFound ? 'Газар олдсонгүй' : 'Ачаалж чадсангүй',
+          style: AppTextStyles.h2),
+        const SizedBox(height: 8),
+        Text(_notFound
+            ? 'Энэ газар устсан эсвэл холбоос хуучирсан байна'
+            : 'Сүлжээгээ шалгаад дахин оролдоно уу',
+          textAlign: TextAlign.center,
+          style: AppTextStyles.bodyMd.copyWith(color: AppColors.textSecondary)),
+        const SizedBox(height: 20),
+        // Хуудасны primary (DS-03): бусад алдааны төлөвтэй ижил md pill.
+        if (_notFound)
+          GradientButton(label: 'Буцах', size: GradientButtonSize.md,
+            fullWidth: false, onPressed: _goBack)
+        else
+          GradientButton(label: 'Дахин оролдох', size: GradientButtonSize.md,
+            fullWidth: false, onPressed: _load),
+      ]),
+    ))),
   );
 
+  // Зураггүй газрын нүүр — emoji биш, газрын төрлийн icon (DS-09)
   Widget _coverFallback(String? type) => Container(
     decoration: const BoxDecoration(gradient: AppColors.accentGradient),
-    child: Center(child: Text(_venueEmoji(type), style: const TextStyle(fontSize: 72))));
+    child: Center(child: Icon(AppIcons.venueType(type), size: 72,
+      color: Colors.white.withValues(alpha: 0.9))));
 
-  // Check-in pill — идэвхгүй үед accentGradient, идэвхтэй үед lime glass.
-  // Өндөр 52 / радиус pill — дэлгэц дэх бүх үндсэн товчтой нэг хэмжээст.
-  Widget _checkInPill(bool checkedIn) => _Tap(
-    onTap: _checkinBusy ? null : _toggleCheckIn,
-    child: AnimatedContainer(
-      duration: const Duration(milliseconds: 200),
-      curve: Curves.easeOut,
-      height: 52,
-      decoration: BoxDecoration(
-        gradient: checkedIn ? null : AppColors.accentGradient,
-        color: checkedIn ? AppColors.lime.withValues(alpha: 0.14) : null,
-        borderRadius: AppRadii.pillR,
-        border: checkedIn
-            ? Border.all(color: AppColors.lime.withValues(alpha: 0.7))
-            : null,
-        boxShadow: checkedIn
-            ? AppColors.glowShadow(AppColors.lime, alpha: 0.25)
-            : AppColors.glowShadow(AppColors.accentStart),
-      ),
-      child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-        if (_checkinBusy)
-          SizedBox(width: 18, height: 18, child: CircularProgressIndicator(
-            color: checkedIn ? AppColors.lime : Colors.white, strokeWidth: 2))
-        else
-          Icon(checkedIn ? Icons.where_to_vote : Icons.where_to_vote_outlined,
-            size: 20, color: checkedIn ? AppColors.lime : Colors.white),
-        const SizedBox(width: 8),
-        Flexible(child: Text(checkedIn ? 'Та энд байна · Гарах' : 'Ирснээ мэдэгдэх',
-          maxLines: 1, overflow: TextOverflow.ellipsis,
-          style: AppTextStyles.btn.copyWith(
-            color: checkedIn ? AppColors.lime : Colors.white,
-            fontSize: 14))),
-      ]),
-    ),
-  );
-
-  // Glass pill товч — icon + label
-  Widget _glassPill(IconData icon, String label, VoidCallback onTap) =>
-    _Tap(onTap: onTap, child: Container(
-      height: 52,
-      decoration: BoxDecoration(
-        color: AppColors.bgSurface.withValues(alpha: 0.72),
-        borderRadius: AppRadii.pillR,
-        border: Border.all(color: AppColors.hairline2)),
-      child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-        Icon(icon, size: 18, color: AppColors.textPrimary),
-        const SizedBox(width: 8),
-        Flexible(child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis,
-          style: AppTextStyles.btn.copyWith(
-            color: AppColors.textPrimary, fontSize: 14))),
-      ])));
+  // Check-in (DS-03): ирээгүй үед primary GradientButton, ирсэн үед secondary
+  // OutlineButton — lime icon нь "та энд байна" төлвийг хадгална.
+  // Хоёулаа бүтэн өргөнтэй 52px pill; "Үнэлгээ" товч доор нь тусдаа мөрөнд
+  // байрлана, учир нь хагас өргөнд "Та энд байна · Гарах" шошго тасардаг.
+  Widget _checkInButton(bool checkedIn) => checkedIn
+      ? OutlineButton(label: 'Та энд байна · Гарах',
+          icon: _checkinBusy
+              ? const SizedBox.square(dimension: 18,
+                  child: OwlLoading(size: 18, compact: true))
+              : Icon(Icons.where_to_vote, size: 20, color: AppColors.lime),
+          onPressed: _checkinBusy ? null : _toggleCheckIn)
+      : GradientButton(label: 'Ирснээ мэдэгдэх',
+          icon: const Icon(Icons.where_to_vote_outlined, size: 20),
+          busy: _checkinBusy,
+          onPressed: _toggleCheckIn);
 
   Widget _eventTile(Map<String, dynamic> e) {
     final starts = DateTime.tryParse(e['starts_at'] as String? ?? '');
@@ -536,7 +517,7 @@ class _VenueDetailScreenState extends ConsumerState<VenueDetailScreen> {
             Text(e['title'] as String? ?? 'Event', maxLines: 1, overflow: TextOverflow.ellipsis,
               style: AppTextStyles.labelMd.copyWith(color: AppColors.textPrimary)),
             const SizedBox(height: 3),
-            Text(dateStr, style: AppTextStyles.bodyXs.copyWith(color: AppColors.accentStart)),
+            Text(dateStr, style: AppTextStyles.bodyXs.copyWith(color: AppColors.accentText)),
           ])),
         Padding(padding: const EdgeInsets.only(right: 14),
           child: Text(price == 0 ? 'Үнэгүй' : _fmtPrice(price),
@@ -665,6 +646,9 @@ class _ReviewsSheetState extends State<_ReviewsSheet> {
   final _commentCtrl = TextEditingController();
   bool _loading = true;
   bool _busy = false;
+  // Илгээх үеийн алдаа. Sheet нээлттэй үед SnackBar sheet-ийн ДООР
+  // зурагддаг тул товчны доор, sheet дотор харуулна; дахин оролдоход арилна.
+  String? _error;
   String get _myId => SupabaseService.currentUser?.id ?? '';
 
   @override
@@ -700,31 +684,37 @@ class _ReviewsSheetState extends State<_ReviewsSheet> {
 
   Future<void> _submit() async {
     if (_myRating == 0 || _busy) return;
-    final messenger = ScaffoldMessenger.of(context);
     if (_myId.isEmpty) {
       // Нэвтрээгүй — чимээгүй унтрахын оронд хэлж өгнө
-      messenger.showSnackBar(const SnackBar(content: Text('Нэвтэрнэ үү')));
+      setState(() => _error = 'Нэвтэрнэ үү');
       return;
     }
-    setState(() => _busy = true);
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
     try {
       await SupabaseService.client.from('venue_reviews').upsert({
         'venue_id': widget.venueId, 'user_id': _myId,
         'rating': _myRating, 'comment': _commentCtrl.text.trim(),
       }, onConflict: 'venue_id, user_id');
-      await _load();
-      if (mounted) {
-        FocusScope.of(context).unfocus();
-        messenger.showSnackBar(
-          const SnackBar(content: Text('Үнэлгээ илгээгдлээ ⭐')));
+      if (!mounted) return;
+      FocusScope.of(context).unfocus();
+      // Амжилт: sheet-ээ ӨӨРИЙН context-оор хаана. Хуудас нь мэдэгдлийг
+      // харуулж, дундаж ба сэтгэгдлүүдийг дахин ачаална (_openReviews).
+      // Хүлээх зуур sheet хаагдаж эхэлсэн бол (current биш) pop хийхгүй —
+      // эс бөгөөс доорх газрын хуудас хаагдана.
+      if (ModalRoute.isCurrentOf(context) ?? false) {
+        Navigator.of(context).pop(true);
       }
     } catch (_) {
       if (mounted) {
-        messenger.showSnackBar(
-          const SnackBar(content: Text('Илгээж чадсангүй. Дахин оролдоно уу')));
+        setState(() {
+          _busy = false;
+          _error = 'Илгээж чадсангүй. Дахин оролдоно уу';
+        });
       }
     }
-    if (mounted) setState(() => _busy = false);
   }
 
   @override
@@ -750,7 +740,9 @@ class _ReviewsSheetState extends State<_ReviewsSheet> {
             ])
           : ListView(controller: scrollCtrl, children: [
               // Бариулыг theme (showDragHandle) зурна — энд дахин зурахгүй.
-              Text('Үнэлгээ ба сэтгэгдэл', style: AppTextStyles.h2),
+              // Гарчиг доорх картуудтай нэг ирмэгт (16px).
+              const AppSheetHeader(title: 'Үнэлгээ ба сэтгэгдэл',
+                padding: EdgeInsets.zero),
               const SizedBox(height: 14),
               // Бичих — шилэн карт хэмнэл
               Container(
@@ -768,9 +760,9 @@ class _ReviewsSheetState extends State<_ReviewsSheet> {
                       onTap: () => setState(() => _myRating = i),
                       child: Padding(padding: const EdgeInsets.only(right: 4),
                         child: Icon(i <= _myRating ? Icons.star_rounded : Icons.star_border_rounded,
-                          color: AppColors.amber, size: 34,
+                          color: AppColors.rating, size: 34,
                           shadows: i <= _myRating
-                            ? [Shadow(color: AppColors.amber.withValues(alpha: 0.5),
+                            ? [Shadow(color: AppColors.rating.withValues(alpha: 0.5),
                                 blurRadius: 10)]
                             : null)))]),
                   const SizedBox(height: 10),
@@ -782,28 +774,16 @@ class _ReviewsSheetState extends State<_ReviewsSheet> {
                       border: OutlineInputBorder(borderRadius: AppRadii.mdR,
                         borderSide: BorderSide.none))),
                   const SizedBox(height: 10),
-                  // Илгээх — од сонгоогүй үед идэвхгүй: хэлбэр, өндөр нь
-                  // хэвээр, зөвхөн саармаг гадарга + hairline хүрээ болно.
-                  // Идэвхтэй үедээ градиент — товч ялгаатай хэвээр байна.
-                  _Tap(
-                    onTap: (_myRating == 0 || _busy) ? null : _submit,
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 160),
-                      curve: Curves.easeOut,
-                      height: 52, width: double.infinity,
-                      decoration: BoxDecoration(
-                        gradient: _myRating == 0 ? null : AppColors.accentGradient,
-                        color: _myRating == 0
-                          ? AppColors.bgSurface.withValues(alpha: 0.9) : null,
-                        border: _myRating == 0
-                          ? Border.all(color: AppColors.hairline) : null,
-                        borderRadius: AppRadii.pillR),
-                      alignment: Alignment.center,
-                      child: _busy
-                        ? const SizedBox(width: 20, height: 20, child:
-                            CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                        : Text('Илгээх', style: AppTextStyles.btn.copyWith(
-                            color: _myRating == 0 ? AppColors.textTertiary : Colors.white)))),
+                  // Илгээх (DS-03) — од сонгоогүй үед идэвхгүй гадарга,
+                  // илгээж байхад owl + шошго хэвээр.
+                  GradientButton(label: 'Илгээх', busy: _busy,
+                    onPressed: _myRating == 0 ? null : _submit),
+                  if (_error != null) ...[
+                    const SizedBox(height: 8),
+                    Semantics(liveRegion: true,
+                      child: Text(_error!, style: AppTextStyles.bodySm.copyWith(
+                        color: AppColors.danger))),
+                  ],
                 ]),
               ),
               const SizedBox(height: 18),

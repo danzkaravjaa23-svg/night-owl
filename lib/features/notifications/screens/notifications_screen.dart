@@ -2,11 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/widgets/authorized_media.dart';
+import '../../../core/router/app_router.dart' show AppRoutes;
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/widgets/owl_loading.dart';
 import '../../../core/l10n/app_strings.dart';
 import '../../../core/widgets/app_avatar.dart';
+import '../../../core/widgets/app_header.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/glass_icon_button.dart';
 import '../../../core/widgets/gradient_button.dart';
@@ -114,8 +117,10 @@ class _NotificationsScreenState extends ConsumerState<_AccountNotifications> {
   }
 
   void _showError(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(message), backgroundColor: AppColors.error));
+    // dangerFill дээр цагаан текст — хоёр горимд AA (DS-01)
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(message, style: const TextStyle(color: Colors.white)),
+        backgroundColor: AppColors.dangerFill));
   }
 
   Future<void> _markAllRead() async {
@@ -243,109 +248,122 @@ class _NotificationsScreenState extends ConsumerState<_AccountNotifications> {
 
     return Scaffold(
       backgroundColor: AppColors.bgBase,
+      // top: false — AppHeader (primary) status bar-ын зайг өөрөө авч, гэрэл
+      // нь status bar-ын доогуур тасралтгүй үргэлжилнэ (DM жагсаалттай ижил).
       body: SafeArea(
+          top: false,
           child: Column(children: [
+        // Нэг гэрэл толгой ба "N шинэ" мөрийг хамтад нь бүрхэнэ (DS-06).
         NightOwlAtmosphere(
-            child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 18, 16, 12),
-          child:
-              Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-            Row(children: [
-              if (context.canPop()) ...[
-                GlassIconButton(
-                    icon: Icons.chevron_left_rounded,
-                    iconSize: 24,
-                    tooltip: 'Буцах',
-                    onTap: () => context.pop()),
-                const SizedBox(width: 8),
-              ],
-              Expanded(
-                  child: Text('Мэдэгдэл',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: AppTextStyles.h1)),
-              IconButton(
-                  tooltip: 'Дагах хүсэлтүүд',
-                  icon: const Icon(Icons.person_add_outlined),
-                  onPressed: () => context.push('/privacy')),
-              IconButton(
-                  tooltip: 'Дахин ачаалах',
-                  onPressed: _loadInFlight || _markingAll ? null : _load,
-                  icon: const Icon(Icons.refresh_rounded, size: 20)),
-            ]),
-            const SizedBox(height: 3),
-            Text('Танд хамаатай шинэ мэдээ', style: AppTextStyles.bodySm),
-            if (unread > 0)
-              Wrap(
-                  alignment: WrapAlignment.spaceBetween,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  children: [
-                    Text('$unread шинэ',
-                        style: AppTextStyles.bodySm
-                            .copyWith(color: AppColors.accentStart)),
-                    TextButton.icon(
-                        onPressed: _markingAll ||
-                                _loadInFlight ||
-                                _openingIds.isNotEmpty
-                            ? null
-                            : _markAllRead,
-                        style: TextButton.styleFrom(
-                            minimumSize: const Size(44, 44)),
-                        icon: _markingAll
-                            ? const SizedBox(
-                                width: 16,
-                                height: 16,
-                                child:
-                                    CircularProgressIndicator(strokeWidth: 2))
-                            : const Icon(Icons.done_all_rounded, size: 18),
-                        label: const Text('Бүгдийг уншсан')),
-                  ]),
-          ]),
-        )),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Tab биш тул буцах товч үргэлж харагдана; pop хийх хуудасгүй
+              // (deep link) бол feed рүү.
+              AppHeader.title(
+                title: 'Мэдэгдэл',
+                subtitle: 'Танд хамаатай шинэ мэдээ',
+                fallbackLocation: AppRoutes.feed,
+                actions: [
+                  GlassIconButton(
+                      icon: Icons.person_add_outlined,
+                      tooltip: 'Дагах хүсэлтүүд',
+                      onTap: () => context.push('/privacy')),
+                  GlassIconButton(
+                      icon: Icons.refresh_rounded,
+                      tooltip: 'Дахин ачаалах',
+                      onTap: _loadInFlight || _markingAll ? null : _load),
+                ],
+              ),
+              if (unread > 0)
+                Padding(
+                  // Товчны дотоод 12px зайтай нийлээд шошго 20px gutter дээр.
+                  padding: const EdgeInsets.fromLTRB(20, 0, 8, 8),
+                  child: Wrap(
+                      alignment: WrapAlignment.spaceBetween,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        Text('$unread шинэ',
+                            style: AppTextStyles.bodySm
+                                .copyWith(color: AppColors.accentText)),
+                        TextButton.icon(
+                            onPressed: _markingAll ||
+                                    _loadInFlight ||
+                                    _openingIds.isNotEmpty
+                                ? null
+                                : _markAllRead,
+                            style: TextButton.styleFrom(
+                                minimumSize: const Size(44, 44)),
+                            icon: _markingAll
+                                ? const SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator(
+                                        strokeWidth: 2))
+                                : const Icon(Icons.done_all_rounded, size: 18),
+                            label: const Text('Бүгдийг уншсан')),
+                      ]),
+                ),
+            ],
+          ),
+        ),
         Expanded(
-          child: _loading
-              ? const _SkeletonList()
-              : _error
-                  ? SingleChildScrollView(child: _ErrorState(onRetry: _load))
-                  : _notifs.isEmpty
-                      ? _EmptyNotifState(onRefresh: _load)
-                      : RefreshIndicator(
-                          color: AppColors.accentStart,
-                          backgroundColor: AppColors.bgElevated,
-                          onRefresh: _load,
-                          child: ListView.builder(
-                            physics: const AlwaysScrollableScrollPhysics(),
-                            padding: const EdgeInsets.only(bottom: 28),
-                            itemCount: entries.length,
-                            itemBuilder: (_, i) {
-                              final e = entries[i];
-                              // Хэсгийн гарчиг — uppercase sectionLabel + сунгасан hairline
-                              if (e is String) {
-                                return Padding(
-                                  padding:
-                                      const EdgeInsets.fromLTRB(20, 20, 20, 8),
-                                  child: Row(children: [
-                                    Text(e,
-                                        style: AppTextStyles.labelMd.copyWith(
-                                            color: AppColors.textSecondary,
-                                            letterSpacing: .5)),
-                                    const SizedBox(width: 12),
-                                    Expanded(
-                                        child: Divider(
-                                            color: AppColors.hairline,
-                                            height: 1)),
-                                  ]),
-                                );
-                              }
-                              final (_, n) = e as (int, Map<String, dynamic>);
-                              return _NotifTile(
-                                notif: n,
-                                thumbUrl: _thumbs[n['post_id']],
-                                onTap: () => _onTapNotif(n),
-                                opening: _openingIds.contains(n['id']),
-                              );
-                            },
-                          )),
+          // The header above took the status bar; the lists below must not
+          // add it again (a ListView without padding would). The Builder's
+          // context is inside this SafeArea, so only the top inset changes.
+          child: Builder(
+            builder: (context) => MediaQuery.removePadding(
+              context: context,
+              removeTop: true,
+              child: _loading
+                  ? const _SkeletonList()
+                  : _error
+                      ? SingleChildScrollView(
+                          child: _ErrorState(onRetry: _load))
+                      : _notifs.isEmpty
+                          ? _EmptyNotifState(onRefresh: _load)
+                          : RefreshIndicator(
+                              color: AppColors.accentText,
+                              backgroundColor: AppColors.bgElevated,
+                              onRefresh: _load,
+                              child: ListView.builder(
+                                physics: const AlwaysScrollableScrollPhysics(),
+                                padding: const EdgeInsets.only(bottom: 28),
+                                itemCount: entries.length,
+                                itemBuilder: (_, i) {
+                                  final e = entries[i];
+                                  // Хэсгийн гарчиг — uppercase sectionLabel + сунгасан hairline
+                                  if (e is String) {
+                                    return Padding(
+                                      padding: const EdgeInsets.fromLTRB(
+                                          20, 20, 20, 8),
+                                      child: Row(children: [
+                                        Text(e,
+                                            style: AppTextStyles.labelMd
+                                                .copyWith(
+                                                    color: AppColors
+                                                        .textSecondary,
+                                                    letterSpacing: .5)),
+                                        const SizedBox(width: 12),
+                                        Expanded(
+                                            child: Divider(
+                                                color: AppColors.hairline,
+                                                height: 1)),
+                                      ]),
+                                    );
+                                  }
+                                  final (_, n) =
+                                      e as (int, Map<String, dynamic>);
+                                  return _NotifTile(
+                                    notif: n,
+                                    thumbUrl: _thumbs[n['post_id']],
+                                    onTap: () => _onTapNotif(n),
+                                    opening: _openingIds.contains(n['id']),
+                                  );
+                                },
+                              )),
+            ),
+          ),
         ),
       ])),
     );
@@ -376,14 +394,16 @@ class _NotifTile extends StatelessWidget {
     final isRead = notif['is_read'] as bool? ?? false;
     final postId = notif['post_id'] as String?;
 
+    // Төрлийн тэмдэг — AppIcons-ийн ойлголтын glyph-ийн дүүрсэн хэлбэр
+    // (DS-09): сэтгэгдэл ≠ мессеж (чат бөмбөлөг нь мессежийнх).
     final icon = switch (type) {
-      'like' => Icons.favorite_rounded,
+      'like' => AppIcons.likeActive,
       'follow' => Icons.person_add_rounded,
-      'comment' => Icons.chat_bubble_rounded,
-      'message' => Icons.mail_rounded,
+      'comment' => AppIcons.commentActive,
+      'message' => AppIcons.messageActive,
       'mention' => Icons.alternate_email_rounded,
       'event' => Icons.event_rounded,
-      _ => Icons.notifications_rounded,
+      _ => AppIcons.notificationsActive,
     };
     // Төрлийн өнгө — like=pink, follow/message=cyan, comment=purple, event=lime
     final color = switch (type) {
@@ -533,7 +553,7 @@ class _PostThumb extends StatelessWidget {
         fadeInDuration: const Duration(milliseconds: 150),
         placeholder: (_, __) =>
             Container(width: 44, height: 44, color: AppColors.bgSurface),
-        errorWidget: (_, __, ___) => _iconTile(Icons.image_outlined),
+        errorWidget: (_, __, ___) => _iconTile(AppIcons.imageBroken),
       ),
     );
   }
@@ -545,7 +565,7 @@ class _EmptyNotifState extends StatelessWidget {
   const _EmptyNotifState({required this.onRefresh});
   @override
   Widget build(BuildContext context) => RefreshIndicator(
-        color: AppColors.accentStart,
+        color: AppColors.accentText,
         backgroundColor: AppColors.bgElevated,
         onRefresh: onRefresh,
         child: LayoutBuilder(

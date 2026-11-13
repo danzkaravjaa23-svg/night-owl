@@ -6,13 +6,13 @@ import '../../auth/providers/auth_provider.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/widgets/authorized_media.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/widgets/owl_loading.dart';
 import '../../../core/widgets/app_avatar.dart';
+import '../../../core/widgets/app_header.dart';
 import '../../../core/widgets/empty_state.dart';
-import '../../../core/widgets/glass_icon_button.dart';
 import '../../../core/widgets/gradient_button.dart';
-import '../../../core/widgets/premium_surface.dart';
 import '../../../core/widgets/theme_toggle_button.dart';
 import '../../../core/widgets/network_video.dart';
 import '../../../core/services/supabase_service.dart';
@@ -195,42 +195,22 @@ class _SearchScreenState extends State<_AccountSearch> {
     final searching = _q.trim().isNotEmpty;
     return Scaffold(
       backgroundColor: AppColors.bgBase,
+      // top: false — AppHeader (primary) status bar-ын зайг өөрөө авч, гэрэл
+      // нь status bar-ын доогуур тасралтгүй үргэлжилнэ (DM жагсаалттай ижил).
       body: SafeArea(
+          top: false,
           child: Column(children: [
-        // ── Header — glass back + том "Хайх" гарчиг ──
-        NightOwlAtmosphere(
-            child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 18, 20, 4),
-          child: Row(children: [
-            // Буцах — апп даяар нэг л хэлбэр (GlassIconButton)
-            GlassIconButton(
-                icon: Icons.chevron_left_rounded,
-                iconSize: 24,
-                tooltip: 'Буцах',
-                // Deep link-ээр шууд орж ирсэн үед pop хийх юмгүй — feed рүү
-                onTap: () {
-                  if (context.canPop()) {
-                    context.pop();
-                  } else {
-                    context.go('/feed');
-                  }
-                }),
-            const SizedBox(width: 10),
-            Expanded(
-                child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                  Text('Хайх', style: AppTextStyles.h1),
-                  if (MediaQuery.viewInsetsOf(context).bottom == 0) ...[
-                    const SizedBox(height: 3),
-                    Text('Хүн, газар, шинэ мэдрэмж',
-                        style: AppTextStyles.bodySm),
-                  ],
-                ])),
-            const SizedBox(width: 8),
-            const ThemeToggleButton(),
-          ]),
-        )),
+        // ── Header — AppHeader.title: буцах + "Хайх" + theme toggle (DS-06).
+        // Deep link-ээр шууд орж ирсэн үед pop хийх юмгүй — feed рүү буцна.
+        // Гар нээлттэй үед дэд мөрийг нууж зай хэмнэнэ.
+        AppHeader.title(
+          title: 'Хайх',
+          subtitle: MediaQuery.viewInsetsOf(context).bottom == 0
+              ? 'Хүн, газар, шинэ мэдрэмж'
+              : null,
+          atmosphere: true,
+          actions: const [ThemeToggleButton()],
+        ),
 
         // ── Search — апп даяарх нэгдсэн шилэн pill талбар (48) ──
         Padding(
@@ -242,14 +222,24 @@ class _SearchScreenState extends State<_AccountSearch> {
               hint: 'Хүн, газар хайх...'),
         ),
 
+        // The header took the status bar; the lists below must not add it
+        // again (a ListView or GridView without padding would). The Builder's
+        // context is inside this SafeArea, so only the top inset changes.
         Expanded(
+            child: Builder(
+          builder: (context) => MediaQuery.removePadding(
+            context: context,
+            removeTop: true,
             child: AnimatedSwitcher(
-          duration: const Duration(milliseconds: 200),
-          switchInCurve: Curves.easeOut,
-          child: searching
-              ? KeyedSubtree(key: const ValueKey('results'), child: _results())
-              : KeyedSubtree(
-                  key: const ValueKey('discover'), child: _discover()),
+              duration: const Duration(milliseconds: 200),
+              switchInCurve: Curves.easeOut,
+              child: searching
+                  ? KeyedSubtree(
+                      key: const ValueKey('results'), child: _results())
+                  : KeyedSubtree(
+                      key: const ValueKey('discover'), child: _discover()),
+            ),
+          ),
         )),
       ])),
     );
@@ -325,7 +315,7 @@ class _SearchScreenState extends State<_AccountSearch> {
                   _ctrl.clear();
                   _search('');
                 },
-                icon: const Icon(Icons.close_rounded, size: 18),
+                icon: const Icon(AppIcons.close, size: 18),
                 label: const Text('Хайлтыг цэвэрлэх'),
               )));
     }
@@ -405,7 +395,7 @@ class _SearchScreenState extends State<_AccountSearch> {
                           .copyWith(color: AppColors.textSecondary)),
                 ],
               ])),
-          Icon(Icons.chevron_right, color: AppColors.textTertiary, size: 18),
+          Icon(AppIcons.forward, color: AppColors.textTertiary, size: 18),
         ]),
       ),
     );
@@ -426,7 +416,7 @@ class _SearchScreenState extends State<_AccountSearch> {
                     color: AppColors.accentStart.withValues(alpha: 0.10),
                     border: Border.all(color: AppColors.hairline2)),
                 child: Center(
-                    child: Icon(Icons.location_on_outlined,
+                    child: Icon(AppIcons.venue,
                         color: AppColors.neonCyan, size: 23))),
             const SizedBox(width: 12),
             Expanded(
@@ -450,7 +440,7 @@ class _SearchScreenState extends State<_AccountSearch> {
                             .copyWith(color: AppColors.textSecondary)),
                   ],
                 ])),
-            Icon(Icons.chevron_right, color: AppColors.textTertiary, size: 18),
+            Icon(AppIcons.forward, color: AppColors.textTertiary, size: 18),
           ]),
         ),
       );
@@ -512,7 +502,7 @@ class _SearchScreenState extends State<_AccountSearch> {
                         Container(color: AppColors.bgSurface),
                     errorWidget: (_, __, ___) => Container(
                         color: AppColors.bgSurface,
-                        child: Icon(Icons.image_not_supported_outlined,
+                        child: Icon(AppIcons.imageBroken,
                             color: AppColors.textTertiary)))
               else if (isVideo && url != null)
                 // Видеоны эхний кадрыг cover болгож харуулна (+ play icon)
@@ -537,7 +527,7 @@ class _SearchScreenState extends State<_AccountSearch> {
                                   Colors.black54
                                 ])),
                             child: Row(children: [
-                              const Icon(Icons.favorite,
+                              const Icon(AppIcons.likeActive,
                                   size: 12, color: Colors.white),
                               const SizedBox(width: 4),
                               Text(_fmtLikes(likes),

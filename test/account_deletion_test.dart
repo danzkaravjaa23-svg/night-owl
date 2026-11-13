@@ -9,6 +9,7 @@ import 'package:http/testing.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:night_owl_ub/core/router/app_router.dart';
+import 'package:night_owl_ub/core/theme/app_colors.dart';
 import 'package:night_owl_ub/core/utils/auth_return.dart';
 import 'package:night_owl_ub/features/auth/providers/auth_provider.dart';
 import 'package:night_owl_ub/features/profile/screens/delete_account_screen.dart';
@@ -331,6 +332,11 @@ void main() {
       final button = tester.widget<FilledButton>(
           find.byKey(const ValueKey('delete-account-submit')));
       expect(button.onPressed, isNull);
+      // Destructive action: white label on dangerFill (DS-03).
+      expect(button.style?.backgroundColor?.resolve(const <WidgetState>{}),
+          AppColors.dangerFill);
+      expect(button.style?.foregroundColor?.resolve(const <WidgetState>{}),
+          Colors.white);
       tester
           .state<ScrollableState>(find.byType(Scrollable).first)
           .position

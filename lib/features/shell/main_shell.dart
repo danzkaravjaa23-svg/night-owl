@@ -4,10 +4,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_icons.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../core/router/app_router.dart';
 import '../../core/services/supabase_service.dart';
 import '../../core/providers/user_settings_provider.dart';
+import '../../core/widgets/app_sheet.dart';
+import '../../core/widgets/gradient_button.dart';
 import '../../core/widgets/night_owl_brand.dart';
 import '../../core/widgets/sculpted_icon.dart';
 import '../../core/widgets/app_motion.dart';
@@ -138,6 +141,12 @@ class _MainShellState extends ConsumerState<MainShell>
 
   // Feed биш tab дээр pop хийх зүйлгүй бол back → Feed (аппаас гарахгүй)
   Future<bool> _onBack() async {
+    // A dialog, sheet or page on the ROOT navigator covers the shell: close
+    // that first. go_router 13 would send back to the nested tab navigator
+    // and pop the page underneath it instead.
+    if (ModalRoute.isCurrentOf(context) == false) {
+      return Navigator.of(context, rootNavigator: true).maybePop();
+    }
     if (_atFeed || GoRouter.of(context).canPop()) return false;
     context.go(AppRoutes.feed);
     return true;
@@ -189,14 +198,14 @@ class _BottomNav extends ConsumerWidget {
                       ),
                       Row(children: [
                         _NavItem(
-                            icon: Icons.location_on_outlined,
-                            activeIcon: Icons.location_on_rounded,
+                            icon: AppIcons.venue,
+                            activeIcon: AppIcons.venueActive,
                             label: 'Газрууд',
                             isActive: index == 0,
                             onTap: () => context.go(AppRoutes.explore)),
                         _NavItem(
-                            icon: Icons.people_outline_rounded,
-                            activeIcon: Icons.people_rounded,
+                            icon: AppIcons.feed,
+                            activeIcon: AppIcons.feedActive,
                             label: 'Нийтлэл',
                             isActive: index == 1,
                             onTap: () => context.go(AppRoutes.feed)),
@@ -205,14 +214,14 @@ class _BottomNav extends ConsumerWidget {
                                 child: _CreateFab(
                                     onTap: () => _showCreateSheet(context)))),
                         _NavItem(
-                            icon: Icons.chat_bubble_outline_rounded,
-                            activeIcon: Icons.chat_bubble_rounded,
+                            icon: AppIcons.message,
+                            activeIcon: AppIcons.messageActive,
                             label: 'Мессеж',
                             isActive: index == 3,
                             onTap: () => context.go(AppRoutes.dmList)),
                         _NavItem(
-                            icon: Icons.person_outline_rounded,
-                            activeIcon: Icons.person_rounded,
+                            icon: AppIcons.profile,
+                            activeIcon: AppIcons.profileActive,
                             label: 'Профайл',
                             isActive: index == 4,
                             onTap: () => context.go(AppRoutes.profile)),
@@ -228,31 +237,19 @@ class _BottomNav extends ConsumerWidget {
 
   void _showCreateSheet(BuildContext context) {
     FocusManager.instance.primaryFocus?.unfocus();
-    showModalBottomSheet(
+    // The theme supplies the background, the radius and the one drag handle.
+    // Each option closes the sheet with the SHEET's context, then navigates
+    // with the dock's context.
+    showAppSheet<void>(
       context: context,
-      backgroundColor: AppColors.bgElevated,
-      isScrollControlled: true, // контентдээ багтаж overflow гарахгүй
-      showDragHandle: false,
-      sheetAnimationStyle: AppMotion.reduced(context)
-          ? AnimationStyle.noAnimation
-          : const AnimationStyle(
-              duration: AppMotion.enter, reverseDuration: AppMotion.exit),
-      shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
-      builder: (_) => SafeArea(
+      builder: (sheetContext) => SafeArea(
+        top: false,
         child: SingleChildScrollView(
             child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+          padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
           child: Column(mainAxisSize: MainAxisSize.min, children: [
-            Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                    color: AppColors.hairline,
-                    borderRadius: BorderRadius.circular(2))),
-            const SizedBox(height: 20),
-            Text('Шинээр үүсгэх', style: AppTextStyles.h2),
-            const SizedBox(height: 20),
+            const AppSheetHeader(
+                title: 'Шинээр үүсгэх', padding: EdgeInsets.only(bottom: 20)),
 
             // Нийтлэл
             _CreateOption(
@@ -261,7 +258,7 @@ class _BottomNav extends ConsumerWidget {
               subtitle: 'Зураг эсвэл видео хуваалцах',
               gradient: AppColors.accentGradient,
               onTap: () {
-                Navigator.pop(context);
+                Navigator.of(sheetContext).pop();
                 context.push(AppRoutes.createPost);
               },
             ),
@@ -273,7 +270,7 @@ class _BottomNav extends ConsumerWidget {
               subtitle: 'Өнөө оройн мөчөө хуваалцах',
               gradient: AppColors.accentGradient,
               onTap: () {
-                Navigator.pop(context);
+                Navigator.of(sheetContext).pop();
                 context.push(AppRoutes.createStory);
               },
             ),
@@ -281,12 +278,12 @@ class _BottomNav extends ConsumerWidget {
 
             // Богино видео (зөвхөн venue эзэд)
             _CreateOption(
-              icon: Icons.explore_outlined,
+              icon: AppIcons.shortVideo,
               label: 'Богино видео',
               subtitle: 'Өөрийн туршлага, дуртай газраа хуваалцах',
               gradient: AppColors.accentGradient,
               onTap: () {
-                Navigator.pop(context);
+                Navigator.of(sheetContext).pop();
                 context.push(AppRoutes.createReel);
               },
             ),
@@ -299,7 +296,7 @@ class _BottomNav extends ConsumerWidget {
               subtitle: 'Үйл явдал зарлах (бизнес)',
               gradient: AppColors.accentGradient,
               onTap: () {
-                Navigator.pop(context);
+                Navigator.of(sheetContext).pop();
                 context.push(AppRoutes.createEvent);
               },
             ),
@@ -439,7 +436,7 @@ class _CreateFab extends StatelessWidget {
               iconSize: 28,
               style: IconButton.styleFrom(
                   fixedSize: const Size(48, 48), foregroundColor: Colors.white),
-              icon: const Icon(Icons.add_rounded, color: Colors.white),
+              icon: const Icon(AppIcons.add, color: Colors.white),
             ),
           ),
         ),
@@ -502,7 +499,7 @@ class _CreateOption extends StatelessWidget {
                           style: AppTextStyles.bodyXs
                               .copyWith(color: AppColors.textSecondary)),
                     ])),
-                Icon(Icons.chevron_right, color: AppColors.textTertiary),
+                Icon(AppIcons.forward, color: AppColors.textTertiary),
               ]),
             )),
       );
@@ -513,13 +510,19 @@ class _DesktopNavigation extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final location = GoRouterState.of(context).uri.path;
+    // (route, icon, selected icon, label): outline glyph, filled when selected.
     const destinations = [
-      (AppRoutes.explore, Icons.location_on_outlined, 'Газрууд'),
-      (AppRoutes.feed, Icons.people_outline_rounded, 'Нийтлэл'),
-      (AppRoutes.reels, Icons.smart_display_outlined, 'Богино видео'),
-      (AppRoutes.dmList, Icons.chat_bubble_outline_rounded, 'Мессеж'),
-      (AppRoutes.profile, Icons.person_outline_rounded, 'Профайл'),
-      (AppRoutes.saved, Icons.bookmark_border_rounded, 'Хадгалсан'),
+      (AppRoutes.explore, AppIcons.venue, AppIcons.venueActive, 'Газрууд'),
+      (AppRoutes.feed, AppIcons.feed, AppIcons.feedActive, 'Нийтлэл'),
+      (
+        AppRoutes.reels,
+        AppIcons.shortVideo,
+        AppIcons.shortVideoActive,
+        'Богино видео'
+      ),
+      (AppRoutes.dmList, AppIcons.message, AppIcons.messageActive, 'Мессеж'),
+      (AppRoutes.profile, AppIcons.profile, AppIcons.profileActive, 'Профайл'),
+      (AppRoutes.saved, AppIcons.save, AppIcons.saveActive, 'Хадгалсан'),
     ];
     return SafeArea(
         child: LayoutBuilder(
@@ -553,11 +556,13 @@ class _DesktopNavigation extends StatelessWidget {
                                                 borderRadius:
                                                     BorderRadius.circular(14)),
                                             leading: SculptedIcon(
-                                                destination.$2,
+                                                location == destination.$1
+                                                    ? destination.$3
+                                                    : destination.$2,
                                                 size: 22,
                                                 active:
                                                     location == destination.$1),
-                                            title: Text(destination.$3,
+                                            title: Text(destination.$4,
                                                 style: const TextStyle(
                                                     fontSize: 13)),
                                             contentPadding:
@@ -566,15 +571,12 @@ class _DesktopNavigation extends StatelessWidget {
                                             onTap: () =>
                                                 context.go(destination.$1))),
                                   const SizedBox(height: 16),
-                                  FilledButton.icon(
+                                  GradientButton(
+                                      label: 'Нийтлэх',
+                                      size: GradientButtonSize.md,
+                                      icon: const Icon(AppIcons.add, size: 18),
                                       onPressed: () => _BottomNav()
-                                          ._showCreateSheet(context),
-                                      icon: const SculptedIcon(
-                                          Icons.add_rounded,
-                                          size: 18,
-                                          color: Colors.white,
-                                          onDark: true),
-                                      label: const Text('Нийтлэх')),
+                                          ._showCreateSheet(context)),
                                   const Spacer(),
                                   Text('УЛААНБААТАР\nAFTER HOURS',
                                       style: AppTextStyles.labelSm),

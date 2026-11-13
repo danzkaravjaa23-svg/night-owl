@@ -353,6 +353,16 @@ void main() {
         findsNothing);
     expect(find.byType(TextFormField), findsWidgets);
     expect(saveButton(tester).label, 'Хадгалах');
+    // GlassBack нь апп даяарх GlassIconButton (DS-06): "Буцах" шошго,
+    // 44px хүрэх талбар; дарахад профайл руу буцна.
+    final back = find.descendant(
+        of: find.byType(GlassBack), matching: find.byTooltip('Буцах'));
+    expect(back, findsOneWidget);
+    expect(tester.getSize(back).shortestSide, greaterThanOrEqualTo(44));
+    await tester.tap(back);
+    await tester.pumpAndSettle();
+    expect(find.text('Profile destination'), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 
   for (final dark in [true, false]) {

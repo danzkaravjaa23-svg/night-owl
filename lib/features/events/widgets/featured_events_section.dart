@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/router/app_router.dart';
+import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/night_owl_brand.dart';
 import '../../../core/widgets/owl_loading.dart';
 import '../../auth/providers/auth_provider.dart';
@@ -22,7 +23,8 @@ class FeaturedEventsSection extends ConsumerWidget {
       Padding(
           padding: const EdgeInsets.fromLTRB(20, 20, 12, 12),
           child: Row(children: [
-            const Icon(Icons.auto_awesome_rounded, color: Color(0xFF9879EC)),
+            // Icon-ы accent — горимдоо AA (DS-01)
+            Icon(Icons.auto_awesome_rounded, color: AppColors.accentText),
             const SizedBox(width: 10),
             Expanded(
                 child: Column(

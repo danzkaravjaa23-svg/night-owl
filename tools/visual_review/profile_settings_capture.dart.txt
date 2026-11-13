@@ -52,11 +52,8 @@ void main() {
 
   setUpAll(() async {
     AppFonts.configure();
-    // Responsive label measurements must use the bundled font on first layout.
-    await GoogleFonts.pendingFonts([
-      for (final weight in [FontWeight.w400, FontWeight.w600, FontWeight.w700])
-        GoogleFonts.inter(fontWeight: weight),
-    ]);
+    // test/flutter_test_config.dart registers the bundled Inter family before
+    // this runs, so responsive labels measure with Inter on the first layout.
     final icons = FontLoader('MaterialIcons')
       ..addFont(rootBundle.load('fonts/MaterialIcons-Regular.otf'));
     await icons.load();

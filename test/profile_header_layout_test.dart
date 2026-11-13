@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:night_owl_ub/core/theme/app_colors.dart';
+import 'package:night_owl_ub/core/theme/app_text_styles.dart';
 import 'package:night_owl_ub/core/widgets/sculpted_icon.dart';
 import 'package:night_owl_ub/features/profile/widgets/profile_header.dart';
 import 'package:night_owl_ub/models/user_profile.dart';
@@ -168,7 +169,10 @@ void main() {
       await tester.pumpWidget(_identityFixture(identity.$1));
       await tester.pumpAndSettle();
       expect(find.text(identity.$2), findsOneWidget);
-      expect(tester.widget<Text>(find.text(identity.$2)).style?.fontSize, 26);
+      // The fallback identity is styled as the profile name (h1 token, DS-04).
+      final identityStyle = tester.widget<Text>(find.text(identity.$2)).style;
+      expect(identityStyle?.fontSize, AppTextStyles.h1.fontSize);
+      expect(identityStyle?.fontWeight, AppTextStyles.h1.fontWeight);
       expect(find.text('@@actual_username'), findsNothing);
       expect(tester.takeException(), isNull);
     });

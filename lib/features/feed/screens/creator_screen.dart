@@ -5,10 +5,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' show PostgrestException;
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_icons.dart';
+import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/widgets/owl_loading.dart';
 import '../../../core/widgets/app_avatar.dart';
+import '../../../core/widgets/app_header.dart';
 import '../../../core/widgets/empty_state.dart';
+import '../../../core/widgets/glass_icon_button.dart';
 import '../../../core/widgets/gradient_button.dart';
 import '../../../core/widgets/network_video.dart';
 import '../../../core/services/supabase_service.dart';
@@ -62,20 +66,21 @@ class _CreatorScreenState extends ConsumerState<CreatorScreen> {
   }
 
   // Буцах — shared линк / refresh-ээр орсон бол pop хийх юм байхгүй
+  // (AppHeader-ийн нийтлэг дүрэм, DS-06)
   void _goBack() {
     if (!mounted) return;
-    if (context.canPop()) {
-      context.pop();
-    } else {
-      context.go(_isMe ? AppRoutes.profile : AppRoutes.feed);
-    }
+    AppHeader.goBack(context,
+        fallbackLocation: _isMe ? AppRoutes.profile : AppRoutes.feed);
   }
 
   void _toast(String msg, {bool error = false}) {
     if (!mounted) return;
+    // Алдаа: dangerFill дээр цагаан бичиг (DS-01) — theme-ийн snackbar
+    // бичиг Day горимд бараан тул улаан дээр өнгийг тодорхой өгнө.
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(msg),
-        backgroundColor: error ? AppColors.error : null));
+        content: Text(msg,
+            style: error ? const TextStyle(color: Colors.white) : null),
+        backgroundColor: error ? AppColors.dangerFill : null));
   }
 
   /// Профайл + дагалт + блок + постын эхний хуудас.
@@ -308,16 +313,10 @@ class _CreatorScreenState extends ConsumerState<CreatorScreen> {
         backgroundColor: AppColors.bgBase,
         body: Stack(children: [
           Positioned.fill(child: body),
+          // Зөвхөн буцах товчтой толгой (DS-06); status bar-ыг өөрөө тооцно
           Positioned(
-            top: 0, left: 0,
-            child: SafeArea(
-              bottom: false,
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 10, 20, 0),
-                child: _GlassRoundBtn(
-                    icon: Icons.arrow_back_ios_new, onTap: _goBack),
-              ),
-            ),
+            top: 0, left: 0, right: 0,
+            child: AppHeader.title(title: '', onBack: _goBack),
           ),
         ]),
       );
@@ -343,7 +342,6 @@ class _CreatorScreenState extends ConsumerState<CreatorScreen> {
                     label: 'Дахин оролдох',
                     size: GradientButtonSize.md,
                     fullWidth: false,
-                    borderRadius: 999,
                     onPressed: () {
                       setState(() { _loading = true; _error = false; });
                       _load();
@@ -372,7 +370,7 @@ class _CreatorScreenState extends ConsumerState<CreatorScreen> {
       backgroundColor: AppColors.bgBase,
       body: RefreshIndicator(
           onRefresh: () => _load(),
-          color: AppColors.accentStart,
+          color: AppColors.accentText,
           child: CustomScrollView(
             // Агуулга богино үед ч pull-to-refresh ажиллана
             physics: const AlwaysScrollableScrollPhysics(),
@@ -385,37 +383,34 @@ class _CreatorScreenState extends ConsumerState<CreatorScreen> {
                     alignment: Alignment.bottomCenter,
                     children: [
                       _CreatorCover(url: coverUrl),
-                      // Дээд бар — буцах + options, cover дээгүүр glass товч
+                      // Дээд толгой (DS-06) — буцах + options, cover дээгүүр
+                      // медиа горимын шилэн товч; status bar-ыг өөрөө тооцно
                       Positioned(
                         top: 0, left: 0, right: 0,
-                        child: SafeArea(
-                          bottom: false,
-                          child: Padding(
-                            padding: const EdgeInsets.fromLTRB(20, 10, 20, 0),
-                            child: Row(children: [
-                              _GlassRoundBtn(
-                                icon: Icons.arrow_back_ios_new,
-                                onTap: _goBack,
-                              ),
-                              const Spacer(),
-                              if (isMe)
-                                _GlassRoundBtn(
-                                  icon: Icons.settings_outlined,
-                                  onTap: () =>
-                                      context.push(AppRoutes.settings),
-                                )
-                              else
-                                _GlassRoundBtn(
-                                  icon: Icons.more_horiz,
-                                  onTap: () => showUserOptionsSheet(
-                                    context,
-                                    userId: widget.creatorId,
-                                    username: handle,
-                                    onBlocked: _onBlocked,
-                                  ),
+                        child: AppHeader.media(
+                          onBack: _goBack,
+                          actions: [
+                            if (isMe)
+                              GlassIconButton(
+                                icon: Icons.settings_outlined,
+                                onMedia: true,
+                                tooltip: 'Тохиргоо',
+                                onTap: () =>
+                                    context.push(AppRoutes.settings),
+                              )
+                            else
+                              GlassIconButton(
+                                icon: AppIcons.more,
+                                onMedia: true,
+                                tooltip: 'Бусад',
+                                onTap: () => showUserOptionsSheet(
+                                  context,
+                                  userId: widget.creatorId,
+                                  username: handle,
+                                  onBlocked: _onBlocked,
                                 ),
-                            ]),
-                          ),
+                              ),
+                          ],
                         ),
                       ),
                       // Avatar 96 — cover-ийг -48 давхарлан голд, неон glow
@@ -536,7 +531,6 @@ class _CreatorScreenState extends ConsumerState<CreatorScreen> {
                         GradientButton(
                           label: 'Профайл засах',
                           height: 48,
-                          borderRadius: 999,
                           icon: const Icon(Icons.edit_outlined,
                               color: Colors.white, size: 16),
                           // /auth/setup биш — router бүртгэлтэйг feed рүү
@@ -549,26 +543,42 @@ class _CreatorScreenState extends ConsumerState<CreatorScreen> {
                       else if (_isBlocked)
                         _BlockedNotice(busy: _unblocking, onUnblock: _unblock)
                       else
-                        Row(children: [
-                          // Дагах / Дагасан — gradient ↔ glass pill
-                          Expanded(
-                            child: _FollowBtn(
-                                isFollowing: _isFollowing,
-                                requested:_followRequested,
-                                loading: _followLoading,
-                                onTap: _toggleFollow),
-                          ),
-                          const SizedBox(width: 12),
-                          // Мессеж — glass pill
-                          Expanded(
-                            child: _GlassPillBtn(
-                              label: 'Мессеж',
-                              icon: Icons.send_outlined,
-                              onTap: () =>
-                                  context.push('/dm/${widget.creatorId}'),
-                            ),
-                          ),
-                        ]),
+                        // Нарийн дэлгэц эсвэл томруулсан бичвэрт хоёр товч
+                        // дээр-доороо бүтэн өргөнөөр: хагас өргөнд "Мессеж",
+                        // "Хүсэлттэй" үгийн дундуур тасардаг.
+                        LayoutBuilder(builder: (context, constraints) {
+                          // Дагах (primary) ↔ Дагасан / Хүсэлттэй (secondary)
+                          final follow = _FollowBtn(
+                              isFollowing: _isFollowing,
+                              requested: _followRequested,
+                              loading: _followLoading,
+                              onTap: _toggleFollow);
+                          // Мессеж — secondary pill (DS-03)
+                          final message = OutlineButton(
+                            label: 'Мессеж',
+                            height: 48,
+                            icon: const Icon(AppIcons.message, size: 16),
+                            onPressed: () =>
+                                context.push('/dm/${widget.creatorId}'),
+                          );
+                          final stack = constraints.maxWidth < 300 ||
+                              MediaQuery.textScalerOf(context).scale(15) > 16.5;
+                          return stack
+                              ? Column(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.stretch,
+                                  children: [
+                                    follow,
+                                    const SizedBox(height: AppSpacing.x3),
+                                    message,
+                                  ],
+                                )
+                              : Row(children: [
+                                  Expanded(child: follow),
+                                  const SizedBox(width: 12),
+                                  Expanded(child: message),
+                                ]);
+                        }),
                       const SizedBox(height: 28),
 
                       // ── Icon-only таб (grid / reels) — профайлтай ижил underline ──
@@ -580,8 +590,11 @@ class _CreatorScreenState extends ConsumerState<CreatorScreen> {
                               selected: _tab == 0,
                               onTap: () => setState(() => _tab = 0)),
                           const SizedBox(width: 40),
+                          // Богино видео: идэвхгүй = outline, идэвхтэй = filled
                           _IconTab(
-                              icon: Icons.play_arrow_rounded,
+                              icon: _tab == 1
+                                  ? AppIcons.shortVideoActive
+                                  : AppIcons.shortVideo,
                               selected: _tab == 1,
                               onTap: () => setState(() => _tab = 1)),
                         ],
@@ -593,8 +606,8 @@ class _CreatorScreenState extends ConsumerState<CreatorScreen> {
               ),
 
               // ── Posts grid — нягт 2px завсартай, cursor хуудаслалттай ──
-              SliverToBoxAdapter(child:Padding(padding:const EdgeInsets.symmetric(horizontal:20),child:OutlinedButton.icon(
-                icon:const Icon(Icons.collections_bookmark_outlined),label:const Text('Газрын цуглуулга'),onPressed:()=>context.push('/collections/${widget.creatorId}')))),
+              SliverToBoxAdapter(child:Padding(padding:const EdgeInsets.symmetric(horizontal:20),child:OutlineButton(
+                icon:const Icon(Icons.collections_bookmark_outlined),label:'Газрын цуглуулга',onPressed:()=>context.push('/collections/${widget.creatorId}')))),
               if(!_canView&&!isMe)const SliverToBoxAdapter(child:Padding(padding:EdgeInsets.all(32),child:Column(children:[Icon(Icons.lock_outline,size:40),SizedBox(height:12),Text('Хувийн профайл · Дагах хүсэлт илгээгээрэй')]))),
               if(_canView||isMe)..._gridSlivers(isMe),
             ]),
@@ -628,7 +641,6 @@ class _CreatorScreenState extends ConsumerState<CreatorScreen> {
                     label: _tab == 1 ? 'Бичлэг хуваалцах' : 'Пост хуваалцах',
                     size: GradientButtonSize.md,
                     fullWidth: false,
-                    borderRadius: 999,
                     onPressed: () async {
                       await context.push(_tab == 1
                           ? AppRoutes.createReel
@@ -666,10 +678,10 @@ class _CreatorScreenState extends ConsumerState<CreatorScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) _loadMore(pg);
     });
-    return const Padding(
-      padding: EdgeInsets.all(24),
+    return Padding(
+      padding: const EdgeInsets.all(24),
       child: Center(child: CircularProgressIndicator(
-          color: AppColors.accentStart, strokeWidth: 2)),
+          color: AppColors.accentText, strokeWidth: 2)),
     );
   }
 
@@ -689,7 +701,6 @@ class _CreatorScreenState extends ConsumerState<CreatorScreen> {
           label: 'Дахин оролдох',
           size: GradientButtonSize.md,
           fullWidth: false,
-          borderRadius: 999,
           onPressed: () {
             setState(() => pg.error = false);
             pg.items.isEmpty ? _reloadPager(pg) : _loadMore(pg);
@@ -755,7 +766,7 @@ class _CreatorScreenState extends ConsumerState<CreatorScreen> {
           if (likes > 0)
             Positioned(bottom: 6, left: 6,
               child: Row(mainAxisSize: MainAxisSize.min, children: [
-                const Icon(Icons.favorite,
+                const Icon(AppIcons.likeActive,
                   color: Colors.white, size: 13),
                 const SizedBox(width: 3),
                 Text(_fmt(likes),
@@ -809,7 +820,7 @@ class _BlockedNotice extends StatelessWidget {
         ),
         child: Column(mainAxisSize: MainAxisSize.min, children: [
           Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-            const Icon(Icons.block, color: AppColors.error, size: 16),
+            Icon(Icons.block, color: AppColors.danger, size: 16),
             const SizedBox(width: 8),
             Flexible(
               child: Text('Та энэ хэрэглэгчийг блоклосон',
@@ -823,7 +834,6 @@ class _BlockedNotice extends StatelessWidget {
             label: 'Блокоо цуцлах',
             size: GradientButtonSize.md,
             fullWidth: false,
-            borderRadius: 999,
             busy: busy,
             onPressed: onUnblock,
           ),
@@ -879,31 +889,6 @@ class _CreatorCover extends StatelessWidget {
               AppColors.bgBase,
             ],
             stops: const [0.0, 0.45, 1.0])),
-      );
-}
-
-/// Glass round button — cover дээгүүрх navigation товч
-class _GlassRoundBtn extends StatelessWidget {
-  final IconData icon;
-  final VoidCallback onTap;
-  const _GlassRoundBtn({required this.icon, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) => MouseRegion(
-        cursor: SystemMouseCursors.click,
-        child: GestureDetector(
-          onTap: onTap,
-          child: Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: AppColors.bgBase.withValues(alpha: 0.55),
-              border: Border.all(color: AppColors.hairline2),
-            ),
-            child: Icon(icon, color: AppColors.textPrimary, size: 19),
-          ),
-        ),
       );
 }
 
@@ -983,40 +968,8 @@ class _Stat extends StatelessWidget {
   }
 }
 
-/// Glass pill товч — бүтэн өргөн (Мессеж)
-class _GlassPillBtn extends StatelessWidget {
-  final String label;
-  final IconData icon;
-  final VoidCallback onTap;
-  const _GlassPillBtn(
-      {required this.label, required this.icon, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) => MouseRegion(
-        cursor: SystemMouseCursors.click,
-        child: GestureDetector(
-          onTap: onTap,
-          child: Container(
-            height: 48,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: AppColors.bgElevated.withValues(alpha: 0.72),
-              borderRadius: BorderRadius.circular(999),
-              border: Border.all(color: AppColors.hairline2),
-            ),
-            child: Row(mainAxisSize: MainAxisSize.min, children: [
-              Icon(icon, size: 16, color: AppColors.textPrimary),
-              const SizedBox(width: 7),
-              Text(label,
-                  style: AppTextStyles.btn
-                      .copyWith(color: AppColors.textPrimary)),
-            ]),
-          ),
-        ),
-      );
-}
-
-/// Дагах / Дагасан — бүтэн өргөн pill (gradient ↔ glass)
+/// Дагах / Дагасан — бүтэн өргөн pill (DS-03): "Дагах" нь primary
+/// [GradientButton], "Дагасан" / "Хүсэлттэй" нь secondary [OutlineButton].
 class _FollowBtn extends StatelessWidget {
   final bool isFollowing;
   final bool requested;
@@ -1031,42 +984,25 @@ class _FollowBtn extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final filled = !isFollowing; // Дагах = gradient, Дагасан = glass
-    return MouseRegion(
-      cursor: loading ? MouseCursor.defer : SystemMouseCursors.click,
-      child: GestureDetector(
-      onTap: loading ? null : onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        curve: Curves.easeOut,
+    if (!isFollowing && !requested) {
+      return GradientButton(
+        label: 'Дагах',
         height: 48,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          gradient: filled ? AppColors.accentGradient : null,
-          color: filled ? null : AppColors.bgElevated.withValues(alpha: 0.72),
-          borderRadius: BorderRadius.circular(999),
-          border: filled ? null : Border.all(color: AppColors.hairline2),
-          // Primary үед неон glow
-          boxShadow: filled
-              ? AppColors.glowShadow(AppColors.accentStart)
-              : null,
-        ),
-        child: Row(mainAxisSize: MainAxisSize.min, children: [
-          if (loading)
-            // Glass (Дагасан) төлөвт цагаан spinner цайвар дэвсгэр дээр алга болно
-            SizedBox(
-              width: 16, height: 16,
-              child: CircularProgressIndicator(strokeWidth: 2,
-                  color: filled ? Colors.white : AppColors.textPrimary))
-          else ...[
-            Icon(isFollowing ? Icons.check : Icons.person_add_alt_1,
-              size: 16, color: filled ? Colors.white : AppColors.textPrimary),
-            const SizedBox(width: 7),
-            Text(requested?'Хүсэлттэй':isFollowing ? 'Дагасан' : 'Дагах',
-                style: AppTextStyles.btn.copyWith(
-                    color: filled ? Colors.white : AppColors.textPrimary)),
-          ],
-        ]),
-      )));
+        busy: loading,
+        icon: const Icon(Icons.person_add_alt_1, size: 16),
+        onPressed: onTap,
+      );
+    }
+    return OutlineButton(
+      label: requested ? 'Хүсэлттэй' : 'Дагасан',
+      height: 48,
+      // Хүсэлт явж байхад товч идэвхгүй, icon-ы оронд owl — "Дагах"-ын busy
+      // төлөв ба дагагчдын жагсаалтын follow товчтой ижил.
+      icon: loading
+          ? const OwlLoading(size: 16, compact: true)
+          : Icon(isFollowing ? Icons.check : Icons.person_add_alt_1,
+              size: 16),
+      onPressed: loading ? null : onTap,
+    );
   }
 }

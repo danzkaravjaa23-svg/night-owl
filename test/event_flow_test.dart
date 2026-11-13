@@ -73,6 +73,7 @@ class FakeEventService extends EventService {
   EventRsvp rsvp = (going: 4, interested: 2, mine: null);
   bool loadFailure = false;
   Object? uploadFailure;
+  Object? mutationFailure;
   Completer<String>? uploadPending;
   Completer<void>? mutationPending;
   Completer<void>? publishPending;
@@ -122,6 +123,7 @@ class FakeEventService extends EventService {
       PublicationSession session, String eventId, String? status) async {
     mutations++;
     await mutationPending?.future;
+    if (mutationFailure != null) throw mutationFailure!;
     session.check();
     rsvp = (going: status == 'going' ? 5 : 4, interested: 2, mine: status);
   }
@@ -618,5 +620,31 @@ void main() {
     pending.complete();
     await tester.pumpAndSettle();
     expect(find.text('5 очно · 2 сонирхож байна'), findsOneWidget);
+  });
+
+  // The detail sheet sits on the root navigator, where a SnackBar would be
+  // painted under it: the error is shown inside the sheet, next to the RSVP
+  // buttons, and the next attempt clears it.
+  testWidgets('RSVP failure shows inside the open sheet and clears on retry',
+      (tester) async {
+    final service = FakeEventService()
+      ..mutationFailure = const PublicationFailure('Fixture RSVP failure');
+    await detail(tester, service);
+    await tester.tap(find.text('Очно  ·  4'));
+    await tester.pumpAndSettle();
+    expect(service.mutations, 1);
+    expect(
+        find.descendant(
+            of: find.byType(BottomSheet),
+            matching: find.text('Fixture RSVP failure')),
+        findsOneWidget);
+    expect(find.byType(SnackBar), findsNothing);
+    service.mutationFailure = null;
+    await tester.tap(find.text('Очно  ·  4'));
+    await tester.pumpAndSettle();
+    expect(service.mutations, 2);
+    expect(find.text('Fixture RSVP failure'), findsNothing);
+    expect(find.text('5 очно · 2 сонирхож байна'), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 }

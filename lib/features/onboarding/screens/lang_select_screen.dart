@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_radii.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/widgets/gradient_button.dart';
 import '../../../core/router/app_router.dart';
@@ -82,8 +81,6 @@ class _LangSelectScreenState extends State<LangSelectScreen> {
                     child: GradientButton(
                       label: _selected == 'mn' ? 'Үргэлжлүүлэх' : 'Continue',
                       onPressed: _continue,
-                      // GradientButton-ы үндсэн радиустай ижил (14)
-                      borderRadius: AppRadii.md,
                       trailing: const Icon(Icons.arrow_forward_rounded,
                           color: Colors.white, size: 19),
                     ),

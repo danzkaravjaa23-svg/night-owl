@@ -11,7 +11,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:night_owl_ub/core/services/media_access.dart';
 import 'package:night_owl_ub/core/constants/app_constants.dart';
+import 'package:night_owl_ub/core/theme/app_icons.dart';
 import 'package:night_owl_ub/core/widgets/authorized_media.dart';
+import 'package:night_owl_ub/core/widgets/owl_loading.dart';
+import 'package:night_owl_ub/core/widgets/settings_rows.dart';
 import 'package:night_owl_ub/core/utils/auth_return.dart';
 import 'package:night_owl_ub/features/auth/providers/auth_provider.dart';
 import 'package:night_owl_ub/features/discovery/services/discovery_service.dart';
@@ -166,7 +169,7 @@ void main() {
   Finder savedButton(String surface, bool saved) => surface == 'feed'
       ? find.byTooltip(saved ? 'Хадгалснаас хасах' : 'Хадгалах')
       : find
-          .byIcon(saved ? Icons.bookmark : Icons.bookmark_border)
+          .byIcon(saved ? AppIcons.saveActive : AppIcons.save)
           .hitTestable();
 
   http.Response savedOtherResponse(http.Request r) {
@@ -492,10 +495,10 @@ void main() {
         container: container,
         child: MaterialApp(home: PostDetailScreen(postId: post.id))));
     await tester.pumpAndSettle();
-    await tester.ensureVisible(find.byIcon(Icons.favorite_border));
-    await tester.tap(find.byIcon(Icons.favorite_border));
+    await tester.ensureVisible(find.byIcon(AppIcons.like));
+    await tester.tap(find.byIcon(AppIcons.like));
     await tester.pump();
-    await tester.tap(find.byIcon(Icons.favorite));
+    await tester.tap(find.byIcon(AppIcons.likeActive));
     await tester.pump();
     expect(
         requests
@@ -513,7 +516,7 @@ void main() {
               '${identical(feed, all) ? 'all' : 'following'}: ${requests.map((r) => '${r.method} ${r.url.path}').toList()}');
       expect(feed.state.value!.single.likesCount, 5);
     }
-    await tester.tap(find.byIcon(Icons.favorite));
+    await tester.tap(find.byIcon(AppIcons.likeActive));
     await tester.pumpAndSettle();
     for (final feed in [all, following]) {
       expect(feed.state.value!.single.isLikedByMe, isTrue);
@@ -704,9 +707,9 @@ void main() {
           child: const MaterialApp(
               home: PostDetailScreen(postId: 'reaction-post'))));
       await tester.pumpAndSettle();
-      await tester.tap(find.byIcon(Icons.favorite));
+      await tester.tap(find.byIcon(AppIcons.likeActive));
       await tester.pumpAndSettle();
-      expect(find.byIcon(denied ? Icons.favorite : Icons.favorite_border),
+      expect(find.byIcon(denied ? AppIcons.likeActive : AppIcons.like),
           findsOneWidget);
       expect(find.text('-1'), findsNothing);
       expect(feed.state.value!.single.likesCount, 0);
@@ -900,7 +903,7 @@ void main() {
       await render('first-post');
       await tester.pumpAndSettle();
       if (action == 'like') {
-        await tester.tap(find.byIcon(Icons.favorite_border));
+        await tester.tap(find.byIcon(AppIcons.like));
       } else {
         await tester.enterText(find.byType(TextField), 'First post draft');
         await tester.tap(find.byIcon(Icons.send_rounded));
@@ -997,7 +1000,7 @@ void main() {
           await tester.pumpAndSettle();
           Finder button(bool saved) => surface == 'feed'
               ? find.byTooltip(saved ? 'Хадгалснаас хасах' : 'Хадгалах')
-              : find.byIcon(saved ? Icons.bookmark : Icons.bookmark_border);
+              : find.byIcon(saved ? AppIcons.saveActive : AppIcons.save);
           await tester.ensureVisible(button(initiallySaved));
           await tester.tap(button(initiallySaved));
           await tester.pump();
@@ -1533,7 +1536,11 @@ void main() {
     container.read(account.notifier).state = other;
     await tester.pump();
     expect(find.text('Previous account content'), findsNothing);
-    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    // The loading owl, not DiscoveryProblem (also an OwlLoading).
+    expect(
+        find.byWidgetPredicate(
+            (w) => w is OwlLoading && w.state == OwlLoadingState.loading),
+        findsOneWidget);
     pendingPosts.complete(json(heldRequest!, []));
     await tester.pumpAndSettle();
     expect(find.text('Previous account content'), findsNothing);
@@ -1563,7 +1570,10 @@ void main() {
     await expectLater(refresh.onRefresh(), completes);
     await tester.pumpAndSettle();
     expect(find.text('Холбогдож чадсангүй. Дахин оролдоорой.'), findsOneWidget);
-    expect(find.byType(CircularProgressIndicator), findsNothing);
+    expect(
+        find.byWidgetPredicate(
+            (w) => w is OwlLoading && w.state == OwlLoadingState.loading),
+        findsNothing);
     fail = false;
     await tester.tap(find.text('Дахин оролдох'));
     await tester.pumpAndSettle();
@@ -1616,7 +1626,11 @@ void main() {
       container.read(socialVersionProvider.notifier).state++;
       await tester.pump();
       expect(find.text('Cached private content'), findsNothing);
-      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+      // The loading owl, not DiscoveryProblem (also an OwlLoading).
+      expect(
+          find.byWidgetPredicate(
+              (w) => w is OwlLoading && w.state == OwlLoadingState.loading),
+          findsOneWidget);
       expect(heldRequest, isNotNull);
       pending.complete(json(heldRequest!, []));
       await tester.pumpAndSettle();
@@ -1816,7 +1830,7 @@ void main() {
             home: const PrivacyScreen())));
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
-    await tester.tap(find.byType(Switch));
+    await tester.tap(find.byType(SettingsSwitch));
     await tester.pumpAndSettle();
     expect(private, isTrue);
     await tester.ensureVisible(find.byTooltip('Зөвшөөрөх'));
@@ -1905,7 +1919,10 @@ void main() {
                 home: screen.value())));
         await tester.pumpAndSettle();
         expect(tester.takeException(), isNull);
-        expect(find.byType(CircularProgressIndicator), findsNothing);
+        expect(
+            find.byWidgetPredicate(
+                (w) => w is OwlLoading && w.state == OwlLoadingState.loading),
+            findsNothing);
       });
     }
   }

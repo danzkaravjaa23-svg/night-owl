@@ -7,12 +7,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/widgets/authorized_media.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/theme/app_radii.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/widgets/app_avatar.dart';
+import '../../../core/widgets/app_header.dart';
+import '../../../core/widgets/app_sheet.dart';
 import '../../../core/widgets/empty_state.dart';
-import '../../../core/widgets/night_owl_brand.dart';
+import '../../../core/widgets/glass_icon_button.dart';
+import '../../../core/widgets/gradient_button.dart';
 import '../../../core/widgets/sculpted_icon.dart';
 import '../../../core/widgets/theme_toggle_button.dart';
 import '../../../core/widgets/owl_loading.dart';
@@ -105,7 +109,7 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
           _FeedTopBar(),
           Expanded(
             child: RefreshIndicator(
-              color: AppColors.accentStart,
+              color: AppColors.accentText,
               backgroundColor: AppColors.bgElevated,
               onRefresh: _refresh,
               child: CustomScrollView(
@@ -230,21 +234,17 @@ class _FeedToolbar extends StatelessWidget {
             Expanded(
                 child: Semantics(
                     header: true,
-                    child: Text('Нийтлэл',
-                        style: AppTextStyles.h2.copyWith(
-                            fontSize: 24,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: -.5)))),
+                    child: Text('Нийтлэл', style: AppTextStyles.pageTitle))),
             IconButton(
               tooltip: 'Хүн, газар нээх',
               onPressed: () => context.push('/discovery'),
-              icon: SculptedIcon(Icons.search_rounded,
+              icon: SculptedIcon(AppIcons.search,
                   color: AppColors.textSecondary, size: 22),
             ),
             IconButton(
               tooltip: 'Reels',
               onPressed: () => context.push(AppRoutes.reels),
-              icon: SculptedIcon(Icons.movie_rounded,
+              icon: SculptedIcon(AppIcons.shortVideo,
                   color: AppColors.textSecondary, size: 22),
             ),
           ]),
@@ -262,11 +262,10 @@ class _FeedToolbar extends StatelessWidget {
               initialValue: followingOnly ? 'following' : 'all',
               onSelected: (value) {
                 if (value == 'events') {
-                  showModalBottomSheet<void>(
+                  // Root navigator дээр нээгдэж dock-ийг бүрхэнэ (DS-02);
+                  // дэвсгэр, булан, бариулыг theme өгнө.
+                  showAppSheet<void>(
                     context: context,
-                    backgroundColor: AppColors.bgBase,
-                    useSafeArea: true,
-                    isScrollControlled: true,
                     builder: (_) => const _FeedEventsSheet(),
                   );
                 } else {
@@ -314,18 +313,11 @@ class _FeedEventsSheet extends ConsumerWidget {
     final events = ref.watch(upcomingEventsProvider);
     return SafeArea(
         child: Padding(
-      padding: const EdgeInsets.symmetric(vertical: 16),
+      // Гарчиг theme-ийн бариулын яг доор эхэлнэ (AppSheetHeader дээд зайгүй).
+      padding: const EdgeInsets.only(bottom: 16),
       child: Column(mainAxisSize: MainAxisSize.min, children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: Row(children: [
-            Expanded(child: Text('Эвентүүд', style: AppTextStyles.h2)),
-            IconButton(
-                tooltip: 'Хаах',
-                onPressed: () => Navigator.pop(context),
-                icon: const Icon(Icons.close)),
-          ]),
-        ),
+        // "Хаах" нь sheet-ийн өөрийн context-оор pop хийнэ.
+        const AppSheetHeader(title: 'Эвентүүд', showClose: true),
         if (events.hasError)
           Padding(
               padding: const EdgeInsets.all(20),
@@ -347,121 +339,30 @@ class _FeedEventsSheet extends ConsumerWidget {
   }
 }
 
-// ─── Compact brand bar with the existing notification and message controls ───
+// ─── Брэндийн толгой: мэдэгдэл ба мессежийн товчтой (DS-06 AppHeader) ───
+// Theme toggle өмнөх байрандаа (эхний үйлдэл). Уншаагүй мэдэгдлийн тоог
+// GlassIconButton-ийн badge харуулна; дэлгэц уншигч "Мэдэгдэл, N шинэ".
 class _FeedTopBar extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final unread = ref.watch(unreadNotifCountProvider);
-    return NightOwlAtmosphere(
-        child: Container(
-      height: 64,
-      decoration: BoxDecoration(
-          border: Border(
-              bottom:
-                  BorderSide(color: AppColors.silver.withValues(alpha: .10)))),
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Row(children: [
-        // Лого зай хүрэлцэхгүй (360px утас) үед багасна — overflow болохгүй
-        const Expanded(
-          child: Align(
-            alignment: Alignment.centerLeft,
-            child: FittedBox(
-              fit: BoxFit.scaleDown,
-              child: NightOwlBrand(size: 28),
-            ),
-          ),
-        ),
+    return AppHeader.brand(
+      showDivider: true,
+      actions: [
         const ThemeToggleButton(),
-        const SizedBox(width: 4),
-        _TopIconBtn(
-          icon: SculptedIcon(Icons.notifications_rounded,
-              color: AppColors.textPrimary, size: 22),
+        GlassIconButton(
+          icon: AppIcons.notifications,
           tooltip: 'Мэдэгдэл',
-          bare: false,
           badgeCount: unread,
           onTap: () => context.push(AppRoutes.notifications),
         ),
-        const SizedBox(width: 8),
-        _TopIconBtn(
+        GlassIconButton(
+          icon: AppIcons.message,
           tooltip: 'Мессеж',
-          bare: false,
-          icon: SculptedIcon(Icons.chat_bubble_rounded,
-              color: AppColors.textPrimary, size: 22),
           onTap: () => context.push(AppRoutes.dmList),
         ),
-      ]),
-    ));
-  }
-}
-
-// Шилэн дугуй icon товч (40) — badge/tooltip дэмжинэ
-class _TopIconBtn extends StatelessWidget {
-  final Widget icon;
-  final VoidCallback onTap;
-  final int badgeCount;
-  final String? tooltip;
-
-  /// Дэвсгэр/хүрээгүй — icon өөрөө дугуй хэлбэртэй үед (ж: гэрийн зураг).
-  final bool bare;
-
-  const _TopIconBtn({
-    required this.icon,
-    required this.onTap,
-    this.badgeCount = 0,
-    this.tooltip,
-    this.bare = false,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    Widget btn = _Press(
-      scale: 0.9,
-      onTap: onTap,
-      child: Container(
-        width: 44,
-        height: 44,
-        decoration: bare
-            ? null
-            : BoxDecoration(
-                shape: BoxShape.circle,
-                color: AppColors.bgElevated.withValues(alpha: 0.72),
-                border: Border.all(color: AppColors.hairline, width: 1)),
-        alignment: Alignment.center,
-        child: icon,
-      ),
+      ],
     );
-    if (tooltip != null) btn = Tooltip(message: tooltip!, child: btn);
-    if (badgeCount > 0) {
-      btn = Stack(clipBehavior: Clip.none, children: [
-        btn,
-        Positioned(
-          right: -2,
-          top: -2,
-          child: IgnorePointer(
-              child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-            constraints: const BoxConstraints(minWidth: 16),
-            decoration: BoxDecoration(
-                color: AppColors.error, // улаан — мэдэгдэл ирсэн
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: AppColors.bgBase, width: 1.5),
-                boxShadow: [
-                  BoxShadow(
-                      color: AppColors.error.withValues(alpha: 0.55),
-                      blurRadius: 6,
-                      spreadRadius: 0)
-                ]),
-            child: Text(badgeCount > 99 ? '99+' : '$badgeCount',
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 9,
-                    fontWeight: FontWeight.w800)),
-          )),
-        ),
-      ]);
-    }
-    return btn;
   }
 }
 
@@ -578,8 +479,10 @@ class _PostCardState extends ConsumerState<_PostCard>
       if (err != null) {
         // Бүтэлгүйтвэл rollback + мэдэгдэнэ (чимээгүй алдахгүй)
         setState(() => _savedOverride = was);
-        ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(err), backgroundColor: AppColors.error));
+        // dangerFill дээр цагаан текст — хоёр горимд AA (DS-01)
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(err, style: const TextStyle(color: Colors.white)),
+            backgroundColor: AppColors.dangerFill));
         return;
       }
       wrote = true;
@@ -598,8 +501,9 @@ class _PostCardState extends ConsumerState<_PostCard>
           ref.read(sessionUserIdProvider) == owner &&
           widget.post.id == postId) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text(wrote ? savedPostRefreshError : savedPostReadError),
-            backgroundColor: AppColors.error));
+            content: Text(wrote ? savedPostRefreshError : savedPostReadError,
+                style: const TextStyle(color: Colors.white)),
+            backgroundColor: AppColors.dangerFill));
       }
     } finally {
       _saving = false;
@@ -769,7 +673,7 @@ class _PostCardState extends ConsumerState<_PostCard>
                   width: 44,
                   height: 44,
                   child: Center(
-                    child: Icon(Icons.more_horiz_rounded,
+                    child: Icon(AppIcons.more,
                         color: AppColors.textSecondary, size: 22),
                   ),
                 ),
@@ -812,9 +716,9 @@ class _PostCardState extends ConsumerState<_PostCard>
                                 Container(color: AppColors.bgSurface),
                             errorWidget: (_, __, ___) => Container(
                               color: AppColors.bgSurface,
-                              child: const Center(
-                                  child: Text('📸',
-                                      style: TextStyle(fontSize: 48))),
+                              child: Center(
+                                  child: Icon(AppIcons.imageBroken,
+                                      size: 34, color: AppColors.textTertiary)),
                             ),
                           ),
                         )
@@ -849,7 +753,7 @@ class _PostCardState extends ConsumerState<_PostCard>
                                       curve: Curves.easeIn))),
                           child: ScaleTransition(
                             scale: _heartAnim,
-                            child: Icon(Icons.favorite_rounded,
+                            child: Icon(AppIcons.likeActive,
                                 color: Colors.white,
                                 size: 92,
                                 shadows: [
@@ -909,16 +813,14 @@ class _PostCardState extends ConsumerState<_PostCard>
                         HapticFeedback.lightImpact();
                         widget.onLike();
                       },
-                      icon: liked
-                          ? Icons.favorite_rounded
-                          : Icons.favorite_border_rounded,
+                      icon: liked ? AppIcons.likeActive : AppIcons.like,
                       color: liked ? AppColors.like : AppColors.textPrimary,
                       glow: liked,
                       label: inlineCounts ? likes : '',
                     ),
                     _ActionBtn(
                       onTap: openPost,
-                      icon: Icons.chat_bubble_outline_rounded,
+                      icon: AppIcons.comment,
                       color: AppColors.textPrimary,
                       label: inlineCounts ? comments : '',
                     ),
@@ -930,11 +832,11 @@ class _PostCardState extends ConsumerState<_PostCard>
                         if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
-                                  content: Text('Холбоос хуулагдлаа 🔗'),
+                                  content: Text('Холбоос хуулагдлаа'),
                                   duration: Duration(seconds: 2)));
                         }
                       },
-                      icon: Icons.send_outlined,
+                      icon: AppIcons.share,
                       color: AppColors.textPrimary,
                       label: '',
                     ),
@@ -957,9 +859,7 @@ class _PostCardState extends ConsumerState<_PostCard>
                                   scale: Tween(begin: 0.7, end: 1.0).animate(a),
                                   child: c),
                               child: SculptedIcon(
-                                  _saved
-                                      ? Icons.bookmark_rounded
-                                      : Icons.bookmark_border_rounded,
+                                  _saved ? AppIcons.saveActive : AppIcons.save,
                                   key: ValueKey(_saved),
                                   color: _saved
                                       ? AppColors.saved
@@ -1137,7 +1037,7 @@ class _PostCarouselState extends State<_PostCarousel> {
                 errorWidget: (_, __, ___) => Container(
                   color: AppColors.bgSurface,
                   child: Center(
-                      child: Icon(Icons.image_not_supported_outlined,
+                      child: Icon(AppIcons.imageBroken,
                           size: 34, color: AppColors.textTertiary)),
                 ),
               );
@@ -1339,10 +1239,13 @@ class _EmptyFeed extends StatelessWidget {
                 onPressed: onBrowse,
                 icon: const Icon(Icons.explore_outlined),
                 label: const Text('Бүх нийтлэл үзэх'))
-            : ElevatedButton.icon(
+            // Хоосон төлвийн primary CTA — нэг GradientButton (DS-03)
+            : GradientButton(
+                label: 'Зураг оруулах',
+                icon: const Icon(AppIcons.add, size: 18),
+                size: GradientButtonSize.md,
+                fullWidth: false,
                 onPressed: onPost,
-                icon: const Icon(Icons.add, size: 18),
-                label: const Text('Зураг оруулах'),
               ),
       );
 }

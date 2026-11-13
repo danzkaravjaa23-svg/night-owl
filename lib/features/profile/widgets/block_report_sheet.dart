@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../discovery/services/discovery_service.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../core/widgets/app_sheet.dart';
 import '../services/block_report_service.dart';
 
 const _reasons = <String, String>{
@@ -25,30 +27,38 @@ void _blockChanged(BuildContext context) {
   container.invalidate(blockedIdsProvider);
 }
 
-/// Report шалтгаан сонгох sheet
+/// Report шалтгаан сонгох sheet.
+///
+/// Sheet нь root navigator дээр (showAppSheet, DS-02): sheet-ийг зөвхөн
+/// `sheetCtx`-оор хаана; диалог ба toast нь [context]-оор, sheet хаагдсаны
+/// дараа. [dark] — зөвхөн хуучин дэвсгэр нь заавал харанхуй байсан sheet-д
+/// (docs/DESIGN_SYSTEM.md §4). Reels-ээс нээх report sheet апп-ын theme-ийг
+/// зориуд дагана.
 Future<void> showReportSheet(
   BuildContext context, {
   required String targetType,
   required String targetId,
   String? title,
+  bool dark = false,
 }) async {
-  await showModalBottomSheet(
+  await showAppSheet<void>(
     context: context,
-    // Өндөр агуулга халихаас сэргийлж — scroll + safe area
-    // (өнгө, булан, drag handle-ийг theme өгнө)
-    isScrollControlled: true,
-    useSafeArea: true,
+    dark: dark,
     builder: (sheetCtx) => SafeArea(
       top: false,
       child: SingleChildScrollView(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const SizedBox(height: 4),
-          Text(title ?? 'Юунд мэдээлэх вэ?', style: AppTextStyles.h3),
-          const SizedBox(height: 8),
+          AppSheetHeader(title: title ?? 'Юунд мэдээлэх вэ?'),
           ..._reasons.entries.map((e) => ListTile(
-            title: Text(e.value, style: AppTextStyles.bodyMd),
+            // Гарчигтай (AppSheetHeader, 20 px) ижил ирмэг дээр эхэлнэ.
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: AppSpacing.page),
+            // Adaptive AppTextStyles нь апп-ын горимыг дагадаг тул харанхуй
+            // sheet-д .onDark хувилбарыг өгнө.
+            title: Text(e.value, style: dark
+                ? AppTextStyles.bodyMd.onDark : AppTextStyles.bodyMd),
             onTap: () async {
               Navigator.of(sheetCtx).pop();
               // 'Бусад' сонговол нэмэлт тайлбар (details) авна — модерацид хэрэгтэй
@@ -66,7 +76,7 @@ Future<void> showReportSheet(
                 reason: e.key, details: details);
               if (context.mounted) {
                 _toast(context, err == null
-                  ? 'Мэдээлэл хүлээн авлаа. Баярлалаа 🙏'
+                  ? 'Мэдээлэл хүлээн авлаа. Баярлалаа'
                   : 'Алдаа: $err');
               }
             },
@@ -86,12 +96,9 @@ Future<void> showUserOptionsSheet(
   required String username,
   VoidCallback? onBlocked,
 }) async {
-  await showModalBottomSheet(
+  // Өнгө, булан, drag handle, scroll/safe area-г showAppSheet + theme өгнө.
+  await showAppSheet<void>(
     context: context,
-    // Өндөр агуулга халихаас сэргийлж — scroll + safe area
-    // (өнгө, булан, drag handle-ийг theme өгнө)
-    isScrollControlled: true,
-    useSafeArea: true,
     builder: (sheetCtx) => SafeArea(
       top: false,
       child: SingleChildScrollView(
@@ -100,9 +107,9 @@ Future<void> showUserOptionsSheet(
         children: [
           const SizedBox(height: 4),
           ListTile(
-            leading: const Icon(Icons.block, color: AppColors.error),
+            leading: Icon(Icons.block, color: AppColors.danger),
             title: Text('@$username-г блоклох',
-              style: AppTextStyles.bodyMd.copyWith(color: AppColors.error)),
+              style: AppTextStyles.bodyMd.copyWith(color: AppColors.danger)),
             onTap: () async {
               Navigator.of(sheetCtx).pop();
               final ok = await _confirmBlock(context, username);
@@ -147,12 +154,9 @@ Future<void> showPostOptionsSheet(
   Future<bool> Function()? onDelete,
   Future<void> Function(String)? onEditCaption,
 }) async {
-  await showModalBottomSheet(
+  // Өнгө, булан, drag handle, scroll/safe area-г showAppSheet + theme өгнө.
+  await showAppSheet<void>(
     context: context,
-    // Өндөр агуулга халихаас сэргийлж — scroll + safe area
-    // (өнгө, булан, drag handle-ийг theme өгнө)
-    isScrollControlled: true,
-    useSafeArea: true,
     builder: (sheetCtx) => SafeArea(
       top: false,
       child: SingleChildScrollView(
@@ -180,9 +184,9 @@ Future<void> showPostOptionsSheet(
                 },
               ),
             ListTile(
-              leading: const Icon(Icons.delete_outline, color: AppColors.error),
+              leading: Icon(Icons.delete_outline, color: AppColors.danger),
               title: Text('Постыг устгах',
-                style: AppTextStyles.bodyMd.copyWith(color: AppColors.error)),
+                style: AppTextStyles.bodyMd.copyWith(color: AppColors.danger)),
               onTap: () async {
                 Navigator.of(sheetCtx).pop();
                 final ok = await _confirmDeletePost(context);
@@ -203,9 +207,9 @@ Future<void> showPostOptionsSheet(
             },
           ),
           ListTile(
-            leading: const Icon(Icons.block, color: AppColors.error),
+            leading: Icon(Icons.block, color: AppColors.danger),
             title: Text('@$authorUsername-г блоклох',
-              style: AppTextStyles.bodyMd.copyWith(color: AppColors.error)),
+              style: AppTextStyles.bodyMd.copyWith(color: AppColors.danger)),
             onTap: () async {
               Navigator.of(sheetCtx).pop();
               final ok = await _confirmBlock(context, authorUsername);
@@ -236,7 +240,7 @@ Future<String?> _detailsDialog(BuildContext context) {
     context: context,
     builder: (dCtx) => AlertDialog(
       backgroundColor: AppColors.bgElevated,
-      title: Text('Нэмэлт тайлбар', style: AppTextStyles.h3),
+      title: const Text('Нэмэлт тайлбар'),
       content: TextField(
         controller: ctrl,
         maxLines: 4,
@@ -255,7 +259,7 @@ Future<String?> _detailsDialog(BuildContext context) {
         TextButton(
           onPressed: () => Navigator.of(dCtx).pop(ctrl.text.trim()),
           child: Text('Илгээх', style: AppTextStyles.bodyMd.copyWith(
-            color: AppColors.accentStart, fontWeight: FontWeight.w600))),
+            color: AppColors.accentText, fontWeight: FontWeight.w600))),
       ],
     ),
   );
@@ -267,7 +271,7 @@ Future<String?> _editCaptionDialog(BuildContext context, String initial) {
     context: context,
     builder: (dCtx) => AlertDialog(
       backgroundColor: AppColors.bgElevated,
-      title: Text('Тайлбар засах', style: AppTextStyles.h3),
+      title: const Text('Тайлбар засах'),
       content: TextField(
         controller: ctrl,
         maxLines: 4,
@@ -286,7 +290,7 @@ Future<String?> _editCaptionDialog(BuildContext context, String initial) {
         TextButton(
           onPressed: () => Navigator.of(dCtx).pop(ctrl.text),
           child: Text('Хадгалах', style: AppTextStyles.bodyMd.copyWith(
-            color: AppColors.accentStart, fontWeight: FontWeight.w600))),
+            color: AppColors.accentText, fontWeight: FontWeight.w600))),
       ],
     ),
   );
@@ -297,7 +301,7 @@ Future<bool?> _confirmDeletePost(BuildContext context) {
     context: context,
     builder: (dCtx) => AlertDialog(
       backgroundColor: AppColors.bgElevated,
-      title: Text('Постыг устгах уу?', style: AppTextStyles.h3),
+      title: const Text('Постыг устгах уу?'),
       content: Text(
         'Энэ постыг бүрмөсөн устгана. Буцаах боломжгүй.',
         style: AppTextStyles.bodySm.copyWith(
@@ -307,10 +311,13 @@ Future<bool?> _confirmDeletePost(BuildContext context) {
           onPressed: () => Navigator.of(dCtx).pop(false),
           child: Text('Болих', style: AppTextStyles.bodyMd.copyWith(
             color: AppColors.textSecondary))),
-        TextButton(
+        // Устгах баталгаа — dangerFill дээр цагаан (DS-03)
+        FilledButton(
           onPressed: () => Navigator.of(dCtx).pop(true),
-          child: Text('Устгах', style: AppTextStyles.bodyMd.copyWith(
-            color: AppColors.error, fontWeight: FontWeight.w600))),
+          style: FilledButton.styleFrom(
+            backgroundColor: AppColors.dangerFill,
+            foregroundColor: Colors.white),
+          child: const Text('Устгах')),
       ],
     ),
   );
@@ -321,7 +328,7 @@ Future<bool?> _confirmBlock(BuildContext context, String username) {
     context: context,
     builder: (dCtx) => AlertDialog(
       backgroundColor: AppColors.bgElevated,
-      title: Text('@$username-г блоклох уу?', style: AppTextStyles.h3),
+      title: Text('@$username-г блоклох уу?'),
       content: Text(
         'Түүний постууд таны feed-д харагдахгүй болно.',
         style: AppTextStyles.bodySm.copyWith(
@@ -331,10 +338,13 @@ Future<bool?> _confirmBlock(BuildContext context, String username) {
           onPressed: () => Navigator.of(dCtx).pop(false),
           child: Text('Болих', style: AppTextStyles.bodyMd.copyWith(
             color: AppColors.textSecondary))),
-        TextButton(
+        // Блоклох баталгаа — dangerFill дээр цагаан (DS-03)
+        FilledButton(
           onPressed: () => Navigator.of(dCtx).pop(true),
-          child: Text('Блоклох', style: AppTextStyles.bodyMd.copyWith(
-            color: AppColors.error, fontWeight: FontWeight.w600))),
+          style: FilledButton.styleFrom(
+            backgroundColor: AppColors.dangerFill,
+            foregroundColor: Colors.white),
+          child: const Text('Блоклох')),
       ],
     ),
   );

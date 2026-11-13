@@ -2,6 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/router/app_router.dart';
+import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_icons.dart';
+import '../../../core/theme/app_spacing.dart';
+import '../../../core/theme/app_text_styles.dart';
+import '../../../core/widgets/app_header.dart';
+import '../../../core/widgets/gradient_button.dart';
+import '../../../core/widgets/settings_rows.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../services/account_deletion_service.dart';
 
@@ -41,20 +48,24 @@ class _DeleteAccountScreenState extends ConsumerState<DeleteAccountScreen> {
     setState(() => _busy = true);
     final confirmed = await showDialog<bool>(
         context: context,
-        builder: (context) => AlertDialog(
+        builder: (dialogContext) => AlertDialog(
               title: const Text('Бүрмөсөн устгах уу?'),
               content: const Text(
                   'Бүртгэл, холбоотой контент болон хувийн медиагаа устгана. Буцаах боломжгүй.'),
               actions: [
                 TextButton(
-                    onPressed: () => Navigator.pop(context, false),
+                    onPressed: () => Navigator.pop(dialogContext, false),
                     child: const Text('Цуцлах')),
-                TextButton(
+                // Устгах баталгаа — dangerFill дээр цагаан (DS-03)
+                FilledButton(
                     key: const ValueKey('delete-account-confirm'),
-                    onPressed: () => Navigator.pop(context, true),
-                    child: Text('Бүрмөсөн устгах',
-                        style: TextStyle(
-                            color: Theme.of(context).colorScheme.error))),
+                    onPressed: () => Navigator.pop(dialogContext, true),
+                    style: FilledButton.styleFrom(
+                        backgroundColor: AppColors.dangerFill,
+                        foregroundColor: Colors.white),
+                    // Нарийн дэлгэц + том фонтод 2 мөр болоход ч төвдөө.
+                    child: const Text('Бүрмөсөн устгах',
+                        textAlign: TextAlign.center)),
               ],
             ));
     if (!_active(epoch)) return;
@@ -118,60 +129,77 @@ class _DeleteAccountScreenState extends ConsumerState<DeleteAccountScreen> {
     final profile = !changed && !_deleted && _owner != null
         ? ref.watch(currentProfileProvider).valueOrNull
         : null;
+    // DS-05: апп-ын token (AppColors, AppTextStyles, AppSpacing).
+    final body = AppTextStyles.bodyMd
+        .copyWith(color: AppColors.textSecondary, height: 1.5);
     return PopScope(
       canPop: !_busy,
       child: Scaffold(
-        appBar: AppBar(
-            title: const Text('Бүртгэл устгах'),
-            leading: IconButton(
-                tooltip: 'Буцах',
-                icon: const Icon(Icons.arrow_back),
-                onPressed: _busy
-                    ? null
-                    : () => context.canPop()
-                        ? context.pop()
-                        : context.go(_owner == null
-                            ? AppRoutes.authLanding
-                            : AppRoutes.settings))),
+        backgroundColor: AppColors.bgBase,
+        appBar: AppHeader.title(
+            title: 'Бүртгэл устгах',
+            // Устгал явж байхад буцахгүй (PopScope ч мөн хаана)
+            onBack: () {
+              if (_busy) return;
+              AppHeader.goBack(context,
+                  fallbackLocation: _owner == null
+                      ? AppRoutes.authLanding
+                      : AppRoutes.settings);
+            }),
         body: SafeArea(
-            child: ListView(padding: const EdgeInsets.all(20), children: [
+            child: ListView(
+                padding: const EdgeInsets.fromLTRB(AppSpacing.page,
+                    AppSpacing.x3, AppSpacing.page, AppSpacing.x8),
+                children: [
           if (changed) ...[
-            const Text('Бүртгэл солигдлоо. Устгах хуудсыг дахин нээнэ үү.'),
+            Text('Бүртгэл солигдлоо. Устгах хуудсыг дахин нээнэ үү.',
+                style: AppTextStyles.bodyMd),
           ] else if (_deleted) ...[
-            const Icon(Icons.check_circle_outline, size: 40),
-            const SizedBox(height: 16),
-            const Text('Бүртгэл устгагдлаа.'),
-            if (_message != null) Text(_message!),
-            const SizedBox(height: 20),
-            FilledButton(
+            Icon(Icons.check_circle_outline,
+                size: 40, color: AppColors.success),
+            const SizedBox(height: AppSpacing.x4),
+            Text('Бүртгэл устгагдлаа.', style: AppTextStyles.title),
+            if (_message != null) ...[
+              const SizedBox(height: AppSpacing.x2),
+              Text(_message!, style: body),
+            ],
+            const SizedBox(height: AppSpacing.x5),
+            GradientButton(
+                label: 'Нэвтрэх хуудас',
                 onPressed:
-                    _busy ? null : () => context.go(AppRoutes.authLanding),
-                child: const Text('Нэвтрэх хуудас')),
+                    _busy ? null : () => context.go(AppRoutes.authLanding)),
           ] else if (_owner == null) ...[
-            const Text('Өөрийн бүртгэлийг устгахын тулд нэвтэрнэ үү.'),
-            const SizedBox(height: 16),
-            FilledButton(
+            Text('Өөрийн бүртгэлийг устгахын тулд нэвтэрнэ үү.',
+                style: AppTextStyles.bodyMd),
+            const SizedBox(height: AppSpacing.x4),
+            GradientButton(
+                label: 'Нэвтрэх',
                 onPressed: () => context.go(Uri(
                         path: AppRoutes.authLanding,
                         queryParameters: {'next': AppRoutes.deleteAccount})
-                    .toString()),
-                child: const Text('Нэвтрэх')),
+                    .toString())),
           ] else ...[
+            // Аль бүртгэлийг устгаж буйг тод харуулна (settings kit).
+            SettingsCard(children: [
+              SettingsRow(
+                  icon: AppIcons.profile,
+                  title: profile == null
+                      ? 'Таны нэвтэрсэн бүртгэл'
+                      : '@${profile.username}'),
+            ]),
+            const SizedBox(height: AppSpacing.x5),
             Text(
-                profile == null
-                    ? 'Таны нэвтэрсэн бүртгэл'
-                    : '@${profile.username}',
-                style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 12),
-            const Text(
-                'Бүртгэл болон түүнтэй холбоотой пост, story, reel, сэтгэгдэл, мессеж, хадгалсан газар, хувийн медиагаа бүрмөсөн устгах хүсэлт илгээнэ.'),
-            const SizedBox(height: 12),
-            const Text(
-                'Устгасан мэдээллийг буцааж сэргээх боломжгүй. Бусдын өмнө татсан эсвэл хуулсан файлыг буцаан арилгах боломжгүй.'),
-            const SizedBox(height: 12),
-            const Text(
-                'Зөвхөн сервер устгал дууссаныг баталсан үед амжилттай гэж мэдээлнэ. Сүлжээ тасарвал устгал үргэлжилсэн байж болно.'),
-            const SizedBox(height: 20),
+                'Бүртгэл болон түүнтэй холбоотой пост, story, reel, сэтгэгдэл, мессеж, хадгалсан газар, хувийн медиагаа бүрмөсөн устгах хүсэлт илгээнэ.',
+                style: body),
+            const SizedBox(height: AppSpacing.x3),
+            Text(
+                'Устгасан мэдээллийг буцааж сэргээх боломжгүй. Бусдын өмнө татсан эсвэл хуулсан файлыг буцаан арилгах боломжгүй.',
+                style: body),
+            const SizedBox(height: AppSpacing.x3),
+            Text(
+                'Зөвхөн сервер устгал дууссаныг баталсан үед амжилттай гэж мэдээлнэ. Сүлжээ тасарвал устгал үргэлжилсэн байж болно.',
+                style: body),
+            const SizedBox(height: AppSpacing.x5),
             CheckboxListTile(
                 key: const ValueKey('delete-account-ack'),
                 contentPadding: EdgeInsets.zero,
@@ -184,18 +212,26 @@ class _DeleteAccountScreenState extends ConsumerState<DeleteAccountScreen> {
                     : (value) => setState(() => _acknowledged = value == true)),
             if (_sending) ...[
               const LinearProgressIndicator(),
-              const SizedBox(height: 12),
-              const Text('Хүсэлт боловсруулж байна...'),
+              const SizedBox(height: AppSpacing.x3),
+              Text('Хүсэлт боловсруулж байна...',
+                  style: AppTextStyles.bodySm),
             ],
             if (_message != null) ...[
-              const SizedBox(height: 16),
-              Semantics(liveRegion: true, child: Text(_message!)),
+              const SizedBox(height: AppSpacing.x4),
+              // Энэ төлөвт мессеж нь үргэлж алдаа — danger өнгө (DS-01)
+              Semantics(
+                  liveRegion: true,
+                  child: Text(_message!,
+                      style: AppTextStyles.bodyMd
+                          .copyWith(color: AppColors.danger, height: 1.5))),
             ],
-            const SizedBox(height: 20),
+            const SizedBox(height: AppSpacing.x5),
+            // Устгах үйлдэл — dangerFill дээр цагаан (DS-03)
             FilledButton.icon(
                 key: const ValueKey('delete-account-submit'),
                 style: FilledButton.styleFrom(
-                    backgroundColor: Theme.of(context).colorScheme.error),
+                    backgroundColor: AppColors.dangerFill,
+                    foregroundColor: Colors.white),
                 onPressed: _busy || !_acknowledged ? null : _delete,
                 icon: const Icon(Icons.person_remove_outlined),
                 label:

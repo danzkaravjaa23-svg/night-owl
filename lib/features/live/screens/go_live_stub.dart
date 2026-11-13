@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_icons.dart';
 import '../../../core/widgets/empty_state.dart';
 
 class GoLiveScreen extends StatelessWidget {
@@ -14,9 +15,10 @@ class GoLiveScreen extends StatelessWidget {
         appBar: AppBar(
           backgroundColor: AppColors.bgBase,
           leading: IconButton(
+            tooltip: 'Хаах',
             onPressed: () =>
                 context.canPop() ? context.pop() : context.go(AppRoutes.feed),
-            icon: const Icon(Icons.close_rounded),
+            icon: const Icon(AppIcons.close),
           ),
         ),
         body: const EmptyState(

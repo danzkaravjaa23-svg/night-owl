@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_icons.dart';
 import '../../../core/widgets/gradient_button.dart';
 import '../../../core/widgets/owl_loading.dart';
 import '../../../core/router/app_router.dart';
@@ -153,7 +154,6 @@ class _AuthLandingScreenState extends State<AuthLandingScreen> {
                                     const SizedBox(height: 28),
                                     GradientButton(
                                         label: 'Имэйлээр нэвтрэх',
-                                        borderRadius: 16,
                                         trailing: const Icon(
                                             Icons.arrow_forward_rounded,
                                             color: Colors.white,
@@ -166,16 +166,15 @@ class _AuthLandingScreenState extends State<AuthLandingScreen> {
                                     OutlinedButton(
                                         onPressed:
                                             _authBusy ? null : _googleSignIn,
+                                        // Pill хэлбэрийг theme өгнө (DS-03);
+                                        // өндөр ба хүрээ нь Apple товчтой ижил.
                                         style: OutlinedButton.styleFrom(
                                             foregroundColor:
                                                 AppColors.textPrimary,
                                             minimumSize:
                                                 const Size.fromHeight(52),
                                             side: BorderSide(
-                                                color: AppColors.hairline2),
-                                            shape: RoundedRectangleBorder(
-                                                borderRadius:
-                                                    BorderRadius.circular(16))),
+                                                color: AppColors.hairline2)),
                                         child: Row(
                                             mainAxisAlignment:
                                                 MainAxisAlignment.center,
@@ -210,16 +209,14 @@ class _AuthLandingScreenState extends State<AuthLandingScreen> {
                                             ? null
                                             : () => context
                                                 .push(AppRoutes.register),
-                                        style: TextButton.styleFrom(
-                                            foregroundColor: AppColors.silver),
                                         child: const Text('Шинээр бүртгүүлэх')),
                                     TextButton.icon(
                                         onPressed: _authBusy
                                             ? null
                                             : () =>
                                                 context.go(AppRoutes.explore),
-                                        icon:
-                                            const Icon(Icons.explore_outlined),
+                                        // "Газрууд" tab-ын icon (DS-09)
+                                        icon: const Icon(AppIcons.venue),
                                         label: const Text(
                                             'Бүртгэлгүйгээр газрууд үзэх')),
                                     Text('18+ · Хүндэтгэлтэй хамтын орчин',

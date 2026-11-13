@@ -3,10 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/app_radii.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/utils/auth_callback.dart';
 import '../../../core/widgets/app_motion.dart';
+import '../../../core/widgets/glass_icon_button.dart';
 import '../../../core/widgets/owl_loading.dart';
 import '../services/apple_auth_service.dart';
 
@@ -49,8 +51,9 @@ InputDecoration authInputDec({
     fillColor: AppColors.bgElevated.withValues(alpha: 0.70),
     enabledBorder: b(AppColors.hairline),
     focusedBorder: b(AppColors.neonCyan.withValues(alpha: 0.75), 1.2),
-    errorBorder: b(AppColors.error.withValues(alpha: 0.55)),
-    focusedErrorBorder: b(AppColors.error.withValues(alpha: 0.8), 1.2),
+    // Алдааны хүрээ — горимын danger (Day-д #C81E3A, DS-01)
+    errorBorder: b(AppColors.danger.withValues(alpha: 0.55)),
+    focusedErrorBorder: b(AppColors.danger.withValues(alpha: 0.8), 1.2),
   );
 }
 
@@ -128,23 +131,18 @@ class FieldLabel extends StatelessWidget {
   );
 }
 
+/// Auth дэлгэцүүдийн буцах товч — апп даяарх [GlassIconButton] (DS-06):
+/// 40px шилэн диск, 44px хүрэх талбар, [AppIcons.back], "Буцах" tooltip нь
+/// дэлгэц уншигчийн шошго болно.
 class GlassBack extends StatelessWidget {
   final VoidCallback onTap;
   const GlassBack({super.key, required this.onTap});
   @override
-  Widget build(BuildContext context) => TapScale(
+  Widget build(BuildContext context) => GlassIconButton(
+    icon: AppIcons.back,
+    iconSize: 24,
+    tooltip: 'Буцах',
     onTap: onTap,
-    // Шилэн товч — web дээр BackdropFilter удаан тул хатуу glass өнгө
-    child: Container(
-      width: 40, height: 40,
-      decoration: BoxDecoration(
-        color: AppColors.bgElevated.withValues(alpha: 0.72),
-        shape: BoxShape.circle,
-        border: Border.all(color: AppColors.hairline2),
-      ),
-      child: Icon(Icons.chevron_left_rounded,
-        color: AppColors.textPrimary, size: 24),
-    ),
   );
 }
 
@@ -210,20 +208,22 @@ class AuthErrorBox extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.all(12),
+    // Горимын danger (Night #FF4566, Day #C81E3A) — Day-д хуучин улаан
+    // 2.9:1 байсан тул текст уншигдахгүй байв (DS-01)
     decoration: BoxDecoration(
-      color: AppColors.error.withValues(alpha: 0.10),
+      color: AppColors.danger.withValues(alpha: 0.10),
       borderRadius: BorderRadius.circular(14),
-      border: Border.all(color: AppColors.error.withValues(alpha: 0.35)),
+      border: Border.all(color: AppColors.danger.withValues(alpha: 0.35)),
       // Зөөлөн улаан glow — анхааруулга мэдрэгдэхүйц ч түрэмгий биш
-      boxShadow: [BoxShadow(color: AppColors.error.withValues(alpha: 0.14),
+      boxShadow: [BoxShadow(color: AppColors.danger.withValues(alpha: 0.14),
         blurRadius: 18, spreadRadius: -6)],
     ),
     child: Row(children: [
-      const Icon(Icons.error_outline, color: AppColors.error, size: 16),
+      Icon(Icons.error_outline, color: AppColors.danger, size: 16),
       const SizedBox(width: 8),
       Expanded(child: Text(message,
         style: AppTextStyles.bodySm.copyWith(
-          color: AppColors.error, height: 1.35))),
+          color: AppColors.danger, height: 1.35))),
     ]),
   );
 }
@@ -281,10 +281,12 @@ class AppleSignInButton extends StatefulWidget {
   final bool onDark;
   final bool enabled;
   final ValueChanged<bool>? onBusyChanged;
-  /// Тухайн дэлгэцийн Google товчны булангийн радиустай тааруулна.
+  /// Булангийн радиус. Анхдагч нь pill — Google товч болон апп-ын бүх товч
+  /// pill хэлбэртэй (DS-03).
   final double borderRadius;
   const AppleSignInButton({super.key, this.onSignIn, this.onDark = false,
-    this.enabled = true, this.onBusyChanged, this.borderRadius = 16});
+    this.enabled = true, this.onBusyChanged,
+    this.borderRadius = AppRadii.pill});
   @override
   State<AppleSignInButton> createState() => _AppleSignInButtonState();
 }

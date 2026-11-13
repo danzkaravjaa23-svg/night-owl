@@ -3,10 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_icons.dart';
 import '../../../core/widgets/sculpted_icon.dart';
 import '../../../core/widgets/theme_toggle_button.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/widgets/app_avatar.dart';
+import '../../../core/widgets/app_sheet.dart';
 import '../../../core/widgets/glass_icon_button.dart';
 import '../../../core/widgets/gradient_button.dart';
 import '../../../core/services/supabase_service.dart';
@@ -347,28 +349,26 @@ class _DmThreadScreenState extends State<_ScopedDmThread>
       _markedUnread = false; // амжилтгүй — авто-read-ийг дахин зөвшөөрнө
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text('Амжилтгүй боллоо. Дахин оролдоно уу.'),
-            backgroundColor: AppColors.error));
+            content: Text('Амжилтгүй боллоо. Дахин оролдоно уу.',
+                style: TextStyle(color: Colors.white)),
+            backgroundColor: AppColors.dangerFill));
       }
     }
   }
 
-  // App bar-ийн ⋮ товч — Профайл / Уншаагүй болгох
+  // App bar-ийн "Бусад" (…) товч — Профайл / Уншаагүй болгох
   void _showThreadOptions() {
     final username =
         (_partner?['username'] as String? ?? 'User').replaceAll('@', '');
-    // Бариулыг theme (showDragHandle) зурна — энд дахин зурахгүй.
-    showModalBottomSheet(
+    // showAppSheet (DS-02): бариул, дэвсгэрийг theme өгнө. Sheet-ийг зөвхөн
+    // өөрийнх нь sheetCtx-ээр хаана, дараа нь хуудасны context-оор шилжинэ.
+    showAppSheet<void>(
       context: context,
       builder: (sheetCtx) => SafeArea(
           child: Column(mainAxisSize: MainAxisSize.min, children: [
-        Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child:
-                Row(children: [Text(username, style: AppTextStyles.labelLg)])),
-        const SizedBox(height: 8),
+        AppSheetHeader(title: username),
         ListTile(
-            leading: SculptedIcon(Icons.person_outline,
+            leading: SculptedIcon(AppIcons.profile,
                 color: AppColors.textSecondary, size: 22),
             title: Text('Профайл харах',
                 style: AppTextStyles.bodyMd
@@ -417,8 +417,9 @@ class _DmThreadScreenState extends State<_ScopedDmThread>
         // The composer and note were never cleared; failure cannot overwrite
         // text entered after this request began.
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text(discoveryError(error)),
-            backgroundColor: AppColors.error));
+            content: Text(discoveryError(error),
+                style: const TextStyle(color: Colors.white)),
+            backgroundColor: AppColors.dangerFill));
         await _loadPartner(force: true);
       }
     }
@@ -639,7 +640,7 @@ class _DmThreadScreenState extends State<_ScopedDmThread>
                                 tooltip: 'Татгалзах',
                                 onPressed:
                                     _responding ? null : () => _respond(false),
-                                icon: const Icon(Icons.close)),
+                                icon: const Icon(AppIcons.close)),
                             IconButton(
                                 tooltip: 'Зөвшөөрөх',
                                 onPressed:
@@ -697,7 +698,7 @@ class _DmThreadScreenState extends State<_ScopedDmThread>
                               onPressed: _sending
                                   ? null
                                   : () => setState(() => _pendingNote = null),
-                              icon: SculptedIcon(Icons.close,
+                              icon: SculptedIcon(AppIcons.close,
                                   size: 18, color: AppColors.textTertiary)),
                         ]),
                       ),
@@ -816,7 +817,7 @@ class _DmThreadScreenState extends State<_ScopedDmThread>
                                                     ? const Padding(
                                                         padding: EdgeInsets.all(12),
                                                         child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                                                    : SculptedIcon(Icons.send_rounded, color: lit ? Colors.white : AppColors.textTertiary, size: 19, active: lit, onDark: lit)),
+                                                    : SculptedIcon(AppIcons.send, color: lit ? Colors.white : AppColors.textTertiary, size: 19, active: lit, onDark: lit)),
                                           )));
                                 }),
                           ]),
@@ -981,7 +982,7 @@ class _GlassAppBar extends StatelessWidget implements PreferredSizeWidget {
         child: Row(children: [
           // round glass back button — апп даяар нэг л хэлбэр
           GlassIconButton(
-            icon: Icons.chevron_left_rounded,
+            icon: AppIcons.back,
             iconSize: 24,
             tooltip: 'Буцах',
             onTap: onBack,
@@ -1037,7 +1038,7 @@ class _GlassAppBar extends StatelessWidget implements PreferredSizeWidget {
           const ThemeToggleButton(),
           const SizedBox(width: 4),
           GlassIconButton(
-              icon: Icons.more_vert,
+              icon: AppIcons.more,
               iconSize: 20,
               tooltip: 'Бусад',
               onTap: onMore),
@@ -1360,9 +1361,10 @@ class _Bubble extends StatelessWidget {
         border: Border.all(color: AppColors.hairline),
       );
 
-  // Миний bubble — accent gradient (зөөлөн ~0.9) + neon glow
+  // Миний bubble — тунгалаг биш purpleGradient (цагаан текст Day, Night
+  // хоёуланд 5.2:1+) + neon glow
   BoxDecoration get _meGrad => BoxDecoration(
-        gradient: AppColors.accentGradient.scale(0.9),
+        gradient: AppColors.purpleGradient,
         borderRadius: _radius,
         boxShadow: [
           BoxShadow(
@@ -1468,7 +1470,7 @@ class _Bubble extends StatelessWidget {
                         fit: BoxFit.cover,
                         errorWidget: (_, __, ___) => Container(
                             color: AppColors.bgSurface,
-                            child: SculptedIcon(Icons.auto_stories,
+                            child: SculptedIcon(AppIcons.imageBroken,
                                 size: 16, color: AppColors.textTertiary)))),
               ),
               const SizedBox(width: 6),

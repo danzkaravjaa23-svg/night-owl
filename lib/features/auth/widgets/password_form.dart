@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/utils/validators.dart';
 import '../../../core/widgets/gradient_button.dart';
@@ -40,7 +41,7 @@ class AuthFormScaffold extends StatelessWidget {
                       IconButton(
                         onPressed: onBack,
                         tooltip: 'Буцах',
-                        icon: const Icon(Icons.chevron_left_rounded),
+                        icon: const Icon(AppIcons.back),
                       ),
                       Expanded(
                         child: Text('NIGHT OWL',

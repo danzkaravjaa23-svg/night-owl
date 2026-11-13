@@ -150,7 +150,7 @@ class AppStrings {
   String get dmThreadEmptyBody  => _t('Send the first message to start the conversation.', 'Эхний мессежээ илгээж яриаг эхлүүлээрэй.');
 
   // ─── Profile ───
-  String get profileEmptyTitle => _t('Upload Your First Photo 🦉', 'Эхний зургаа оруулаарай 🦉');
+  String get profileEmptyTitle => _t('Upload Your First Photo', 'Эхний зургаа оруулаарай');
   String get profileEmptyBody  => _t('Share your favorite nights and fill your feed.', 'Дуртай газраа, дуртай шөнөө хуваалцаад фийдээ дүүргээрэй.');
 
   // ─── Settings ───

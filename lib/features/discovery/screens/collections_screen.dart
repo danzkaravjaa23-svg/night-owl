@@ -2,9 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_icons.dart';
+import '../../../core/theme/app_spacing.dart';
+import '../../../core/theme/app_text_styles.dart';
+import '../../../core/widgets/app_header.dart';
+import '../../../core/widgets/empty_state.dart';
+import '../../../core/widgets/glass_icon_button.dart';
+import '../../../core/widgets/gradient_button.dart';
+import '../../../core/widgets/owl_loading.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../services/discovery_service.dart';
-import '../widgets/discovery_back_button.dart';
 import '../widgets/venue_picker.dart';
 import 'discovery_screen.dart';
 import '../../profile/utils/app_links.dart';
@@ -92,12 +100,33 @@ class _CollectionsScreenState extends ConsumerState<CollectionsScreen> {
                   TextButton(
                       onPressed: () => Navigator.pop(c, false),
                       child: const Text('Болих')),
-                  TextButton(
+                  // Destructive confirmation (DS-03): white on dangerFill.
+                  FilledButton(
+                      style: FilledButton.styleFrom(
+                          backgroundColor: AppColors.dangerFill,
+                          foregroundColor: Colors.white),
                       onPressed: () => Navigator.pop(c, true),
                       child: const Text('Устгах'))
                 ]));
     if (yes == true) {
       await _change(() => _service.deleteCollection(row['id'] as String));
+    }
+  }
+
+  Future<void> _copyLink(JsonRow row) async {
+    await Clipboard.setData(ClipboardData(
+        text: '${appOrigin()}/#/collections/${widget.userId}?list=${row['id']}'));
+    if (mounted) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Холбоос хууллаа')));
+    }
+  }
+
+  Future<void> _addPlace(JsonRow row) async {
+    final venue = await pickDiscoveryVenue(context);
+    if (venue != null) {
+      await _change(
+          () => _service.addPlace(row['id'] as String, venue['ref'] as String));
     }
   }
 
@@ -110,15 +139,16 @@ class _CollectionsScreenState extends ConsumerState<CollectionsScreen> {
     );
     if (requestKey != _requestKey) _reload();
     return Scaffold(
-        appBar: AppBar(
-            leading: const DiscoveryBackButton(),
-            title: const Text('Газрын цуглуулга'),
+        appBar: AppHeader.title(
+            title: 'Газрын цуглуулга',
+            compact: true,
+            fallbackLocation: '/discovery',
             actions: [
               if (_own)
-                IconButton(
+                GlassIconButton(
+                    icon: AppIcons.add,
                     tooltip: 'Цуглуулга нэмэх',
-                    onPressed: _busy ? null : _create,
-                    icon: const Icon(Icons.add))
+                    onTap: _busy ? null : _create)
             ]),
         body: FutureBuilder<List<JsonRow>>(
             future: _data,
@@ -129,7 +159,7 @@ class _CollectionsScreenState extends ConsumerState<CollectionsScreen> {
               }
               if (snapshot.connectionState != ConnectionState.done ||
                   !snapshot.hasData) {
-                return const Center(child: CircularProgressIndicator());
+                return const Center(child: OwlLoading());
               }
               final data = snapshot.data!
                   .where((r) =>
@@ -137,92 +167,95 @@ class _CollectionsScreenState extends ConsumerState<CollectionsScreen> {
                       r['id'] == widget.collectionId)
                   .toList();
               if (data.isEmpty) {
-                return const Center(child: Text('Цуглуулга алга'));
+                return const EmptyState(
+                    icon: Icons.bookmarks_outlined, title: 'Цуглуулга алга');
               }
-              return ListView(children: [
-                if (_busy) const LinearProgressIndicator(),
-                for (final row in data) ...[
-                  ListTile(
-                      title: Text(row['title'] as String,
-                          style: Theme.of(context).textTheme.titleLarge),
-                      subtitle: Text(row['is_public'] == true
-                          ? 'Нийтийн цуглуулга'
-                          : 'Зөвхөн надад'),
-                      trailing: Row(mainAxisSize: MainAxisSize.min, children: [
-                        IconButton(
-                            tooltip: 'Холбоос хуулах',
-                            icon: const Icon(Icons.ios_share),
-                            onPressed: () async {
-                              await Clipboard.setData(ClipboardData(
-                                  text:
-                                      '${appOrigin()}/#/collections/${widget.userId}?list=${row['id']}'));
-                              if (context.mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                        content: Text('Холбоос хууллаа')));
-                              }
-                            }),
-                        if (_own)
-                          PopupMenuButton<String>(
-                              tooltip: 'Цуглуулгын үйлдэл',
-                              onSelected: (v) {
-                                if (v == 'delete') {
-                                  _delete(row);
-                                } else {
-                                  _change(() => _service.collectionVisibility(
-                                      row['id'] as String,
-                                      row['is_public'] != true));
-                                }
-                              },
-                              itemBuilder: (_) => [
-                                    PopupMenuItem(
-                                        value: 'visibility',
-                                        child: Text(row['is_public'] == true
-                                            ? 'Хувийн болгох'
-                                            : 'Нийтийн болгох')),
-                                    const PopupMenuItem(
-                                        value: 'delete', child: Text('Устгах'))
-                                  ])
-                      ])),
-                  for (final item in (row['collection_places'] as List? ?? []))
-                    ListTile(
-                        leading: const Icon(Icons.place_outlined),
-                        title: Text((item['venue_catalog'] as Map?)?['name']
-                                as String? ??
-                            'Газар'),
-                        subtitle: Text(item['note'] as String? ?? ''),
-                        onTap: () => context.push(
-                            '/place/${Uri.encodeComponent(item['venue_ref'] as String)}'),
-                        trailing: _own
-                            ? IconButton(
-                                tooltip: 'Цуглуулгаас хасах',
-                                icon: const Icon(Icons.remove_circle_outline),
-                                onPressed: _busy
-                                    ? null
-                                    : () => _change(() => _service.removePlace(
-                                        row['id'] as String,
-                                        item['venue_ref'] as String)))
-                            : null),
-                  if (_own)
-                    Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        child: OutlinedButton.icon(
-                            icon: const Icon(Icons.add_location_alt_outlined),
-                            label: const Text('Газар нэмэх'),
-                            onPressed: _busy
-                                ? null
-                                : () async {
-                                    final venue =
-                                        await pickDiscoveryVenue(context);
-                                    if (venue != null) {
-                                      await _change(() => _service.addPlace(
-                                          row['id'] as String,
-                                          venue['ref'] as String));
-                                    }
-                                  })),
-                  const Divider(height: 32),
-                ]
-              ]);
+              return ListView(
+                  padding: const EdgeInsets.fromLTRB(AppSpacing.page,
+                      AppSpacing.x2, AppSpacing.page, AppSpacing.x8),
+                  children: [
+                    if (_busy)
+                      const Padding(
+                          padding: EdgeInsets.only(bottom: AppSpacing.x3),
+                          child: LinearProgressIndicator()),
+                    for (final row in data)
+                      Padding(
+                          padding:
+                              const EdgeInsets.only(bottom: AppSpacing.x4),
+                          child: _collection(row)),
+                  ]);
             }));
   }
+
+  /// One collection on the shared card surface: title row, its places and,
+  /// for the owner, "Газар нэмэх".
+  Widget _collection(JsonRow row) => Card(
+      child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: AppSpacing.x2),
+          child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                ListTile(
+                    title: Text(row['title'] as String,
+                        style: AppTextStyles.title),
+                    subtitle: Text(row['is_public'] == true
+                        ? 'Нийтийн цуглуулга'
+                        : 'Зөвхөн надад'),
+                    trailing: Row(mainAxisSize: MainAxisSize.min, children: [
+                      IconButton(
+                          tooltip: 'Холбоос хуулах',
+                          icon: Icon(AppIcons.share),
+                          onPressed: () => _copyLink(row)),
+                      if (_own)
+                        PopupMenuButton<String>(
+                            tooltip: 'Цуглуулгын үйлдэл',
+                            icon: const Icon(AppIcons.more),
+                            onSelected: (v) {
+                              if (v == 'delete') {
+                                _delete(row);
+                              } else {
+                                _change(() => _service.collectionVisibility(
+                                    row['id'] as String,
+                                    row['is_public'] != true));
+                              }
+                            },
+                            itemBuilder: (_) => [
+                                  PopupMenuItem(
+                                      value: 'visibility',
+                                      child: Text(row['is_public'] == true
+                                          ? 'Хувийн болгох'
+                                          : 'Нийтийн болгох')),
+                                  const PopupMenuItem(
+                                      value: 'delete', child: Text('Устгах'))
+                                ])
+                    ])),
+                for (final item in (row['collection_places'] as List? ?? []))
+                  ListTile(
+                      leading: const Icon(AppIcons.venue),
+                      title: Text((item['venue_catalog'] as Map?)?['name']
+                              as String? ??
+                          'Газар'),
+                      subtitle: Text(item['note'] as String? ?? ''),
+                      onTap: () => context.push(
+                          '/place/${Uri.encodeComponent(item['venue_ref'] as String)}'),
+                      trailing: _own
+                          ? IconButton(
+                              tooltip: 'Цуглуулгаас хасах',
+                              icon: const Icon(Icons.remove_circle_outline),
+                              onPressed: _busy
+                                  ? null
+                                  : () => _change(() => _service.removePlace(
+                                      row['id'] as String,
+                                      item['venue_ref'] as String)))
+                          : null),
+                if (_own)
+                  Padding(
+                      padding: const EdgeInsets.fromLTRB(AppSpacing.x4,
+                          AppSpacing.x1, AppSpacing.x4, AppSpacing.x2),
+                      child: OutlineButton(
+                          size: GradientButtonSize.md,
+                          icon: const Icon(Icons.add_location_alt_outlined),
+                          label: 'Газар нэмэх',
+                          onPressed: _busy ? null : () => _addPlace(row))),
+              ])));
 }

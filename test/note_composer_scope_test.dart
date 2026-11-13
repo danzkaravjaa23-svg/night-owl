@@ -125,6 +125,54 @@ void main() {
     });
   }
 
+  testWidgets('a failed save stays inside the sheet and clears on retry',
+      (tester) async {
+    const failure = 'Өөрчлөлтийг баталгаажуулж чадсангүй. Дахин оролдоно уу.';
+    var saves = 0;
+    final retry = Completer<http.Response>();
+    http.Request? held;
+    respond = (request) async {
+      if (request.method == 'POST' && request.url.path.endsWith('/notes')) {
+        if (++saves == 1) {
+          return http.Response(jsonEncode({'message': 'denied'}), 403,
+              request: request, headers: {'content-type': 'application/json'});
+        }
+        held = request;
+        return retry.future;
+      }
+      if (request.url.path.endsWith('/profiles')) {
+        return json(request, {'id': account, 'username': 'fixture'});
+      }
+      return json(request, []);
+    };
+    await render(tester);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Note үлдээх...'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), 'Unconfirmed note');
+    await tester.tap(find.text('Хуваалцах'));
+    await tester.pumpAndSettle();
+    // The composer is a root sheet: a SnackBar would be painted under it, so
+    // the failure is shown inside the sheet and the draft is kept.
+    expect(
+        find.descendant(
+            of: find.byType(BottomSheet), matching: find.text(failure)),
+        findsOneWidget);
+    expect(find.byType(SnackBar), findsNothing);
+    expect(find.text('Unconfirmed note'), findsOneWidget);
+    await tester.tap(find.text('Хуваалцах'));
+    await tester.pump();
+    expect(saves, 2);
+    expect(find.text(failure), findsNothing);
+    retry.complete(json(held!, [
+      {'user_id': first, 'text': 'Unconfirmed note'}
+    ]));
+    await tester.pumpAndSettle();
+    expect(find.byType(BottomSheet), findsNothing);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox());
+  });
+
   testWidgets('a late profile load cannot resume the old account note query',
       (tester) async {
     final pending = Completer<http.Response>();

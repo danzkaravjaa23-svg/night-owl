@@ -515,7 +515,9 @@ class _SetupScreenState extends State<SetupScreen> {
                       ] else if (_isEditMode) ...[
                         Row(children: [
                           GlassBack(onTap: _back),
-                          const SizedBox(width: 14),
+                          // 44px хүрэх талбартай тул гарчиг хуучин байрандаа,
+                          // дискээс 12px (AppHeader-тэй ижил).
+                          const SizedBox(width: 10),
                           Expanded(
                               child: Text('Профайл засах',
                                   style: AppTextStyles.h1)),
@@ -565,10 +567,6 @@ class _SetupScreenState extends State<SetupScreen> {
     );
   }
 
-  // Цайвар дэвсгэр дээр amber текст уншигдахгүй тул бараан amber
-  Color get _amberInk =>
-      AppColors.isDarkMode ? AppColors.amber : const Color(0xFF8A5A00);
-
   Widget _accountChangedView() => Padding(
         padding: const EdgeInsets.all(24),
         child: Center(
@@ -584,20 +582,22 @@ class _SetupScreenState extends State<SetupScreen> {
         ])),
       );
 
-  // Профайл ачаалж чадаагүй анхааруулга + retry
+  // Профайл ачаалж чадаагүй анхааруулга + retry. AppColors.warning нь
+  // Day-д бараан amber (#8A5A00) тул цайвар дэвсгэр дээр ч уншигдана.
   Widget _loadFailedBanner() => Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: AppColors.amber.withValues(alpha: 0.10),
+          color: AppColors.warning.withValues(alpha: 0.10),
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: AppColors.amber.withValues(alpha: 0.3)),
+          border: Border.all(color: AppColors.warning.withValues(alpha: 0.3)),
         ),
         child: Row(children: [
-          Icon(Icons.wifi_off_rounded, color: _amberInk, size: 16),
+          Icon(Icons.wifi_off_rounded, color: AppColors.warning, size: 16),
           const SizedBox(width: 8),
           Expanded(
               child: Text('Профайл ачаалж чадсангүй',
-                  style: AppTextStyles.bodySm.copyWith(color: _amberInk))),
+                  style: AppTextStyles.bodySm
+                      .copyWith(color: AppColors.warning))),
           TapScale(
             onTap: _loadExistingProfile,
             child: Text('Дахин оролдох',
@@ -660,7 +660,6 @@ class _SetupScreenState extends State<SetupScreen> {
               key: const ValueKey('setup-save'),
               label: _loading ? 'Хадгалж байна...' : 'Зөвшөөрч үргэлжлүүлэх',
               onPressed: _canAgree ? _agreeOnly : null,
-              borderRadius: 999,
               trailing: _loading ? const BtnSpinner() : null,
             ),
             const SizedBox(height: 8),
@@ -980,7 +979,6 @@ class _SetupScreenState extends State<SetupScreen> {
                     ? 'Хадгалж байна...'
                     : (_isEditMode ? 'Хадгалах' : 'Эхлэх'),
                 onPressed: _canEdit ? _save : null,
-                borderRadius: 999,
                 trailing: _loading ? const BtnSpinner() : null,
               ),
               const SizedBox(height: 8),

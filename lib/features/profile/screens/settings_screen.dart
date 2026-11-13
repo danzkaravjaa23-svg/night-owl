@@ -3,11 +3,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/theme/theme_provider.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/widgets/app_avatar.dart';
-import '../../../core/widgets/sculpted_icon.dart';
+import '../../../core/widgets/app_header.dart';
+import '../../../core/widgets/gradient_button.dart';
+import '../../../core/widgets/settings_rows.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../../models/user_profile.dart';
 import '../../../core/providers/user_settings_provider.dart';
@@ -116,10 +119,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 720),
             child: Column(children: [
-              _Header(
-                  onBack: () => context.canPop()
-                      ? context.pop()
-                      : context.go(AppRoutes.profile)),
+              const AppHeader.title(
+                  title: 'Тохиргоо', fallbackLocation: AppRoutes.profile),
               Expanded(
                 child: ListView(
                   padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
@@ -132,131 +133,134 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                           _ProfileCard(profile: null, onTap: _openEditProfile),
                     ),
                     const SizedBox(height: 24),
-                    _GlassCard(children: [
+                    SettingsCard(children: [
                       _AppearanceChooser(
                           selected: themeMode, onChanged: _setThemeMode),
                     ]),
                     const SizedBox(height: 28),
-                    const _SectionLabel('Таны бүртгэл'),
+                    const SettingsSectionLabel('Таны бүртгэл'),
                     const SizedBox(height: 12),
-                    _GlassCard(children: [
-                      _SettingRow(
-                          icon: Icons.person_outline,
-                          label: 'Профайл засах',
-                          sub: 'Нэр, зураг, танилцуулга',
+                    SettingsCard(children: [
+                      SettingsRow(
+                          icon: AppIcons.profile,
+                          title: 'Профайл засах',
+                          subtitle: 'Нэр, зураг, танилцуулга',
                           onTap: _openEditProfile),
-                      const _RowDivider(),
-                      _SettingRow(
+                      const SettingsDivider(),
+                      SettingsRow(
                           icon: Icons.lock_outline,
-                          label: 'Нууц үг солих',
+                          title: 'Нууц үг солих',
                           onTap: () => context.push(AppRoutes.changePassword)),
                     ]),
                     const SizedBox(height: 28),
-                    const _SectionLabel('Нууцлал ба мэдэгдэл'),
+                    const SettingsSectionLabel('Нууцлал ба мэдэгдэл'),
                     const SizedBox(height: 12),
-                    _GlassCard(children: [
-                      _SettingRow(
+                    SettingsCard(children: [
+                      SettingsRow(
                           icon: Icons.lock_person_outlined,
-                          label: 'Нууцлал, хүсэлтүүд',
-                          sub: 'Хэн тантай холбогдохыг тохируулах',
+                          title: 'Нууцлал, хүсэлтүүд',
+                          subtitle: 'Хэн тантай холбогдохыг тохируулах',
                           onTap: () => context.push('/privacy'),
-                          disabled: profileAsync.isLoading),
-                      const _RowDivider(),
-                      _SettingRow(
-                          icon: Icons.notifications_none,
-                          label: 'Апп доторх мэдэгдэл',
-                          sub: 'Энэ төхөөрөмж дээр',
+                          enabled: !profileAsync.isLoading),
+                      const SettingsDivider(),
+                      SettingsRow(
+                          icon: AppIcons.notifications,
+                          title: 'Апп доторх мэдэгдэл',
+                          subtitle: 'Энэ төхөөрөмж дээр',
                           onTap: () => _setNotifLikes(!notifLikes),
-                          trailing: _NeonSwitch(
+                          trailing: SettingsSwitch(
                               value: notifLikes, onChanged: _setNotifLikes)),
-                      const _RowDivider(),
-                      _SettingRow(
+                      const SettingsDivider(),
+                      SettingsRow(
                           icon: Icons.radar_outlined,
-                          label: 'Идэвхтэй төлөв',
-                          sub: 'Энэ төхөөрөмжөөс идэвхтэй төлөв харуулах',
+                          title: 'Идэвхтэй төлөв',
+                          subtitle: 'Энэ төхөөрөмжөөс идэвхтэй төлөв харуулах',
                           onTap: () => _setActivityStatus(!activityStatus),
-                          trailing: _NeonSwitch(
+                          trailing: SettingsSwitch(
                               value: activityStatus,
                               onChanged: _setActivityStatus)),
-                      const _RowDivider(),
-                      _SettingRow(
+                      const SettingsDivider(),
+                      SettingsRow(
                           icon: Icons.insights_outlined,
-                          label: 'Хэрэглээний статистик',
-                          sub: 'Сайжруулахад туслах зорилгоор нээсэн хуудас, '
+                          title: 'Хэрэглээний статистик',
+                          subtitle:
+                              'Сайжруулахад туслах зорилгоор нээсэн хуудас, '
                               'хадгалалт зэрэг үйлдлийг бүртгэхийг зөвшөөрнө. '
                               'Сонголттой, хүссэн үедээ унтрааж болно.',
-                          disabled: owner == null || _savingConsent,
+                          enabled: owner != null && !_savingConsent,
                           onTap: () => _setAnalyticsConsent(!analytics),
-                          trailing: _NeonSwitch(
+                          trailing: SettingsSwitch(
                               value: analytics,
                               onChanged: owner == null || _savingConsent
                                   ? null
                                   : _setAnalyticsConsent)),
                     ]),
                     const SizedBox(height: 28),
-                    const _SectionLabel('Night Owl'),
+                    const SettingsSectionLabel('Night Owl'),
                     const SizedBox(height: 12),
-                    _GlassCard(children: [
+                    SettingsCard(children: [
                       if (profileAsync.asData?.value?.canModerate(owner) ==
                           true) ...[
-                        _SettingRow(
+                        SettingsRow(
                             icon: Icons.admin_panel_settings_outlined,
-                            label: 'Админ панел',
-                            sub: 'Гомдол, хэрэглэгч, контент ба үйлдлийн түүх',
+                            title: 'Админ панел',
+                            subtitle:
+                                'Гомдол, хэрэглэгч, контент ба үйлдлийн түүх',
                             onTap: () => context.push(AppRoutes.adminPanel)),
-                        const _RowDivider(),
+                        const SettingsDivider(),
                       ],
-                      _SettingRow(
+                      SettingsRow(
                           icon: Icons.business_center_outlined,
-                          label: 'Бизнес самбар',
-                          sub: 'Газрынхаа мэдээллийг удирдах',
+                          title: 'Бизнес самбар',
+                          subtitle: 'Газрынхаа мэдээллийг удирдах',
                           onTap: () => context.push(AppRoutes.business)),
-                      const _RowDivider(),
-                      _SettingRow(
+                      const SettingsDivider(),
+                      SettingsRow(
                           icon: Icons.person_add_alt_1_outlined,
-                          label: 'Найзаа урих',
+                          title: 'Найзаа урих',
                           onTap: () => context.push(AppRoutes.invite)),
                     ]),
                     const SizedBox(height: 28),
-                    const _SectionLabel('Тусламж ба мэдээлэл'),
+                    const SettingsSectionLabel('Тусламж ба мэдээлэл'),
                     const SizedBox(height: 12),
-                    _GlassCard(children: [
-                      _SettingRow(
+                    SettingsCard(children: [
+                      SettingsRow(
                           icon: Icons.help_outline,
-                          label: 'Тусламж',
+                          title: 'Тусламж',
                           onTap: () =>
                               openAppPolicy(context, AppPolicy.support)),
-                      const _RowDivider(),
-                      _SettingRow(
+                      const SettingsDivider(),
+                      SettingsRow(
                           icon: Icons.privacy_tip_outlined,
-                          label: 'Нууцлалын бодлого',
+                          title: 'Нууцлалын бодлого',
                           onTap: () =>
                               openAppPolicy(context, AppPolicy.privacy)),
-                      const _RowDivider(),
-                      _SettingRow(
+                      const SettingsDivider(),
+                      SettingsRow(
                           icon: Icons.description_outlined,
-                          label: 'Үйлчилгээний нөхцөл',
+                          title: 'Үйлчилгээний нөхцөл',
                           onTap: () => openAppPolicy(context, AppPolicy.terms)),
-                      const _RowDivider(),
-                      _SettingRow(
+                      const SettingsDivider(),
+                      SettingsRow(
                           icon: Icons.article_outlined,
-                          label: 'Лицензүүд',
+                          title: 'Лицензүүд',
                           onTap: () => showLicensePage(
                               context: context,
                               applicationName: 'Night Owl UB',
                               applicationVersion: '1.0.0')),
-                      const _RowDivider(),
-                      const _SettingRow(
+                      const SettingsDivider(),
+                      const SettingsRow(
                           icon: Icons.account_tree_outlined,
-                          label: 'Хувилбар · Үнэгүй',
-                          trailingValue: '1.0.0',
-                          mono: true),
+                          title: 'Хувилбар · Үнэгүй',
+                          value: '1.0.0',
+                          monospaceValue: true),
                     ]),
                     const SizedBox(height: 28),
-                    _NeutralButton(
+                    // Буцаах боломжтой үйлдэл — secondary pill (DS-03)
+                    OutlineButton(
                         label: _signingOut ? 'Гарч байна…' : 'Гарах',
-                        icon: Icons.logout,
-                        onTap: _signingOut ? null : _signOut),
+                        icon: const Icon(Icons.logout, size: 20),
+                        onPressed: _signingOut ? null : _signOut),
                     const SizedBox(height: 12),
                     TextButton.icon(
                         onPressed: () => context.push(AppRoutes.deleteAccount),
@@ -436,39 +440,6 @@ class _AppearancePreview extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────
-//  Header
-// ─────────────────────────────────────────────────────────────
-class _Header extends StatelessWidget {
-  final VoidCallback onBack;
-  const _Header({required this.onBack});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 8, 20, 8),
-      child: Row(
-        children: [
-          IconButton(
-              tooltip: 'Буцах',
-              onPressed: onBack,
-              style: IconButton.styleFrom(minimumSize: const Size(48, 48)),
-              icon: SculptedIcon(Icons.chevron_left,
-                  color: AppColors.textPrimary, size: 22)),
-          const SizedBox(width: 8),
-          Expanded(
-              child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Тохиргоо', style: AppTextStyles.h1.copyWith(fontSize: 26)),
-            ],
-          )),
-        ],
-      ),
-    );
-  }
-}
-
-// ─────────────────────────────────────────────────────────────
 //  Profile glance card
 // ─────────────────────────────────────────────────────────────
 class _ProfileCard extends StatelessWidget {
@@ -548,8 +519,7 @@ class _ProfileCard extends StatelessWidget {
               const SizedBox(width: 10),
               // 'LIVE' pill байсан нь худал (жинхэнэ live төлөвтэй холбоогүй) —
               // "Профайл засах" гэдгийг илэрхийлсэн саармаг chevron-оор солив.
-              Icon(Icons.chevron_right_rounded,
-                  color: AppColors.textTertiary, size: 20),
+              Icon(AppIcons.forward, color: AppColors.textTertiary, size: 20),
             ],
           ),
         ),
@@ -608,238 +578,4 @@ class _ProfileCardSkeleton extends StatelessWidget {
       ),
     );
   }
-}
-
-// ─────────────────────────────────────────────────────────────
-//  Section label (eyebrow)
-// ─────────────────────────────────────────────────────────────
-class _SectionLabel extends StatelessWidget {
-  final String label;
-  const _SectionLabel(this.label);
-  @override
-  Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.only(left: 6),
-        child: Text(
-          label,
-          style: AppTextStyles.labelLg.copyWith(color: AppColors.textSecondary),
-        ),
-      );
-}
-
-// ─────────────────────────────────────────────────────────────
-//  Glass card container
-// ─────────────────────────────────────────────────────────────
-class _GlassCard extends StatelessWidget {
-  final List<Widget> children;
-  const _GlassCard({required this.children});
-  @override
-  Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.all(6),
-        decoration: BoxDecoration(
-          color: AppColors.bgElevated,
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Column(children: children),
-      );
-}
-
-class _RowDivider extends StatelessWidget {
-  const _RowDivider();
-  @override
-  Widget build(BuildContext context) => Padding(
-        padding: EdgeInsets.only(
-            left: MediaQuery.sizeOf(context).width < 380 &&
-                    MediaQuery.textScalerOf(context).scale(14) > 19
-                ? 12
-                : 56,
-            right: 12),
-        child: Divider(height: 1, thickness: 1, color: AppColors.hairline),
-      );
-}
-
-// ─────────────────────────────────────────────────────────────
-//  Setting row — violet icon tile + label + trailing
-// ─────────────────────────────────────────────────────────────
-class _SettingRow extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final String? sub;
-  final String? trailingValue;
-  final Widget? trailing;
-  final VoidCallback? onTap;
-  final bool mono;
-  final bool disabled; // идэвхгүй мөр (сааралдуулж, дарагдахгүй)
-  const _SettingRow({
-    required this.icon,
-    required this.label,
-    this.sub,
-    this.trailingValue,
-    this.trailing,
-    this.onTap,
-    this.mono = false,
-    this.disabled = false,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final iconColor = disabled ? AppColors.textTertiary : AppColors.silver;
-    final largeText = MediaQuery.sizeOf(context).width < 380 &&
-        MediaQuery.textScalerOf(context).scale(14) > 19;
-    final row = Opacity(
-      opacity: disabled ? 0.55 : 1.0,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 15),
-        child: Row(
-          children: [
-            // At larger text sizes, give the description the icon's space.
-            if (!largeText) ...[
-              Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  color: iconColor.withValues(alpha: 0.10),
-                  borderRadius: BorderRadius.circular(11),
-                ),
-                child: Center(child: Icon(icon, size: 21, color: iconColor)),
-              ),
-              const SizedBox(width: 12),
-            ],
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(label, style: AppTextStyles.h3),
-                  if (sub != null) ...[
-                    const SizedBox(height: 5),
-                    Text(
-                      sub!,
-                      style: AppTextStyles.bodySm.copyWith(
-                          color: AppColors.textSecondary, height: 1.45),
-                    ),
-                  ],
-                  if (trailingValue != null) ...[
-                    const SizedBox(height: 3),
-                    Text(
-                      trailingValue!,
-                      style: mono
-                          ? AppTextStyles.mono.copyWith(
-                              color: AppColors.textTertiary, fontSize: 12)
-                          : AppTextStyles.bodySm
-                              .copyWith(color: AppColors.textTertiary),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-            if (trailing != null) ...[
-              const SizedBox(width: 8),
-              trailing!,
-            ] else if (onTap != null && !disabled) ...[
-              const SizedBox(width: 4),
-              Icon(Icons.chevron_right_rounded,
-                  size: 18, color: AppColors.textTertiary),
-            ],
-          ],
-        ),
-      ),
-    );
-
-    if (onTap == null || disabled) return row;
-    return MouseRegion(
-      cursor: SystemMouseCursors.click,
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(14),
-          child: row,
-        ),
-      ),
-    );
-  }
-}
-
-// ─────────────────────────────────────────────────────────────
-//  Violet switch
-// ─────────────────────────────────────────────────────────────
-class _NeonSwitch extends StatelessWidget {
-  final bool value;
-  final ValueChanged<bool>? onChanged;
-  const _NeonSwitch({required this.value, required this.onChanged});
-
-  @override
-  Widget build(BuildContext context) {
-    // Дүрс нь 46×28 хэвээр, харин дарах талбайг 44px өндөр болгов
-    return Semantics(
-        toggled: value,
-        enabled: onChanged != null,
-        child: MouseRegion(
-          cursor:
-              onChanged == null ? MouseCursor.defer : SystemMouseCursors.click,
-          child: GestureDetector(
-            onTap: onChanged == null ? null : () => onChanged!(!value),
-            behavior: HitTestBehavior.opaque,
-            child: SizedBox(
-              height: 44,
-              child: Center(
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 180),
-                  curve: Curves.easeOut,
-                  width: 46,
-                  height: 28,
-                  padding: const EdgeInsets.all(3),
-                  alignment:
-                      value ? Alignment.centerRight : Alignment.centerLeft,
-                  decoration: BoxDecoration(
-                    color: value ? AppColors.accentStart : AppColors.bgSurface,
-                    borderRadius: BorderRadius.circular(999),
-                    border: Border.all(
-                      color:
-                          value ? AppColors.accentStart : AppColors.hairline2,
-                    ),
-                  ),
-                  child: Container(
-                    width: 22,
-                    height: 22,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: value ? Colors.white : AppColors.textTertiary,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ));
-  }
-}
-
-// ─────────────────────────────────────────────────────────────
-//  Neutral (secondary) button — буцаах боломжтой үйлдэлд
-// ─────────────────────────────────────────────────────────────
-class _NeutralButton extends StatelessWidget {
-  final String label;
-  final IconData icon;
-  final VoidCallback? onTap;
-  const _NeutralButton({
-    required this.label,
-    required this.icon,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) => OutlinedButton.icon(
-      onPressed: onTap,
-      style: OutlinedButton.styleFrom(
-          minimumSize: const Size.fromHeight(52),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-          backgroundColor: AppColors.bgSurface.withValues(alpha: .7),
-          foregroundColor: AppColors.textPrimary,
-          side: BorderSide(color: AppColors.hairline2),
-          textStyle: AppTextStyles.btn,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
-      icon: Icon(icon, size: 20),
-      label: Text(label, textAlign: TextAlign.center));
 }
