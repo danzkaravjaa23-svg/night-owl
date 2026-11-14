@@ -29,7 +29,7 @@ class NightOwlBrand extends StatelessWidget {
         child: Row(mainAxisSize: MainAxisSize.min, children: [
           NightOwlMark(size: size + 2),
           const SizedBox(width: 8),
-          Text('night owl',
+          Text('Night Owl',
               style: TextStyle(
                 // The bundled Inter family: w700 renders Inter-Bold, also
                 // where no app theme sets the font (DS-04).

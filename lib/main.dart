@@ -14,6 +14,7 @@ import 'core/theme/theme_provider.dart';
 import 'core/router/app_router.dart';
 import 'core/services/supabase_service.dart';
 import 'core/utils/host_badge_inset.dart';
+import 'core/utils/media_picker_setup.dart';
 import 'core/widgets/mobile_frame.dart';
 import 'core/widgets/theme_reveal.dart';
 import 'features/auth/providers/auth_provider.dart';
@@ -23,6 +24,9 @@ import 'features/feed/providers/saved_provider.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   AppFonts.configure();
+  // Android: галерейгаас сонгоход файл менежерийн оронд системийн photo
+  // picker (зургийн grid, цомгууд) нээгдэнэ.
+  useSystemPhotoPicker();
 
   // Status bar — transparent (dark content shown over aurora)
   SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(

@@ -37,6 +37,10 @@ dependencies:
 
   # Media
   image_picker: ^1.1.2
+  # Android: gallery picks open the system photo picker (photo grid, no
+  # storage permission) instead of the document browser; see main.dart.
+  image_picker_android: ^0.8.13+17
+  image_picker_platform_interface: ^2.11.1
   image: ^4.5.4
   cached_network_image: ^3.3.1
   video_player: ^2.8.6

@@ -17,7 +17,8 @@ class PickedMediaFile {
 }
 
 /// Файл сонгох диалог — cancel бол хоосон list
-Future<List<PickedMediaFile>> pickPostMedia({bool multiple = true}) async =>
+Future<List<PickedMediaFile>> pickPostMedia(
+        {bool multiple = true, int? limit, bool imagesOnly = false}) async =>
     const [];
 
 /// Preview object URL чөлөөлөх

@@ -21,10 +21,13 @@ class PickedMediaFile {
 
 /// Файл сонгох диалог. Cancel хийвэл хоосон list буцаана —
 /// window focus + delay guard тул dangling await үлдэхгүй.
-Future<List<PickedMediaFile>> pickPostMedia({bool multiple = true}) async {
+/// Браузерын сонгогч тоог хязгаарлаж чаддаггүй; [limit]-ээс илүүг composer
+/// хасна. [imagesOnly] бол зөвхөн зураг.
+Future<List<PickedMediaFile>> pickPostMedia(
+    {bool multiple = true, int? limit, bool imagesOnly = false}) async {
   final input = html.FileUploadInputElement()
-    ..accept = 'image/*,video/*'
-    ..multiple = multiple;
+    ..accept = imagesOnly ? 'image/*' : 'image/*,video/*'
+    ..multiple = multiple && (limit == null || limit >= 2);
 
   final c = Completer<List<PickedMediaFile>>();
 

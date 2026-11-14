@@ -65,7 +65,7 @@ class _AuthLandingScreenState extends State<AuthLandingScreen> {
                                         size: 28)),
                                 const SizedBox(width: 10),
                                 Flexible(
-                                    child: Text('night owl',
+                                    child: Text('Night Owl',
                                         style: TextStyle(
                                             color: AppColors.textPrimary,
                                             fontSize: 23,

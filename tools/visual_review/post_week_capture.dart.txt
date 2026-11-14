@@ -131,7 +131,8 @@ void main() {
               key: capture,
               child: CreatePostScreen(
                 publicationService: _OfflinePublication(),
-                mediaPicker: ({bool multiple = true}) async => [media],
+                mediaPicker: ({bool multiple = true, int? limit, bool imagesOnly = false}) async =>
+                    [media],
                 venueLoader: _catalog,
               ),
             ),

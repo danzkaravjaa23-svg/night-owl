@@ -129,7 +129,7 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
   static const double height = 64;
 
   /// Брэндийн НЭГ хэмжээ. Feed ба Explore хоёулаа өнөөдөр
-  /// `NightOwlBrand(size: 28)` (mark 30px, "night owl" 21.8px) — 390px дээрх
+  /// `NightOwlBrand(size: 28)` (mark 30px, "Night Owl" 21.8px) — 390px дээрх
   /// capture-аар хэмжээ нь ижил. Аудитын "18 ба 22 px" нь логоны ЗҮҮН ИРМЭГ
   /// (16 ба 20px gutter + зурган дахь 2px тунгалаг зах) байсан тул хэмжээг
   /// өөрчлөхгүй, байрлалыг нэг gutter-т нэгтгэв.

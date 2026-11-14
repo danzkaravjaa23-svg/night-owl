@@ -83,7 +83,7 @@ class _DesktopBrand extends StatelessWidget {
             children: [
               const NightOwlMark(size: 78),
               const SizedBox(height: 24),
-              Text('night owl',
+              Text('Night Owl',
                   style: TextStyle(
                       color: AppColors.textPrimary,
                       fontSize: 34,

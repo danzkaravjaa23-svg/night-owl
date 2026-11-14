@@ -210,4 +210,19 @@ void main() {
     await tester.pumpWidget(const SizedBox());
     semantics.dispose();
   });
+
+  testWidgets('posts follow each other with a narrow 8 px gap',
+      (tester) async {
+    await render(tester, 420);
+    // The painted card surface: the first DecoratedBox inside each post.
+    Rect surface(String id) => tester.getRect(find
+        .descendant(
+            of: find.byKey(ValueKey(id)), matching: find.byType(DecoratedBox))
+        .first);
+    final cards = [surface('post-alpha'), surface('post-beta')]
+      ..sort((a, b) => a.top.compareTo(b.top));
+    expect(cards[1].top - cards[0].bottom, moreOrLessEquals(8, epsilon: 0.5));
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox());
+  });
 }

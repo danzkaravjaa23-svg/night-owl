@@ -28,7 +28,8 @@ class GradientText extends StatelessWidget {
   }
 }
 
-/// The approved lowercase wordmark; the brand name is shared across locales.
+/// The "Night Owl" wordmark (capital N and O); the brand name is shared across
+/// locales.
 class NightOwlLogoText extends StatelessWidget {
   final double fontSize;
   final bool isMn;
@@ -49,9 +50,9 @@ class NightOwlLogoText extends StatelessWidget {
         (dark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight);
     return Text.rich(
         TextSpan(children: [
-          TextSpan(text: 'night ', style: TextStyle(color: first)),
+          TextSpan(text: 'Night ', style: TextStyle(color: first)),
           TextSpan(
-              text: 'owl',
+              text: 'Owl',
               style: TextStyle(color: dark ? first : AppColors.accentStart)),
         ]),
         style: TextStyle(

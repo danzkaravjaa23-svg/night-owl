@@ -62,17 +62,31 @@ class PickedMediaFile {
   String get mimeType => _mimeByExt[_ext(_path)] ?? 'application/octet-stream';
 }
 
-/// Gallery-с зураг/видео сонгох — cancel бол хоосон list
-Future<List<PickedMediaFile>> pickPostMedia({bool multiple = true}) async {
+/// Gallery-с зураг/видео сонгох — cancel бол хоосон list.
+/// [limit]: галерей хамгийн ихдээ хэдийг сонгуулах ("up to N").
+/// [imagesOnly]: зөвхөн зураг (зурагтай постонд нэмэх үед).
+Future<List<PickedMediaFile>> pickPostMedia(
+    {bool multiple = true, int? limit, bool imagesOnly = false}) async {
   try {
     final picker = ImagePicker();
+    // image_picker multi-select needs limit >= 2; one free slot = one pick.
+    final many = multiple && (limit == null || limit >= 2);
     final List<XFile> files;
-    if (multiple) {
-      files = await picker.pickMultipleMedia(
-          maxWidth: 1440, maxHeight: 1440, imageQuality: 82);
+    if (many) {
+      files = imagesOnly
+          ? await picker.pickMultiImage(
+              maxWidth: 1440, maxHeight: 1440, imageQuality: 82, limit: limit)
+          : await picker.pickMultipleMedia(
+              maxWidth: 1440, maxHeight: 1440, imageQuality: 82, limit: limit);
     } else {
-      final f = await picker.pickMedia(
-          maxWidth: 1440, maxHeight: 1440, imageQuality: 82);
+      final f = imagesOnly
+          ? await picker.pickImage(
+              source: ImageSource.gallery,
+              maxWidth: 1440,
+              maxHeight: 1440,
+              imageQuality: 82)
+          : await picker.pickMedia(
+              maxWidth: 1440, maxHeight: 1440, imageQuality: 82);
       files = f == null ? const <XFile>[] : <XFile>[f];
     }
     return [
@@ -81,7 +95,7 @@ Future<List<PickedMediaFile>> pickPostMedia({bool multiple = true}) async {
     ];
   } catch (e) {
     debugPrint('pickPostMedia failed: $e');
-    throw Exception('Медиа сонгож чадсангүй. Зургийн сангийн зөвшөөрлөө шалгана уу.');
+    throw Exception('Медиа сонгож чадсангүй. Дахин оролдоно уу.');
   }
 }
 

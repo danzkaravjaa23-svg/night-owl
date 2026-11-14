@@ -12,6 +12,7 @@ import 'package:http/testing.dart';
 import 'package:image/image.dart' as image;
 import 'package:night_owl_ub/core/constants/stickers.dart';
 import 'package:night_owl_ub/core/theme/app_fonts.dart';
+import 'package:night_owl_ub/core/theme/app_icons.dart';
 import 'package:night_owl_ub/core/widgets/gradient_button.dart';
 import 'package:night_owl_ub/features/feed/screens/create_story_screen.dart';
 import 'package:night_owl_ub/features/discovery/services/discovery_service.dart';
@@ -550,7 +551,7 @@ void main() {
           tester,
           CreatePostScreen(
               publicationService: publisher,
-              mediaPicker: ({bool multiple = true}) async => [media],
+              mediaPicker: ({bool multiple = true, int? limit, bool imagesOnly = false}) async => [media],
               venueLoader: storyVenueLoader));
       await pickPost(tester);
       await choosePostVenue(tester, 'Community газар');
@@ -585,7 +586,7 @@ void main() {
           tester,
           CreatePostScreen(
               publicationService: publisher,
-              mediaPicker: ({bool multiple = true}) async => [media],
+              mediaPicker: ({bool multiple = true, int? limit, bool imagesOnly = false}) async => [media],
               venueLoader: storyVenueLoader));
       await pickPost(tester);
       await choosePostVenue(tester, 'Газрын зураг дахь газар');
@@ -630,7 +631,7 @@ void main() {
             path: '/post',
             builder: (_, __) => CreatePostScreen(
                 publicationService: publisher,
-                mediaPicker: ({bool multiple = true}) async => [media],
+                mediaPicker: ({bool multiple = true, int? limit, bool imagesOnly = false}) async => [media],
                 venueLoader: storyVenueLoader)),
         GoRoute(
             path: '/feed',
@@ -668,7 +669,7 @@ void main() {
           tester,
           CreatePostScreen(
               publicationService: publisher,
-              mediaPicker: ({bool multiple = true}) async => [media],
+              mediaPicker: ({bool multiple = true, int? limit, bool imagesOnly = false}) async => [media],
               venueLoader: loader));
       await pickPost(tester);
       final picker = find.byKey(const ValueKey('post-location-picker'));
@@ -693,6 +694,32 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
+    testWidgets('post gallery stops at the free photo slots', (tester) async {
+      final asks = <String>[];
+      await pump(
+          tester,
+          CreatePostScreen(
+              publicationService: publisher,
+              mediaPicker: (
+                  {bool multiple = true,
+                  int? limit,
+                  bool imagesOnly = false}) async {
+                asks.add('multiple=$multiple limit=$limit images=$imagesOnly');
+                return [media];
+              }));
+      await pickPost(tester);
+      // A new post: photos or one video, at most 10 items in the gallery.
+      expect(asks, ['multiple=true limit=10 images=false']);
+      // The + tile adds photos only, up to the 9 free slots.
+      final add = find.byIcon(AppIcons.add);
+      expect(add, findsOneWidget);
+      await tester.ensureVisible(add);
+      await tester.tap(add);
+      await tester.pumpAndSettle();
+      expect(asks.last, 'multiple=true limit=9 images=true');
+      expect(tester.takeException(), isNull);
+    });
+
     testWidgets(
         'post picker prevents duplicate opens and ignores completion after dispose',
         (tester) async {
@@ -702,7 +729,7 @@ void main() {
           tester,
           CreatePostScreen(
               publicationService: publisher,
-              mediaPicker: ({bool multiple = true}) {
+              mediaPicker: ({bool multiple = true, int? limit, bool imagesOnly = false}) {
                 picks++;
                 return pending.future;
               }));
@@ -725,7 +752,7 @@ void main() {
           tester,
           CreatePostScreen(
               publicationService: publisher,
-              mediaPicker: ({bool multiple = true}) async => [media]));
+              mediaPicker: ({bool multiple = true, int? limit, bool imagesOnly = false}) async => [media]));
       await pickPost(tester);
       // The caption field sits below the media preview in the lazy form.
       await tester.scrollUntilVisible(find.byType(TextField), 200,
@@ -765,7 +792,7 @@ void main() {
           tester,
           CreatePostScreen(
               publicationService: publisher,
-              mediaPicker: ({bool multiple = true}) async => [media]));
+              mediaPicker: ({bool multiple = true, int? limit, bool imagesOnly = false}) async => [media]));
       await pickPost(tester);
       await tapPublish(tester, 'Хуваалцах');
       await tester.pump();
@@ -808,7 +835,7 @@ void main() {
                         child: child!)),
                 home: CreatePostScreen(
                     publicationService: publisher,
-                    mediaPicker: ({bool multiple = true}) async =>
+                    mediaPicker: ({bool multiple = true, int? limit, bool imagesOnly = false}) async =>
                         [media, media, media]))));
         await tester.pumpAndSettle();
         await pickPost(tester);

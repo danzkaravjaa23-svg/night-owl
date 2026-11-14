@@ -282,7 +282,7 @@ void main() {
                 child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Text('night owl',
+                      const Text('Night Owl',
                           style: TextStyle(fontSize: 28, color: Colors.white)),
                       const SizedBox(height: 28),
                       Row(

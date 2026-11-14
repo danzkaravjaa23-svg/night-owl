@@ -22,7 +22,8 @@ const int _maxImageBytes = 25 * 1024 * 1024; // 25MB
 
 class CreatePostScreen extends ConsumerStatefulWidget {
   final ContentPublicationService? publicationService;
-  final Future<List<PickedMediaFile>> Function({bool multiple})? mediaPicker;
+  final Future<List<PickedMediaFile>> Function(
+      {bool multiple, int? limit, bool imagesOnly})? mediaPicker;
   final VenueCatalogLoader? venueLoader;
   const CreatePostScreen(
       {super.key, this.publicationService, this.mediaPicker, this.venueLoader});
@@ -119,13 +120,18 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
   // ─── Media сонгох (олон зураг эсвэл нэг видео) ───
   Future<void> _pickMedia({bool append = false}) async {
     if (!_canEdit) return;
+    if (append && _media.length >= _maxImages) return;
     setState(() {
       _picking = true;
       _error = null;
     });
     try {
+      // The gallery itself stops at the free slots ("up to N"); adding to a
+      // photo post offers photos only.
       final picked = await (widget.mediaPicker ?? pickPostMedia)(
-          multiple: !append || !_isVideoPost);
+          multiple: !append || !_isVideoPost,
+          limit: _maxImages - (append ? _media.length : 0),
+          imagesOnly: append);
       if (!mounted || !_session.isCurrent) {
         for (final media in picked) {
           revokePreviewUrl(media.previewUrl);
@@ -198,7 +204,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
     } catch (_) {
       if (mounted) {
         setState(() => _error =
-            'Медиа сонгож чадсангүй. Зөвшөөрлөө шалгаад дахин оролдоно уу.');
+            'Медиа сонгож чадсангүй. Дахин оролдоно уу.');
       }
     } finally {
       if (mounted) setState(() => _picking = false);

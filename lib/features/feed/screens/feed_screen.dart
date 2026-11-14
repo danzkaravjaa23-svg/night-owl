@@ -546,7 +546,8 @@ class _PostCardState extends ConsumerState<_PostCard>
     void openAuthor() => context.push('/creator/${widget.post.userId}');
 
     return Container(
-      margin: const EdgeInsets.fromLTRB(20, 4, 20, 24),
+      // Постуудын хооронд нарийн 8px зай: feed тасралтгүй гүйлгэгдэнэ.
+      margin: const EdgeInsets.fromLTRB(20, 0, 20, AppSpacing.x2),
       padding: const EdgeInsets.only(top: 4, bottom: 14),
       decoration: PremiumSurface.card(),
       clipBehavior: Clip.antiAlias,
@@ -1275,7 +1276,7 @@ class _SkeletonCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Padding(
         // Match the card gutters and image ratio while content loads.
-        padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
+        padding: const EdgeInsets.fromLTRB(20, 0, 20, AppSpacing.x2),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
